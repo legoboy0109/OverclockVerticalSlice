@@ -37,7 +37,7 @@
 #   Each entry: name, status, source, referenced_by[], attributes{}, added, revised
 
 version: 1
-last_updated: ""
+last_updated: 2026-07-20
 
 # ─── ENTITIES ────────────────────────────────────────────────────────────────
 # Named game-world objects: enemies, NPCs, characters, factions, bosses.
@@ -48,7 +48,70 @@ last_updated: ""
 # Attribute fields: any key stats that could appear in another GDD
 #   (health, damage, drops, faction, etc.)
 
-entities: []
+entities:
+  - name: scout
+    status: active
+    source: design/gdd/unit-system.md
+    referenced_by:
+      - design/gdd/unit-system.md
+      - design/gdd/movement-system.md   # references move_cost
+    hp: 3
+    attack: 2
+    attack_range: 1
+    move_cost: 1
+    soft_move_cap: 4   # PROVISIONAL (2026-07-20) — tiles before move cost escalates ×SOFT_MOVE_PENALTY; escalation formula owned by movement-system.md
+    produce_cost: 2
+    added: 2026-07-19
+    revised: 2026-07-20
+    # Cheap, fast, fragile melee harasser. Costs owned here; attack_cost (2 AP) owned by combat.
+
+  - name: trooper
+    status: active
+    source: design/gdd/unit-system.md
+    referenced_by:
+      - design/gdd/unit-system.md
+      - design/gdd/movement-system.md   # references move_cost
+    hp: 6
+    attack: 3
+    attack_range: 2
+    move_cost: 2
+    soft_move_cap: 3   # PROVISIONAL (2026-07-20) — see movement-system.md for escalation formula
+    produce_cost: 4
+    added: 2026-07-19
+    revised: 2026-07-20
+    # Efficiency-band backbone; range 2 (cardinal, first blocker). Owns range-2 hp/AP after Heavy cost→7.
+
+  - name: heavy
+    status: active
+    source: design/gdd/unit-system.md
+    referenced_by:
+      - design/gdd/unit-system.md
+      - design/gdd/movement-system.md   # references move_cost
+    hp: 10
+    attack: 5
+    attack_range: 2
+    move_cost: 3
+    soft_move_cap: 2   # PROVISIONAL (2026-07-20) — slow anvil, lowest reach; see movement-system.md for escalation formula
+    produce_cost: 7   # was 6 — raised 2026-07-20 (unit-system design-review) so Trooper owns the range-2 efficiency band (Heavy 10/7=1.43 hp/AP < Trooper 1.5)
+    added: 2026-07-19
+    revised: 2026-07-20
+    # Durable anvil; slow; range 2. produce_cost 6→7 per unit-system design-review (Trooper-dominance fix).
+
+  - name: sniper
+    status: active
+    source: design/gdd/unit-system.md
+    referenced_by:
+      - design/gdd/unit-system.md
+      - design/gdd/movement-system.md   # references move_cost
+    hp: 3
+    attack: 6
+    attack_range: 3
+    move_cost: 2
+    soft_move_cap: 3   # PROVISIONAL (2026-07-20) — see movement-system.md for escalation formula
+    produce_cost: 5
+    added: 2026-07-19
+    revised: 2026-07-20
+    # Glass cannon; longest range (3); UNVALIDATED starting stats (ranged + kiting not in prototype). cost 5 kept (odd — strands 1 AP; spike decision).
 
 # Example (remove when first real entry is added):
 #
@@ -106,7 +169,67 @@ items: []
 #   output_range[min, max], added
 # Optional: expression (the actual formula), notes
 
-formulas: []
+formulas:
+  - name: manhattan_distance
+    status: active
+    source: design/gdd/grid-terrain.md
+    referenced_by:
+      - design/gdd/grid-terrain.md
+      - design/gdd/game-state-turn-manager.md   # references it as a grid query it uses
+    variables:
+      - x1
+      - y1
+      - x2
+      - y2
+    output_range: [0, 46]   # ceiling on a 24x24 board: (24-1)+(24-1)
+    expression: "abs(x1 - x2) + abs(y1 - y2)"
+    notes: "Grid distance on the orthogonal (4-directional) board. Used by Movement
+      (range / reachable-tile search) and Combat (adjacency == 1). Output max scales
+      with grid size; 46 is the 24x24 ceiling."
+    added: 2026-07-19
+    revised: ""
+
+  - name: ap_income
+    status: active
+    source: design/gdd/ap-economy.md
+    referenced_by:
+      - design/gdd/ap-economy.md
+      - design/gdd/game-state-turn-manager.md   # calls it at start-of-turn reset
+    variables:
+      - BASE_INCOME
+      - OUTPOST_BONUS_TIER1
+      - OUTPOST_BONUS_TIER2
+      - TIER_THRESHOLD
+      - completed_outpost_count
+    output_range: [10, 26]   # floor 10 (0 outposts); ~26 practical ceiling (board build limits)
+    expression: "BASE_INCOME + OUTPOST_BONUS_TIER1*min(n, TIER_THRESHOLD) + OUTPOST_BONUS_TIER2*max(0, n - TIER_THRESHOLD), where n = max(0, completed_outpost_count(player))"
+    # was: "BASE_INCOME + 2*min(n, TIER_THRESHOLD) + 1*max(0, n - TIER_THRESHOLD)" before 2026-07-19
+    #      (design-review revision wired literals to named knobs OUTPOST_BONUS_TIER1/TIER2 and clamped n at 0)
+    notes: "n = max(0, completed_outpost_count(player)) — CLAMPED at 0 so a negative count can never
+      produce sub-floor/negative income (upholds the never-negative invariant). completed_outpost_count:
+      alive, owned, tagged outpost, status=completed, HQ excluded, under-construction excluded. Tiered
+      diminishing via named knobs: OUTPOST_BONUS_TIER1=2 (outposts 1-4), OUTPOST_BONUS_TIER2=1 (5+).
+      FROZEN as a start-of-turn snapshot (not recomputed mid-turn). BASE_INCOME=10, TIER_THRESHOLD=4.
+      Consumed by Base & Production, Game HUD, Command & Action Interface when authored."
+    added: 2026-07-19
+    revised: 2026-07-19
+
+  - name: effective_attack
+    status: active
+    source: design/gdd/unit-system.md
+    referenced_by:
+      - design/gdd/unit-system.md
+    variables:
+      - base_attack
+      - owner_has_researched
+      - RESEARCH_ATK_BONUS
+    output_range: [2, 7]   # un-researched Scout (2) to researched Sniper (6+1)
+    expression: "base_attack + (owner_has_researched ? RESEARCH_ATK_BONUS : 0)"
+    notes: "Attack value Combat uses. base_attack from unit stat table (2/3/5/6). RESEARCH_ATK_BONUS
+      (+1) owned by Research GDD. Computed live from owner tech flag (research buffs all units instantly).
+      Damage formula itself (cover, counters, min 1) is owned by Combat, not here."
+    added: 2026-07-19
+    revised: ""
 
 # Example:
 #
@@ -139,7 +262,107 @@ formulas: []
 #
 # Required fields: name, status, source, referenced_by, value, unit, added
 
-constants: []
+constants:
+  - name: grid_terrain_types
+    status: active
+    source: design/gdd/grid-terrain.md
+    referenced_by:
+      - design/gdd/grid-terrain.md
+      - design/gdd/movement-system.md   # Impassable blocks traversal
+    value: "[Plain, Cover, Impassable]"
+    unit: enum
+    added: 2026-07-19
+    revised: ""
+    # Cover grants a defensive damage reduction; magnitude is owned by combat GDD, not here.
+    # Impassable tiles are never passable or occupiable.
+
+  - name: grid_adjacency_mode
+    status: active
+    source: design/gdd/grid-terrain.md
+    referenced_by:
+      - design/gdd/grid-terrain.md
+      - design/gdd/movement-system.md   # movement is 4-directional per this
+    value: 4-directional-orthogonal
+    unit: adjacency
+    added: 2026-07-19
+    revised: ""
+    # No diagonals. Movement and Combat both assume orthogonal adjacency (manhattan_distance == 1).
+
+  - name: grid_size_range
+    status: active
+    source: design/gdd/grid-terrain.md
+    referenced_by:
+      - design/gdd/grid-terrain.md
+    value: "8-24"
+    unit: tiles_per_axis
+    added: 2026-07-19
+    revised: ""
+    # Vertical Slice per-map dimension range (GRID_WIDTH, GRID_HEIGHT). Prototype baseline 8x8.
+
+  - name: win_condition
+    status: active
+    source: design/gdd/game-state-turn-manager.md
+    referenced_by:
+      - design/gdd/game-state-turn-manager.md
+    value: "opponent HQ destroyed (hp reaches 0)"
+    unit: rule
+    added: 2026-07-19
+    revised: ""
+    # Combat destroys the HQ; Base & Production defines the HQ entity; both must agree with this.
+    # Optional MAX_ROUNDS + tiebreak (see game-state-turn-manager Tuning Knobs) is a secondary path.
+
+  - name: ap_reset_policy
+    status: active
+    source: design/gdd/game-state-turn-manager.md
+    referenced_by:
+      - design/gdd/game-state-turn-manager.md
+      - design/gdd/ap-economy.md   # AP Economy owns the amounts and honors this timing rule
+    value: "reset to income at start-of-turn; unspent AP discarded at end-of-turn (no banking)"
+    unit: rule
+    added: 2026-07-19
+    revised: ""
+    # Pillar 1 timing rule. Turn manager owns the timing; AP Economy owns the income/spend AMOUNTS.
+    # AP Economy GDD must honor "no banking" — unspent AP is lost each turn.
+
+  - name: BASE_INCOME
+    status: active
+    source: design/gdd/ap-economy.md
+    referenced_by:
+      - design/gdd/ap-economy.md
+    value: 10
+    unit: AP_per_turn
+    added: 2026-07-19
+    revised: ""
+    # Flat per-turn AP every player receives regardless of board state. Input to ap_income formula.
+
+  - name: outpost_income_tiers
+    status: active
+    source: design/gdd/ap-economy.md
+    referenced_by:
+      - design/gdd/ap-economy.md
+    value: "+2 AP per outpost for outposts 1-4; +1 AP per outpost for 5+ (TIER_THRESHOLD=4)"
+    unit: rule
+    added: 2026-07-19
+    revised: ""
+    # Tiered diminishing returns on outpost income (snowball brake). Only COMPLETED outposts count.
+    # Outpost build COST (5 AP) and build TIME are owned by Base & Production, not here.
+
+  - name: SOFT_MOVE_PENALTY
+    status: active
+    source: design/gdd/unit-system.md
+    referenced_by:
+      - design/gdd/unit-system.md
+      - design/gdd/movement-system.md   # Movement owes the surcharge summation that reads this
+    value: 2.0   # PROVISIONAL (2026-07-20) — spike-gated; tuning range 1.5-3.0
+    unit: multiplier
+    added: 2026-07-20
+    revised: ""
+    # Unit-owned GLOBAL constant (not per-type), mirroring per-unit soft_move_cap. Each tile a unit
+    # moves past its soft_move_cap (CUMULATIVE this turn) costs ceil(move_cost * SOFT_MOVE_PENALTY) AP
+    # — a FLAT single-step surcharge (two-level step, NOT a multi-tier curve). ceil keeps AP integer
+    # (Movement/AP invariant). Purpose: brake on deep single-turn over-extension/rushes — NOT a
+    # per-step kiting tax (kiting sits under the caps). Surcharge summation formula owned by
+    # movement-system.md (owed — GDD Approved, must be revised: run /propagate-design-change).
 
 # Example:
 #
