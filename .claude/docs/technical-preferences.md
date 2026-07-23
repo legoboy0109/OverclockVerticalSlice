@@ -9,8 +9,8 @@
 - **Language**: GDScript (primary). C# may be added incrementally for
   performance-critical systems (deep AI search, large-map pathfinding) if
   profiling shows GDScript is a bottleneck — Redot supports mixing both.
-- **Rendering**: [TO BE CONFIGURED — Forward+ / Mobile / Compatibility]
-- **Physics**: [TO BE CONFIGURED — Godot Physics / Jolt]
+- **Rendering**: Forward+ (default renderer; 2D top-down has no need for Mobile/Compatibility's reduced feature set)
+- **Physics**: Godot Physics 2D (standard for grid-based tactics; Jolt targets 3D and is not relevant here)
 
 ## Input & Platform
 

@@ -18,6 +18,16 @@ placement) that every other gameplay system builds against. Crucially, the autho
 grid is a plain, render-decoupled data model — the on-screen `TileMapLayer` is only a view —
 so the tempo AI can evaluate hypothetical board states and the test suite can run headless.
 
+> **Projection note (2026-07-23):** The board renders in **2:1 isometric (dimetric)** projection
+> — see `design/art/art-bible.md` (Map Projection Decision). This is a **view-layer** choice only:
+> every rule, coordinate, adjacency, and distance in this GDD is computed in **logical grid space**
+> and is projection-invariant. "Square tiles" below means square *in grid space*; they render as
+> 2:1 diamonds. "Cardinal / 4-directional (N/S/E/W)" means the four **grid** axes — under isometric
+> these render along the screen *diagonals*, but adjacency and all grid math are unchanged. The
+> isometric view introduces new *architecture* concerns (grid→screen transform, inverse mouse→tile
+> picking, depth-sort, iso overlay rendering) captured in
+> `docs/architecture/change-impact-2026-07-23-isometric-projection.md` — none alter this GDD's rules.
+
 ## Player Fantasy
 
 Grid & Terrain is infrastructure — players don't "feel" the grid, they feel *what it
@@ -35,7 +45,11 @@ stage.
 ### Core Rules
 
 1. **The board is a rectangular grid** of `GRID_WIDTH` × `GRID_HEIGHT` square tiles.
-   Dimensions are per-map data (Vertical Slice range **8×8 to 24×24**; prototype baseline 8×8).
+   The engine supports any dimensions in the **8×8 to 24×24** range (this stays the accepted
+   bound for the future map editor / map variety). **The Vertical Slice ships a single pinned
+   board size: `GRID_WIDTH` = 14, `GRID_HEIGHT` = 16** (decision 2026-07-22 — see Tuning Knobs
+   and the dominant-strategy resolution note). Prototype baseline was 8×8; variable per-map sizes
+   are an Alpha/map-editor goal, deliberately out of VS scope.
    Larger maps trade maneuver room for longer matches and heavier AI/movement search.
 2. **Coordinates are integer `(x, y)`**, origin top-left `(0,0)`, where `x` is the column
    (`0 … GRID_WIDTH−1`) and `y` is the row (`0 … GRID_HEIGHT−1`). No wrap-around.
@@ -44,8 +58,9 @@ stage.
    Slice (it keeps the board readable — Pillar 3 — and matches the prototype).
 4. **Each tile has exactly one terrain type** from the Vertical-Slice set:
    - **Plain** — passable, no combat modifier. The default.
-   - **Cover** — passable; grants a defensive damage reduction to an occupant *(magnitude
-     owned by the Combat GDD; Grid owns only the "this tile is cover" flag)*.
+   - **Cover** — passable; grants a defensive damage reduction to a **unit** occupant *(magnitude
+     owned by the Combat GDD, which also scopes application — structures are cover-immune; Grid owns
+     only the "this tile is cover" flag)*.
    - **Impassable** — never passable, never occupiable (walls, chasms, void). Creates
      chokepoints and defensible shape.
 5. **Occupancy: each tile holds at most one occupant** (a unit, an HQ, or an outpost) or is
@@ -130,7 +145,7 @@ deterministic, and O(1) except `neighbors` (O(4)).
 | Variable | Type | Range | Description |
 |----------|------|-------|-------------|
 | x, y | int | any | Candidate cell coordinate |
-| GRID_WIDTH, GRID_HEIGHT | int | 8–24 (VS) | Board dimensions (per-map) |
+| GRID_WIDTH, GRID_HEIGHT | int | 8–24 engine; VS pinned 14×16 | Board dimensions (per-map) |
 
 **Output:** boolean. **Example:** on an 8×8 grid, `in_bounds(7,7)=true`, `in_bounds(8,0)=false`.
 
@@ -205,6 +220,7 @@ Adjacency is the special case `manhattan_distance == 1`.
 | Combat Resolution | Hard | `is_cover`, adjacency (`manhattan_distance == 1`) for target validation |
 | Base & Production | Hard | `place` structures on chosen tiles; occupancy checks for deploy-tile selection |
 | Command & Action Interface / Game HUD | Hard | Read terrain + occupancy to render board and highlight overlays |
+| AI Opponent | Hard | `manhattan_distance`, `terrain_at`, `occupant_at` — positional inputs to scoring |
 
 *Bidirectional note:* each dependent GDD, when authored, must list Grid & Terrain under its
 own Dependencies section.
@@ -213,7 +229,7 @@ own Dependencies section.
 
 | Knob | VS Range | Default | Affects | If too high | If too low |
 |------|----------|---------|---------|-------------|------------|
-| `GRID_WIDTH` × `GRID_HEIGHT` | 8×8 – 24×24 | 8×8 | Match length, maneuver room, readability | Sprawling matches, readability strain at 1080p, slower AI/movement search | Cramped board, no maneuvering, tempo swings feel forced |
+| `GRID_WIDTH` × `GRID_HEIGHT` | 8×8 – 24×24 (engine); **VS pinned to 14×16** | **14×16 (VS)** | Match length, maneuver room, readability | Sprawling matches, readability strain at 1080p, slower AI/movement search | Cramped board, no maneuvering, tempo swings feel forced |
 | Terrain type set | {Plain, Cover, Impassable} | (all three) | Tactical texture | Cognitive overload (Pillar 3 risk) | Flat, featureless board |
 | Per-map terrain layout | Authored or Procedural Center | authored | Chokepoints, defensibility, pacing | Over-walled → stalemates | Open field → no positional play |
 | Adjacency mode | 4-dir (fixed VS) | 4-directional | Movement/combat reach | (8-dir would blur readability + rebalance everything) | — |
@@ -293,7 +309,7 @@ these overlays are owned by the Command & Action Interface GDD (#9), not here.
 
 | Question | Owner | Notes / target |
 |----------|-------|----------------|
-| Final Vertical-Slice grid dimensions per map (8×8 baseline vs larger)? | game-designer / level design | Resolve during level design; 8×8 proven in prototype |
+| ~~Final Vertical-Slice grid dimensions per map (8×8 baseline vs larger)?~~ **RESOLVED 2026-07-22** | game-designer / level design | **VS pinned to a single 14×16 board.** Chosen to defuse the map-size dominant-strategy composition (see AP Economy #3's resolved "Bimodal meta" open question): a fixed mid-small board keeps rush's punish window landing while the boom economy is still mid-tier, not post-ceiling. Corner-to-corner Manhattan distance = 28 tiles; sits just past the modeled 12–14-square band (22–26) but still lands rush contact ~turn 5–6 before boom is unrecoverable — a starting point to balance/playtest from. Variable map sizes + editor deferred to Alpha. |
 | Add variable-move-cost terrain (difficult terrain, high ground) in Alpha? | Movement GDD author | Deferred — Movement GDD may want terrain that costs extra AP to enter |
 | Can Impassable chokepoints help mitigate the endgame closeout-drag (defensible positions reduce corner-spam)? | Base & Production GDD author | Flag for #7 and level design — a spatial lever on the drag problem |
 | Should cover be binary or have degrees (light/heavy cover)? | Combat GDD author | VS = binary; degrees are an Alpha consideration owned by Combat |
