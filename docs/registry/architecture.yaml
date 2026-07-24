@@ -30,7 +30,7 @@
 #   Superseded entries:     Grep pattern="status: superseded"
 
 version: 1
-last_updated: ""
+last_updated: "2026-07-24"   # ADR-0012 (faction identity modifier framework — completes 16/16 ADRs): +1 interface (faction_effective_values [fwd-decl to Unit/AP/B&P/Research]), +1 api_decision (faction_modifier_framework), +1 forbidden (faction_owns_base_value); referenced_by updates (ADR-0012) on authoritative_game_state [+PlayerState.faction field], entity_stat_template_storage [pattern reuse], effective_attack [faction combat delta extends it], ai_decision [AI reads effective_X + faction-axis fwd-flags]. (Earlier same day: ADR-0016 (game HUD): +2 interfaces (detail_panel_selection_seam [fwd-decl to ADR-0015], ap_income_breakdown [fwd-decl to ADR-0006]), +1 api_decision (hud_module_shape), +1 forbidden (multi_owner_audio_play); referenced_by updates (ADR-0016 as consumer) on state_change_signal, action_result, turn_start_sequence, board_render_query, focus_management, ap_query_spend, gameplay_config_storage [+HUDConfig, closes ADR-0014's INPUT_LOCK_MS>=AP_TICK_DURATION_MS invariant]. (Same day earlier: ADR-0015 (command & action interface FSM): +1 api_decision (command_fsm_module_shape), +1 forbidden (balance_constant_in_presentation_layer); referenced_by updates (ADR-0015 as concrete consumer) on state_change_signal [+ flash↔tick shared-signal note], reachable_query, combat_targeting_query, ap_query_spend, action_result, verb_handler, board_render_query, board_input, gameplay_config_storage [+cancel_build_hold_ms on InputConfig]. (Same day earlier: ADR-0014 +1 interface (board_input), +1 api_decision (focus_management), +2 forbidden (manual_input_focus_arbitration, screen_axis_board_cursor); referenced_by update on gameplay_config_storage (+InputConfig); ADR-0013 +1 interface (board_render_query) +2 api_decisions (board_render_transform, iso_depth_sort) +1 forbidden (local_to_map_for_iso_picking); ADR-0011 +1 interface +1 api_decision; ADR-0010 +4 interfaces +1 api_decision +1 forbidden; ADR-0009 +1 interface +1 api_decision +1 forbidden. Prior 2026-07-23: ADR-0008 +4 interfaces +1 forbidden; ADR-0007 +2 api_decisions +1 forbidden.)
 
 # ─── STATE OWNERSHIP ─────────────────────────────────────────────────────────
 # Who is the authoritative owner of each piece of shared game state.
@@ -43,7 +43,68 @@ last_updated: ""
 # interface: how other systems access this state (read-only property, method call,
 #   signal, shared resource, etc.) — this is the contract other ADRs depend on.
 
-state_ownership: []
+state_ownership:
+  - state: authoritative_game_state
+    status: active
+    owner_system: game-state-turn-manager
+    adr: docs/architecture/adr-0001-state-model-ownership-lifecycle.md
+    interface: "GameState (Resource, not Node). Read API side-effect-free (active_player, current_ap(player), round_number, match_status, entities(), entity_at(tile), grid, faction_of(player)); clone() -> GameState deep copy for lookahead; mutate ONLY via apply_action(action). ADR-0008 adds field starting_player (int, set once by start_match(), immutable after) and method start_turn(player) -> Array[Event] (GameState's own turn-boundary orchestrator, invoked by start_match() and EndTurnAction.apply()). ADR-0010 adds method destroy_entity(entity_id) -> Array[Event] (the sole same-step destruction hook — Grid removal + forward-declared Research.on_lab_destroyed + Destroyed events; called only from inside a verb handler's apply()). ADR-0011 adds field PlayerState.is_ai_controlled (bool, set once at Setup, immutable after Setup->PlayerTurn — same lock as PlayerState.faction; the data-model backing for 'active player, human or AI' that game-state-turn-manager.md's prose assumed but had no field for). ADR-0012 adds field PlayerState.faction (FactionDef ref, set once at the SELECTING->ASSIGNED setup commit, immutable after Setup->PlayerTurn — same Setup-lock; faction_of(player) returns it; survives clone() as a shared path-having preload'd Resource, zero copy cost per ADR-0007)."
+    write_access: apply_action-only   # no system writes GameState fields directly (start_turn/destroy_entity run inside a verb handler's apply, itself under apply_action; is_ai_controlled set once at Setup then locked)
+    referenced_by:
+      - docs/architecture/adr-0001-state-model-ownership-lifecycle.md
+      - docs/architecture/adr-0008-start-of-turn-sequencing.md   # adds starting_player field + start_turn() method
+      - docs/architecture/adr-0010-combat-resolution-destruction-wincheck.md   # adds destroy_entity() method
+      - docs/architecture/adr-0011-ai-opponent-decision-loop.md   # adds PlayerState.is_ai_controlled field (Setup-locked like faction)
+      - docs/architecture/adr-0013-isometric-board-rendering.md   # BoardRenderer reads entities()/entity_at() read-only to know what to draw
+      - docs/architecture/adr-0012-faction-identity-modifier-framework.md   # adds PlayerState.faction field (Setup-locked) + faction_of(player) accessor; clone-survival relies on ADR-0007's shared-path-having-Resource finding
+    added: 2026-07-23
+    revised: 2026-07-24
+
+  - state: entity_id
+    status: active
+    owner_system: game-state-turn-manager
+    adr: docs/architecture/adr-0001-state-model-ownership-lifecycle.md
+    interface: "Deterministic int, assigned from GameState.next_entity_id counter, incremented by apply_action on entity creation. Unique within one GameState; clone() preserves ids."
+    write_access: apply_action-only
+    referenced_by:
+      - docs/architecture/adr-0001-state-model-ownership-lifecycle.md
+    added: 2026-07-23
+    revised: ""
+
+  - state: grid_occupancy
+    status: active
+    owner_system: grid-terrain
+    adr: docs/architecture/adr-0005-grid-representation-map-format.md
+    interface: "GridState (Resource field of GameState). Read: in_bounds, terrain_at, is_cover, is_passable, occupant_at (returns entity_id, or -1), neighbors (4-dir), manhattan_distance. Mutate: place(entity_id,x,y), remove(x,y), move(from,to) — single-occupant invariant. terrain is static PackedByteArray post-load; occupancy is PackedInt32Array of entity_id. occupant_at returns an id; GameState.entity_at resolves it to EntityState."
+    write_access: apply_action-only   # place/remove/move called only inside apply_action handlers
+    referenced_by:
+      - docs/architecture/adr-0005-grid-representation-map-format.md
+    added: 2026-07-23
+    revised: ""
+
+  - state: current_ap
+    status: active
+    owner_system: ap-economy
+    adr: docs/architecture/adr-0006-ap-economy-data-model-spend-contract.md
+    interface: "PlayerState.current_ap (int, read via GameState). Written ONLY by AP.spend() (deduction, called from inside a verb handler's apply(), ADR-0002 step 5) and AP.reset_turn()/AP.discard() (turn-boundary writes, invoked by ADR-0008's start-of-turn sequence). Read via can_afford(player, amount) / current_ap(player)."
+    write_access: ap-economy-only   # AP.spend() (in apply()) and AP.reset_turn()/AP.discard() (turn boundary)
+    referenced_by:
+      - docs/architecture/adr-0006-ap-economy-data-model-spend-contract.md
+      - docs/architecture/adr-0008-start-of-turn-sequencing.md   # start_turn() step 4 calls AP.reset_turn(); EndTurnAction.apply() calls AP.discard()
+    added: 2026-07-23
+    revised: 2026-07-23
+
+  - state: income_this_turn
+    status: active
+    owner_system: ap-economy
+    adr: docs/architecture/adr-0006-ap-economy-data-model-spend-contract.md
+    interface: "PlayerState.income_this_turn (int). Frozen start-of-turn snapshot; sole writer AP.reset_turn(), invoked once per player per start-of-turn (ADR-0008). Immune to same-turn increase/decrease in the underlying formula inputs (GDD Rule 5)."
+    write_access: ap-economy-only   # AP.reset_turn() only
+    referenced_by:
+      - docs/architecture/adr-0006-ap-economy-data-model-spend-contract.md
+      - docs/architecture/adr-0008-start-of-turn-sequencing.md   # start_turn() step 4 invokes AP.reset_turn() at the correct sequence position
+    added: 2026-07-23
+    revised: 2026-07-23
 
 # Example:
 #
@@ -71,7 +132,335 @@ state_ownership: []
 #
 # pattern options: signal | direct_call | event_bus | shared_resource | rpc | none
 
-interfaces: []
+interfaces:
+  - contract: action_result
+    status: active
+    pattern: direct_call
+    producer: game-state-turn-manager   # apply_action returns it
+    consumers:
+      - command-action-interface   # reads ok/reason to accept/reject a commit
+      - ai-opponent                # reads ok/reason during evaluate-commit loop
+      - game-hud                   # reads events to drive AP tick, hp drain, action-log
+    adr: docs/architecture/adr-0002-apply-action-command-model.md
+    signal_signature: "apply_action(action: Action) -> ActionResult { ok: bool, reason: int (Reason enum), events: Array[Event] }"
+    referenced_by:
+      - docs/architecture/adr-0002-apply-action-command-model.md
+      - docs/architecture/adr-0011-ai-opponent-decision-loop.md   # AITurnDriver reads result.ok to handle rejection (AC-24) + result.events stream
+      - docs/architecture/adr-0015-command-action-interface-fsm.md   # Tier-4: reads ActionResult.ok after every commit; on reject swallows, re-issues Tier-1, stays in menu, spends 0 (never re-validates legality itself)
+      - docs/architecture/adr-0016-game-hud.md   # reads ActionResult.events as the action-log source — one log entry per event, in the events' append order (deterministic resolution order, ADR-0004)
+    added: 2026-07-23
+    revised: 2026-07-24
+
+  - contract: verb_handler
+    status: active
+    pattern: direct_call
+    producer: game-state-turn-manager   # apply_action dispatches to handlers by verb enum
+    consumers:
+      - movement-system            # supplies MoveAction validate/apply
+      - combat-resolution          # supplies AttackAction validate/apply
+      - base-production            # supplies Build/Produce/CancelBuild validate/apply
+      - research-tech              # supplies Research validate/apply
+    adr: docs/architecture/adr-0002-apply-action-command-model.md
+    signal_signature: "validate(state: GameState, action: Action) -> int (Reason; PURE, total); apply(state: GameState, action: Action) -> Array[Event] (assumes validated; may not fail). Dispatched via action.verb enum through a Dictionary[int, Callable]."
+    referenced_by:
+      - docs/architecture/adr-0002-apply-action-command-model.md
+      - docs/architecture/adr-0009-reachable-search-pathfinding.md   # supplies MoveAction validate()/apply()
+      - docs/architecture/adr-0010-combat-resolution-destruction-wincheck.md   # supplies AttackAction validate()/apply()
+      - docs/architecture/adr-0011-ai-opponent-decision-loop.md   # AI constructs typed Action subclasses; AITurnDriver commits them through the same dispatch
+      - docs/architecture/adr-0015-command-action-interface-fsm.md   # constructs typed Move/Attack/Build/Produce/CancelBuild/EndTurn Actions on commit and dispatches them through apply_action (the sole commit vector; UI never mutates state)
+    added: 2026-07-23
+    revised: 2026-07-24
+
+  - contract: ap_query_spend
+    status: active
+    pattern: direct_call
+    producer: ap-economy   # static AP class — income()/can_afford()/spend()
+    consumers:
+      - command-action-interface   # can_afford/income drive affordability highlighting + previews
+      - ai-opponent                # can_afford/current_ap/income gate every candidate action it scores
+      - game-hud                   # current_ap/income/income breakdown display
+      - movement-system            # spend() for move cost, inside apply()
+      - combat-resolution          # spend() for attack cost, inside apply()
+      - base-production            # spend() for build/produce cost, inside apply()
+      - research-tech              # spend() for research cost, inside apply()
+    adr: docs/architecture/adr-0006-ap-economy-data-model-spend-contract.md
+    signal_signature: "income(state, player) -> int [pure]; can_afford(state, player, amount) -> bool [pure]; spend(state, player, amount) -> bool [sole mutator, active-player-gated, called only inside a verb handler's apply()]"
+    referenced_by:
+      - docs/architecture/adr-0006-ap-economy-data-model-spend-contract.md
+      - docs/architecture/adr-0010-combat-resolution-destruction-wincheck.md   # spend(attack_cost | DEFENSIVE_ATTACK_COST) inside Combat.apply()
+      - docs/architecture/adr-0011-ai-opponent-decision-loop.md   # can_afford/current_ap/income gate every candidate before scoring (no discount)
+      - docs/architecture/adr-0015-command-action-interface-fsm.md   # can_afford gates every menu verb (D-2); current_ap drives projected_remaining_ap (D-1); UI NEVER deducts (spend() runs inside each verb handler's apply())
+      - docs/architecture/adr-0016-game-hud.md   # HUD reads current_ap (AP counter, opponent-AP muted) + can_afford (Build-button affordability) via GameStateReader; income breakdown uses the forward-declared ap_income_breakdown (separate contract), never a HUD-side sum
+    added: 2026-07-23
+    revised: 2026-07-24
+
+  - contract: completed_outpost_count
+    status: active
+    pattern: direct_call
+    producer: base-production   # forward-declared — concrete implementation owed by ADR-0007
+    consumers:
+      - ap-economy                 # AP.income() calls this for the n term
+    adr: docs/architecture/adr-0006-ap-economy-data-model-spend-contract.md
+    signal_signature: "completed_outpost_count(state: GameState, player: int) -> int — count of the player's alive, owned, completed Economy Outposts (HQ/Production Outposts/Defensive Structures excluded). Forward-declared by ADR-0006; implemented by ADR-0007."
+    referenced_by:
+      - docs/architecture/adr-0006-ap-economy-data-model-spend-contract.md
+      - docs/architecture/adr-0007-entity-stat-schema.md   # concrete implementation (iterates entities() filtering type == ECONOMY_OUTPOST + COMPLETED)
+    added: 2026-07-23
+    revised: 2026-07-23
+
+  - contract: economy_tech_income_bonus
+    status: active
+    pattern: direct_call
+    producer: research-tech   # forward-declared — concrete implementation owed by ADR-0007
+    consumers:
+      - ap-economy                 # AP.income() calls this when has_economy_tech is set
+    adr: docs/architecture/adr-0006-ap-economy-data-model-spend-contract.md
+    signal_signature: "economy_tech_income_bonus(state: GameState, player: int) -> int — the per-outpost AP value of Research's Economy Tech effect (ECONOMY_TECH_INCOME_BONUS, Research-owned constant). Forward-declared by ADR-0006; implemented by ADR-0007. ECONOMY_TECH_TIER_THRESHOLD (the cap) is AP Economy's own EconomyConfig field, not part of this contract."
+    referenced_by:
+      - docs/architecture/adr-0006-ap-economy-data-model-spend-contract.md
+      - docs/architecture/adr-0007-entity-stat-schema.md   # concrete implementation (has_economy_tech gate + INCOME_BONUS × min(count, TIER_THRESHOLD))
+    added: 2026-07-23
+    revised: 2026-07-23
+
+  - contract: state_change_signal
+    status: active
+    pattern: signal
+    producer: game-state-turn-manager   # GameState emits its own signal (no separate bus Autoload)
+    consumers:
+      - game-hud                   # AP tick, hp-pip drain, action-log append, dirty-flag coalescing
+      - board-renderer             # sprite move, depth re-sort
+      - game-hud                   # audio single-owner subscribes to the same commit signal (TR-hud-021/231)
+    adr: docs/architecture/adr-0004-event-signal-architecture.md
+    signal_signature: "signal action_applied(result: ActionResult) — emitted once, synchronously, at apply_action step 7, ONLY when result.ok == true. Payload carries the typed events: Array[Event] from ADR-0002. Per-commit coalescing is automatic (one signal, N typed events); subscribers narrow via `if e is SomeEvent:`. A fired signal always means state actually changed. Rejected actions do not emit — callers read result from the direct apply_action() return. Resolves QQ-02 (supersedes its state_changed / per-category-signal candidates). ADR-0008 adds StructureCompletedEvent + TechCompletedEvent to the Event payload (emitted by EndTurnAction via this same signal, since EndTurnAction dispatches through apply_action)."
+    referenced_by:
+      - docs/architecture/adr-0004-event-signal-architecture.md
+      - docs/architecture/adr-0008-start-of-turn-sequencing.md   # StructureCompletedEvent/TechCompletedEvent ride this signal via EndTurnAction
+      - docs/architecture/adr-0013-isometric-board-rendering.md   # BoardRenderer subscribes to know WHEN to redraw (sprite move, depth re-sort), never polling
+      - docs/architecture/adr-0015-command-action-interface-fsm.md   # CommandInterface subscribes for: (1) commit-flash — fired off THIS single signal, the SAME event Game HUD's AP-tick (ADR-0016) subscribes to, so both animate on one frame (TR-cmdui-023, the named top desync risk); (2) board-change Tier-1 re-issue of reachable()/legal_targets(); (3) GAME_OVER observation by BOTH players' interface instances (committing or not)
+      - docs/architecture/adr-0016-game-hud.md   # HUD subscribes for the AP-tick (visual + the single-owner audio via HudAudioDispatcher), hp-pip drain, and action-log append (one entry per result.events element); the SAME signal #9's commit-flash rides (one-frame flash<->tick sync)
+    added: 2026-07-23
+    revised: 2026-07-24
+
+  - contract: turn_start_sequence
+    status: active
+    pattern: direct_call
+    producer: game-state-turn-manager   # GameState.start_turn() orchestrates the canonical 4-step order
+    consumers:
+      - ap-economy                 # AP.reset_turn() is step 4 (income snapshot)
+      - base-production            # advance_build_timers() is part of step 3
+      - research-tech              # advance_research_timers() is part of step 3
+      - unit-system                # reset_turn_flags() is step 2
+    adr: docs/architecture/adr-0008-start-of-turn-sequencing.md
+    signal_signature: "GameState.start_turn(player: int) -> Array[Event] — the canonical fixed 4-step start-of-turn sequence: (1) set active_player, (2) reset per-turn flags for the player's entities (Unit/Structure.reset_turn_flags), (3) advance build + research timers (BaseProduction/Research.advance_*_timers, completing structures/techs), (4) AP.reset_turn() income snapshot. Called by start_match() for the first turn and by EndTurnAction.apply() (after AP.discard + round_number increment) each subsequent turn. Step order is fixed — step 4 MUST follow step 3 (see forbidden: start_of_turn_step_reordering)."
+    referenced_by:
+      - docs/architecture/adr-0008-start-of-turn-sequencing.md
+      - docs/architecture/adr-0016-game-hud.md   # HUD drives the AP-counter fill-flourish + turn-change stinger off the start-of-turn signal; completion cues fire on the Structure/TechCompletedEvents this sequence emits (step 3)
+    added: 2026-07-23
+    revised: 2026-07-24
+
+  - contract: build_timer_advance
+    status: active
+    pattern: direct_call
+    producer: base-production   # forward-declared — concrete implementation owed by the Base & Production epic
+    consumers:
+      - game-state-turn-manager    # start_turn() step 3 calls it
+    adr: docs/architecture/adr-0008-start-of-turn-sequencing.md
+    signal_signature: "BaseProduction.advance_build_timers(state: GameState, player: int) -> Array[Event] — decrements build_turns_remaining on the player's Under-Construction structures; transitions any reaching 0 to StructureState.BuildStatus.COMPLETED, appending one StructureCompletedEvent per completion. Forward-declared by ADR-0008; implemented by the Base & Production epic (no dedicated ADR — same pattern as ADR-0006→ADR-0007's completed_outpost_count)."
+    referenced_by:
+      - docs/architecture/adr-0008-start-of-turn-sequencing.md
+    added: 2026-07-23
+    revised: ""
+
+  - contract: research_timer_advance
+    status: active
+    pattern: direct_call
+    producer: research-tech   # forward-declared — concrete implementation owed by the Research/Tech epic
+    consumers:
+      - game-state-turn-manager    # start_turn() step 3 calls it
+    adr: docs/architecture/adr-0008-start-of-turn-sequencing.md
+    signal_signature: "Research.advance_research_timers(state: GameState, player: int) -> Array[Event] — decrements research_turns_remaining on the player's Labs with a non-null current_research_target; on reaching 0, sets the owner's PlayerState tech flag (has_attack_tech/has_defense_tech/has_economy_tech), clears the Lab's current_research_target, and appends a TechCompletedEvent. Order-independent vs build_timer_advance within step 3 (research-tech.md joint-completion rule). Forward-declared by ADR-0008; implemented by the Research/Tech epic."
+    referenced_by:
+      - docs/architecture/adr-0008-start-of-turn-sequencing.md
+    added: 2026-07-23
+    revised: ""
+
+  - contract: turn_flag_reset
+    status: active
+    pattern: direct_call
+    producer: unit-system   # Unit.reset_turn_flags; Structure.reset_turn_flags is Base & Production-owned (co-producer)
+    consumers:
+      - game-state-turn-manager    # start_turn() step 2 calls both, filtered to the active player's entities
+    adr: docs/architecture/adr-0008-start-of-turn-sequencing.md
+    signal_signature: "Unit.reset_turn_flags(unit: UnitState) -> void (sets has_attacked=false, tiles_moved_this_turn=0 — unit-system.md Rule 2a); Structure.reset_turn_flags(structure: StructureState) -> void (sets units_produced_this_turn=0, has_attacked=false — base-production.md; no-op-safe on structure types that don't use these). Forward-declared by ADR-0008; Turn Manager owns WHEN they run (step 2), owning systems own the flag semantics."
+    referenced_by:
+      - docs/architecture/adr-0008-start-of-turn-sequencing.md
+    added: 2026-07-23
+    revised: ""
+
+  - contract: reachable_query
+    status: active
+    pattern: direct_call
+    producer: movement-system   # static Movement.reachable() — side-effect-free
+    consumers:
+      - ai-opponent                # scores candidate move tiles from many cloned states per turn
+      - command-action-interface   # renders reachable overlay + per-tile path/cost preview
+      - game-hud                   # per-tile AP cost + in-cap/over-cap (is_surcharged) readout
+    adr: docs/architecture/adr-0009-reachable-search-pathfinding.md
+    signal_signature: "Movement.reachable(state: GameState, unit: UnitState) -> Array[ReachableTile] [PURE, side-effect-free; Movement.ReachableTile = {tile: Vector2i, min_cost: int, is_surcharged: bool}]. min_cost/is_surcharged share one soft-cap summation with Movement.move_path_cost() (preview==billed agreement invariant). Callable against the authoritative state or any clone(); no cache (recomputed fresh each call). Neighbor-expansion is a fixed N->E->S->W order for deterministic tie-break (does NOT depend on GridState.neighbors()'s order)."
+    referenced_by:
+      - docs/architecture/adr-0009-reachable-search-pathfinding.md
+      - docs/architecture/adr-0011-ai-opponent-decision-loop.md   # AI scores candidate move tiles + move+attack combos from reachable() over cloned states
+      - docs/architecture/adr-0015-command-action-interface-fsm.md   # Tier-1 move set (holds reachable() result per PREVIEW_MOVE entry + re-issues on board-change); renders in-cap/over-cap from is_surcharged directly (TR-cmdui-011), never inferred
+    added: 2026-07-24
+    revised: 2026-07-24
+
+  - contract: combat_targeting_query
+    status: active
+    pattern: direct_call
+    producer: combat-resolution   # static Combat.* — all side-effect-free
+    consumers:
+      - ai-opponent                # scores candidate attacks over cloned states (legal_targets/preview_damage)
+      - command-action-interface   # target overlay + damage preview + 3 blocked-shot states
+      - game-hud                   # damage number / lethal-hit telegraph from preview_damage
+    adr: docs/architecture/adr-0010-combat-resolution-destruction-wincheck.md
+    signal_signature: "Combat.legal_targets(state, attacker) -> Array[TargetResult]; Combat.legal_targets_from(state, attacker, from_tile) -> Array[TargetResult] [hypothetical origin; == legal_targets when from_tile==attacker.position; finalizes combat-resolution.md's deferred legal_targets(unit,from_tile) overload]; Combat.preview_damage(state, attacker, target) -> int [PURE, exactly == committed damage]; Combat.blocked_reason(...) -> BlockedReason {NONE, BLOCKED_BY_FRIENDLY, OUT_OF_RANGE, INSIDE_DEAD_ZONE}. All PURE/side-effect-free; callable on authoritative state or any clone()."
+    referenced_by:
+      - docs/architecture/adr-0010-combat-resolution-destruction-wincheck.md
+      - docs/architecture/adr-0011-ai-opponent-decision-loop.md   # AI scores candidate attacks + move+attack combos via legal_targets/legal_targets_from/preview_damage
+      - docs/architecture/adr-0015-command-action-interface-fsm.md   # Tier-1 attack set (legal_targets) + Tier-2 D-3 batch (legal_targets_from across reachable frontier) + preview_damage/blocked_reason for the 3 blocked-shot states; commits an AttackAction via apply_action
+    added: 2026-07-24
+    revised: 2026-07-24
+
+  - contract: entity_destruction
+    status: active
+    pattern: direct_call
+    producer: game-state-turn-manager   # GameState.destroy_entity() — the single shared same-step death hook
+    consumers:
+      - combat-resolution          # calls it on primary + counter death (the only VS killer)
+      - grid-terrain               # occupancy cleared via GridState.remove() inside the hook
+      - research-tech              # Lab-revert rides it via forward-declared on_lab_destroyed
+    adr: docs/architecture/adr-0010-combat-resolution-destruction-wincheck.md
+    signal_signature: "GameState.destroy_entity(entity_id: int) -> Array[Event] — the SOLE same-step destruction routine, called only from inside a verb handler's apply() (never mid-iteration). Order: (a) if StructureState is a Research Lab with active research, call Research.on_lab_destroyed() while the Lab is STILL live in Grid+entities_by_id; (b) GridState.remove(position); (c) entities_by_id.erase(); (d) append UnitDestroyedEvent or StructureDestroyedEvent{entity_id, is_hq}. Any future killer reuses it. run_win_check (ADR-0002 step 6) sets GameOver+GameOverEvent iff any StructureDestroyedEvent.is_hq."
+    referenced_by:
+      - docs/architecture/adr-0010-combat-resolution-destruction-wincheck.md
+    added: 2026-07-24
+    revised: ""
+
+  - contract: effective_attack
+    status: active
+    pattern: direct_call
+    producer: unit-system   # forward-declared by ADR-0010 — concrete implementation owed by the Unit/Research epic
+    consumers:
+      - combat-resolution          # Combat.damage() reads it; never touches research state directly
+    adr: docs/architecture/adr-0010-combat-resolution-destruction-wincheck.md
+    signal_signature: "effective_attack(state: GameState, attacker: EntityState) -> int == base_attack(attacker.type) + (RESEARCH_ATK_BONUS if owner has_attack_tech else 0) + faction combat delta (ADR-0012, identity-locked=0 for VS per CR-6). Forward-declared by ADR-0010 so Combat's damage formula never reads Research state directly; implemented by the Unit epic (same forward-declaration pattern as ADR-0006's completed_outpost_count). ADR-0012 folds the faction combat delta into this SAME site (one more term), never a parallel resolution."
+    referenced_by:
+      - docs/architecture/adr-0010-combat-resolution-destruction-wincheck.md
+      - docs/architecture/adr-0012-faction-identity-modifier-framework.md   # faction combat delta extends this exact effective_attack site (base + research + faction), identity-locked in VS; part of the faction_effective_values family
+    added: 2026-07-24
+    revised: 2026-07-24
+
+  - contract: lab_destruction_revert
+    status: active
+    pattern: direct_call
+    producer: research-tech   # forward-declared by ADR-0010 — concrete implementation owed by the Research epic
+    consumers:
+      - game-state-turn-manager    # GameState.destroy_entity() calls it, same apply_action
+    adr: docs/architecture/adr-0010-combat-resolution-destruction-wincheck.md
+    signal_signature: "Research.on_lab_destroyed(state: GameState, lab: StructureState) -> void — reverts the destroyed Lab's current_research_target to Not Started (no refund; research-tech.md Rule 6 / research-008). Called synchronously by destroy_entity() BEFORE Grid/entities removal, so it may read the Lab's live fields. Forward-declared by ADR-0010; implemented by the Research epic. Terminal tech-unlock flags (has_attack/defense/economy_tech) are permanent and survive Lab destruction (TR-research-003) — this reverts only in-progress research."
+    referenced_by:
+      - docs/architecture/adr-0010-combat-resolution-destruction-wincheck.md
+    added: 2026-07-24
+    revised: ""
+
+  - contract: ai_decision
+    status: active
+    pattern: direct_call
+    producer: ai-opponent   # static AI.choose_action() — pure, headless, side-effect-free
+    consumers:
+      - game-state-turn-manager    # AITurnDriver drives run_ai_turn(): choose_action() -> apply_action() loop
+    adr: docs/architecture/adr-0011-ai-opponent-decision-loop.md
+    signal_signature: "AI.choose_action(state: GameState, economy_investments_committed: int) -> Action [PURE, headless, side-effect-free; nullable — null means no candidate clears AIConfig.pass_threshold, the CR-2/CR-6 termination signal]. Clones state internally for evaluation; NEVER calls apply_action itself (committing is the caller's job — the split is what keeps AI headless/unit-testable per TR-ai-001). economy_investments_committed is the turn-scoped cadence-cap counter (AC-30), owned by the AITurnDriver caller, not by AI. Streaming max-scan enumeration in entity-id-ascending order (no candidate array materialized); tie-break lowest ap_cost then lowest entity_id via SCORE_TIE_EPSILON tolerance (AC-23). Pacing/looping lives OUTSIDE AI, in AITurnDriver (Node)."
+    referenced_by:
+      - docs/architecture/adr-0011-ai-opponent-decision-loop.md
+      - docs/architecture/adr-0012-faction-identity-modifier-framework.md   # AI reads faction-correct costs by passing ai_player to the shared effective_X (faction_effective_values) — ZERO AI code change. FWD-FLAGS to ADR-0011: a future AI cost cache must key on player (effective_X is a fn of base_owner+player); a Rush build_cost discount raises economy_ceiling_score and can re-open the Neutral-tuned LETHAL_FLOOR_BONUS>economy_ceiling_score invariant along the faction axis (re-verify with the asymmetry prototype). Both no-op under Neutral.
+    added: 2026-07-24
+    revised: 2026-07-24
+
+  - contract: board_render_query
+    status: active
+    pattern: direct_call
+    producer: board-renderer   # BoardRenderer (Node2D) — the iso view/transform/picking seam
+    consumers:
+      - command-action-interface   # pick_at() for click routing; grid_to_screen() for overlay/preview positioning; set_overlay()/clear_overlay()
+      - game-hud                   # grid_to_screen(tile) as the on-board glyph anchor (hp pips, badges, markers)
+    adr: docs/architecture/adr-0013-isometric-board-rendering.md
+    signal_signature: "BoardRenderer.grid_to_screen(tile: Vector2i) -> Vector2 [exact 2:1 dimetric forward]; BoardRenderer.screen_to_grid(px: Vector2) -> Vector2i [exact inverse; NEVER local_to_map/map_to_local]; BoardRenderer.pick_at(px: Vector2) -> PickResult{tile: Vector2i, occupant_entity_id: int (-1 if none)} [occupant-priority front-to-back, then diamond fallback]; BoardRenderer.set_overlay(tiles: Array[Vector2i], class_id: int) -> void; BoardRenderer.clear_overlay() -> void. On-board glyph anchors = grid_to_screen(tile) + GLYPH_OFFSETS[glyph_class]. Presentation-layer; reads GameState read-only, reacts to action_applied (ADR-0004), never mutates state."
+    referenced_by:
+      - docs/architecture/adr-0013-isometric-board-rendering.md
+      - docs/architecture/adr-0015-command-action-interface-fsm.md   # CommandInterface calls pick_at() (mouse click routing) + screen_to_grid() (empty-tile hover, tile-change-gated) + set_overlay()/clear_overlay() (Tier-1/Tier-2 overlay render); never re-derives iso math
+      - docs/architecture/adr-0016-game-hud.md   # on-board readouts (hp pips, has-acted/tech markers, structure hp, build-timer badge, research marker) anchor at grid_to_screen(tile) + GLYPH_OFFSETS; never re-derives iso math
+    added: 2026-07-24
+    revised: 2026-07-24
+
+  - contract: board_input
+    status: active
+    pattern: direct_call
+    producer: command-action-interface   # input layer — this ADR defines the primitives; ADR-0015's FSM Node owns/drives them
+    consumers:
+      - command-action-interface   # ADR-0015's FSM Node instantiates one BoardCursor, reads active_tile, gates commits on input_locked
+      - game-hud                   # follows the same dual-focus conventions on its interactive Controls (see api_decisions: focus_management)
+    adr: docs/architecture/adr-0014-input-focus-architecture.md
+    signal_signature: "BoardCursor (RefCounted, headless): grid_pos: Vector2i; step(direction: Vector2i, grid: GridState) -> bool [grid-axis only, NEVER screen-axis; false if out of bounds]; jump_to_next(candidates: Array[Vector2i], grid: GridState) -> void [cycles caller's salient-tile set in ascending y*width+x order, wrapping]. PLUS the owning Presentation Node (ADR-0015's FSM) holds: enum Locus{MOUSE, BOARD_CURSOR} + active_locus/active_tile [last-input-handler-wins precedence, no timestamps — Godot's synchronous single-threaded dispatch makes the last handler definitionally most-recent] + input_locked: bool [post-commit UX debounce via await get_tree().create_timer(InputConfig.input_lock_ms/1000.0).timeout; gates ONLY new commit dispatch, not hover/cursor/focus; NOT the single-commit correctness guarantee — that stays structural per ADR-0002/CR-6]. BoardCursor's on-screen anchor = BoardRenderer.grid_to_screen(grid_pos) (ADR-0013, never re-derived)."
+    referenced_by:
+      - docs/architecture/adr-0014-input-focus-architecture.md
+      - docs/architecture/adr-0015-command-action-interface-fsm.md   # CommandInterface (the FSM Node) is the concrete owner: instantiates one BoardCursor, holds active_locus/active_tile + input_locked, feeds _current_salient_tiles() to jump_to_next() per preview mode
+    added: 2026-07-24
+    revised: 2026-07-24
+
+  - contract: detail_panel_selection_seam
+    status: active
+    pattern: signal
+    producer: command-action-interface   # forward-declared by ADR-0016 — CommandInterface emits it; implemented by the Command & Action epic (ADR-0015)
+    consumers:
+      - game-hud                   # detail panel subscribes outward-in and re-renders from a GameStateReader read for the target entity
+    adr: docs/architecture/adr-0016-game-hud.md
+    signal_signature: "signal CommandInterface.selection_changed(target: SelectionTarget) — SelectionTarget = {entity_id: int, pinned: bool} (pinned=true selected/persistent, false peek/inspecting — the CR-6 pinned-vs-peek visual distinction). ONE-WAY #9 -> HUD: the HUD subscribes; #9 NEVER calls into a HUD-owned node (protects game-hud.md's 'Downstream dependents: None' leaf claim + TR-hud-013/020). Forward-declared by ADR-0016 (the consumer); implemented by ADR-0015's CommandInterface epic. Back-declaration owed to ADR-0015 — same consumer-names-producer pattern as ADR-0006's completed_outpost_count."
+    referenced_by:
+      - docs/architecture/adr-0016-game-hud.md
+      - docs/architecture/adr-0015-command-action-interface-fsm.md   # CommandInterface is the producer that must emit this signal (forward-declared by ADR-0016)
+    added: 2026-07-24
+    revised: ""
+
+  - contract: ap_income_breakdown
+    status: active
+    pattern: direct_call
+    producer: ap-economy   # forward-declared by ADR-0016 — concrete implementation owed by the AP Economy epic (TR-hud-019 assigns it to ADR-0006, which defined AP.income() total but NOT this decomposition)
+    consumers:
+      - game-hud                   # renders the income-breakdown popover as pre-labeled named fields (never a HUD-side sum)
+    adr: docs/architecture/adr-0016-game-hud.md
+    signal_signature: "AP.ap_income_breakdown(state: GameState, player: int) -> Dictionary {base: int, outpost: int, econ_tech: int} [PURE] — the pre-labeled, pre-computed income decomposition the HUD renders as named fields (CR-3 / TR-hud-019). The HUD must NOT receive raw inputs (outpost count, tech flag) and split locally (that is the balance_constant_in_presentation_layer violation). The Econ-Tech coefficient (ECONOMY_TECH_INCOME_BONUS) + cap (ECONOMY_TECH_TIER_THRESHOLD) stay AP-Economy-owned, never restated in HUD code. Forward-declared by ADR-0016; implemented by the AP Economy epic (complements ADR-0006's AP.income() which returns only the total). Back-declaration owed to ADR-0006."
+    referenced_by:
+      - docs/architecture/adr-0016-game-hud.md
+      - docs/architecture/adr-0006-ap-economy-data-model-spend-contract.md   # AP Economy is the producer that must implement this decomposition (income() total already defined; breakdown owed)
+    added: 2026-07-24
+    revised: ""
+
+  - contract: faction_effective_values
+    status: active
+    pattern: direct_call
+    producer: faction-identity   # forward-declared by ADR-0012 — the effective_X functions live IN the owning systems (Unit/AP/B&P/Research), each folding faction_of(player)'s delta at its own read site (CR-4); Faction never owns a base value
+    consumers:
+      - command-action-interface   # preview cost/damage read effective_X (Neutral => == base_X)
+      - game-hud                   # AP counter / detail panel read effective_X
+      - ai-opponent                # AI passes ai_player to effective_X -> faction-correct costs with ZERO AI code change
+      - combat-resolution          # effective_attack folds the (VS-identity-locked) faction combat delta
+    adr: docs/architecture/adr-0012-faction-identity-modifier-framework.md
+    signal_signature: "effective_X(state: GameState, base_owner, player: int) -> int [PURE] = clamp(base_X(base_owner) + Sigma(research_delta, faction_delta), floor_X, inf). Faction delta read via Faction.{unit,structure,tech}_delta(FactionDef, base_owner) (typed Array[Faction*Delta] entry scan; null/absent => 0, orphan-inert). Forward-declared family: Unit.effective_produce_cost/effective_move_cost/effective_soft_move_cap (+ faction term folded into ADR-0010's effective_attack, identity-locked VS); AP.effective_ap_income (into the 4-term formula, econ-tech term + ECONOMY_TECH_TIER_THRESHOLD preserved verbatim); BaseProduction.effective_build_cost/effective_build_time/effective_production_cap (TWO-SIDED: base_cap==0 -> 0 inert, base_cap>=1 -> max(1,base+delta)); Research.effective_research_cost/effective_research_time/faction_allows (NOT tech's FactionTechDelta.denied). Floors: max(1,..) costs, MIN_MOVE_COST (Movement's existing move_cost>=1), MIN_BUILD_TIME/MIN_RESEARCH_TIME/BASE_INCOME_FLOOR (owed one-liners, no-op under Neutral). Under Neutral every effective_X == base_X EXACTLY (TR-faction-011). Implemented by the owning epics (Unit/AP/B&P/Research); same forward-declaration pattern as ADR-0006->0007."
+    referenced_by:
+      - docs/architecture/adr-0012-faction-identity-modifier-framework.md
+    added: 2026-07-24
+    revised: ""
 
 # Example:
 #
@@ -131,7 +520,226 @@ performance_budgets: []
 # Register an API decision when the choice is non-obvious and other ADRs might
 # make a different choice for the same purpose without knowing this was decided.
 
-api_decisions: []
+api_decisions:
+  - purpose: game_state_deep_copy
+    status: active
+    api: Resource.duplicate_deep()
+    not: "hand-written clone() / duplicate(true)"   # explicitly banned for state cloning
+    adr: docs/architecture/adr-0001-state-model-ownership-lifecycle.md
+    reason: "Engine-native recursive deep copy of nested Resources (default DEEP_DUPLICATE_INTERNAL mode duplicates path-less runtime Resources inside Dictionaries/Arrays). Requires every state field be storage-flagged (@export or PROPERTY_USAGE_STORAGE)."
+    referenced_by:
+      - docs/architecture/adr-0001-state-model-ownership-lifecycle.md
+    added: 2026-07-23
+    revised: ""
+
+  - purpose: game_state_base_class
+    status: active
+    api: "extends Resource (constructed at runtime via .new() only, never loaded from disk)"
+    not: "Node / bare RefCounted"   # Node breaks headless; RefCounted has no built-in deep-copy
+    adr: docs/architecture/adr-0001-state-model-ownership-lifecycle.md
+    reason: "Headless-simulatable (no scene tree), gets duplicate_deep() for clone(), serializable for future save/load. All game-logic data models (GameState, PlayerState, EntityState, GridState) follow this."
+    referenced_by:
+      - docs/architecture/adr-0001-state-model-ownership-lifecycle.md
+    added: 2026-07-23
+    revised: ""
+
+  - purpose: randomness
+    status: active
+    api: "RandomNumberGenerator.new() with an explicit integer seed (seed = map_def.proc_seed); consumed once at map load only"
+    not: "global randi() / randf() / randomize() / seed()"   # banned — shared hidden stream
+    adr: docs/architecture/adr-0003-deterministic-simulation-rng-isolation.md
+    reason: "The only randomness in the project is Grid procedural map-gen. A dedicated seeded instance is reproducible and isolated; the global RNG functions share one hidden stream so any stray call anywhere breaks reproducibility. No RNG touches per-turn state advancement."
+    referenced_by:
+      - docs/architecture/adr-0003-deterministic-simulation-rng-isolation.md
+    added: 2026-07-23
+    revised: ""
+
+  - purpose: grid_storage
+    status: active
+    api: "GridState (Resource): flat PackedByteArray terrain (enum, static) + PackedInt32Array occupancy (entity_id | -1), indexed index(x,y)=y*width+x"
+    not: "Array[Tile] objects / Dictionary keyed by Vector2i"
+    adr: docs/architecture/adr-0005-grid-representation-map-format.md
+    reason: "O(1) integer index, deterministic linear iteration (ADR-0003 Rule 3), packed arrays deep-copy recursively under duplicate_deep() so a clone is fully independent, cache-friendly for AI scoring. Dictionary iteration is hash/insertion-ordered (forbidden); Tile objects add per-tile alloc + clone cost."
+    referenced_by:
+      - docs/architecture/adr-0005-grid-representation-map-format.md
+    added: 2026-07-23
+    revised: ""
+
+  - purpose: map_format
+    status: active
+    api: "MapDefinition (Resource, .tres) — dims, mode (AUTHORED/PROCEDURAL), authored_terrain PackedByteArray or scaled-int proc params, hq_tiles/deploy_tiles; sole constructor build_grid(map_def)->GridState"
+    not: "JSON/text map files + custom parser"
+    adr: docs/architecture/adr-0005-grid-representation-map-format.md
+    reason: "Typed fields, inspector authoring, standalone loadability for tests, and it is the future map-editor's output format — all free from Resource. JSON can be an export format later if git-diffing matters."
+    referenced_by:
+      - docs/architecture/adr-0005-grid-representation-map-format.md
+    added: 2026-07-23
+    revised: ""
+
+  - purpose: ap_economy_module_shape
+    status: active
+    api: "Static utility class (class_name AP extends RefCounted, no instance state) — income()/can_afford()/spend()/reset_turn()/discard() all take state explicitly"
+    not: "Instance-based service object / methods added directly to GameState or PlayerState"
+    adr: docs/architecture/adr-0006-ap-economy-data-model-spend-contract.md
+    reason: "Mirrors the verb-handler shape ADR-0002 already established for Movement/Combat/Base&Prod/Research (validate/apply held by the owning system, not an instantiated object) — no per-instance state to justify an object, and keeps GameState from re-accreting every Core system's logic."
+    referenced_by:
+      - docs/architecture/adr-0006-ap-economy-data-model-spend-contract.md
+    added: 2026-07-23
+    revised: ""
+
+  - purpose: gameplay_config_storage
+    status: active
+    api: "One dedicated Resource (.tres) per system (e.g. EconomyConfig), typed @export fields, loaded once by a thin logic-free loader Autoload (e.g. Balance) that never mutates/validates — config is NOT stored on GameState"
+    not: "GDScript const values / one shared project-wide BalanceConfig resource for all systems"
+    adr: docs/architecture/adr-0006-ap-economy-data-model-spend-contract.md
+    reason: "Satisfies the data-driven coding standard (consts are hardcoded, banned); per-system files avoid coupling unrelated systems' tuning passes into one asset; keeping config off GameState means it is never deep-copied by duplicate_deep() on the AI's per-candidate-action clone loop. Precedent: ADR-0005's MapDefinition (config-as-Resource) and ADR-0001's MatchService (thin logic-free Autoload)."
+    referenced_by:
+      - docs/architecture/adr-0006-ap-economy-data-model-spend-contract.md
+      - docs/architecture/adr-0009-reachable-search-pathfinding.md   # UnitConfig (soft_move_penalty_x10) is a new instance of this per-system config-Resource pattern
+      - docs/architecture/adr-0010-combat-resolution-destruction-wincheck.md   # CombatConfig (ATTACK_COST/COVER_DR/MIN_DAMAGE) is a new instance of this pattern
+      - docs/architecture/adr-0011-ai-opponent-decision-loop.md   # AIConfig (15 scoring knobs) is a new instance, loaded by the same Balance-style Autoload; adds a load-time cross-knob invariant assert
+      - docs/architecture/adr-0014-input-focus-architecture.md   # InputConfig (input_lock_ms, menu_keyboard_nav_enabled) is a new instance; forward-declares a cross-resource invariant (input_lock_ms >= HUDConfig.ap_tick_duration_ms) for ADR-0016 to enforce at load
+      - docs/architecture/adr-0015-command-action-interface-fsm.md   # appends cancel_build_hold_ms: int = 500 to ADR-0014's InputConfig (CR-6a hold threshold — the field's mechanism is decided by the ADR that needs it, same pattern as ADR-0008 adding starting_player to ADR-0001's GameState)
+      - docs/architecture/adr-0016-game-hud.md   # HUDConfig (9 knobs incl. ap_tick_duration_ms) is a new instance; the loader Autoload CLOSES ADR-0014's forward-declared cross-config invariant (input_lock_ms >= ap_tick_duration_ms) with a RELEASE-SURVIVING guard (push_error + clamp, NOT bare assert — stripped in release exports per ADR-0011), evaluated after both InputConfig + HUDConfig load
+    added: 2026-07-23
+    revised: 2026-07-24
+
+  - purpose: event_dispatch_shape
+    status: active
+    api: "GameState declares & emits its own single unified signal (action_applied(result: ActionResult)); Presentation connects via MatchService.get_current(). Each Core system defines typed Event subclasses (base: class_name Event extends RefCounted) appended to result.events in resolution order."
+    not: "separate EventBus Autoload / per-category signals (ap_changed, hp_changed, …) / one aggregate state_changed generic-diff signal"
+    adr: docs/architecture/adr-0004-event-signal-architecture.md
+    reason: "Resource (Object subclass) emits signals natively; MatchService already solves the lookup a bus Autoload would add. Single signal = automatic per-commit coalescing + deterministic intra-commit event order (append order = TR-hud-014 resolution order); typed events keep static-type info a generic diff would discard. duplicate_deep() clones carry ZERO connections (Resource has no DUPLICATE_SIGNALS mechanism — godot-specialist-confirmed 2026-07-23), so AI lookahead is silent by construction. Resolves QQ-02."
+    referenced_by:
+      - docs/architecture/adr-0004-event-signal-architecture.md
+      - docs/architecture/adr-0008-start-of-turn-sequencing.md   # defines StructureCompletedEvent + TechCompletedEvent as new Event subclasses under this shape
+      - docs/architecture/adr-0010-combat-resolution-destruction-wincheck.md   # defines UnitDestroyedEvent + StructureDestroyedEvent{is_hq} under this shape
+      - docs/architecture/adr-0011-ai-opponent-decision-loop.md   # AITurnDriver relies on the per-commit action_applied signal so presentation renders each AI action as it resolves (TR-ai-013 streaming)
+    added: 2026-07-23
+    revised: 2026-07-24
+
+  - purpose: entity_stat_template_storage
+    status: active
+    api: "Immutable stat templates (UnitTypeDef / StructureTypeDef / TechDef, each extends Resource) authored as .tres files, loaded ONCE via preload() into thin logic-free registry Autoloads exposed as typed consts (UnitTypes.SCOUT, StructureTypes.ECONOMY_OUTPOST, Techs.ATTACK_TECH). Live entity state (UnitState/StructureState) holds a `type` reference to the shared template; 'which type is this' is answered by Resource-reference identity (structure.type == StructureTypes.ECONOMY_OUTPOST)."
+    not: "GDScript enum + const Dictionary of stats / a parallel StructureKind|UnitKind enum discriminator stored alongside the type ref / runtime load() of template .tres"
+    adr: docs/architecture/adr-0007-entity-stat-schema.md
+    reason: "Data-driven per coding-standards (inspector-editable, no code change to retune). CONFIRMED (godot-specialist 2026-07-23, core/io/resource.cpp _duplicate_recursive gated on is_built_in()): duplicate_deep()'s DEEP_DUPLICATE_INTERNAL shares path-having (preload'd) Resources by reference rather than deep-copying — so templates cost ZERO on GameState.clone()'s per-candidate-action AI lookahead path (the whole template subgraph, incl. StructureTypeDef.producible_types, is skipped before recursion). Complements ADR-0001's path-less finding: path-less sub-resources copy, path-having sub-resources share. Mirrors ADR-0006's Balance/EconomyConfig config-as-Resource precedent, strengthened from var to const."
+    referenced_by:
+      - docs/architecture/adr-0007-entity-stat-schema.md
+      - docs/architecture/adr-0012-faction-identity-modifier-framework.md   # FactionDef + the Factions registry REUSE this exact pattern (preload'd consts, Resource-ref identity, shared-not-copied on clone); PlayerState.faction survives clone() at zero cost by the same is_built_in() sharing
+    added: 2026-07-23
+    revised: 2026-07-24
+
+  - purpose: entity_subclass_shape
+    status: active
+    api: "EntityState (ADR-0001 base: entity_id/owner/position) is specialized into EXACTLY TWO concrete subclasses — UnitState and StructureState. All five structure types (HQ, Economy/Production Outpost, Defensive Structure, Research Lab) are StructureState instances distinguished by their `type` ref; Research Lab's per-Lab fields (current_research_target, research_turns_remaining) are folded onto generic StructureState, not a third subclass."
+    not: "a dedicated ResearchLabState (or per-type) subclass of StructureState / a growing per-structure-type class hierarchy"
+    adr: docs/architecture/adr-0007-entity-stat-schema.md
+    reason: "Matches research-tech.md Rule 2's 'built through Base & Production's existing structure mechanics unchanged, no new mechanics' framing — one StructureState type means code walking entities_by_id never needs an `is ResearchLabState` branch. Accepted cost: a few Lab-only fields sit unused (zero-value) on the 4 non-Lab structure types. Adding a 6th structure/5th unit type is a new .tres + one registry const, no schema/enum change."
+    referenced_by:
+      - docs/architecture/adr-0007-entity-stat-schema.md
+    added: 2026-07-23
+    revised: ""
+
+  - purpose: movement_search_module_shape
+    status: active
+    api: "Static utility class (class_name Movement extends RefCounted, no instance state) — reachable(state, unit), move_path_cost(unit, tiles_entered), and the ADR-0002 verb-handler pair validate(state, action)/apply(state, action) all take state explicitly. Search bookkeeping (visited/cost table) is a fresh-per-call flat PackedInt32Array indexed y*width+x."
+    not: "Instance methods on GridState (couples Grid to Unit-owned fields) / instance methods on GameState (re-accretes Core logic onto GameState) / a pooled-and-cleared cross-call visited buffer (stale-across-clones risk)"
+    adr: docs/architecture/adr-0009-reachable-search-pathfinding.md
+    reason: "Mirrors ADR-0006's ap_economy_module_shape exactly (validate/apply held by the owning system, not an instantiated object; state passed explicitly so the identical code runs on the authoritative state and any AI clone()). Keeps GridState entity-agnostic (ADR-0005 layering) and keeps GameState from re-accreting every Core system's logic. Fresh-per-call allocation (TR-movement-010) sidesteps stale-visited-across-clones bugs; reversible to pooled if QQ-05's perf spike requires."
+    referenced_by:
+      - docs/architecture/adr-0009-reachable-search-pathfinding.md
+    added: 2026-07-24
+    revised: ""
+
+  - purpose: combat_module_shape
+    status: active
+    api: "Static utility class (class_name Combat extends RefCounted, no instance state) — legal_targets/legal_targets_from/preview_damage/blocked_reason/damage + the ADR-0002 verb-handler pair validate(state, action)/apply(state, action) all take state explicitly. Private helpers (_apply_hit, _defender_may_counter) are static too. Death/removal is NOT here — it is GameState.destroy_entity() (see interfaces: entity_destruction)."
+    not: "Instance methods on GameState (re-accretes Core logic) / death-removal logic inside Combat (must be the shared GameState.destroy_entity hook so any killer + Research's Lab-revert reuse it)"
+    adr: docs/architecture/adr-0010-combat-resolution-destruction-wincheck.md
+    reason: "Mirrors ap_economy_module_shape / movement_search_module_shape — the combat RULES (targeting, damage, counter) are stateless static functions taking state explicitly, so identical code runs on the authoritative state and any AI clone(). The one deliberate split: destroy_entity() is a GameState method (generic mutation-layer state surgery reused by many systems), not a Combat rule."
+    referenced_by:
+      - docs/architecture/adr-0010-combat-resolution-destruction-wincheck.md
+    added: 2026-07-24
+    revised: ""
+
+  - purpose: ai_module_shape
+    status: active
+    api: "Split shape: (1) class_name AI extends RefCounted — a PURE, HEADLESS, no-instance-state static utility with one entry point choose_action(state, economy_investments_committed) -> Action (mirrors ap_economy_module_shape / movement_search_module_shape / combat_module_shape); PLUS (2) class_name AITurnDriver extends Node — a small, non-authoritative, non-Autoload driver holding the paced evaluate->commit loop (await get_tree().create_timer(AIConfig.commit_pacing_sec).timeout between commits). AIConfig (15 @export knobs) is loaded by the same thin Balance-style Autoload as EconomyConfig/UnitConfig/CombatConfig (gameplay_config_storage), with a load-time invariant assert (LETHAL_FLOOR_BONUS > economy_ceiling_score, TR-ai-008)."
+    not: "single class_name AI extends Node that owns loop+pacing+scoring together (breaks TR-ai-001 headless — decision logic must be unit-testable with no scene tree) / event-driven AI reacting to action_applied (re-entrant, un-paceable, worse testability) / materialize-full-candidate-array-then-sort (extra alloc+sort on top of OQ-1's O(N^2*W*H) enumeration cost) / a new dedicated Autoload just for AIConfig"
+    adr: docs/architecture/adr-0011-ai-opponent-decision-loop.md
+    reason: "The AI is the first system needing a paced multi-commit loop (human actions are self-paced by input). Splitting the pure headless decision (AI.choose_action) from the paced driver (AITurnDriver) satisfies TR-ai-001 (headless, every Logic-typed AC needs no scene tree) and TR-ai-013 (streamed one-commit-at-a-time rendering, AC-9b) simultaneously — neither an all-in-one Node nor an event-driven design can. The choose_action/commit split also makes AC-24 (stale-clone rejection) testable with no mock/DI seam. A future lint rule (CR-4/AC-5 static allowlist) checks AI reads only the approved query set AND that ai.gd never extends Node / never awaits."
+    referenced_by:
+      - docs/architecture/adr-0011-ai-opponent-decision-loop.md
+    added: 2026-07-24
+    revised: ""
+
+  - purpose: board_render_transform
+    status: active
+    api: "Hand-rolled closed-form grid<->screen 2:1 dimetric pair on BoardRenderer (Node2D): grid_to_screen(tile: Vector2i) -> Vector2 = origin_offset_px + Vector2((x-y)*TILE_W/2, (x+y)*TILE_H/2); screen_to_grid(px) -> Vector2i via the algebraic inverse (u = sx/TILE_W + sy/TILE_H, v = sy/TILE_H - sx/TILE_W, then floori). Provably exact inverses (godot-specialist-verified numerically 2026-07-24: exact full-board round-trip, deterministic lower-index boundary tie-break, tile-size-independent). grid_to_screen(tile) is ALSO the sprite placement anchor (art bible §8.4 ground-contact pivot). picking = BoardRenderer.pick_at(px) -> PickResult{tile, occupant_entity_id}: occupant-sprite front-to-back test first, then screen_to_grid diamond fallback."
+    not: "TileMapLayer.local_to_map()/map_to_local() for OUR coordinate math (buggy for iso — GH#89423, QQ-03-verified) / engine forward + hand-rolled inverse split (two independently-sourced math paths can drift at edge pixels — preview-vs-commit-style bug) / pure diamond math with no occupant priority (fails TR-cmdui-004 stacked-sprite ambiguity)"
+    adr: docs/architecture/adr-0013-isometric-board-rendering.md
+    reason: "QQ-03 confirmed engine local_to_map() is unreliable for TILE_SHAPE_ISOMETRIC. One shared exact-inverse formula family upholds Architecture Principle 5 (preview==commitment) at the render seam — a click can never resolve to a tile visually inconsistent with where it is drawn. Occupant-priority picking resolves TR-cmdui-004. Command & Action Interface (ADR-0014/0015) and Game HUD (ADR-0016) consume pick_at()/grid_to_screen(), never re-deriving iso math."
+    referenced_by:
+      - docs/architecture/adr-0013-isometric-board-rendering.md
+    added: 2026-07-24
+    revised: ""
+
+  - purpose: iso_depth_sort
+    status: active
+    api: "Native Node2D.y_sort_enabled on an OccupantLayer child holding all board occupants (unit/structure/tall-prop sprites, pivots at ground-contact bottom-center); floor + overlay TileMapLayers sit OUTSIDE the Y-sort group. Coarse draw order is z_index banding: FloorTileMapLayer z_index 0 -> OverlayTileMapLayer z_index 1 -> OccupantLayer z_index 2, all top-level siblings under BoardRenderer. y_sort_enabled only re-sorts occupants WITHIN their band. No custom depth math (art bible §8.8)."
+    not: "custom per-sprite depth/painter math / the deprecated YSort node (use Node2D.y_sort_enabled, deprecated-apis.md line 15) / CanvasGroup (irrelevant to depth-sort — material compositing only)"
+    adr: docs/architecture/adr-0013-isometric-board-rendering.md
+    reason: "art bible §8.8 already specifies the native mechanism; ground-contact pivot (§8.4) makes it correct with zero custom code. GUARDRAIL: a future node added under OccupantLayer must NOT set a conflicting z_index that fights the Y-sort (godot-specialist 2026-07-24) — a Y-sorted child cannot escape its parent's z-index band, so a stray root-level-z-index VFX node would break occupant depth-sort. Code-review/scene-authoring guardrail, not a code check."
+    referenced_by:
+      - docs/architecture/adr-0013-isometric-board-rendering.md
+    added: 2026-07-24
+    revised: ""
+
+  - purpose: focus_management
+    status: active
+    api: "Native Godot 4.6 Control dual-focus: grab_click_focus() (mouse-click focus) + grab_focus() (keyboard/gamepad focus) as distinct channels; distinct `focus`/`hover` StyleBox theme slots for the two rings (no custom ring drawing); focus_neighbor_top/bottom/left/right (or focus_next/previous) for keyboard traversal order; focus_mode=FOCUS_NONE for present-but-inert Controls (opponent turn / GAME_OVER), focus_mode=FOCUS_CLICK for the MENU_KEYBOARD_NAV=false fallback (mouse-clickable, keyboard-traversal suppressed). BoardCursor (see interfaces: board_input) is DELIBERATELY NOT a Control — it is a headless RefCounted grid cursor, kept off the Control focus system entirely."
+    not: "a custom/project-specific focus manager bypassing native Control dual-focus / hand-rolled per-frame focus-ring suppression / treating BoardCursor as a Control focus concept / a single unified focus state (4.6 splits mouse vs keyboard/gamepad focus — both can be active at once)"
+    adr: docs/architecture/adr-0014-input-focus-architecture.md
+    reason: "Redot 26.2's 4.6 dual-focus API confirmed present via direct ClassDB introspection (game-hud.md, 2026-07-22); reusing it gives free focus/hover styling and future AccessKit (4.5+) screen-reader integration that rides native Control focus, for zero custom code. HIGH-risk residual (input-consumption order under the 4.6 mouse-vs-keyboard focus split, + FOCUS_CLICK's exact traversal-suppression semantics) is gated behind a pre-Accepted engine spike, not asserted — godot-specialist 2026-07-24 confirmed the pre-4.6 propagation order is documented/stable but the 4.6-split-specific interaction is undocumented and must be spiked."
+    referenced_by:
+      - docs/architecture/adr-0014-input-focus-architecture.md
+      - docs/architecture/adr-0016-game-hud.md   # the HUD's 4 interactive controls (Build, End Turn, income-breakdown toggle, action-log scroll) follow these conventions; inert (opponent turn / EndTurn transient / GameOver) = FOCUS_NONE
+    added: 2026-07-24
+    revised: 2026-07-24
+
+  - purpose: command_fsm_module_shape
+    status: active
+    api: "Split shape: (1) class_name CommandFSM extends RefCounted — a PURE, HEADLESS, no-instance-state static core: enum State{IDLE, ENTITY_SELECTED, PREVIEW_MOVE, PREVIEW_ATTACK, PREVIEW_PRODUCE, PREVIEW_BUILD, GAME_OVER (absorbing)} + pure next_state(current, trigger, state)->State + menu_model(state, entity)->Array[VerbEntry] (CR-4 filtered menu) + the D-1/D-2/D-3 display derivations (projected_remaining_ap/attack_possible_after_move), each computed EXCLUSIVELY from owning-system query returns. PLUS (2) class_name CommandInterface extends Node — the Presentation coordinator that holds _fsm_state/_selected_id/BoardCursor/_input_locked + the ephemeral Tier-1/Tier-2 recompute sets (Vector2i-keyed dicts), does input routing (reads active_tile per ADR-0014, pick_at per ADR-0013), overlay rendering (BoardRenderer.set_overlay), action_applied subscription, and commit dispatch (GameState.apply_action) — but delegates every DECISION to CommandFSM. Node, NOT Node2D/Control (owns no visual of its own; delegates render to sibling BoardRenderer). Cancel-Build gesture = a _process-polled hold accumulator (InputConfig.cancel_build_hold_ms) inside ENTITY_SELECTED, no new top state."
+    not: "single class_name CommandInterface extends Node holding transitions+rendering+input together (forces every FSM-transition/menu-filter AC to be Integration-typed — breaks the headless-Logic-test discipline) / State-pattern one-class-per-state hierarchy (7 states is small; enum+pure next_state matches ADR-0002 verb-enum dispatch, and avoids the subclass hierarchy ADR-0007 also declined) / Node2D or Control base for the coordinator (it owns no transform/layout; BoardRenderer owns the 2D canvas) / the UI re-deriving any owning formula or holding a balance constant (see forbidden: balance_constant_in_presentation_layer)"
+    adr: docs/architecture/adr-0015-command-action-interface-fsm.md
+    reason: "Mirrors ai_module_shape's pure-core/driving-Node split exactly: the pure CommandFSM makes the ~18 Logic-typed command-action ACs (transition table, menu filtering, D-1/D-2/D-3) unit-testable headless with no scene tree, and structurally enforces the Pass-Through Invariant (the pure core can reach cost/legality data ONLY by calling a side-effect-free query — there is nowhere for a hardcoded balance constant to live). CommandInterface is inherently scene-tree-coupled (input, signal subscription, render delegation) so its own behaviors are Integration/Visual-Feel-typed, consistent with how the GDD classifies all view-layer ACs. godot-specialist 2026-07-24: extends Node is the correct base for a non-visual coordinator delegating render to a sibling Node2D."
+    referenced_by:
+      - docs/architecture/adr-0015-command-action-interface-fsm.md
+    added: 2026-07-24
+    revised: ""
+
+  - purpose: hud_module_shape
+    status: active
+    api: "Three-part shape: (1) GameStateReader (class_name ... extends RefCounted) — an injected READ-ONLY facade wrapping GameState, exposing GETTERS ONLY (no apply_action, no setter reachable), so 'HUD never mutates state' is STRUCTURAL (a write path does not exist on the object HUD scripts hold), not review-enforced (TR-hud-003). (2) ApCounterFsm (class_name ... extends RefCounted) — a PURE headless animation-state core: enum State{COMMITTED, FILL_FLOURISH, TICK_DOWN, PREVIEW_ECHO} + pure next_state(current, trigger)->State, making AC-3a/4/5a/25 headless-testable (mirrors CommandFSM). (3) HudAudioDispatcher — the SOLE code-level play() chokepoint for every HUD audio event, resolving a single total priority order (GameOver > turn-stinger > completion[deduped] > AP-fill) with ducking; it OWNS the play() calls but may manage >=2 AudioStreamPlayer children under the hood (one player plays one stream; true ducking needs >=2 players/bus sends). HUD is a reactive Control tree using queue_redraw() (native same-frame coalescing) not a _process dirty-flag poll. New HUDConfig (Resource, 9 knobs) via gameplay_config_storage."
+    not: "widgets subscribing directly to owning systems + holding own state with no facade (never-mutates reverts to review/lint-only; anim states not headless-testable) / HUD reading the live mutable GameState directly (a HUD script could reach apply_action) / each cue's owning system playing its own sound (reopens the double-play() risk AC-20 catches; scatters the total-priority-order resolution) / a hand-rolled _process dirty-flag poll instead of queue_redraw()"
+    adr: docs/architecture/adr-0016-game-hud.md
+    reason: "Mirrors command_fsm_module_shape's pure-core-plus-Node discipline: GameStateReader makes never-mutates structural, ApCounterFsm makes the animation-state ACs headless-testable, and a single HudAudioDispatcher makes AC-20's single-play() guarantee a structural property rather than a coordination hope. godot-specialist 2026-07-24: facade pattern is the correct+only idiomatic way to exclude a write path (GDScript has no compile-time access modifiers in 4.6; @abstract adds no member visibility); queue_redraw() is the idiomatic same-frame coalescer (unchanged 4.4-4.6); one AudioStreamPlayer plays one stream so the dispatcher is a code chokepoint, not necessarily a single player node."
+    referenced_by:
+      - docs/architecture/adr-0016-game-hud.md
+    added: 2026-07-24
+    revised: ""
+
+  - purpose: faction_modifier_framework
+    status: active
+    api: "A faction is a data-only FactionDef (extends Resource, CR-1 — @export data only, no _process/logic) declaring exactly the closed 6-domain CR-2 modifier set. Per-entity deltas are TYPED Array[FactionUnitDelta]/[FactionStructureDelta]/[FactionTechDelta] entry sub-resources (each {type/tech: <TypeDef Resource ref>, ...int deltas}), NOT Resource-keyed Dictionaries. FactionDefs are preload'd into a Factions registry Autoload as consts (Factions.NEUTRAL/RUSH/BOOM); identity by Resource-reference (== Factions.RUSH), reusing entity_stat_template_storage (ADR-0007) — so a FactionDef is SHARED (not deep-copied) on GameState.clone() at zero cost, and PlayerState.faction survives clone() by reference. Faction is a MODIFIER PROVIDER: each owning system exposes effective_X(state, base_owner, player) that folds the acting player's faction delta at its OWN read site (see interfaces: faction_effective_values), floored per domain; Faction owns no base value. A static Faction helper (RefCounted) centralizes the roster-sized entry scan + orphan-inertness (null/absent -> 0). PlayerState gains a faction: FactionDef field (Setup-locked, immutable after Setup->PlayerTurn, same lock as is_ai_controlled)."
+    not: "a central Faction.effective_X that computes every domain itself (would read/own base values from 5 systems, breaking CR-4 'modifier provider never owns base values') / enum FactionKind + const Dictionary of hardcoded deltas (violates data-driven standard; loses inspector authoring + clone-sharing; parallels the enum ADR-0007 rejected) / Resource-object-keyed Dictionary delta tables (untyped violates typed-collections standard; Resource keys are a fragile .tres/inspector-authoring corner - godot-specialist 2026-07-24) / a single symmetric max(0,base+delta) production_cap clamp (fails the two-sided inert invariant TR-faction-006) / mutating base registry values (CR-4 forbids; base is read-only)"
+    adr: docs/architecture/adr-0012-faction-identity-modifier-framework.md
+    reason: "Framework-only scope matching the GDD (Rush/Boom asymmetry values prototype-gated; VS ships Neutral where every delta is identity so effective_X == base_X EXACTLY - zero corpus behavior change, TR-faction-011). Reuses entity_stat_template_storage (ADR-0007) so faction data is shared-not-copied on the AI clone path. The effective_X-folds-at-owning-read-site pattern extends ADR-0010's effective_attack (base + research + faction) rather than adding a parallel resolution site, so every consumer (preview/HUD/AI/Combat) reads ONE effective_X per domain and the AI plays any faction correctly-costed with zero AI code change (every effective_X takes player). Typed entry-array authoring (chosen over Resource-keyed dicts) keeps Resource-ref identity while being fully typed + cleanly inspector-authorable."
+    referenced_by:
+      - docs/architecture/adr-0012-faction-identity-modifier-framework.md
+    added: 2026-07-24
+    revised: ""
 
 # Example:
 #
@@ -157,7 +765,141 @@ api_decisions: []
 # Register a pattern when an ADR explicitly bans it AND other ADRs might
 # unknowingly use it (i.e., it's a tempting but wrong approach for this project).
 
-forbidden_patterns: []
+forbidden_patterns:
+  - pattern: autoload_state_authority
+    status: active
+    description: "No Autoload may hold authoritative game state. The GameState instance is created by a match-bootstrap script and passed by reference (DI). The MatchService Autoload is a logic-free reference holder ONLY (get/set current GameState) — it must never mutate, validate, or interpret state, and unit tests + AI must not depend on it."
+    why: "An Autoload models one live instance well, but the AI's clone()-based lookahead and headless tests need many independent simultaneous instances. Authority in an Autoload makes both structurally awkward and violates the DI-over-singletons coding standard."
+    adr: docs/architecture/adr-0001-state-model-ownership-lifecycle.md
+    added: 2026-07-23
+
+  - pattern: direct_game_state_field_write
+    status: active
+    description: "A system must never write GameState (or PlayerState/EntityState/GridState) fields directly. All mutation flows through GameState.apply_action(action), the sole mutation vector. Field-level write ownership (e.g. current_ap via AP Economy.spend, occupancy via Grid.place/remove/move) is enforced inside apply_action, not by callers reaching in."
+    why: "Single mutation vector guarantees atomicity, validation, AP deduction, and win-check on every state change (full contract in ADR-0002). Direct writes create race conditions and break determinism + clone parity."
+    adr: docs/architecture/adr-0001-state-model-ownership-lifecycle.md
+    added: 2026-07-23
+
+  - pattern: get_class_verb_dispatch
+    status: active
+    description: "Never dispatch/route on Object.get_class() for GDScript-defined types. For a script class, get_class() returns the base ENGINE class name (e.g. 'RefCounted'), not the script class_name, so `match action.get_class()` silently never matches. Verb dispatch uses the action.verb enum through a Dictionary[int, Callable] (or `is`-type checks where a table is overkill)."
+    why: "get_class()-based dispatch is a plausible-looking silent bug (godot-specialist, 2026-07-23). The verb-enum table is also faster than a linear is-chain as verb count grows."
+    adr: docs/architecture/adr-0002-apply-action-command-model.md
+    added: 2026-07-23
+
+  - pattern: mutation_in_validate
+    status: active
+    description: "A verb handler's validate(state, action) must be PURE — it may read state but must never mutate it, and must check ALL failure conditions (including AP.can_afford). The paired apply(state, action) assumes validation passed and may not fail. Applies to every Core verb handler (Movement/Combat/Base&Prod/Research)."
+    why: "Atomicity is achieved by validate-before-mutate with NO rollback (ADR-0002). If validate() mutates, or a precondition is checked only in apply(), an illegal action can leave partial state — breaking the 'illegal action => zero state change' guarantee (TR-gamestate-005)."
+    adr: docs/architecture/adr-0002-apply-action-command-model.md
+    added: 2026-07-23
+
+  - pattern: global_rng
+    status: active
+    description: "The global RNG functions randi() / randf() / randi_range() / randf_range() / randomize() / seed() are banned project-wide. Randomness is ONLY via a dedicated RandomNumberGenerator instance with an explicit seed, used once in Grid map-gen (see api_decisions: randomness). No RNG of any kind touches per-turn state advancement."
+    why: "The global RNG is one hidden shared stream — any stray call (an effect, helper, test) silently perturbs the sequence and breaks map-gen reproducibility + determinism (ADR-0003 Rule 1). CI greps for these calls outside the sanctioned instance."
+    adr: docs/architecture/adr-0003-deterministic-simulation-rng-isolation.md
+    added: 2026-07-23
+
+  - pattern: float_in_state
+    status: active
+    description: "No float field may appear on a state class (GameState, PlayerState, EntityState, GridState). State is int / enum / Vector2i only. Fractional gameplay coefficients (e.g. SOFT_MOVE_PENALTY, CANCEL_REFUND_RATE) are stored as scaled integers (PENALTY_X10 = 15) and computed with integer ceil/floor-division. Floats are allowed ONLY in AI advisory scoring (never written to state) and pure presentation (animation)."
+    why: "Integer arithmetic is bit-identical across platforms; float accumulation/rounding is not. Float state reintroduces nondeterminism that breaks the golden-replay test and AI clone-lookahead (ADR-0003 Rule 2; TR-gamestate-009)."
+    adr: docs/architecture/adr-0003-deterministic-simulation-rng-isolation.md
+    referenced_by:
+      - docs/architecture/adr-0009-reachable-search-pathfinding.md   # UnitConfig.soft_move_penalty_x10 fixed-point (20 = 2.0); surcharge via integer ceil-div, per TR-movement-011
+    added: 2026-07-23
+
+  - pattern: nondeterministic_iteration_order
+    status: active
+    description: "Order-sensitive operations (batch build/research completion in one tick, AI action enumeration, multi-event resolution) must NOT rely on Dictionary hash or insertion order. Spatial iteration uses flat arrays indexed y*GRID_WIDTH+x; order-sensitive entity passes iterate a list sorted by a stable key (entity_id, or tile index)."
+    why: "Iteration order must be a property of the data, not the container. Coupling correctness to insertion history is fragile across clone()/rebuild and breaks determinism (ADR-0003 Rule 3; TR-movement-006/007)."
+    adr: docs/architecture/adr-0003-deterministic-simulation-rng-isolation.md
+    added: 2026-07-23
+
+  - pattern: entity_ref_in_spatial_index
+    status: active
+    description: "A spatial index (Grid occupancy, or any future spatial cache/lookup) must store entity_id (int), never an EntityState reference. The single source of entity objects is GameState.entities_by_id; indexes hold ids and resolve via GameState.entity_at."
+    why: "If both the grid and entities_by_id held EntityState references, duplicate_deep() (clone()) would deep-copy the same unit into two divergent objects — a tile's occupant would no longer BE the object in entities_by_id. A silent aliasing bug in the project's most safety-critical operation (ADR-0005)."
+    adr: docs/architecture/adr-0005-grid-representation-map-format.md
+    added: 2026-07-23
+
+  - pattern: config_resource_runtime_mutation
+    status: active
+    description: "EconomyConfig (and any future per-system tuning Resource loaded via a thin Balance-style Autoload) must never be mutated at runtime. It is load-time tuning data, not GameState — only the resource editor (or a build-time tool) writes its fields."
+    why: "Runtime mutation of config would make income() (and any other config-driven formula) no longer a pure function of board state, breaking determinism (ADR-0003) and blurring the state/config boundary this ADR deliberately drew to keep EconomyConfig off GameState's clone path."
+    adr: docs/architecture/adr-0006-ap-economy-data-model-spend-contract.md
+    added: 2026-07-23
+
+  - pattern: runtime_load_of_type_templates
+    status: active
+    description: "Never runtime-load() a stat-template .tres (UnitTypeDef/StructureTypeDef/TechDef) outside its registry Autoload. Every reference to a template goes through the preload'd registry const (UnitTypes.SCOUT, StructureTypes.ECONOMY_OUTPOST, Techs.ATTACK_TECH). Type identity is tested by Resource-reference equality against those consts."
+    why: "load('res://data/units/scout.tres') returns a SECOND Resource instance — identical content, different object identity — so `structure.type == StructureTypes.ECONOMY_OUTPOST` silently evaluates false against it. The entire type-identity mechanism (ADR-0007) and the zero-clone-cost sharing guarantee depend on there being exactly one preload'd instance per template. A stray load() is a plausible-looking silent bug."
+    adr: docs/architecture/adr-0007-entity-stat-schema.md
+    added: 2026-07-23
+
+  - pattern: start_of_turn_step_reordering
+    status: active
+    description: "GameState.start_turn()'s 4 steps run in a FIXED order: (1) set active_player → (2) reset per-turn flags → (3) advance build + research timers (completing structures/techs) → (4) AP.reset_turn() income snapshot. Step 4 MUST come after step 3; steps 2/3 must precede step 4. The two timer-advance calls WITHIN step 3 (build vs research) are order-INDEPENDENT and must stay so (assert commutativity, don't rely on one running first)."
+    why: "The income snapshot (step 4) must observe structures/techs that completed this same turn — reordering step 4 before step 3 silently breaks base-production.md Rule 6 + research-tech.md Rule 5 ('a just-completed Economy Outpost counts toward income this turn'). Coupling correctness to the build-vs-research order within step 3 would contradict research-tech.md's explicit joint-completion rule (both complete regardless of which advance ran first)."
+    adr: docs/architecture/adr-0008-start-of-turn-sequencing.md
+    added: 2026-07-23
+
+  - pattern: astar_for_grid_movement
+    status: active
+    description: "Never use AStarGrid2D / AStar2D (or NavigationServer2D / NavigationAgent2D) for the movement reachable-search. Movement pathfinding is a hand-rolled BFS-by-depth over GridState's neighbors()/is_passable()/occupant_at() API (see api_decisions: movement_search_module_shape)."
+    why: "OVERCLOCK's move cost is DEPTH-DEPENDENT (the soft_move_cap surcharge depends on cumulative tiles_moved_this_turn + steps-so-far). AStarGrid2D's _compute_cost/_estimate_cost callbacks receive only the two grid endpoints, with no accumulated path-depth (g_score) parameter — so the surcharge cannot be computed inside them without external mutable state, which breaks A*'s closed-set 'a settled node's cost is final' invariant (the same tile has different entry costs on different-depth paths). The Navigation module is for continuous-space navmesh agents, not a logical tile grid. This is a tempting-but-wrong reach for any future ADR that adds pathfinding (e.g. AI positional queries)."
+    adr: docs/architecture/adr-0009-reachable-search-pathfinding.md
+    added: 2026-07-24
+
+  - pattern: physics_engine_for_grid_combat
+    status: active
+    description: "Never use the physics engine (PhysicsServer2D ray/shape queries, Area2D/RayCast2D nodes, Jolt) for combat targeting, line-of-fire, or range. DIRECT line-of-fire is a tile walk over GridState.occupant_at()/is_passable(); range is integer manhattan_distance / cardinal step count; hit resolution is the integer damage formula. Applies to any future targeting/LoS/AoE query too."
+    why: "Combat is deterministic integer/grid logic (ADR-0003). Physics raycasts are float-based, continuous-space, and not bit-reproducible across platforms/frames — using one would reintroduce the nondeterminism the whole simulation is built to avoid, break clone-parity for AI lookahead, and pull in the 4.6 Jolt-default surface for zero benefit. technical-preferences.md already scopes physics out of this 2D tactics game."
+    adr: docs/architecture/adr-0010-combat-resolution-destruction-wincheck.md
+    added: 2026-07-24
+
+  - pattern: local_to_map_for_iso_picking
+    status: active
+    description: "Never use TileMapLayer.local_to_map() (nor map_to_local() for our own coordinate math) for isometric screen<->grid conversion or mouse picking. All grid<->screen conversion goes through BoardRenderer's hand-rolled closed-form grid_to_screen()/screen_to_grid() exact-inverse pair (see api_decisions: board_render_transform). Applies to any future picking/hit-test/overlay-placement code, not just the initial Board Renderer."
+    why: "local_to_map() has a documented accuracy bug for TILE_SHAPE_ISOMETRIC (GH#89423, QQ-03-verified 2026-07-23) — it does not reliably invert the iso projection. Mixing an engine forward transform with a hand-rolled inverse also risks the two drifting apart at edge pixels, a preview-vs-commit-style bug at the render seam (violates Architecture Principle 5). The hand-rolled pair is provably exact and sidesteps the engine bug entirely."
+    adr: docs/architecture/adr-0013-isometric-board-rendering.md
+    added: 2026-07-24
+
+  - pattern: manual_input_focus_arbitration
+    status: active
+    description: "Never write manual arbitration code to decide 'who owns this keypress right now' between the BoardCursor and a focused menu Control, nor hand-roll per-frame focus-ring suppression on inert Controls. Bind BoardCursor stepping to the same ui_up/ui_down/ui_left/ui_right actions Control focus-neighbor traversal uses and read them in _unhandled_input — Godot's own input-consumption order (a focused Control consumes the event in the GUI pass, marking it handled, so it never reaches _unhandled_input) IS the arbitration. Inert Controls use focus_mode=FOCUS_NONE, not a hand-rolled suppression loop."
+    why: "The arbitration is a structural consequence of Godot's synchronous top-down input dispatch — writing an explicit ownership flag re-implements engine behavior, adds a state variable that can desync, and is exactly the tempting-but-wrong approach a downstream input/UI ADR or story might reach for. The last-input-handler-wins precedence rule (TR-cmdui-020) relies on this same single-owner-Node dispatch model; a second Node fielding its own _unhandled_input would reintroduce tree-order ambiguity. NOTE: the 4.6-dual-focus-specific propagation behavior is gated behind a pre-Accepted spike (see api_decisions: focus_management) — this ban is on hand-rolled arbitration, not a claim the spike is already passed."
+    adr: docs/architecture/adr-0014-input-focus-architecture.md
+    added: 2026-07-24
+
+  - pattern: screen_axis_board_cursor
+    status: active
+    description: "BoardCursor.step() moves along the LOGICAL grid's own (x,y) axes only (ui_up -> y-1, ui_down -> y+1, ui_left -> x-1, ui_right -> x+1) — NEVER along the iso screen's visually-diagonal directions. No grid<->screen transform (BoardRenderer.grid_to_screen/screen_to_grid) appears anywhere in board-cursor MOVEMENT logic; the transform is used ONLY to place the cursor's on-screen indicator, never to compute its next tile. Applies to any future board-space keyboard/gamepad navigation, not just the initial cursor."
+    why: "OVERCLOCK renders 2:1 dimetric isometric but every gameplay rule lives in logical grid space (the change-impact report's zero-rule-change finding; ADR-0013's view-layer boundary). Stepping a cursor by screen axes would make D-pad movement feel diagonal/wrong on the grid and couple input to the render transform — a tempting-but-wrong reach precisely because the board LOOKS diagonal. TR-cmdui-019 mandates grid-axis stepping."
+    adr: docs/architecture/adr-0014-input-focus-architecture.md
+    added: 2026-07-24
+
+  - pattern: balance_constant_in_presentation_layer
+    status: active
+    description: "The Command & Action Interface (command_fsm.gd/command_interface.gd) — and any preview/HUD presentation layer — must hold ZERO copies of any owning-system balance constant (move_cost, SOFT_MOVE_PENALTY, attack_cost, COVER_DR, CANCEL_REFUND_RATE, BASE_INCOME, etc.) and must never re-derive an owning-system formula locally. Every displayed cost/damage/legality/refund value is the LITERAL return of that owning system's side-effect-free query (Movement.reachable's is_surcharged/min_cost, Combat.preview_damage, AP.can_afford/current_ap, BaseProduction.cancel_build's refund), evaluated at render time. projected_remaining_ap is one subtraction of two query returns; the in-cap/over-cap split is consumed from reachable()'s is_surcharged flag, NEVER inferred from min_cost."
+    why: "This is the Pass-Through Invariant (command-action-interface.md CR-2/TR-cmdui-010), the load-bearing promise that 'a preview is a guarantee, not an estimate' — the number shown at preview is exactly the number charged at commit. A duplicated balance constant in the UI is a second source of truth that silently desyncs the moment the owning system retunes, reintroducing the preview-vs-commit disagreement the whole layer exists to prevent. Enforced structurally by the pure CommandFSM core (which can reach cost/legality only by calling a query — see api_decisions: command_fsm_module_shape) PLUS a candidate greppable lint/CI check that fails on any owning-system constant name appearing in this layer (same static-allowlist discipline as ADR-0011's AI read set). Also applies to the HUD (TR-hud-018) — enforced there by the GameStateReader facade (hud_module_shape)."
+    adr: docs/architecture/adr-0015-command-action-interface-fsm.md
+    added: 2026-07-24
+
+  - pattern: multi_owner_audio_play
+    status: active
+    description: "A shared audio event (the AP-tick on a commit, a completion chime, a turn stinger, the victory/defeat cue) has EXACTLY ONE play() owner. Two systems must never both call play() for the same logical sound. Every other interested system subscribes to the same trigger signal for its VISUAL reaction only and stays audio-silent. Concretely: the AP-tick sound is owned by the HUD's single HudAudioDispatcher (bound to the apply_action-committed signal, NOT an ap_changed value-change); #9's commit-flash and the HUD counter-tick subscribe to that same signal for visuals but do not play() (game-hud.md Audio C). The attack-commit sound is owned by Combat off the same action_applied event; #9 abstains. Structure-complete reuses #9's Build-stamp ASSET but Base & Production owns the TRIGGER (its build-timer completes it) — asset reuse is not trigger ownership."
+    why: "Two play() call sites on one shared cue is the double-trigger bug AC-20 exists to catch — it produces a flanged/doubled sound and makes the total audio priority order (GameOver > stinger > completion[deduped] > AP-fill, TR-hud-021) impossible to resolve coherently because the deciding logic is split across systems that cannot see each other's cues. A single dispatcher is the only place the duck/hard-preempt/dedup ordering can be resolved. Binding audio to a value-change (ap_changed) instead of the commit signal is a second form of this bug (fires for non-commit reasons). Enforced by an AC-20 call-count spy on the play() entry point the ADR designates."
+    adr: docs/architecture/adr-0016-game-hud.md
+    added: 2026-07-24
+
+  - pattern: faction_owns_base_value
+    status: active
+    description: "Faction Identity is a MODIFIER PROVIDER only — it must never own, read, mutate, or recompute a base value or formula owned by another system (Unit cost/mobility, AP income curve, structure cost/time/cap, tech cost/time, combat stats). Every faction effect resolves as effective_X(state, base_owner, player) = clamp(base_X + delta, floor, inf) AT THE OWNING SYSTEM'S read site (CR-4); the faction supplies only the additive int delta (via typed Array[Faction*Delta] entries). A faction delta is ADDITIVE int, never a multiplicative factor (integer-AP invariant). A faction may only re-cost/re-time/re-scale actions ALREADY priced in AP (CR-3): never a second resource, a 0-AP version of a paid verb, a new verb, or a value outside CR-2's closed 6 domains. The production_cap delta may not cross the produces/doesn't-produce boundary in either direction (two-sided inert, TR-faction-006). Faction identity is a Resource-reference (== Factions.X), never a parallel enum/string discriminator."
+    why: "CR-4's 'live modifier resolution, no base mutation' is what keeps Neutral provably inert (effective_X == base_X exactly) and lets a faction be tuned as data without touching system logic (CR-1). A central Faction service that computed effective values itself would have to read/own 5 systems' base values, re-accreting cross-system logic onto faction and breaking the single-owner-per-value discipline the whole corpus rests on. A multiplicative delta breaks integer-AP (Pillar 1 / ADR-0003). Manufacturing or deleting a verb (production_cap crossing 0, a 0-AP paid action, a new verb) breaks Pillar 1's 'no parallel resource / one AP economy'. Enforced by the Neutral regression pin (TR-faction-011), the closed-schema load reject (TR-faction-002), the two-sided cap branch (TR-faction-006), and a per-FactionDef design-review checklist for the CR-3 universals that aren't black-box-testable."
+    adr: docs/architecture/adr-0012-faction-identity-modifier-framework.md
+    added: 2026-07-24
 
 # Example:
 #
