@@ -137,7 +137,7 @@ Create `tests/gdunit4_runner.gd`:
 
 ```gdscript
 # GdUnit4 test runner — invoked by CI and /smoke-check
-# Usage: godot --headless --script tests/gdunit4_runner.gd
+# Usage: ./redot --headless --script tests/gdunit4_runner.gd
 extends SceneTree
 
 func _init() -> void:
