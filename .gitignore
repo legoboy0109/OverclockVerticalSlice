@@ -38,10 +38,13 @@ dist/
 *.dylib
 *.app
 
-# === Engine: Godot ===
+# === Engine: Redot / Godot ===
 .godot/
 *.translation
 export_presets.cfg
+# Redot editor binary + local symlink (136 MB — do not commit; each dev supplies their own)
+redot.linuxbsd.editor.x86_64
+/redot
 # Uncomment if using Godot:
 # *.import
 
