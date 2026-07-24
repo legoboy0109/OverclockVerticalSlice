@@ -23,34 +23,441 @@
 #   NNN = three-digit zero-padded sequence per system, starting at 001
 #
 # STATUS VALUES: active | deprecated | superseded-by: TR-[system]-NNN
-
-version: 1
-last_updated: ""
-
-requirements: []
-
-# --- EXAMPLE ENTRIES (remove when first real entries are added) ---
 #
-# - id: TR-combat-001
-#   system: combat
-#   gdd: design/gdd/combat-system.md
-#   requirement: "Player takes damage from enemies based on attack power minus defence"
-#   created: 2026-03-10
-#   revised: ""
-#   status: active
-#
-# - id: TR-combat-002
-#   system: combat
-#   gdd: design/gdd/combat-system.md
-#   requirement: "Combo window timing is 0.4 seconds between hits"
-#   created: 2026-03-10
-#   revised: "2026-04-01"
-#   status: active
-#
-# - id: TR-combat-003
-#   system: combat
-#   gdd: design/gdd/combat-system.md
-#   requirement: "Old damage formula using raw stats"
-#   created: 2026-03-10
-#   revised: ""
-#   status: superseded-by: TR-combat-001
+# `adr` = the ADR that governs this requirement's implementation (from
+#   docs/architecture/architecture.md mapping, 200/200 mapped). ADRs 0001-0016
+#   exist (all Proposed). ADR-0017 (Base & Production mechanics) and ADR-0018
+#   (Research/Tech mechanics) are RECOMMENDED-BUT-NOT-YET-WRITTEN: the
+#   2026-07-24 /architecture-review found 7 build/produce/research-mechanic TRs
+#   mis-parked on ADR-0010 (which specifies only combat/destruction) and
+#   re-pointed them to the planned ADR-0017/0018. Those 7 are ⚠️ Partial until
+#   the ADRs are authored.
+
+version: 3
+last_updated: "2026-07-24"
+
+requirements:
+
+  # ============================ Grid & Terrain (15) ============================
+  - { id: TR-grid-001, system: grid, gdd: design/gdd/grid-terrain.md, adr: ADR-0005, created: 2026-07-23, revised: "", status: active,
+      requirement: "Fixed-size 2D tile grid, integer (x,y), origin top-left, no wrap; dims 8x8-24x24 (VS 14x16), flat 1D array index=y*W+x" }
+  - { id: TR-grid-002, system: grid, gdd: design/gdd/grid-terrain.md, adr: ADR-0005, created: 2026-07-23, revised: "", status: active,
+      requirement: "One terrain type per tile {Plain,Cover,Impassable}, static post-load; passable-set cacheable once" }
+  - { id: TR-grid-003, system: grid, gdd: design/gdd/grid-terrain.md, adr: ADR-0005, created: 2026-07-23, revised: "", status: active,
+      requirement: "Occupancy map (tile->entity id/none) separate from terrain, single-occupant invariant, atomic within resolution step" }
+  - { id: TR-grid-004, system: grid, gdd: design/gdd/grid-terrain.md, adr: ADR-0005, created: 2026-07-23, revised: "", status: active,
+      requirement: "Deterministic render-decoupled API: in_bounds, terrain_at, is_cover, occupant_at, is_passable, neighbors, manhattan_distance, place, remove, move" }
+  - { id: TR-grid-005, system: grid, gdd: design/gdd/grid-terrain.md, adr: ADR-0001, created: 2026-07-23, revised: "", status: active,
+      requirement: "Grid model decoupled from render node; no query depends on frame timing/TileMapLayer; pure GDScript class/Resource not Node" }
+  - { id: TR-grid-006, system: grid, gdd: design/gdd/grid-terrain.md, adr: ADR-0001, created: 2026-07-23, revised: "", status: active,
+      requirement: "Grid model is part of authoritative state owned by Game State & Turn Manager" }
+  - { id: TR-grid-007, system: grid, gdd: design/gdd/grid-terrain.md, adr: ADR-0005, created: 2026-07-23, revised: "", status: active,
+      requirement: "All queries O(1) except neighbors O(4); manhattan_distance/in_bounds integer arithmetic (high-volume AI+Movement calls)" }
+  - { id: TR-grid-008, system: grid, gdd: design/gdd/grid-terrain.md, adr: ADR-0013, created: 2026-07-23, revised: "", status: active,
+      requirement: "ISO: render-side projection layer (TileMapLayer) reads grid; grid->screen 2:1 dimetric transform, inverse picking, depth-sort separate from logical grid" }
+  - { id: TR-grid-009, system: grid, gdd: design/gdd/grid-terrain.md, adr: ADR-0005, created: 2026-07-23, revised: "", status: active,
+      requirement: "Deterministic seeded procedural terrain byte-identical per seed+config; seeded PRNG (PROC_SEED) not engine global RNG (also ADR-0003 Rule 1)" }
+  - { id: TR-grid-010, system: grid, gdd: design/gdd/grid-terrain.md, adr: ADR-0005, created: 2026-07-23, revised: "", status: active,
+      requirement: "Load-time HQ-to-HQ reachability validator (BFS flood-fill over passable); Procedural self-corrects, Authored hard-rejects" }
+  - { id: TR-grid-011, system: grid, gdd: design/gdd/grid-terrain.md, adr: ADR-0005, created: 2026-07-23, revised: "", status: active,
+      requirement: "Two map modes (Authored / Procedural Center) per map def with band-placement constraints and PROC_* params" }
+  - { id: TR-grid-012, system: grid, gdd: design/gdd/grid-terrain.md, adr: ADR-0005, created: 2026-07-23, revised: "", status: active,
+      requirement: "Reject/guard invalid maps at load (dims, HQ unreachable, density) with deterministic fallback (density clamp + log)" }
+  - { id: TR-grid-013, system: grid, gdd: design/gdd/grid-terrain.md, adr: ADR-0005, created: 2026-07-23, revised: "", status: active,
+      requirement: "Serialize map definition sufficient to reconstruct identical grid; map defs are data assets (.tres/JSON)" }
+  - { id: TR-grid-014, system: grid, gdd: design/gdd/grid-terrain.md, adr: ADR-0005, created: 2026-07-23, revised: "", status: active,
+      requirement: "Expose read-only tile-highlight data (terrain, occupancy, cover, passability) to UI without mutation" }
+  - { id: TR-grid-015, system: grid, gdd: design/gdd/grid-terrain.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
+      requirement: "Support AI positional queries many times/turn without mutating shared state; side-effect-free, O(1)" }
+
+  # =================== Game State & Turn Manager (19) ===================
+  - { id: TR-gamestate-001, system: gamestate, gdd: design/gdd/game-state-turn-manager.md, adr: ADR-0001, created: 2026-07-23, revised: "", status: active,
+      requirement: "Single authoritative data model (grid, entities, per-player, active_player, round_number, match_status) held independent of scene tree" }
+  - { id: TR-gamestate-002, system: gamestate, gdd: design/gdd/game-state-turn-manager.md, adr: ADR-0001, created: 2026-07-23, revised: "", status: active,
+      requirement: "Instantiable/mutable/queryable with zero render nodes (headless); state is not a Node" }
+  - { id: TR-gamestate-003, system: gamestate, gdd: design/gdd/game-state-turn-manager.md, adr: ADR-0001, created: 2026-07-23, revised: "", status: active,
+      requirement: "clone() deep-copy produces fully independent state; all fields plain copyable; enables AI lookahead" }
+  - { id: TR-gamestate-004, system: gamestate, gdd: design/gdd/game-state-turn-manager.md, adr: ADR-0002, created: 2026-07-23, revised: "", status: active,
+      requirement: "All mutation flows through single apply_action(action): validates, applies atomically, deducts AP, runs win-check" }
+  - { id: TR-gamestate-005, system: gamestate, gdd: design/gdd/game-state-turn-manager.md, adr: ADR-0002, created: 2026-07-23, revised: "", status: active,
+      requirement: "Illegal actions rejected with zero state change (incl. AP); validate-before-apply or transactional" }
+  - { id: TR-gamestate-006, system: gamestate, gdd: design/gdd/game-state-turn-manager.md, adr: ADR-0008, created: 2026-07-23, revised: "", status: active,
+      requirement: "Turn/phase FSM: Setup->PlayerTurn(P)->EndTurn(P)->PlayerTurn(other)->...->GameOver with ordered entry actions" }
+  - { id: TR-gamestate-007, system: gamestate, gdd: design/gdd/game-state-turn-manager.md, adr: ADR-0008, created: 2026-07-23, revised: "", status: active,
+      requirement: "Start-of-turn canonical 4-step order: set active -> clear per-turn flags -> apply start effects (build/research timers) -> reset AP to income snapshot" }
+  - { id: TR-gamestate-008, system: gamestate, gdd: design/gdd/game-state-turn-manager.md, adr: ADR-0003, created: 2026-07-23, revised: "", status: active,
+      requirement: "Fully deterministic transitions: identical state+ordered actions -> byte-identical result; no RNG in turn advance" }
+  - { id: TR-gamestate-009, system: gamestate, gdd: design/gdd/game-state-turn-manager.md, adr: ADR-0003, created: 2026-07-23, revised: "", status: active,
+      requirement: "No float-driven nondeterminism in transitions; AP/HP/positions/counters integer" }
+  - { id: TR-gamestate-010, system: gamestate, gdd: design/gdd/game-state-turn-manager.md, adr: ADR-0002, created: 2026-07-23, revised: "", status: active,
+      requirement: "Win-check after every HQ-destroying mutation, synchronous -> GameOver, inside apply_action atomic step (also ADR-0010)" }
+  - { id: TR-gamestate-011, system: gamestate, gdd: design/gdd/game-state-turn-manager.md, adr: ADR-0001, created: 2026-07-23, revised: "", status: active,
+      requirement: "Side-effect-free read API: active_player, current_ap(p), round_number, match_status, entities(), entity_at(tile), grid" }
+  - { id: TR-gamestate-012, system: gamestate, gdd: design/gdd/game-state-turn-manager.md, adr: ADR-0004, created: 2026-07-23, revised: "", status: active,
+      requirement: "Renderer is a pure consumer observing change events/signals, never mutating truth; signal contract (unit_moved, turn_ended, game_over)" }
+  - { id: TR-gamestate-013, system: gamestate, gdd: design/gdd/game-state-turn-manager.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
+      requirement: "AI interacts only via clone()+read API+apply_action, no privileged access; same code path as real play" }
+  - { id: TR-gamestate-014, system: gamestate, gdd: design/gdd/game-state-turn-manager.md, adr: ADR-0001, created: 2026-07-23, revised: "", status: active,
+      requirement: "Store faction_of(player), apply starting_loadout at Setup; faction locked after Setup->PlayerTurn (boot-order: faction before first start-of-turn)" }
+  - { id: TR-gamestate-015, system: gamestate, gdd: design/gdd/game-state-turn-manager.md, adr: ADR-0001, created: 2026-07-23, revised: "", status: active,
+      requirement: "Every field a plain serializable value (no engine object refs) even though save/load deferred; pre-conditions future Persistence GDD" }
+  - { id: TR-gamestate-016, system: gamestate, gdd: design/gdd/game-state-turn-manager.md, adr: ADR-0001, created: 2026-07-23, revised: "", status: active,
+      requirement: "Optional MAX_ROUNDS cap + TIEBREAK_METRIC forcing GameOver; tiebreak computable purely from state" }
+  - { id: TR-gamestate-017, system: gamestate, gdd: design/gdd/game-state-turn-manager.md, adr: ADR-0001, created: 2026-07-23, revised: "", status: active,
+      requirement: "No softlock: player with zero legal actions can always end_turn(); end_turn() unconditionally legal (also ADR-0002)" }
+  - { id: TR-gamestate-018, system: gamestate, gdd: design/gdd/game-state-turn-manager.md, adr: ADR-0002, created: 2026-07-23, revised: "", status: active,
+      requirement: "Re-submission of an applied action safely re-validated + rejected, no double-apply; idempotency-by-revalidation" }
+  - { id: TR-gamestate-019, system: gamestate, gdd: design/gdd/game-state-turn-manager.md, adr: ADR-0001, created: 2026-07-23, revised: "", status: active,
+      requirement: "State-model location (Autoload vs passed object vs event-bus) resolved by ADR before coding (was OPEN blocker; ADR-0001 resolves)" }
+
+  # ============================ AP Economy (14) ============================
+  - { id: TR-apecon-001, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
+      requirement: "current_ap stored as state, mutated by exactly 2 paths: turn-manager reset + spend(); int field on per-player state" }
+  - { id: TR-apecon-002, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
+      requirement: "ap_income(player)->int per tiered formula (BASE + tier1*min(n,THRESH) + tier2*max(0,n-THRESH) + econ-tech term), n=max(0,outposts)" }
+  - { id: TR-apecon-003, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
+      requirement: "Externalize coefficients: BASE_INCOME=10, OUTPOST_BONUS_TIER1=2, TIER2=1, TIER_THRESHOLD=4, ECONOMY_TECH_TIER_THRESHOLD=6, ECONOMY_TECH_INCOME_BONUS=1; no literals in code" }
+  - { id: TR-apecon-004, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0008, created: 2026-07-23, revised: "", status: active,
+      requirement: "Start-of-turn: eval ap_income once, freeze income_this_turn snapshot; current_ap set to it; no mid-turn recompute (step 3 of turn seq)" }
+  - { id: TR-apecon-005, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
+      requirement: "End of turn: discard unspent AP (current_ap:=0), immutable through opponent turn; hard write, observable" }
+  - { id: TR-apecon-006, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
+      requirement: "can_afford(player,amount)->bool pure, callable for any player; all spenders call before offering action" }
+  - { id: TR-apecon-007, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
+      requirement: "spend(player,amount)->bool sole atomic mutator (reject if not active, <0, >current_ap; no-op if 0); sole cross-system write" }
+  - { id: TR-apecon-008, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
+      requirement: "Invariant 0<=current_ap<=income_this_turn holds structurally" }
+  - { id: TR-apecon-009, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
+      requirement: "Read query current_ap + frozen income breakdown (base/outpost/tech); HUD + Cmd interface; frozen snapshot not live recompute" }
+  - { id: TR-apecon-010, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
+      requirement: "Read completed_outpost_count(player) + has_economy_tech(player) as external deps (Base&Prod + Research); pure/deterministic" }
+  - { id: TR-apecon-011, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
+      requirement: "All AP-consumers integrate via spend()/can_afford() only; no parallel pool (Pillar 1)" }
+  - { id: TR-apecon-012, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
+      requirement: "Additive Faction income modifier fold-in (Delta base/tier1/tier2) gated by BASE_INCOME_FLOOR; no-op under Neutral" }
+  - { id: TR-apecon-013, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0003, created: 2026-07-23, revised: "", status: active,
+      requirement: "Full determinism: identical income+actions -> bit-identical AP trajectory, no RNG" }
+  - { id: TR-apecon-014, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
+      requirement: "Test doubles for completed_outpost_count + has_economy_tech (DI over singletons)" }
+
+  # ============================ Unit System (15) ============================
+  - { id: TR-unit-001, system: unit, gdd: design/gdd/unit-system.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
+      requirement: "Unit templates as external data resources (.tres UnitStats): hp/attack/attack_range/move_cost/soft_move_cap/produce_cost; injectable in tests" }
+  - { id: TR-unit-002, system: unit, gdd: design/gdd/unit-system.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
+      requirement: "Runtime state distinct from template: entity_id, type, owner, current_hp, position, has_attacked, tiles_moved_this_turn; render-decoupled, static types" }
+  - { id: TR-unit-003, system: unit, gdd: design/gdd/unit-system.md, adr: ADR-0001, created: 2026-07-23, revised: "", status: active,
+      requirement: "entity_id from deterministic injectable sequential counter, unique within one game state; no random UUIDs; duplicate() preserves id" }
+  - { id: TR-unit-004, system: unit, gdd: design/gdd/unit-system.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
+      requirement: "Pure headless ops: can_attack(unit)->bool, reset_turn_flags(unit), duplicate(unit)" }
+  - { id: TR-unit-005, system: unit, gdd: design/gdd/unit-system.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
+      requirement: "Single hp-mutation entry apply_hp_delta(unit,N) clamping 0<=hp<=max; Combat routes through this" }
+  - { id: TR-unit-006, system: unit, gdd: design/gdd/unit-system.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
+      requirement: "Compute effective_attack/effective_defense live from owner tech flags + RESEARCH_ATK_BONUS/DEFENSE_TECH_BONUS; reads Research config at call time" }
+  - { id: TR-unit-007, system: unit, gdd: design/gdd/unit-system.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
+      requirement: "base_defense:int field (default 0), from Combat handoff, consumed by effective_defense + damage_formula" }
+  - { id: TR-unit-008, system: unit, gdd: design/gdd/unit-system.md, adr: ADR-0009, created: 2026-07-23, revised: "", status: active,
+      requirement: "Movement reads move_cost/soft_move_cap/SOFT_MOVE_PENALTY, writes tiles_moved_this_turn; surcharge=ceil(move_cost*PENALTY), integer AP" }
+  - { id: TR-unit-009, system: unit, gdd: design/gdd/unit-system.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
+      requirement: "AP integration: move/produce/attack costs spent via spend()/can_afford(); over-budget move rejected atomically" }
+  - { id: TR-unit-010, system: unit, gdd: design/gdd/unit-system.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
+      requirement: "Combat integration: expose hp/effective_attack/attack_range/can_attack(); Combat sets has_attacked + triggers destruction/Grid removal same step" }
+  - { id: TR-unit-011, system: unit, gdd: design/gdd/unit-system.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
+      requirement: "Faction hooks: effective_produce_cost/effective_move_cost fold deltas, floored MIN_MOVE_COST; combat stats faction-locked; no-op under Neutral" }
+  - { id: TR-unit-012, system: unit, gdd: design/gdd/unit-system.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
+      requirement: "Instance lifecycle 3-state (Produced->Active->Destroyed), Produced presentation-only, no summoning sickness (act same turn)" }
+  - { id: TR-unit-013, system: unit, gdd: design/gdd/unit-system.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
+      requirement: "HUD/Cmd read-surface: type, cur/max hp, effective attack, move cost, has-acted, blocked-shot reason; read-only" }
+  - { id: TR-unit-014, system: unit, gdd: design/gdd/unit-system.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
+      requirement: "All fields static GDScript typing (hot AI paths)" }
+  - { id: TR-unit-015, system: unit, gdd: design/gdd/unit-system.md, adr: ADR-0001, created: 2026-07-23, revised: "", status: active,
+      requirement: "Runtime state fully serializable/reconstructable for save + AI snapshot via duplicate(), no nondeterministic fields" }
+
+  # ============================ Movement System (14) ============================
+  - { id: TR-movement-001, system: movement, gdd: design/gdd/movement-system.md, adr: ADR-0009, created: 2026-07-23, revised: "", status: active,
+      requirement: "Grid exposes neighbors()/is_passable()/occupant_at() that search calls; signatures owed by Grid ADR" }
+  - { id: TR-movement-002, system: movement, gdd: design/gdd/movement-system.md, adr: ADR-0009, created: 2026-07-23, revised: "", status: active,
+      requirement: "Reachable search hand-rolled BFS/Dijkstra, NOT AStarGrid2D/AStar2D (callbacks lack accumulated path-depth for soft-cap surcharge)" }
+  - { id: TR-movement-003, system: movement, gdd: design/gdd/movement-system.md, adr: ADR-0009, created: 2026-07-23, revised: "", status: active,
+      requirement: "Length-based BFS shortcut (min-length==min-cost) under uniform terrain, keyed by tile; upgrades to (tile,depth) weighted search when difficult terrain lands" }
+  - { id: TR-movement-004, system: movement, gdd: design/gdd/movement-system.md, adr: ADR-0009, created: 2026-07-23, revised: "", status: active,
+      requirement: "reachable(state,unit)->set<{tile,min_cost,is_surcharged}> side-effect-free from passed-in state" }
+  - { id: TR-movement-005, system: movement, gdd: design/gdd/movement-system.md, adr: ADR-0009, created: 2026-07-23, revised: "", status: active,
+      requirement: "move(unit,dest)->Result validates path+can_afford, atomically spends AP + updates tiles_moved + grid occupancy (via apply_action, ADR-0002)" }
+  - { id: TR-movement-006, system: movement, gdd: design/gdd/movement-system.md, adr: ADR-0003, created: 2026-07-23, revised: "", status: active,
+      requirement: "Visited/cost table = flat array index=y*W+x, NOT Dictionary (dict iteration order breaks clone parity/replay determinism)" }
+  - { id: TR-movement-007, system: movement, gdd: design/gdd/movement-system.md, adr: ADR-0003, created: 2026-07-23, revised: "", status: active,
+      requirement: "Path/tie-break uses pinned reproducible neighbor-expansion order; deterministic tile-sequence" }
+  - { id: TR-movement-008, system: movement, gdd: design/gdd/movement-system.md, adr: ADR-0009, created: 2026-07-23, revised: "", status: active,
+      requirement: "reachable() recomputed fresh every call, no caching; board changes reflected immediately" }
+  - { id: TR-movement-009, system: movement, gdd: design/gdd/movement-system.md, adr: ADR-0009, created: 2026-07-23, revised: "", status: active,
+      requirement: "reachable() meets concrete perf budget (ms/call on 24x24), interactive + AI-repeat; owed to ADR/perf-analyst (QQ-05)" }
+  - { id: TR-movement-010, system: movement, gdd: design/gdd/movement-system.md, adr: ADR-0009, created: 2026-07-23, revised: "", status: active,
+      requirement: "Visited-array allocation strategy (fresh-per-call vs pooled-cleared) explicitly decided" }
+  - { id: TR-movement-011, system: movement, gdd: design/gdd/movement-system.md, adr: ADR-0003, created: 2026-07-23, revised: "", status: active,
+      requirement: "SOFT_MOVE_PENALTY as scaled/fixed-point int (PENALTY_X10), surcharge via integer ceil-div, not float" }
+  - { id: TR-movement-012, system: movement, gdd: design/gdd/movement-system.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
+      requirement: "Schema enforce move_cost>=1, soft_move_cap>=0 at load (move_cost=0 breaks BFS shortcut)" }
+  - { id: TR-movement-013, system: movement, gdd: design/gdd/movement-system.md, adr: ADR-0009, created: 2026-07-23, revised: "", status: active,
+      requirement: "reachable() and move() share one soft-cap cost-summation path (preview==billed)" }
+  - { id: TR-movement-014, system: movement, gdd: design/gdd/movement-system.md, adr: ADR-0002, created: 2026-07-23, revised: "", status: active,
+      requirement: "Integrate apply_action on clonable state; consume unit fields + AP can_afford/spend as single atomic mutation" }
+
+  # ============================ Combat Resolution (14) ============================
+  - { id: TR-combat-001, system: combat, gdd: design/gdd/combat-resolution.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
+      requirement: "Deterministic damage max(MIN_DAMAGE, effective_attack - cover_reduction - defense), no RNG; MIN_DAMAGE=1, COVER_DR=1; computable on clone" }
+  - { id: TR-combat-002, system: combat, gdd: design/gdd/combat-resolution.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
+      requirement: "Structures cover-immune: cover_reduction=0 for structure defenders; closes HQ floor-lock trap" }
+  - { id: TR-combat-003, system: combat, gdd: design/gdd/combat-resolution.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
+      requirement: "legal_targets(unit)->set<target> side-effect-free (DIRECT/AREA, range, line-of-fire); HUD+AI consume" }
+  - { id: TR-combat-004, system: combat, gdd: design/gdd/combat-resolution.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
+      requirement: "legal_targets(unit,from_tile) hypothetical-tile overload, no mutation; matches zero-arg when from_tile==position" }
+  - { id: TR-combat-005, system: combat, gdd: design/gdd/combat-resolution.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
+      requirement: "attack(attacker,target)->Result atomic (validate->spend->damage->counter/death->win-check) via apply_action; idempotent vs double-submit" }
+  - { id: TR-combat-006, system: combat, gdd: design/gdd/combat-resolution.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
+      requirement: "preview_damage(attacker,target)->int pure, exactly equals hp removed on commit" }
+  - { id: TR-combat-007, system: combat, gdd: design/gdd/combat-resolution.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
+      requirement: "Death/removal immediate same-step: hp<=0 -> destroyed+removed from Grid within same apply_action; notifies Grid, Unit, Research Lab-destruction hook" }
+  - { id: TR-combat-008, system: combat, gdd: design/gdd/combat-resolution.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
+      requirement: "HQ-destruction check wired into Turn Manager win-check, same apply_action as killing damage; rejects post-GameOver actions" }
+  - { id: TR-combat-009, system: combat, gdd: design/gdd/combat-resolution.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
+      requirement: "Counterattack data-driven per-type bool (can_counterattack default false), single non-recursive retaliation" }
+  - { id: TR-combat-010, system: combat, gdd: design/gdd/combat-resolution.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
+      requirement: "New Unit/structure stat fields: targeting_mode (DIRECT/AREA), min_range (1), defense (0), can_counterattack (false); owed to Unit + entities.yaml" }
+  - { id: TR-combat-011, system: combat, gdd: design/gdd/combat-resolution.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
+      requirement: "Enforce min_range<=attack_range schema invariant for AREA units; validation error not silent empty set" }
+  - { id: TR-combat-012, system: combat, gdd: design/gdd/combat-resolution.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
+      requirement: "attack() accepts structure attacker (Defensive Structure), same pipeline, AP from DEFENSIVE_ATTACK_COST; attacker polymorphism" }
+  - { id: TR-combat-013, system: combat, gdd: design/gdd/combat-resolution.md, adr: ADR-0003, created: 2026-07-23, revised: "", status: active,
+      requirement: "Full determinism/headlessness: identical attack() on cloned states -> equal damage + field-wise-equal state" }
+  - { id: TR-combat-014, system: combat, gdd: design/gdd/combat-resolution.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
+      requirement: "Three blocked-shot classifications (blocked-by-friendly, out-of-range, dead-zone) as queryable reason data" }
+
+  # ============================ Base & Production (17) ============================
+  - { id: TR-baseprod-001, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
+      requirement: "Structure template (external): name, hp, build_cost, build_time, production_cap, producible_types; Defensive adds attack/range/defense/counter/DEFENSIVE_ATTACK_COST" }
+  - { id: TR-baseprod-002, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0017, created: 2026-07-23, revised: "", status: active,
+      requirement: "Structure instance FSM: Under-Construction->Completed->Destroyed + Removed(cancel); per-instance hp/build-turns/units_produced_this_turn/has_attacked/owner" }
+  - { id: TR-baseprod-003, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0017, created: 2026-07-23, revised: "", status: active,
+      requirement: "Structures occupy 1 tile, hard blocker for movement + DIRECT line-of-fire, targetable in both Under-Construction+Completed; atomic vs Grid" }
+  - { id: TR-baseprod-004, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0002, created: 2026-07-23, revised: "", status: active,
+      requirement: "build(player,type,tile) validates affordability+legality at commit, atomic via apply_action (spend+place one txn), re-validate on change" }
+  - { id: TR-baseprod-005, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0017, created: 2026-07-23, revised: "", status: active,
+      requirement: "legal_build_tiles(player,type): empty+passable, manhattan==1 from friendly, manhattan>2 from every enemy structure, live-recomputed" }
+  - { id: TR-baseprod-006, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0008, created: 2026-07-23, revised: "", status: active,
+      requirement: "Build-timer advance (decrement, complete at 0) as start-of-turn effect BEFORE AP snapshot (step 3 before 4), batch-complete" }
+  - { id: TR-baseprod-007, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
+      requirement: "completed_outpost_count(player): alive owned Completed Economy Outposts only, start-of-turn snapshot; return 0 not null; consumed by ap_income" }
+  - { id: TR-baseprod-008, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0017, created: 2026-07-23, revised: "", status: active,
+      requirement: "produce(producer,type,tile) validates Completed+producible+cap+adjacent-empty; spend produce_cost; instantiate on chosen deploy tile; needs legal_deploy_tiles" }
+  - { id: TR-baseprod-009, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0008, created: 2026-07-23, revised: "", status: active,
+      requirement: "Per-turn structure flag reset at start-of-turn: units_produced_this_turn->0, has_attacked->false; same seq as unit resets" }
+  - { id: TR-baseprod-010, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
+      requirement: "Defensive Structure attack: attack() accepts structure, spends DEFENSIVE_ATTACK_COST, gated has_attacked==false; free uncosted counter when attacked" }
+  - { id: TR-baseprod-011, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
+      requirement: "Structure damage via Combat damage_formula, structures cover-immune; hp 0->Destroyed+Grid removal same step" }
+  - { id: TR-baseprod-012, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
+      requirement: "HQ destruction raises observable hq_destroyed on Result -> Turn Manager sets GameOver winner=opponent; non-HQ raises none" }
+  - { id: TR-baseprod-013, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
+      requirement: "cancel_build(structure) only Under-Construction, removes+clears tile, credits floor(build_cost*CANCEL_REFUND_RATE) AP; combat-destruction never refunds" }
+  - { id: TR-baseprod-014, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
+      requirement: "Closeout-pressure NOT hard cap: MAX_OUTPOST_COUNT exists as named data-driven lever but DISABLED in VS; pressure emergent; togglable-off infra-only" }
+  - { id: TR-baseprod-015, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0003, created: 2026-07-23, revised: "", status: active,
+      requirement: "Deterministic headless clonable: placement/timer/production/attack/destruction pure fns, no RNG, stable order, clone() for AI" }
+  - { id: TR-baseprod-016, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
+      requirement: "Research Lab constructible/destructible/cancelable via generic structure lifecycle, zero special-casing; NOT counted by completed_outpost_count; production_cap=0" }
+  - { id: TR-baseprod-017, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
+      requirement: "UI query surface: legal_build_tiles, legal_deploy_tiles, build-timer progress, remaining production_cap, affordability, cancel-refund preview, structure hp" }
+
+  # ============================ Research / Tech (13) ============================
+  - { id: TR-research-001, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
+      requirement: "Data-driven Research Lab template (hp 12, build_cost 8, build_time 2, defense 0, no counter, production_cap 0) as B&P 5th structure" }
+  - { id: TR-research-002, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
+      requirement: "Data-driven tech table (Attack 10/3/+1atk; Defense 10/4/+1def; Economy 7/3/+1AP-per-outpost-capped) with named constants externalized" }
+  - { id: TR-research-003, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0018, created: 2026-07-23, revised: "", status: active,
+      requirement: "Per-player tech-unlock: 3 terminal boolean flags (has_attack/defense/economy_tech), one-time permanent; survives Lab destruction" }
+  - { id: TR-research-004, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0018, created: 2026-07-23, revised: "", status: active,
+      requirement: "Per-Lab research state: current_research_target + research_turns_remaining, parallel Labs; cross-Lab mutual exclusion (same tech not at 2 Labs)" }
+  - { id: TR-research-005, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0018, created: 2026-07-23, revised: "", status: active,
+      requirement: "legal_research_targets(lab)->set<tech> excluding Completed + Under-Research-elsewhere; empty for Under-Construction Lab" }
+  - { id: TR-research-006, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0002, created: 2026-07-23, revised: "", status: active,
+      requirement: "start_research(lab,tech)/cancel_research(lab) via apply_action, upfront full-cost AP spend, atomic; cancel reuses CANCEL_REFUND_RATE" }
+  - { id: TR-research-007, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0008, created: 2026-07-23, revised: "", status: active,
+      requirement: "Start-of-turn research-timer advance interleaved with build-timer, before income snapshot" }
+  - { id: TR-research-008, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
+      requirement: "Lab destruction -> synchronous same-step tech-revert (current_research_target->Not Started, no refund) within same apply_action; shared trigger with Combat" }
+  - { id: TR-research-009, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
+      requirement: "Unit System exposes owner_has_attack_tech/owner_has_defense_tech feeding effective_attack/effective_defense, live-read" }
+  - { id: TR-research-010, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
+      requirement: "ap_income adds ECONOMY_TECH_INCOME_BONUS*min(outposts,ECONOMY_TECH_TIER_THRESHOLD) live each snapshot; threshold AP-owned, bonus Research-owned" }
+  - { id: TR-research-011, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0003, created: 2026-07-23, revised: "", status: active,
+      requirement: "Deterministic headless pure-fn research ops, clone() for AI + tests, order-independent batch completion" }
+  - { id: TR-research-012, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0001, created: 2026-07-23, revised: "", status: active,
+      requirement: "Persist per-player tech flags + per-Lab research state in save; single-match permanence" }
+  - { id: TR-research-013, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
+      requirement: "UI feed: research menu (targets, cost/time, affordability), tech status panel, timer, cancel-refund preview; opponent-visible working state" }
+
+  # =================== Command & Action Interface (24) ===================
+  - { id: TR-cmdui-001, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0015, created: 2026-07-23, revised: "", status: active,
+      requirement: "Explicit FSM: IDLE, ENTITY_SELECTED, PREVIEW_MOVE, PREVIEW_ATTACK, PREVIEW_PRODUCE, PREVIEW_BUILD, terminal GAME_OVER (no-return)" }
+  - { id: TR-cmdui-002, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0015, created: 2026-07-23, revised: "", status: active,
+      requirement: "CR-6a destructive Cancel-Build gesture = internal duration-tracked sub-condition in ENTITY_SELECTED, no new top state" }
+  - { id: TR-cmdui-003, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0013, created: 2026-07-23, revised: "", status: active,
+      requirement: "ISO: custom inverse screen->grid hit-test for 2:1 dimetric (TileMap iso shape doesn't deliver picking free)" }
+  - { id: TR-cmdui-004, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0013, created: 2026-07-23, revised: "", status: active,
+      requirement: "ISO: resolve hit-test ambiguity from stacked/occluded iso tiles; depth-sort dependency" }
+  - { id: TR-cmdui-005, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0015, created: 2026-07-23, revised: "", status: active,
+      requirement: "Tile-change-gate InputEventMouseMotion: act only on new tile; PREVIEW_HOVER_LATENCY_MS=0 no debounce; critical under iso" }
+  - { id: TR-cmdui-006, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0015, created: 2026-07-23, revised: "", status: active,
+      requirement: "CR-10 Tier1: reachable()/legal_targets() once per preview entry + per board-change, hold set" }
+  - { id: TR-cmdui-007, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0015, created: 2026-07-23, revised: "", status: active,
+      requirement: "CR-10 Tier2: batch legal_targets(unit,from_tile) across reachable frontier once per PREVIEW_MOVE entry" }
+  - { id: TR-cmdui-008, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0015, created: 2026-07-23, revised: "", status: active,
+      requirement: "CR-10 Tier3: hover reads O(1) into precomputed sets keyed by tile/target" }
+  - { id: TR-cmdui-009, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0015, created: 2026-07-23, revised: "", status: active,
+      requirement: "CR-10 Tier4: commit-time re-validation inside owning apply_action; UI only reacts; reject -> refresh from fresh Tier1, spend 0" }
+  - { id: TR-cmdui-010, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0015, created: 2026-07-23, revised: "", status: active,
+      requirement: "Pass-Through Invariant: zero copies of balance constants, no local formula re-derive; projected values from live queries only" }
+  - { id: TR-cmdui-011, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0015, created: 2026-07-23, revised: "", status: active,
+      requirement: "Consume reachable()->{tile,min_cost,is_surcharged}, render in-cap/over-cap split from is_surcharged, never infer" }
+  - { id: TR-cmdui-012, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0015, created: 2026-07-23, revised: "", status: active,
+      requirement: "Consume Combat legal_targets/preview_damage/hypothetical overload; call atomic attack() on commit" }
+  - { id: TR-cmdui-013, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0015, created: 2026-07-23, revised: "", status: active,
+      requirement: "Consume B&P legal_build_tiles/legal_deploy_tiles/completed_outpost_count/production_cap; call build/produce/cancel_build; two exclusion reasons distinguishable" }
+  - { id: TR-cmdui-014, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0015, created: 2026-07-23, revised: "", status: active,
+      requirement: "Consume AP can_afford/current_ap/income for affordability + projected_remaining_ap; UI never deducts" }
+  - { id: TR-cmdui-015, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0015, created: 2026-07-23, revised: "", status: active,
+      requirement: "Read active_player/phase from Turn Manager, route commits via apply_action, scope input to active player Action phase; both instances observe GameOver" }
+  - { id: TR-cmdui-016, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0013, created: 2026-07-23, revised: "", status: active,
+      requirement: "ISO: re-derive iso overlays (reachable fills, cap hatch, target rings, blocked states, cover glyphs, exclusion, AREA rings, scaffold hatch) for 2:1 diamonds" }
+  - { id: TR-cmdui-017, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0013, created: 2026-07-23, revised: "", status: active,
+      requirement: "ISO: iso-space anchors for on-board glyphs (AP badges, damage numbers, cover glyph, turns numeral, target bracket, D-3 echo) w/ occlusion avoidance" }
+  - { id: TR-cmdui-018, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0014, created: 2026-07-23, revised: "", status: active,
+      requirement: "Custom BoardCursor (Vector2i grid pos from input) as keyboard/gamepad nav distinct from Control focus; 3 focus states" }
+  - { id: TR-cmdui-019, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0014, created: 2026-07-23, revised: "", status: active,
+      requirement: "ISO: D-pad cursor stepping maps to grid axes not screen axes; cycle/jump between salient tiles; one-tile-per-press" }
+  - { id: TR-cmdui-020, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0014, created: 2026-07-23, revised: "", status: active,
+      requirement: "Mouse-hover vs board-cursor precedence: most-recently-moved source owns active locus" }
+  - { id: TR-cmdui-021, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0014, created: 2026-07-23, revised: "", status: active,
+      requirement: "ENGINE RISK: verify Redot 26.2 inherited Godot 4.6 dual-focus unmodified before relying on it (verified 2026-07-23; residual ClassDB check at impl)" }
+  - { id: TR-cmdui-022, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0014, created: 2026-07-23, revised: "", status: active,
+      requirement: "Gate destructive input behind synchronous dispatch + immediate FSM transition, INPUT_LOCK_MS (120ms); INPUT_LOCK_MS>=AP_TICK_DURATION_MS hard cross-system constraint" }
+  - { id: TR-cmdui-023, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0015, created: 2026-07-23, revised: "", status: active,
+      requirement: "Commit-flash (this) + AP tick-down (HUD) off single shared apply_action-result event, same frame; highest-risk desync, ADR lock-in" }
+  - { id: TR-cmdui-024, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0014, created: 2026-07-23, revised: "", status: active,
+      requirement: "Every core interaction (select/commit/cancel/menu-verb/End Turn) reachable via keyboard/gamepad + mouse; no hover-only" }
+
+  # ============================ Game HUD (23) ============================
+  - { id: TR-hud-001, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0004, created: 2026-07-23, revised: "", status: active,
+      requirement: "HUD is pure-read event-driven render layer, no mutation, no game logic; signal-bus" }
+  - { id: TR-hud-002, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0004, created: 2026-07-23, revised: "", status: active,
+      requirement: "Coalesce dirty state to <=1 redraw/frame regardless of event count (N-hit kill -> 1 redraw)" }
+  - { id: TR-hud-003, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
+      requirement: "Read-only facade (GameStateReader getters-only), not convention; facade + lint (no compile-time modifiers in Godot)" }
+  - { id: TR-hud-004, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
+      requirement: "Bind AP counter, turn/round indicator, End Turn, Build button, action log always-present during active turn" }
+  - { id: TR-hud-005, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
+      requirement: "AP counter reads current_ap/income, 4-state anim FSM (Committed-rest/Fill-flourish/Tick-down/Preview-echo); opponent AP muted" }
+  - { id: TR-hud-006, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
+      requirement: "On PlayerTurn/EndTurn transition, preview echo force-cleared before fill-flourish evaluates; closes one-frame race" }
+  - { id: TR-hud-007, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
+      requirement: "GameOver commit snaps in-flight AP tick to final within one-frame; killing hp-pip drain plays unclipped non-gating" }
+  - { id: TR-hud-008, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
+      requirement: "AP tick relies on upstream INPUT_LOCK_MS>=AP_TICK_DURATION_MS, no own tick queue; cross-system coupling w/ Cmd interface" }
+  - { id: TR-hud-009, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
+      requirement: "Turn/round indicator + YOUR/ENEMY banner reads active_player/round_number/match_status, self-clearing TURN_BANNER_DURATION_MS" }
+  - { id: TR-hud-010, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0013, created: 2026-07-23, revised: "", status: active,
+      requirement: "ISO: on-board glyph layer (hp pips, has-acted, tech marker, structure hp, build badge, research marker) anchored per-entity, reprojecting under iso" }
+  - { id: TR-hud-011, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0013, created: 2026-07-23, revised: "", status: active,
+      requirement: "Glyphs use fixed per-tile sub-positions + occlusion-priority (hp pips never occluded)" }
+  - { id: TR-hud-012, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
+      requirement: "hp display branch on PIP_MAX_HP (10, >=): discrete pips below, numeric cur/max at/above; no smooth bar" }
+  - { id: TR-hud-013, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
+      requirement: "Detail panel subscribes outward-in to Cmd selection-changed signal (one-way #9->HUD), distinct pinned vs peek state" }
+  - { id: TR-hud-014, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
+      requirement: "Action log append-only newest-on-top ring buffer (ACTION_LOG_LENGTH 20), one entry per apply_action, oldest dropped; deterministic order" }
+  - { id: TR-hud-015, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
+      requirement: "Build button real-time affordability (dimmed never hidden), mirrors Cmd PREVIEW_BUILD pressed cue" }
+  - { id: TR-hud-016, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
+      requirement: "Victory/defeat reads match_status=GameOver(winner)+win_condition, preempts turn banner within one frame" }
+  - { id: TR-hud-017, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
+      requirement: "End Turn + Build gated inert during opponent turn + EndTurn transient, readouts stay live; reads match_status/phase" }
+  - { id: TR-hud-018, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
+      requirement: "Every HUD value live verbatim read, zero local balance constants, zero recompute (exempt transient anim delta)" }
+  - { id: TR-hud-019, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
+      requirement: "AP Economy exposes pre-computed ap_income_breakdown(player)->{base,outpost,econ_tech}" }
+  - { id: TR-hud-020, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
+      requirement: "Bind read-only to 7 upstream systems + coordination seam w/ Cmd, zero downstream dependents (leaf)" }
+  - { id: TR-hud-021, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
+      requirement: "Audio single-owner play() per event; total priority GameOver>turn stinger>completion(deduped)>AP-fill; duck HUD_AUDIO_DUCK_MS except GameOver hard-cut" }
+  - { id: TR-hud-022, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0014, created: 2026-07-23, revised: "", status: active,
+      requirement: "ENGINE RISK: HUD controls reachable via click + keyboard/gamepad focus, dual-focus grab_click_focus()/grab_focus() + distinct focus/hover StyleBox; inert=FOCUS_NONE" }
+  - { id: TR-hud-023, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0004, created: 2026-07-23, revised: "", status: active,
+      requirement: "Event-driven (signal-subscribed) not per-_process polling; ~6 glyph classes/entity; dirty-flag coalescing" }
+
+  # ============================ AI Opponent (17) ============================
+  - { id: TR-ai-001, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
+      requirement: "AI operates on headless render-decoupled clone(); no rendering dep; evaluate clone, commit real" }
+  - { id: TR-ai-002, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
+      requirement: "AI acts only as second active_player in own Action phase, identical rules" }
+  - { id: TR-ai-003, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
+      requirement: "Decision loop iterative evaluate->commit: clone->enumerate all legal/affordable across verbs->score->commit best via apply_action->re-clone->repeat" }
+  - { id: TR-ai-004, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
+      requirement: "Enumerate via reachable(), legal_targets()/hypothetical+preview_damage(), legal_build_tiles/legal_deploy_tiles/completed_outpost_count, legal_research_targets" }
+  - { id: TR-ai-005, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
+      requirement: "Every candidate through can_afford + costed via current_ap/income before scoring; no discount" }
+  - { id: TR-ai-006, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
+      requirement: "Single normalized action_score(action) -> AP-equivalent-value-per-AP-cost, post-hoc lethal floor override; verb-dispatch, data-driven no hardcoded priority" }
+  - { id: TR-ai-007, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
+      requirement: "All scoring weights external tunable (15 knobs: HP_PER_AP, KILL_DENIAL_RATE, ECONOMY_HORIZON, LETHAL_FLOOR_BONUS, PASS_THRESHOLD, etc.)" }
+  - { id: TR-ai-008, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
+      requirement: "Enforce/validate LETHAL_FLOOR_BONUS > economy_ceiling_score cross-knob invariant; needs startup assertion (no AC automates - QQ-07)" }
+  - { id: TR-ai-009, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
+      requirement: "Loop termination guaranteed: no legal action, best<=PASS_THRESHOLD, or own commit->GameOver; bounded iterations" }
+  - { id: TR-ai-010, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
+      requirement: "Handle apply_action() rejection defensively: discard clone, re-loop fresh, spend 0, no crash" }
+  - { id: TR-ai-011, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0003, created: 2026-07-23, revised: "", status: active,
+      requirement: "Deterministic selection: no engine RNG; ties (<SCORE_TIE_EPSILON) -> lowest ap_cost then lowest entity ID" }
+  - { id: TR-ai-012, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
+      requirement: "Perf budget for evaluate->commit loop OPEN (~O(N^2*W*H), N<=24 on 14x16); turn wall-clock 3000ms OR per-commit 400ms spike-gated (QQ-06)" }
+  - { id: TR-ai-013, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
+      requirement: "AI-committed actions render incrementally one commit at a time, not silent batch; commit loop yields/streams" }
+  - { id: TR-ai-014, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
+      requirement: "Query-call instrumentation seam to verify reads route exclusively through approved query set; DI query facade" }
+  - { id: TR-ai-015, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
+      requirement: "Field-level diff harness AI vs human apply_action results, named fields only (position/hp/current_ap/existence); excludes entity-id counters" }
+  - { id: TR-ai-016, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
+      requirement: "Seeded fixture + fuzz corpus (>=20 boards, >=500 fuzzed, fixed seed) verifying current_ap never negative" }
+  - { id: TR-ai-017, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
+      requirement: "Consume Grid manhattan_distance/terrain_at/occupant_at for positional/retreat scoring normalized by tiles-traversed; nearest-live-enemy + one-step lookahead" }
+
+  # ============================ Faction Identity (15) ============================
+  - { id: TR-faction-001, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
+      requirement: "FactionDef as statically-typed data-only Resource, loaded at setup; lint asserts no logic methods" }
+  - { id: TR-faction-002, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
+      requirement: "Schema exposes exactly 6 CR-2 domains, reject load if field outside closed set; hard contract" }
+  - { id: TR-faction-003, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
+      requirement: "effective_produce_cost/effective_move_cost/effective_soft_move_cap in Unit read sites, fold faction delta, floors max(1,..)/max(MIN_MOVE_COST,..)" }
+  - { id: TR-faction-004, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
+      requirement: "effective_ap_income(player) folds Delta base/tier1/tier2 into 4-term formula, floored BASE_INCOME_FLOOR; preserves econ-tech term + cap" }
+  - { id: TR-faction-005, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
+      requirement: "effective_build_cost/build_time/production_cap in B&P read sites, floors max(1,..)/max(MIN_BUILD_TIME,..)/dual-floor cap" }
+  - { id: TR-faction-006, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
+      requirement: "effective_production_cap two-sided inert invariant: base>=1->clamp max(1,base+Delta); base==0->always 0; branch on base_cap sign not single clamp" }
+  - { id: TR-faction-007, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
+      requirement: "effective_research_cost/research_time/tech_available(faction_allows) in Research read sites, floors + boolean AND-gate into legal-research-target filter" }
+  - { id: TR-faction-008, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
+      requirement: "Turn Manager persists faction_of(player) full match, set at SELECTING->ASSIGNED, immutable (LOCKED Setup->PlayerTurn); clone() deep-copies faction" }
+  - { id: TR-faction-009, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
+      requirement: "Turn Manager applies starting_loadout once at SELECTING->ASSIGNED before Setup->PlayerTurn; setup-time placement validation" }
+  - { id: TR-faction-010, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
+      requirement: "SELECTING sub-state between UNASSIGNED and ASSIGNED, re-highlight-without-commit preview + acknowledgment-gated confirm for non-Neutral" }
+  - { id: TR-faction-011, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
+      requirement: "Zero behavior change when all deltas 0 (Neutral): effective_X(base,player)==base_X exactly; parametrized regression test" }
+  - { id: TR-faction-012, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
+      requirement: "Orphaned deltas (key no longer in base roster) silently ignored/inert + load-time schema warning; orphaned loadout vs orphaned numeric delta" }
+  - { id: TR-faction-013, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
+      requirement: "Schema declares faction_hue + reserved non-hue faction_pattern_id, both non-empty on every FactionDef; colorblind fallback" }
+  - { id: TR-faction-014, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
+      requirement: "Faction-selection UI (setup picker + campaign config) showing 3 VS FactionDefs, default Neutral, acknowledgment-gated non-Neutral, preview loadout before lock" }
+  - { id: TR-faction-015, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
+      requirement: "AI reads effective_X via same shared call sites, no AI-only branch; future AI cost-cache key includes player" }
