@@ -89,3 +89,38 @@ Open cross-doc follow-ups (NOT resolved in this GDD):
 
 Prior verdict resolved: Yes — the 7 first-review blockers were confirmed closed; this pass's 7 new
 blockers were fixed and accepted. Status → Approved (spike-gated ranged/kiting numbers noted).
+
+## Review — 2026-07-21 — Verdict: NEEDS REVISION → revised + ACCEPTED (Approved) same session — NARROW DELTA re-review
+Scope signal: S
+Specialists: systems-designer, qa-lead, game-designer, creative-director (senior)
+Blocking items: 2 | Recommended/advisory: 4
+Summary: Narrow re-review triggered solely by the 2026-07-21 Research #8 handoff — the additive
+`effective_defense(unit) = base_defense + (owner_has_defense_tech ? DEFENSE_TECH_BONUS : 0)` formula
+(mirror of `effective_attack`; base_defense 0 all VS units, bonus +1) and the split of the single
+`owner_has_researched` flag into two independent flags (`owner_has_attack_tech`, `owner_has_defense_tech`).
+Scope was strictly the delta; the settled spike-gated ranged/kiting/Sniper numbers were explicitly out of
+scope and NOT re-litigated. All three delta specialists converged that the change is design- and
+logic-clean: systems-designer boundary-tested `effective_defense` (output {0,1}, floors cleanly at
+`MIN_DAMAGE` in the worst case Scout atk 2 vs researched-on-Cover = max(1,2−1−1)=1), confirmed the Combat
+wiring reads the live effective value with no static-`base_defense` split-source ambiguity, and
+grep-confirmed zero surviving `owner_has_researched` references; game-designer confirmed Pillar 3
+legibility is untouched (base_defense is a live value, not a 7th stat-table column; roster identities
+unchanged) and the floor-lock risk is adequately flagged as provisional in three places; the two-flag
+split is neutral-to-positive for Autonomy (flat unordered no-prereq techs → no dominant research order).
+The only defects were two acceptance-criteria gaps found by qa-lead and sustained as blocking by the
+creative-director: (1) **[qa-lead]** the `base_defense = 0` default was asserted in the stat table as fact
+but never verified by any AC (a wrong default would silently corrupt every `effective_defense` output);
+(2) **[qa-lead]** flag independence lived only in a parenthetical prose aside, so a test author could
+satisfy the two adjacent ACs with the other flag left at default `false` and never exercise the cross-term
+— leaving the two-flag split's whole purpose untested. Both fixed in-file with pure additive ACs (a
+`base_defense == 0` all-types AC + a testable cross-term independence AC), plus 3 advisories folded in: a
+both-techs-simultaneously combined-case AC, the live-flag-flip AC split to require one test per flag, and
+a Tuning-Knobs note (plus the missing `DEFENSE_TECH_BONUS` knob row) clarifying `base_defense` is a schema
+field (0 all VS), not a 7th tracked legibility dimension. No formula, rule, or balance change. One advisory
+NOT applied (logged as a follow-up): systems-designer's suggestion that `combat-resolution.md` name its
+defender term `effective_defense(defender)` for symmetry with `effective_attack(attacker)` — a Combat-doc
+polish, not a Unit defect; left to Combat's next revision rather than editing the Approved Combat GDD here.
+Files touched: unit-system.md only (5 AC/knob additions + status → Approved). User accepted to Approved
+without a further re-review.
+Prior verdict resolved: Yes — the two prior full-review approvals (2026-07-20) HELD; this pass only added
+test coverage for the small additive delta. Status → Approved.

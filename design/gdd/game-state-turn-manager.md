@@ -2,7 +2,12 @@
 
 > **Status**: Designed (user-approved 2026-07-19 — pending independent `/design-review`)
 > **Author**: user + main session
-> **Last Updated**: 2026-07-19
+> **Last Updated**: 2026-07-21 (Base & Production `/design-review` reconciliation: Core Rule 3's
+> Start-of-turn phase is now an explicit **canonical numbered sequence** — flags → start-of-turn effects
+> (incl. Base & Production build-timer advance) → **AP income snapshot**, in that order — so a
+> just-completed Economy Outpost counts toward income the same turn. This system owns start-of-turn
+> ordering; `base-production.md` Rule 6 and AP Economy's snapshot both cite it. Additive — no
+> state-machine change.)
 > **Implements Pillar**: Pillar 2 (Tempo Is the Skill — deterministic, legible turn/state advancement); enables Pillar 3 (Readable Board)
 > **Priority / Layer**: Vertical Slice / Foundation (system #2)
 
@@ -41,9 +46,21 @@ always fair, always legible, and always exactly where they left it.
 2. **A match is an alternating sequence of turns.** In the 2-player Vertical Slice, turns alternate
    P1 → P2 → P1 …. Exactly one player is active at a time.
 3. **Each turn runs three phases:**
-   - **Start-of-turn** — set the active player; reset their AP to their income *(amount owned by
-     AP Economy; the reset/discard **timing** is owned here)*; clear per-unit per-turn flags
-     (e.g. `has_attacked`); apply any start-of-turn effects.
+   - **Start-of-turn** — the **canonical ordered sequence** this system owns (other systems contribute
+     effects but do **not** define the order). Steps run in exactly this order:
+     1. **Set the active player.**
+     2. **Clear per-turn flags** for the active player's pieces — units (`has_attacked`, movement
+        state) and structures (`units_produced_this_turn`, structure `has_attacked`). *(Unit System and
+        Base & Production own the flag semantics; the turn manager owns when they clear.)*
+     3. **Apply start-of-turn effects** — including **Base & Production's build-timer advance** (under-
+        construction structures decrement; any reaching 0 transition to Completed) and Research's
+        research-timer advance. These run **before** step 4 so a just-completed Economy Outpost counts
+        toward income *this* turn.
+     4. **Reset AP to income** — snapshot `ap_income` (amount owned by AP Economy) and set `current_ap`.
+        Because this follows step 3, the income snapshot observes the freshly-completed structures.
+     *(The reset/discard **timing** is owned here; AP **amounts** are owned by AP Economy. Base &
+     Production's Rule 6 and AP Economy's start-of-turn snapshot both cite this ordered sequence — it is
+     the single source of truth for start-of-turn ordering.)*
    - **Action phase** — the active player (human or AI) issues AP-costed actions via `apply_action`
      until they end the turn or have no meaningful action left.
    - **End-of-turn** — **discard unspent AP** (no banking — Pillar 1); pass control to the opponent.
@@ -156,6 +173,13 @@ then P2 both end their turns, `round_number` goes 1 → 2 and `active_player` re
 **Downstream (systems that depend on this — all HARD):** AP Economy, Unit System, Movement, Combat
 Resolution, Base & Production, Research, AI Opponent, Command & Action Interface, Game HUD. Each,
 when authored, must list Game State & Turn Manager under its own Dependencies.
+
+**Faction Identity (#12)** is also a downstream dependent (Hard): Game State stores `faction_of(player)`
+and applies each faction's `starting_loadout` at the Setup phase (faction is locked at the
+Setup→PlayerTurn transition and immutable thereafter). This faction *plumbing* is the **only** faction
+handoff a playable Neutral-vs-Neutral VS needs; the per-domain `effective_X` deltas are identity under
+the Neutral default and land with the asymmetry prototype. *(Reciprocity closed 2026-07-22 via
+`/review-all-gdds` C-5 — see faction-identity.md Dependencies.)*
 
 **AP Economy interface (designed 2026-07-19 — confirmed compatible):** this GDD assumed an interface
 of `income(player) -> int`, `spend(player, amount) -> bool`, and a "reset to income" call the turn

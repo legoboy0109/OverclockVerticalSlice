@@ -1,9 +1,16 @@
 # Movement System
 
-> **Status**: In Revision (was Approved 2026-07-19; revised 2026-07-20 to absorb the Unit-System soft-cap
-> surcharge — the new `move_path_cost` split and reachability change need an independent `/design-review`)
+> **Status**: **Approved** (2026-07-21 confirming re-review — 5 specialists). The formula core was
+> independently re-derived as sound (min-length ≡ min-cost licenses the depth-only BFS/Dijkstra; no
+> degenerate boundary outputs). Three blocking gaps from that re-review — path-selection determinism
+> AC, board-change/no-stale-cache AC, and the `move_cost ≥ 1` monotonicity precondition — were fixed
+> in-file same session, plus doc-honesty notes (Player-Fantasy caveat, no-positional-deterrence
+> decision, named kiting fallback owner+lever, split blocker AC, impl-note precision). Numbers remain
+> **spike-gated** (soft-cap/range values ← ranged-combat spike). History: Approved 2026-07-19 → In
+> Revision 2026-07-20 (soft-cap surcharge) → NEEDS REVISION re-review 2026-07-20 (4 items fixed) →
+> Approved 2026-07-21. See `reviews/movement-system-review-log.md`.
 > **Author**: user + main session
-> **Last Updated**: 2026-07-20
+> **Last Updated**: 2026-07-21
 > **Implements Pillar**: Pillar 3 (Readable Board — reachable tiles shown before committing); Pillar 1 (movement spends from the one AP pool); Pillar 2 (positioning is tempo)
 > **Priority / Layer**: Vertical Slice / Core (system #5)
 
@@ -28,6 +35,15 @@ seeing a Scout's wide reach vs. a Heavy's short shuffle, threading a unit past a
 lane — these should feel crisp and deliberate. This serves Pillar 3 (*Readable Board, Deep
 Decisions*): the depth is in choosing *where*, and the system's job is to make the *where* perfectly
 clear before you spend the AP.
+
+> **Honest caveat (the soft cap's cost to this fantasy):** the `soft_move_cap` surcharge (added
+> 2026-07-20) introduces **one extra thing the player must be aware of** — a cheap-tiles budget that
+> is cumulative across the turn and shrinks as a unit moves. "Legible maneuver" here does **not** mean
+> "zero ruleset awareness"; it means the reachable overlay must carry that state *visually* so the
+> player never has to track it mentally (in-cap vs over-cap tiles rendered distinctly, reflecting the
+> unit's current `tiles_moved_this_turn` — a hard requirement, see Visual/Audio Requirements). The
+> depth-dependent cost is a deliberate, spike-gated design cost paid *for* an over-extension brake; the
+> overlay is how Pillar 3 is honored despite it, not a claim the extra regime is invisible.
 
 ## Detailed Rules
 
@@ -61,7 +77,12 @@ clear before you spend the AP.
    A unit may also move and then attack (Combat's `has_attacked` is separate; movement never sets it).
 7. **No zone of control in the Vertical Slice:** being adjacent to an enemy does not stop or slow a
    unit — enemies block only the tile they occupy, not the tiles around them. (ZoC is an Alpha
-   consideration; see Open Questions.)
+   consideration; see Open Questions.) **Stated design consequence (deliberate, not emergent):** with
+   no ZoC, no overwatch, unlimited AP-gated moves, and move-then-attack all in play, the VS has **no
+   positional deterrence** — an attacker can freely path around a defensive line to reach softer
+   backline targets, constrained only by AP, never by any spatial commitment the defender can impose.
+   Fast, fluid flanking over WW2-style front lines is the intended feel; this is load-bearing, not an
+   oversight, and Combat/AI reviewers should treat it as a fixed VS assumption.
 8. **Movement is deterministic:** the reachable set and the chosen path's cost are pure functions of
    the grid state and the unit — no RNG, stable iteration order, headless-computable (for AI + tests).
 
@@ -86,11 +107,13 @@ manager's `apply_action`:
 | AP Economy | `can_afford` (gates reachable set) / `spend` (on move) | — | AP Economy owns the pool |
 | Game State & Turn Manager | applies the move via `apply_action`; move is part of clonable state | new unit position | Turn manager (mutation path) |
 | Combat Resolution | a moved unit may then attack (separate action) | — | Combat (movement doesn't trigger it) |
-| Base & Production | (produced units are *placed*, not *moved* — placement owned there) | — | Base & Production |
-| Command & Action Interface / Game HUD | reachable set + path preview + AP cost | display before commit | those systems own presentation |
+| Base & Production | (produced units are *placed*, not *moved* — placement owned there); **structures block all traversal (Rule 3), incl. for their owner** — so *your own* structure placement can reduce *your own* army's reachability (a corridor-blocking outpost/HQ removes a friendly pass-through route). A placement-side interaction Base & Production should be aware of. | — | Base & Production |
+| Command & Action Interface / Game HUD | reachable set + path preview + AP cost + **per-tile `is_surcharged` flag** (drives the in-cap vs over-cap overlay) | display before commit | those systems own presentation |
 
-**Public interface:** `reachable(unit) -> set<tile, cost>` (side-effect-free) · `move(unit, destination) -> Result`
+**Public interface:** `reachable(unit) -> set<{tile, min_cost, is_surcharged}>` (side-effect-free) · `move(unit, destination) -> Result`
 (validates path + `can_afford`, spends, updates position; atomic).
+
+**Cross-system flag (owed by Command & Action Interface #9's `/design-review` 2026-07-22 — propagated here):** `reachable()`'s return now carries an explicit **`is_surcharged: bool` per tile** — true when the tile's `min_cost` includes at least one over-cap surcharge step. This makes the in-cap/over-cap split of the overlay a *contract*, not a UI inference from `min_cost` (which cannot cleanly separate a mixed in-cap/over-cap path — see this GDD's Visual/Audio requirement that the two render distinctly). #9 renders it verbatim and holds no surcharge constant of its own. The flag is computed by the same Dijkstra search that produces `min_cost` (it already knows, per depth, whether a step crossed `soft_move_cap`), so it adds no new traversal. Final field name/shape reconciled at `/create-architecture`.
 
 ## Formulas
 
@@ -119,6 +142,14 @@ move_path_cost  = base_tiles × unit.move_cost + overcap_tiles × surcharge
 | `tiles_entered(path)` | int | 0 – path length | Tiles the path enters (excludes the start tile) |
 | `move_path_cost` | int | 0 – `current_ap` | AP spent for the move (always integer — `ceil` on the surcharge) |
 
+**Monotonicity precondition (required for the search shortcut below):** `move_cost ≥ 1` and
+`soft_move_cap ≥ 0` for every unit (enforced by Unit System's schema — Core Rule 3). This is not a
+cosmetic bound: the `reachable()` search's correctness (min-length ≡ min-cost, licensing the
+depth-only BFS/Dijkstra) depends on per-tile cost being **strictly positive and non-decreasing in
+path depth**. A hypothetical `move_cost = 0` unit would make every path length cost-tie, silently
+breaking that argument; `soft_move_cap` may be 0 (all tiles surcharged) and the formula still degrades
+gracefully, but `move_cost` must never be 0.
+
 **Integer-AP invariant:** because `SOFT_MOVE_PENALTY` × an odd `move_cost` can be fractional
 (e.g. Scout 1 × 1.5 = 1.5), the surcharge is `ceil(move_cost × SOFT_MOVE_PENALTY)` — rounded up per
 over-cap tile, so every cost stays an integer and is always ≥ `move_cost`. (This replaces this GDD's
@@ -140,18 +171,83 @@ Deterministic uniform-cost search (Dijkstra) from the unit's tile:
   the per-tile cost only ever **rises** with depth (surcharge ≥ base) and depth increases along every
   path, accumulated path cost is still monotonic — so Dijkstra remains correct; the search accumulates
   the soft-cap-aware `move_path_cost` rather than `move_cost × depth`.
+  - **Why keying the settled-cost table by `tile` alone (not `(tile, depth)`) is safe:** given a fixed
+    starting `tiles_moved_this_turn`, this formula makes path cost a pure function of path **length** —
+    so the minimum-**length** path to a tile is always a minimum-**cost** path to it (min-length ≡
+    min-cost). Two paths reaching the same tile at the same length are cost-identical *regardless of
+    where along them the cap was crossed*, so a depth-un-keyed per-tile relaxation cannot miss a
+    cheaper-longer path. This min-length≡min-cost equivalence — distinct from mere length-purity — is
+    the actual property licensing BFS/Dijkstra without `(tile, depth)` keys; spelled out here for
+    implementers.
 - **Traversable nodes:** empty tiles and **friendly-unit-occupied** tiles (pass-through). **Blocked
   nodes** (not expanded): enemy units, all structures, Impassable terrain.
 - **Budget:** accumulate cost ≤ `current_ap`.
 - **Valid destinations returned:** reachable tiles that are **empty & passable** (Rule 4) — a
   friendly-occupied tile can be traversed but is excluded from the returned destination set.
 
-**Output:** a set of `{tile, min_cost}` for every legal stop. Max reach is no longer a simple
+**Output:** a set of `{tile, min_cost, is_surcharged}` for every legal stop (`is_surcharged` true when `min_cost` includes ≥1 over-cap step — see the Public-interface cross-system flag). Max reach is no longer a simple
 `floor(current_ap / move_cost)` — the surcharge shortens deep paths — but the search still respects
 blockers, board shape, and the soft cap. **Example:** a fresh Scout (`move_cost` 1, cap 4, penalty
 2.0) with 5 AP reaches any empty tile within 4 steps at base cost (4 AP), then can afford **at most
 0** further tiles (a 5th tile would cost `ceil(1×2.0)` = 2 AP, exceeding the remaining 1 AP) — so its
 5-AP reach is 4 tiles, not 5. Under the old uniform rule it would have been 5.
+
+**Agreement invariant (reachable ⇔ billed).** For any destination `T` in `reachable(unit)`, the
+reported `min_cost` **equals** the `move_path_cost` that `move(unit, T)` actually bills for the path
+it takes to `T` — both use the identical soft-cap-aware summation over the same tile sequence, so the
+previewed cost is *always exactly* what is charged (Pillar 3: see the cost before you pay). This holds
+on the authoritative state and on any `clone()`. The two code paths (search vs. billing) must never
+diverge; an AC asserts it directly.
+
+> **The invariant is actually stronger than "same tile sequence."** Because cost depends only on path
+> **length** (given the same starting `tiles_moved_this_turn`), it holds even if `move()`'s concrete
+> route differs *tile-for-tile* from the one `reachable()` costed — any two equal-length paths to `T`
+> bill identically. The real guarantee is **same-length ⇒ same-cost**, which is robust to
+> implementation divergence in *which* shortest path is walked; implementers need only match path
+> *length*, not path identity.
+
+> 📐 **Implementation note (owed to an ADR when the architecture phase begins).**
+> - **Hand-rolled search, not the built-in pathfinder.** The depth-dependent edge cost **cannot** be
+>   expressed with Redot/Godot's `AStarGrid2D`/`AStar2D`. The precise reason (not "static weights" —
+>   `AStarGrid2D` *does* expose overridable `_compute_cost(from, to)`/`_estimate_cost(from, to)`): that
+>   callback receives **only the two grid points**, with **no accumulated path depth / `g_score`
+>   parameter**, so a cost that depends on `tiles_moved_this_turn` + steps-so-far cannot be computed
+>   inside it without smuggling in external mutable state — which then breaks A*/Dijkstra's "a settled
+>   node's cost is final" closed-set invariant (the same physical tile legitimately has different entry
+>   costs on different-depth paths). Don't go looking for a weight-scale escape hatch; there isn't one
+>   for depth-dependence. Implement over Grid's `neighbors()`/`is_passable()`/`occupant_at()` API.
+> - **Valid shortcut under current (uniform-terrain) rules:** because per-tile cost is a pure function
+>   of path **length**, the min-cost path is the min-**step** path — a plain **BFS** plus a closed-form
+>   length→cost conversion is correct and cheaper than a full priority-queue Dijkstra. **This shortcut
+>   breaks the moment `difficult-terrain` (Alpha Open Question) lands** — variable per-tile cost makes
+>   a shorter path potentially more expensive, forcing a true `(tile, depth)`-keyed weighted search.
+>   Revisit then; do not hardcode the length-monotonicity assumption as permanent.
+> - **Fixed-point penalty, not float (defensive).** Represent `SOFT_MOVE_PENALTY` as a scaled integer
+>   (e.g. `PENALTY_X10 = 20` for 2.0) and compute the surcharge as integer ceiling-division
+>   `((move_cost × PENALTY_X10) + 9) / 10`. **Scope of the risk (narrower than "always overcharges"):**
+>   GDScript `float` is a 64-bit double, and for `move_cost` 1–3 × penalty 1.5–3.0 the products are
+>   small enough that most are exactly representable. The actual hazard is the **boundary case** — a
+>   penalty × move_cost *designed* to be a whole number (e.g. any move_cost × 2.0, or move_cost 2 ×
+>   1.5 = 3.0) landing a hair *below* the integer due to the decimal literal's binary representation,
+>   making `ceil()` round up one AP too many. It won't fire across the whole range, only for those
+>   near-integer products — but AP is an integer-correctness-critical resource (the Integer-AP
+>   invariant), and this is a *live-tunable* knob, so fixed-point is the cheap insurance. *(Ownership:
+>   `SOFT_MOVE_PENALTY` is Unit-owned; this representation change is flagged to Unit System / the spike.)*
+> - **Deterministic structures:** back the search's visited/cost table with a flat
+>   `index(x,y)=y*GRID_WIDTH+x` array (Grid already defines it), **not** a `Dictionary` — Godot
+>   Dictionary iteration/sort order is not a guaranteed contract, and AI-clone parity needs a stable
+>   order. Give the search an explicit state parameter (`reachable(state, unit)`, or a method on
+>   `GameState`/`Grid`) so a cloned state can never read the authoritative grid by mistake.
+> - **Perf budget (owed):** `reachable()` is recomputed per selection (no cache) and called by AI
+>   lookahead over many cloned states; the AI Opponent GDD (or an ADR) should pin a concrete budget
+>   (e.g. `reachable()` ≤ X ms on 24×24; ≤ N calls per AI decision) for `performance-analyst` to profile.
+>   The eventual ADR should also pin the visited/cost-array **allocation strategy** (fresh-per-call —
+>   simplest, GC/alloc cost — vs. pooled-and-cleared across AI lookahead calls — faster but needs
+>   explicit clear-to-avoid-stale-across-clones discipline), since it directly shapes that budget.
+> - **Grid API not yet pinned (cross-doc dependency).** This search couples to Grid's
+>   `neighbors()` / `is_passable()` / `occupant_at()` — exact signatures **not yet specified** in the
+>   Grid & Terrain GDD or any ADR. Those three method contracts must land there before Movement's
+>   search can be coded. Blocking for *implementation*, not for this design doc.
 
 ## Edge Cases
 
@@ -200,7 +296,9 @@ Dependencies when authored.
 **Provisional / spike-gated:** the soft-cap surcharge inputs (`soft_move_cap` per unit,
 `SOFT_MOVE_PENALTY`, default 2.0) are **unvalidated** — Unit System owns them and flags the whole
 ranged/reach model for a combat spike before the numbers lock. The surcharge *formula* here (the
-summation, `ceil` rule, and depth-dependent reachability) is Movement-owned and needs `/design-review`.
+summation, `ceil` rule, and depth-dependent reachability) is Movement-owned and was
+**`/design-review`-confirmed sound on 2026-07-21** (the numbers stay spike-gated; only the formula and
+spec are approved).
 
 ## Tuning Knobs
 
@@ -223,6 +321,14 @@ Movement's readability is central to Pillar 3 (presentation owned by the Command
 HUD; stated here as requirements):
 - **Reachable-tile highlight:** on selecting a unit, all valid destinations are clearly highlighted;
   friendly tiles the unit can pass *through* but not stop on read differently from valid stops.
+- **Surcharge legibility (Pillar 3 — required, NOT a watch-item):** the reachable overlay must
+  **visually distinguish in-cap (base-cost) tiles from over-cap (surcharged) tiles**, and must reflect
+  the unit's **current** `tiles_moved_this_turn`. Because the counter is cumulative but the overlay is
+  recomputed per selection, a partially-moved unit's cheap zone *shrinks* when it is reselected mid-turn
+  — that change must be **shown on the board**, never something the player has to track mentally (the
+  exact hidden-state Pillar 3 forbids). Owned by the Command & Action Interface (#9); stated here as a
+  hard requirement because it is the readability cost the depth-dependent formula introduces. *(This
+  supersedes the earlier "spike/UX watch item" framing in Open Questions.)*
 - **Path + cost preview:** hovering/targeting a destination previews the path and its exact AP cost
   **before** committing (see-the-cost-before-you-pay — Pillar 3, and the prototype's requested
   action-preview affordance).
@@ -246,33 +352,76 @@ are owned and designed by the Command & Action Interface (#9) and Game HUD (#10)
 
 ## Acceptance Criteria
 
-- **GIVEN** a Scout (`move_cost` 1) with 5 AP on open terrain, **WHEN** `reachable` is computed,
-  **THEN** every empty passable tile within a 5-step traversable path is returned as a valid stop.
-- **GIVEN** a Trooper (`move_cost` 2) with 5 AP, **WHEN** it moves a 2-tile path, **THEN** 4 AP are
-  spent (1 remains); **WHEN** a 3-tile path (cost 6) is considered, **THEN** it is not offered.
+- **GIVEN** a Scout (`move_cost` 1, `soft_move_cap` 4, `SOFT_MOVE_PENALTY` 2.0) with 5 AP on open
+  terrain, **WHEN** `reachable` is computed, **THEN** exactly the empty passable tiles within a
+  **4-step** traversable path are returned (tiles 1–4 cost 1 AP each, within cap); **no 5-step-only
+  tile is included** — the 5th tile would cost `ceil(1×2.0)` = 2 AP, exceeding the remaining 1 AP.
+  *(Matches the Formulas worked example; the pre-revision uniform-cost answer of 5 tiles no longer
+  holds.)*
+- **GIVEN** a **fresh** Trooper (`move_cost` 2, `tiles_moved_this_turn` 0) with 5 AP, **WHEN** it
+  moves a 2-tile path, **THEN** exactly 4 AP are spent (1 remains).
+- **GIVEN** a **separate fresh** Trooper (`tiles_moved_this_turn` 0, `soft_move_cap` 3) with 5 AP,
+  **WHEN** a 3-tile path is considered, **THEN** its cost is exactly 6 AP (3 in-cap tiles × 2) and it
+  is **not offered** — excluded from `reachable()`'s returned set **and** rejected by `move()` if
+  attempted directly (fails `can_afford`). *(Split from the old combined AC to remove the
+  fresh-vs-sequential ambiguity: this is a fresh unit, not the same Trooper after its first move.)*
 - **GIVEN** a friendly unit between the mover and an empty tile, **WHEN** `reachable` is computed,
   **THEN** the empty tile beyond is reachable (the mover paths through the friendly).
-- **GIVEN** an enemy unit or a structure between the mover and a tile, **WHEN** `reachable` is
-  computed, **THEN** the path is blocked there and tiles reachable only through it are excluded.
+- **GIVEN** an **enemy unit** between the mover and a tile, **WHEN** `reachable` is computed, **THEN**
+  the path is blocked there and tiles reachable only through it are excluded.
+- **GIVEN** a **friendly *structure*** (HQ/outpost, mover's own owner) between the mover and a tile,
+  **WHEN** `reachable` is computed, **THEN** it **blocks** (tiles reachable only through it are
+  excluded) — proving the pass-through rule applies to friendly **units only**, never friendly
+  structures. *(Split from the old combined enemy-or-structure AC; the "friendly units pass through
+  but friendly structures do not" distinction is the easiest blocker rule to implement wrong, so it
+  gets its own explicit test.)*
 - **GIVEN** a friendly-occupied tile, **WHEN** it is considered as a destination, **THEN** it is not
   a valid stop (`move` to it is rejected); an Impassable tile is likewise never a valid stop.
 - **GIVEN** a unit adjacent to an enemy, **WHEN** it moves past/around the enemy, **THEN** it is not
   stopped or slowed (no zone of control in the VS).
 - **GIVEN** a unit with AP remaining after a move, **WHEN** it moves again, **THEN** the second move
   is allowed and charged normally (AP-gated only).
-- **GIVEN** a unit whose cumulative `tiles_moved_this_turn` is at or above its `soft_move_cap`,
-  **WHEN** it enters a further tile, **THEN** that tile costs `ceil(move_cost × SOFT_MOVE_PENALTY)`,
-  not `move_cost` (surcharge applied per over-cap tile).
-- **GIVEN** a unit that could reach tile T in one move, **WHEN** the same net displacement is split
-  into two `move()` calls, **THEN** the total AP charged is identical (cumulative counter — chunking
-  never resets the cheap budget).
-- **GIVEN** an odd-`move_cost` unit (e.g. Scout `move_cost` 1) and a fractional
-  `move_cost × SOFT_MOVE_PENALTY`, **WHEN** an over-cap tile is billed, **THEN** the charge is the
-  `ceil` (integer) value and the total AP spent is an integer.
-- **GIVEN** the same grid state and unit, **WHEN** `reachable` is computed twice (incl. on a cloned
-  state), **THEN** the results are identical (determinism; headless-computable).
+- **GIVEN** a Heavy (`move_cost` 3, `soft_move_cap` 2, `tiles_moved_this_turn` 0,
+  `SOFT_MOVE_PENALTY` 2.0) with sufficient AP, **WHEN** it moves a 3-tile path, **THEN** the total
+  cost is exactly **12 AP** (2 in-cap tiles × 3 + 1 over-cap tile × `ceil(3×2.0)` = 6 + 6); the
+  over-cap tile costs `ceil(move_cost × SOFT_MOVE_PENALTY)`, not `move_cost`.
+- **GIVEN** a Scout (`move_cost` 1, `soft_move_cap` 4, `SOFT_MOVE_PENALTY` 2.0,
+  `tiles_moved_this_turn` 0), **WHEN** it moves 6 tiles as **one** `move()` call vs. **two** calls of
+  3 + 3 (a split that **crosses the cap**), **THEN** both charge exactly **8 AP** (4 in-cap × 1 +
+  2 over-cap × `ceil(1×2.0)`) — the cumulative counter prevents chunking from resetting the cheap
+  budget. *(The split must straddle the cap; a wholly in-cap split would pass trivially and prove
+  nothing.)*
+- **GIVEN** a Scout (`move_cost` 1) at `SOFT_MOVE_PENALTY` **1.5** with
+  `tiles_moved_this_turn` ≥ `soft_move_cap`, **WHEN** it enters one further (over-cap) tile, **THEN**
+  the charge is `ceil(1×1.5)` = **2 AP** (not 1.5, not 1) and the total AP spent is an integer.
+- **GIVEN** a destination tile T returned by `reachable(unit)` at reported cost X — **including at
+  least one case where X reflects one or more over-cap tiles** — **WHEN** `move(unit, T)` is executed,
+  **THEN** the AP actually spent equals X **exactly** (the reachable-vs-billed agreement invariant in
+  Formulas; the two share one soft-cap-aware summation by construction). This must hold on the
+  authoritative state and any `clone()`.
+- **GIVEN** the same grid state and unit — **including a mid-turn clone where
+  `tiles_moved_this_turn` > 0** (so the depth-dependent surcharge is actually exercised) — **WHEN**
+  `reachable` is computed twice, **THEN** the results are identical (determinism; headless-computable).
+- **GIVEN** a grid state with **two or more equal-cost paths** to the same destination tile T, **WHEN**
+  `move(unit, T)` is executed twice from the identical starting state, **THEN** the **identical tile
+  sequence** is chosen both times (tie-break path selection is deterministic — pins Rule 8's "stable
+  iteration order" for replay/animation/AI-clone parity, which the reachable-set-identity AC above does
+  **not** cover — that one only checks *which tiles* are reachable, not *which path* is walked).
+  *(Integration-type → `tests/integration/movement/`; exercises the search's neighbor-expansion order,
+  which must be a pinned, reproducible order, not hash/insertion-dependent.)*
+- **GIVEN** a unit for which `reachable()` has been computed with a blocking enemy/structure in the
+  way, **AND** that blocker is subsequently removed from the grid (e.g. destroyed in combat) **with no
+  other state change**, **WHEN** `reachable()` is computed again, **THEN** the newly-opened tiles are
+  included — proving reachability is recomputed **fresh from current state each time (no stale cache)**,
+  per the Edge Cases "board changes mid-turn" rule. *(Integration-type → `tests/integration/movement/`;
+  guards the classic caching bug the no-cache rule exists to prevent.)*
 - **GIVEN** a unit whose `move_cost` exceeds `current_ap`, **WHEN** `reachable` is computed, **THEN**
   it returns the empty set.
+- **GIVEN** a Heavy already at/past its cap (`tiles_moved_this_turn` ≥ `soft_move_cap` 2) with
+  `current_ap` = 4, **WHEN** `reachable` is computed, **THEN** it returns the **empty set** — the next
+  tile costs `ceil(3×2.0)` = 6 AP > 4, **even though the base `move_cost` 3 alone would be
+  affordable**. *(A distinct boundary from the `move_cost > current_ap` empty-set case above: here the
+  base cost fits but the surcharge does not.)*
 
 ## Open Questions
 
@@ -280,7 +429,7 @@ are owned and designed by the Command & Action Interface (#9) and Game HUD (#10)
 |----------|-------|----------------|
 | Difficult terrain (variable per-tile move cost — e.g. slow tiles, high ground)? | Movement / Grid | Deferred to Alpha; Grid flagged this and Movement owns the mechanic |
 | Zone of control (adjacent enemies stop/slow movement)? | game-designer | VS = OFF; ZoC adds tactical depth but complicates readability (Pillar 3) — Alpha |
-| Should friendly *structures* be pass-through too, or only friendly units? | game-designer | This GDD sets: only friendly **units** are pass-through; all structures block. Confirm in review |
+| Should friendly *structures* be pass-through too, or only friendly units? | game-designer | This GDD sets: only friendly **units** are pass-through; all structures block. **CONFIRMED in the 2026-07-21 re-review** — dedicated AC added (friendly structure blocks). Closed. |
 | Overwatch / reaction moves (a unit reacting during the enemy turn)? | Combat / game-designer | Out of VS scope; would break the strict turn model — Alpha+ |
-| Ranged kiting emerges from these rules (no ZoC + no overwatch + multiple AP-gated moves + move-then-attack lets a ranged unit move → shoot → retreat freely). | game-designer / Combat | Watch item — the cross-cutting RANGED-COMBAT decision flags kiting (esp. Sniper, range 3 / `move_cost` 2) as the highest-risk *unvalidated* behavior. Movement is half of what enables it. **Note: the soft-cap surcharge (added 2026-07-20) does NOT tax kiting** — a 1–2 tile standoff kite sits under every unit's `soft_move_cap`; the surcharge only brakes deep single-turn over-extension/rushes. If kiting itself proves degenerate in the spike, the lever is a *separate* mechanism (partial ZoC / move-then-attack cost), not a lower soft cap. |
-| Does the depth-dependent reachability cost (soft-cap surcharge) hurt reachable-set compute cost or preview clarity? | Movement / Command & Action Interface | The search stays Dijkstra (monotonic cost) but is no longer uniform-cost — verify the reachable-set overlay still reads clearly when tiles past the cap cost more (Pillar 3). Spike/UX watch item |
+| Ranged kiting emerges from these rules (no ZoC + no overwatch + multiple AP-gated moves + move-then-attack lets a ranged unit move → shoot → retreat freely). | **game-designer** (design call) — **Movement (#5)** owns any *movement-side* lever, **Combat (#6)** owns any *attack-side* lever; decided in the ranged-combat spike | Watch item — the cross-cutting RANGED-COMBAT decision flags kiting (esp. Sniper, range 3 / `move_cost` 2) as the highest-risk *unvalidated* behavior. Movement is half of what enables it. **Note: the soft-cap surcharge (added 2026-07-20) does NOT tax kiting** — a 1–2 tile standoff kite sits under every unit's `soft_move_cap`; the surcharge only brakes deep single-turn over-extension/rushes. **Named fallback (no longer a bare TBD):** *if the combat spike confirms degenerate kiting,* the fix is a **separate** anti-kite lever — the candidates are **partial Zone-of-Control** (Movement-owned) or a **move-then-attack AP cost / restriction** (Combat-owned) — **not** a lower soft cap and **not** stretching the surcharge to cover it. game-designer picks the lever from spike data; this row names the owners so the three docs stop each assuming another owns the fix. Mirrors unit-system.md's Sniper "no-counter" spike hypothesis. |
+| Does the depth-dependent reachability cost (soft-cap surcharge) hurt reachable-set compute cost or preview clarity? | Movement / Command & Action Interface | **Preview-clarity half RESOLVED (2026-07-20 re-review):** promoted from watch-item to a hard overlay requirement (in-cap vs over-cap tiles visually distinct; overlay reflects current `tiles_moved_this_turn`) — see Visual/Audio Requirements. **Compute-cost half:** search stays monotonic (BFS/Dijkstra) but no longer uniform — a concrete `reachable()` perf budget for AI lookahead is owed to the AI Opponent GDD / an ADR (see Formulas implementation note). |

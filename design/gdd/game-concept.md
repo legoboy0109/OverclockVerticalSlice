@@ -39,10 +39,18 @@ chooses better pulls ahead.
 You are a rising faction commander who wins by out-thinking your rival's tempo.
 Not the general with the biggest fleet — the one who reads the board, invests a
 turn's action points where they'll compound hardest, and times the swing that
-tips a close war. The fantasy is **mastery of tempo**: the quiet satisfaction of
-an opening that snowballs, and the white-knuckle moment when momentum flips and
-you have to claw it back — the *Zero Hour* "barely holding on" feeling, earned
-through allocation, not luck.
+decides a close war. The fantasy is **mastery of tempo**: the quiet satisfaction of
+an opening that snowballs, and the white-knuckle moment in an undecided game when
+you have to stabilize before the enemy's lead compounds past reach — the *Zero
+Hour* "barely holding on" feeling, earned through allocation, not luck.
+
+**A deliberate design stance**: OVERCLOCK has no rubber-band or comeback mechanic
+(in the lineage of *Into the Breach* and *StarCraft II*). Every economic lever
+reinforces whoever is currently ahead — Pillar 2 ("Tempo Is the Skill") does not
+reward losing. The "swing" a skilled player pulls off is stabilizing a **close,
+undecided** game before it tips; it is not reversing a game that has already been
+decided. Once a game is decided, it stays decided — that asymmetry is what makes
+the stabilization skill meaningful in the first place.
 
 What you can do here that you can't elsewhere: manage your economy and your army
 as *the same decision*. There is no separate "macro screen." Building a structure,
@@ -87,8 +95,10 @@ compounds that budget fastest.**
 - Players learn to read an opponent's tempo and *time a push* to hit before the rival's
   power spike.
 - Players experiment to find each faction's distinct win condition and AP rhythm.
-- The "swing moment" emerges naturally: momentum tips, the losing side scrambles to
-  stabilize — the *Zero Hour* beat, produced by systems rather than scripting.
+- The "swing moment" emerges naturally in **close, undecided** games: one side's
+  lead grows, and the other scrambles to stabilize before it's too late — the
+  *Zero Hour* beat, produced by systems rather than scripting. This is not a
+  comeback mechanic; once a game is actually decided, OVERCLOCK does not reverse it.
 
 ### Core Mechanics (Systems we build)
 
@@ -126,7 +136,7 @@ compounds that budget fastest.**
 - [x] **Achievers** — campaign completion, mastering each faction, climbing personal skill. How: clear goals, persistent progression, deep mastery curve.
 - [x] **Explorers** — understanding the AP system, discovering openings and faction synergies. How: research trees, emergent optimal builds, asymmetric factions to learn.
 - [ ] **Socializers** — not a primary target for v1 (single-player focus).
-- [x] **Killers/Competitors** — out-thinking and out-tempoing an opponent. How: the tempo duel is built for competitive strategists; skirmish vs AI now, PvP a possible future.
+- [x] **Killers/Competitors** — out-thinking and out-tempoing an opponent. How: the tempo duel is built for competitive strategists; skirmish vs AI now, PvP a possible future. *Scope caveat: this appeal is only fully realized post-Vertical-Slice, once a stronger AI or PvP exists — the VS AI is deliberately scoped to "credible, not masterful" (see AI Opponent GDD).*
 
 ### Flow State Design
 
@@ -137,9 +147,11 @@ compounds that budget fastest.**
   simple and pressure ramps as the board fills.
 - **Feedback clarity**: Every AP spent is a visible, discrete investment; the board reads
   at a glance (Pillar 3) so the player always knows whether they're gaining or losing tempo.
-- **Recovery from failure**: Losing tempo is recoverable through smart stabilization, not a
-  death spiral — the swing can flip back. Missions are self-contained; a loss teaches an
-  opening to try differently next time.
+- **Recovery from failure**: In a **close, undecided** game, losing tempo is recoverable
+  through smart stabilization — the swing can still flip while the outcome is in doubt.
+  OVERCLOCK deliberately has no rubber-band/comeback mechanic (see Core Fantasy): once a
+  game is actually decided, it is not designed to reverse. Missions are self-contained;
+  a loss teaches an opening to try differently next time.
 
 ---
 
@@ -340,6 +352,13 @@ to play.*
 3. Two **asymmetric** factions (rush/tempo vs boom/mass) — pending the asymmetry prototype.
 4. A basic but competent AI opponent, and the pre-commit action-preview menu.
 5. Neon Retro-Future art (no longer placeholder) and one faction's opening campaign beats.
+6. **Validate "swing-back from behind" in playtest**: with the VS AI or a human opponent,
+   confirm that a game which is still **close/undecided** can be flipped through skilled
+   stabilization play. This test explicitly does NOT validate — and must not be scored
+   against — reversing a game that playtesters agree is already decided; OVERCLOCK has no
+   comeback mechanic by design (see Core Fantasy). Acceptance: in a sample of close-game
+   playtests, at least one flips via stabilization; in a sample of decided-game playtests,
+   none reverse.
 
 **Explicitly NOT in the Vertical Slice** (defer to Alpha / Full Vision):
 - Full persistent campaign beyond the 2–3 linked missions.

@@ -1,8 +1,14 @@
 # Unit System
 
-> **Status**: In Revision (re-reviewed 2026-07-20 — melee core Designed; **range-2 firing behavior AND the ranged/kiting subsystem are Provisional/Experimental**, gated on a combat spike before their numbers lock)
+> **Status**: **Approved** (re-reviewed 2026-07-21 — the Research #8 delta re-review; verdict NEEDS
+> REVISION → 2 additive-AC blockers fixed in-file → accepted to Approved). The `effective_defense`
+> formula + two-flag split (`owner_has_attack_tech` / `owner_has_defense_tech`) were confirmed design-
+> and logic-clean by all 3 delta specialists; the fixes added a `base_defense == 0` default AC and a
+> testable flag-independence AC (no formula/rule/balance change). **The range-2 firing behavior AND the
+> ranged/kiting subsystem remain Provisional/Experimental** — gated on a combat spike before their
+> numbers lock (unchanged, spike-gated). Prior: fully Approved twice on 2026-07-20 (14 blockers closed).
 > **Author**: user + main session
-> **Last Updated**: 2026-07-20
+> **Last Updated**: 2026-07-21
 > **Implements Pillar**: Pillar 3 (Readable Board — silhouette-first, roles read at a glance); Pillar 2 (Tempo Is the Skill — unit roles create tactical depth)
 > **Priority / Layer**: Vertical Slice / Core (system #4)
 
@@ -45,8 +51,12 @@ legible units whose interactions run deep.
 1. **A unit type is an immutable data template** with: display name, silhouette id, `hp` (max),
    `attack` (base), `attack_range` (tiles), `move_cost` (AP per tile entered), `soft_move_cap`
    (tiles a unit may move *cumulatively this turn* before movement cost escalates — see Rule 6), and
-   `produce_cost` (AP to build). The Vertical-Slice roster is Scout / Trooper / Heavy / Sniper (stat
-   table below).
+   `produce_cost` (AP to build). It additionally carries four **combat-infrastructure fields** the
+   Combat GDD (#6) introduced but that this system **owns**: `defense` (flat damage mitigation, int ≥ 0),
+   `targeting_mode` (enum {DIRECT, AREA}), `min_range` (AREA dead-zone floor, int; `attack_range` is the
+   maximum reach for both profiles), and `can_counterattack` (bool). All four ship **off/neutral by
+   default** across the entire VS roster — see Rule 3a. The Vertical-Slice roster is Scout / Trooper /
+   Heavy / Sniper (stat table below).
 2. **A unit instance has runtime state**: a unique `entity_id` (the identity Grid's occupancy map
    `tile → entity id` and Turn Manager's `entity_at()` key on — see Rule 2a for its uniqueness
    scope), a `type` reference to its immutable template (which Scout/Trooper/Heavy/Sniper it is —
@@ -111,6 +121,18 @@ legible units whose interactions run deep.
    *(Sniper stats — and the range-2 firing behavior of Trooper/Heavy — are starting proposals; the
    whole ranged-combat model is unvalidated. See Open Questions.)*
 
+   **3a. Combat-infrastructure stat fields (uniform across the VS roster).** Beyond the cost-power
+   ladder above, every unit type carries four fields the Combat GDD (#6) introduced and this system
+   **owns**: `defense`, `targeting_mode`, `min_range`, `can_counterattack`. They are **uniform across
+   all four VS unit types** — every unit ships `defense = 0`, `targeting_mode = DIRECT`, `min_range = 1`,
+   `can_counterattack = false` — so they are stated here as roster-wide defaults rather than as columns
+   on the table above. They are **live infrastructure, off by default**: Combat resolves them now (a
+   `defense`-2 or `AREA`/`can_counterattack` unit would work immediately), but no VS unit uses a
+   non-default value. `attack_range` (Rule 1 / the table) is the **maximum** reach for both targeting
+   profiles; `min_range` is the AREA-only near edge (1 for the direct-fire roster — no dead zone).
+   Defaults and semantics are Combat-authoritative — if this summary disagrees with the Combat GDD, the
+   Combat GDD wins (mirroring Rule 5).
+
 4. **Units occupy exactly one grid tile** (Grid's single-occupant invariant). They block *enemy*
    movement; *friendly* units may path through them but cannot stop on an occupied tile (Movement rule).
 5. **Attacks target the first blocker along a cardinal line, within `attack_range`.** Unit System
@@ -157,9 +179,17 @@ legible units whose interactions run deep.
 7. **A newly produced unit may act the turn it is produced** (no summoning sickness) — AP permitting.
 8. **A unit dies when `current_hp` reaches 0** (Combat resolves the damage); it is removed from the
    grid immediately, in the same resolution step.
-9. **Effective attack includes the research buff:** a unit's effective attack = base `attack` +
-   (owner has researched ? research attack bonus : 0). The buff magnitude is owned by Research; the
-   unit stores only its base and the effective value is computed from the owner's tech state.
+9. **Effective attack and defense include research buffs (two independent tech flags).** Research /
+   Tech (#8) ships **three flat, independent** techs; two of them buff units, via **two independent
+   boolean flags** on the owner's state:
+   - `effective_attack = base attack + (owner_has_attack_tech ? RESEARCH_ATK_BONUS : 0)`
+   - `effective_defense = base defense + (owner_has_defense_tech ? DEFENSE_TECH_BONUS : 0)`
+   The buff magnitudes (`RESEARCH_ATK_BONUS`, `DEFENSE_TECH_BONUS`, both +1) are **owned by Research**;
+   the unit stores only its `base attack`/`base defense` and the effective values are computed live from
+   the owner's tech flags (a unit produced after research already reflects the buffs). `base defense` is
+   0 for all VS units (the field was introduced to the schema via Combat's #6 handoff). *(This
+   generalizes the former single-flag rule — Research chose independent flat techs, not a tiered/stacking
+   bonus, so two booleans suffice.)*
 
 ### States and Transitions
 
@@ -195,25 +225,45 @@ The one derived quantity it owns:
 
 ### `effective_attack(unit)`
 
-`effective_attack(unit) = unit.base_attack + (owner_has_researched ? RESEARCH_ATK_BONUS : 0)`
+`effective_attack(unit) = unit.base_attack + (owner_has_attack_tech ? RESEARCH_ATK_BONUS : 0)`
 
 | Variable | Type | Range | Description |
 |----------|------|-------|-------------|
 | `unit.base_attack` | int | 2–6 | Base attack from the stat table (Scout 2 / Trooper 3 / Heavy 5 / Sniper 6) |
-| `owner_has_researched` | bool | — | Whether the unit's owner has completed the research upgrade |
-| `RESEARCH_ATK_BONUS` | int const, ≥0 | +1 (current) | Attack added by research — **owned by the Research GDD**, referenced here; must be a single non-negative flat int |
+| `owner_has_attack_tech` | bool | — | Whether the unit's owner has completed **Attack Tech** (one of Research's three techs) |
+| `RESEARCH_ATK_BONUS` | int const, ≥0 | +1 | Attack added by Attack Tech — **owned by the Research GDD**, referenced here; a single non-negative flat int |
 | `effective_attack` | int | 2–7 (at current bonus) | The attack value Combat uses |
 
 **Output range:** 2 (un-researched Scout) to 7 (researched Sniper) *at the current `RESEARCH_ATK_BONUS = +1`*. **Example:** a researched Trooper
 = 3 + 1 = 4; a researched Sniper = 6 + 1 = 7.
 
-> **Research coupling (non-authoritative):** `RESEARCH_ATK_BONUS` is owned by the Research GDD (#8);
-> the +1 shown here is illustrative — **if Research's value disagrees, Research wins.** This formula
-> assumes the bonus is a **single non-negative flat int** added to `base_attack`. *Constraint handed
-> to Research:* if Research instead wants a **tiered or stacking** bonus, this boolean formula cannot
-> express it and must be revised — flag it back to Unit System. The stated 2–7 range and any
-> per-type researched values go stale if the bonus is ever ≠ +1 — so tests must read the bonus from
-> Research's config, never hardcode the researched totals (see Acceptance Criteria).
+> **Research coupling (RESOLVED 2026-07-21):** `RESEARCH_ATK_BONUS` is owned by the Research GDD (#8);
+> the +1 shown here is illustrative — **if Research's value disagrees, Research wins.** Research shipped
+> **three flat, independent** techs (Attack / Defense / Economy), so this is a **single boolean flag**
+> (`owner_has_attack_tech`) gating a single flat int — the exact shape this formula already assumed;
+> **no tiered/stacking revision was needed.** Defense Tech is handled by the separate
+> `effective_defense` formula below (a second independent flag), not by extending this one. The stated
+> 2–7 range and any per-type researched values go stale if the bonus is ever ≠ +1 — so tests must read
+> the bonus from Research's config, never hardcode the researched totals (see Acceptance Criteria).
+
+### `effective_defense(unit)`
+
+`effective_defense(unit) = unit.base_defense + (owner_has_defense_tech ? DEFENSE_TECH_BONUS : 0)`
+
+| Variable | Type | Range | Description |
+|----------|------|-------|-------------|
+| `unit.base_defense` | int | 0 (all VS units) | Base defense — the field Combat's `damage_formula` reads (introduced to the schema via Combat's #6 handoff; 0 for the whole VS roster) |
+| `owner_has_defense_tech` | bool | — | Whether the unit's owner has completed **Defense Tech** (Research #8) |
+| `DEFENSE_TECH_BONUS` | int const, ≥0 | +1 | Defense added by Defense Tech — **owned by the Research GDD**; provisional/playtest-gated |
+| `effective_defense` | int | 0–1 (VS) | The `defense(defender)` term Combat's `damage_formula` consumes — **no Combat change** (the term was already generic) |
+
+**Output range:** 0 (un-researched) to 1 (researched). **Example:** a researched player's Trooper has
+`effective_defense = 0 + 1 = 1`; an enemy un-researched Scout then deals `max(1, 2 − 0 − 1) = 1`.
+
+> **Mirror of `effective_attack`, introduced by Research (#8) 2026-07-21.** `DEFENSE_TECH_BONUS` (+1) is
+> **provisional/playtest-gated**: with `COVER_DR = 1`, a researched unit on Cover reaches 2 mitigation,
+> floor-locking low-attack enemies to `MIN_DAMAGE` 1 (a legibility risk — Combat's defense-stacking
+> constraint). Tests must read the bonus from Research's config, not hardcode it.
 
 > **Soft-cap surcharge (owned by Movement, stated here for context):** per over-cap tile the cost is
 > `ceil(move_cost × SOFT_MOVE_PENALTY)`, applied to each tile past `soft_move_cap` cumulative this
@@ -283,15 +333,28 @@ The one derived quantity it owns:
 | AP Economy | Hard | `spend()` for move/produce/surcharge costs (which this system owns the values of) |
 
 **Downstream (systems that depend on this — all HARD):** Movement (`move_cost` + `soft_move_cap` +
-`SOFT_MOVE_PENALTY` + `tiles_moved_this_turn`; **owes the new soft-cap surcharge formula — the
-Movement GDD is Approved and must be revised to add it; run `/propagate-design-change`**), Combat
+`SOFT_MOVE_PENALTY` + `tiles_moved_this_turn`; **added the soft-cap surcharge summation formula
+2026-07-20 — Movement's independent `/design-review` of that formula completed 2026-07-21 (confirming
+re-review: formula confirmed sound, Approved; corrected 2026-07-22, `/review-all-gdds` — this entry was
+stale**), Combat
 (`hp`/effective attack/`attack_range`/`can_attack()`; **owns the cardinal-line targeting rule and the
 ⟶Combat targeting ACs**), Base & Production (produces units), Research (buffs attack), Command & Action
 Interface, Game HUD. Each lists Unit System under its Dependencies when authored.
 
-**Provisional (undesigned dependency):** Research owns `RESEARCH_ATK_BONUS` (+1); Combat owns
-`attack_cost` (2 AP) and the damage formula; Base & Production owns `produce_cost` *spending flow*
-and deploy-tile selection (though the cost *values* live here).
+**Faction Identity (#12)** is also a downstream dependent (additive, identity-default):
+`effective_produce_cost` / `effective_move_cost` fold each player's faction cost deltas, floored by the
+existing `MIN_MOVE_COST` (= `move_cost ≥ 1`, already Approved — no new floor owed). Combat stats stay
+identity-locked (faction-identity.md CR-6). **No-op under the Neutral default**; the fold-ins land with
+the asymmetry prototype. *(Reciprocity closed 2026-07-22 via `/review-all-gdds` C-5 — see
+faction-identity.md Dependencies.)*
+
+**Cross-system ownership (dependencies now designed):** Research / Tech (#8, Approved) owns
+`RESEARCH_ATK_BONUS` (+1) and `DEFENSE_TECH_BONUS` (+1) — Unit System absorbed Research's handoff
+2026-07-21, adding `effective_defense` and splitting the research flag into `owner_has_attack_tech` /
+`owner_has_defense_tech` — this delta was re-reviewed 2026-07-21 (Accepted, Approved; corrected
+2026-07-22, `/review-all-gdds` — this entry was stale). Combat (#6, Approved) owns `attack_cost` (2 AP)
+and the damage formula; Base & Production (#7, Approved) owns `produce_cost` *spending flow* and
+deploy-tile selection (though the cost *values* live here).
 
 ## Tuning Knobs
 
@@ -307,6 +370,13 @@ and deploy-tile selection (though the cost *values* live here).
 | Roster size | 4 (VS) | Scout/Trooper/Heavy/Sniper | Cognitive load vs. variety | >4–5 risks Pillar 3 overload | <3 too flat |
 | Per-unit stat dimensions | 6 tracked (hp/atk/range/move/cap/cost) | 6 | Cognitive load (the *real* complexity axis, not just headcount) | >6–7 tracked values per unit risks the "spreadsheet" the fantasy forbids | — |
 | `RESEARCH_ATK_BONUS` | (owned by Research) | +1 | Tech power spike | referenced — not owned here | — |
+| `DEFENSE_TECH_BONUS` | (owned by Research) | +1 | Defense tech power spike (via `effective_defense`) | referenced — not owned here | — |
+
+> **Note — `base_defense` is a schema field, not a 7th tracked legibility dimension.** Every unit
+> carries a `base_defense` field (introduced via Combat's #6 handoff), but it is **0 for the entire VS
+> roster** and is not a per-unit differentiator — defense enters play only as a global, research-granted
+> `effective_defense` bonus, never as a stat-table column the player reads per unit. The "6 tracked
+> dimensions" count above is unchanged: `base_defense` does not add to the player-facing legibility load.
 
 > **Provisional / spike-gated:** the `soft_move_cap` and `SOFT_MOVE_PENALTY` defaults, and all four
 > Sniper/range values — **plus the range-2 firing behavior of Trooper and Heavy** — are
@@ -368,16 +438,39 @@ whether it has acted this turn. The Command & Action Interface uses this to pres
 - **GIVEN** each unit type is instantiated, **WHEN** its stats are read, **THEN** they match the
   table exactly — Scout (hp 3, atk 2, range 1, move 1, cap 4, cost 2), Trooper (6, 3, 2, 2, 3, 4),
   Heavy (10, 5, 2, 3, 2, **7**), Sniper (3, 6, 3, 2, 3, 5).
+- **GIVEN** each unit type is instantiated, **WHEN** its `base_defense` field is read, **THEN** it is
+  **0** for all four types (Scout / Trooper / Heavy / Sniper) — the schema default the whole VS roster
+  ships with, and the value `effective_defense` reads before any Defense-Tech bonus. *(Guards the
+  data-default the formula table asserts: a wrong default would silently corrupt every
+  `effective_defense` output.)*
 - **GIVEN** an **un-researched** owner, **WHEN** `effective_attack` is computed per type, **THEN** it
   returns the base (Scout 2, Trooper 3, Heavy 5, Sniper 6).
-- **GIVEN** a **researched** owner, **WHEN** `effective_attack` is computed per type, **THEN** it
-  returns `base + RESEARCH_ATK_BONUS`, where `RESEARCH_ATK_BONUS` is **read from Research's config,
-  not hardcoded** (illustrative totals at the current `RESEARCH_ATK_BONUS = +1`: Scout 3, Trooper 4,
-  Heavy 6, Sniper 7).
-- **GIVEN** an instance created **before** its owner researches, **WHEN** the owner's tech flag flips
-  to true (same instance, no new unit), **THEN** a later `effective_attack` call on that instance
-  returns base + bonus — proving the value is computed **live** from tech state, not baked at
-  construction.
+- **GIVEN** an owner with **Attack Tech** (`owner_has_attack_tech = true`), **WHEN** `effective_attack`
+  is computed per type, **THEN** it returns `base + RESEARCH_ATK_BONUS`, where `RESEARCH_ATK_BONUS` is
+  **read from Research's config, not hardcoded** (illustrative totals at +1: Scout 3, Trooper 4, Heavy
+  6, Sniper 7).
+- **GIVEN** an owner **without** / **with Defense Tech** (`owner_has_defense_tech` false / true),
+  **WHEN** `effective_defense` is computed per type, **THEN** it returns `base_defense` (0) / `0 +
+  DEFENSE_TECH_BONUS` (1) respectively — `DEFENSE_TECH_BONUS` **read from Research's config, not
+  hardcoded**.
+- **GIVEN** an owner with `owner_has_attack_tech = true` **and** `owner_has_defense_tech = false`,
+  **WHEN** both effective values are computed, **THEN** `effective_attack` returns `base_attack +
+  RESEARCH_ATK_BONUS` **and** `effective_defense` returns `base_defense` **unmodified** (0); **AND
+  GIVEN** the flags reversed (`owner_has_attack_tech = false`, `owner_has_defense_tech = true`),
+  **THEN** `effective_defense` returns `base_defense + DEFENSE_TECH_BONUS` **and** `effective_attack`
+  returns `base_attack` **unmodified** — proving the two flags act **independently**, not as a shared
+  toggle. *(Locks in the two-flag split's whole purpose: a regression that re-couples the flags fails
+  this AC.)*
+- **GIVEN** an owner with **both** `owner_has_attack_tech` **and** `owner_has_defense_tech` true,
+  **WHEN** both effective values are computed, **THEN** `effective_attack = base_attack +
+  RESEARCH_ATK_BONUS` **and** `effective_defense = base_defense + DEFENSE_TECH_BONUS` **simultaneously**
+  — neither bonus suppresses the other (additive, non-interacting).
+- **GIVEN** an instance created **before** its owner researches, **WHEN** the owner's **Attack-Tech**
+  flag flips to true (same instance, no new unit), **THEN** a later `effective_attack` call on that
+  instance returns `base + RESEARCH_ATK_BONUS`; **AND** independently, **WHEN** the owner's
+  **Defense-Tech** flag flips to true, **THEN** a later `effective_defense` call returns `base_defense +
+  DEFENSE_TECH_BONUS` — both proving the effective values are computed **live** from tech state, not
+  baked at construction. *(Both flags must be exercised — one live-flip test per flag.)*
 - **GIVEN** a unit at `current_hp == hp`, **WHEN** its sole hp mutator `apply_hp_delta(unit, +N)`
   (`N > 0`) is called (the path Combat and any future heal use; not raw field assignment), **THEN**
   `current_hp` clamps at `hp` and never exceeds it.
@@ -445,7 +538,7 @@ whether it has acted this turn. The Command & Action Interface uses this to pres
 | Per-faction unit rosters or stat variants? | Faction Identity (#12) | Natural asymmetry lever; keep shallow until the asymmetry prototype |
 | Per-unit veterancy / XP? | game-designer | Out of VS scope; noted as a possible progression hook |
 | Should Heavy have splash/AoE attacks? | Combat (#6) | Ties to the turn manager's reserved "simultaneous HQ destruction" rule; Alpha consideration |
-| **Soft-cap surcharge formula is undesigned in Movement.** Unit owns `soft_move_cap`, `SOFT_MOVE_PENALTY`, and the `tiles_moved_this_turn` counter; Movement (#5) must add the surcharge summation: tiles past the cap (cumulative this turn) billed at `ceil(move_cost × SOFT_MOVE_PENALTY)`, a flat single-step surcharge. | Movement (#5) | **Handoff — Movement GDD is Approved and must be revised; run `/propagate-design-change`.** Movement must read the counter and honor the `ceil` integer-AP rule |
+| **Soft-cap surcharge formula added to Movement (2026-07-20).** Unit owns `soft_move_cap`, `SOFT_MOVE_PENALTY`, and the `tiles_moved_this_turn` counter; Movement (#5) has added the surcharge summation: tiles past the cap (cumulative this turn) billed at `ceil(move_cost × SOFT_MOVE_PENALTY)`, a flat single-step surcharge, reading the counter and honoring the `ceil` integer-AP rule. | Movement (#5) | **Handoff complete and re-reviewed — formula authored in `move_path_cost`, confirmed sound in Movement's 2026-07-21 independent `/design-review` (Approved; corrected 2026-07-22, `/review-all-gdds` — this entry was stale).** |
 | **Does cost-7 Heavy actually get built?** Raising Heavy 6→7 gave the Trooper the range-2 hp/AP niche but left the Heavy with *no* per-AP niche (worst atk/AP in the roster), standing entirely on concentration. Is concentration enough to justify the price, or is the Heavy dead? | game-designer / economy-designer | Validate build-rate in the slice (doc's own "if <10% built → too costly" threshold). If dead, retune (cost or stats) — kept as a doc-level identity for now, not a rebalance |
 | **Odd `produce_cost` friction (Sniper 5 AND Heavy 7).** A full Sniper turn (5+move2+attack2 = 9 of 10) strands 1 AP; Heavy produce+attack (7+2 = 9) strands 1 AP the same way. **Both kept** pending the spike. | game-designer / Combat (#6) | Even either to a spend-clean value only if the 1-AP friction proves annoying in playtest; likely low-impact (a Scout's 1-AP move absorbs the leftover). Treat as a spike output, not a pre-tune |
 | **`soft_move_cap` / `SOFT_MOVE_PENALTY` defaults are unvalidated** (the ranged/reach model was never in the prototype). | game-designer / Movement (#5) | Tune in the ranged-combat spike alongside the Sniper/range numbers |
