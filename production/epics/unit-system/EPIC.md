@@ -4,7 +4,7 @@
 > **GDD**: design/gdd/unit-system.md
 > **Architecture Module**: Unit System (Core Layer)
 > **Status**: Ready
-> **Stories**: Not yet created — run `/create-stories unit-system`
+> **Stories**: 10 stories created (see table below)
 
 ## Overview
 
@@ -57,7 +57,26 @@ This epic is complete when:
 - All Visual/Feel and UI stories have evidence docs with sign-off in `production/qa/evidence/`
 - The real `UnitState`/`StructureState` classes replace the GS-003 test stubs under `tests/helpers/stubs/` (delete stubs on landing — class_name collision)
 
+## Stories
+
+| # | Story | Type | Status | ADR | TRs | VS-critical |
+|---|-------|------|--------|-----|-----|-------------|
+| 001 | UnitTypeDef template resource + registry | Config/Data | Ready | ADR-0007 | 001, 014 | ✅ (1st) |
+| 002 | UnitState runtime schema + stub migration | Logic | Ready | ADR-0007 | 002, 003, 014, 015 | ✅ (2nd) |
+| 003 | Pure ops — can_attack, reset_turn_flags, duplicate, apply_hp_delta | Logic | Ready | ADR-0007 | 004, 005, 015 | ✅ (3rd) |
+| 004 | effective_attack — live research-tech fold | Logic | Ready | ADR-0007 | 006 | ✅ |
+| 005 | effective_defense + two-flag independence | Logic | Ready | ADR-0007 | 006, 007 | ✅ |
+| 006 | Movement & AP cost fields (UnitConfig) | Logic | Ready | ADR-0009 | 008, 009 | ✅ |
+| 007 | Faction read-sites — effective_produce/move_cost | Logic | Ready | ADR-0012 | 011 | defer |
+| 008 | Lifecycle states + edge-case guards | Logic | Ready | ADR-0007 | 012 | ✅ |
+| 009 | duplicate()/serialization completeness audit | Logic | Ready | ADR-0001 | 015 | defer |
+| 010 | HUD/Command read-surface | UI | Ready | ADR-0016 | 013 | defer |
+
+**All 15 TR-unit-* requirements covered** (no gaps). VS-critical build order: 001 → 002 → 003 → 006 → 004 → 005 → 008.
+
 ## Next Step
 
-Run `/create-stories unit-system` to break this epic into implementable stories.
-This is the VS-critical foundation — build it before Movement and Combat.
+Run `/story-readiness production/epics/unit-system/story-001-unittypedef-template-registry.md`
+to validate the first story, then `/dev-story` to implement. Work in dependency order
+(each story's `Depends on:` field gates it). Story 002 closes the Sprint-1 `UnitState`/`Unit`
+stub seam — the stubs get deleted, so run it before any Movement/Combat work.
