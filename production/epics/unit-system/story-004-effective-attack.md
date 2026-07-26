@@ -1,12 +1,12 @@
 # Story 004: effective_attack — Live Research-Tech Fold
 
 > **Epic**: Unit System
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Logic
 > **Estimate**: 2 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-26
 
 ## Context
 
@@ -77,3 +77,21 @@
 
 - Depends on: Story 001 (`base_attack`), Story 002 (`UnitState.owner`); ADR-0001 `PlayerState.has_attack_tech` (landed); Research epic for the real `RESEARCH_ATK_BONUS` (test double until then).
 - Unlocks: Combat epic damage formula (ADR-0010 consumes this).
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-26
+**Criteria**: 3/3 passing (4 tests)
+**Deviations** (all ADVISORY):
+- Reads `unit.type.attack` (the real ADR-0007 schema) rather than the story's `unit.base_attack` Implementation-Notes wording.
+- **Bonus source seam** (user-approved 2026-07-26): `RESEARCH_ATK_BONUS` magnitude read at call time via the forward-declared `Research.attack_tech_bonus()` accessor (mirrors the existing `Research.economy_tech_income_bonus` pattern; the `Research` test stub was extended with it). The gate (`has_attack_tech`) is read directly from `PlayerState` by `effective_attack`, per the control-manifest. Never hardcoded — the real Research epic implements the accessor (reading the TechDef magnitude) later.
+- Typed `unit: UnitState` for the VS roster; widening to `EntityState` for a Defensive Structure's attack is deferred to Combat-epic wiring (no structure uses Attack Tech in the VS).
+- **Cross-ADR gap logged** (`docs/tech-debt-register.md`): ADR-0018 says tech-effect magnitudes live on `TechDef`, but ADR-0007's `TechDef` has no magnitude field — Research epic must reconcile.
+**Test Evidence**: Logic — `tests/unit/effective_attack_test.gd` (4 tests: un-researched base w/ injected-but-ungated bonus, researched base+bonus, tracks-injected-value-not-hardcoded, live flag-flip on same instance). Full suite 238/238 PASS.
+**Code Review**: Complete — `/code-review` APPROVED (godot-gdscript-specialist, CLEAN; formula matches ADR-0010, forward-declaration seam sound + cleanly upgradable, not-hardcoded + live-computation genuinely proven by the tests, shared-stub extension non-disruptive).
+
+**Files delivered**:
+- `src/core/unit/unit.gd` (appended `Unit.effective_attack`)
+- `tests/helpers/stubs/research_stub.gd` (added forward-declared `attack_tech_bonus()` + setter + reset)
+- `tests/unit/effective_attack_test.gd`

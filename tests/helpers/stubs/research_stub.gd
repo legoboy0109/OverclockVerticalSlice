@@ -51,6 +51,13 @@ static var _economy_tech_income_bonus: Dictionary = {}
 ## that player. Set via [method queue_completion]; cleared by [method reset].
 static var _queued_completions: Dictionary = {}
 
+## Test-controllable flat Attack-Tech bonus magnitude (Unit-004, TR-unit-006).
+## The real Research epic reads this from the Attack-Tech [TechDef] template
+## (ADR-0018); the stub returns a test-set value. Default 1 mirrors the GDD's
+## illustrative RESEARCH_ATK_BONUS = +1, but tests should set it explicitly
+## (e.g. +3) to prove Unit code reads the value rather than hardcoding it.
+static var _attack_tech_bonus: int = 1
+
 
 ## Sets the stubbed, [b]already-capped[/b] economy-tech income term for
 ## [param player]. This is the value AP adds verbatim — pass what the AC expects
@@ -65,6 +72,21 @@ static func set_economy_tech_income_bonus(player: int, bonus: int) -> void:
 ## test-set value (default 0 if unset — the un-researched contribution).
 static func economy_tech_income_bonus(_state: GameState, player: int) -> int:
 	return _economy_tech_income_bonus.get(player, 0)
+
+
+## Sets the stubbed flat Attack-Tech bonus magnitude (Unit-004). Pass what the
+## AC expects [method attack_tech_bonus] to report.
+static func set_attack_tech_bonus(bonus: int) -> void:
+	_attack_tech_bonus = bonus
+
+
+## Forward-declared contract (ADR-0018, TR-unit-006): the flat Attack-Tech bonus
+## magnitude Unit System's [method Unit.effective_attack] adds when the unit's
+## owner holds Attack Tech. Flat (not per-player) — the owner gate is read from
+## [member PlayerState.has_attack_tech] by the caller. Real impl reads the
+## Attack-Tech [TechDef] magnitude; the stub returns the test-set value.
+static func attack_tech_bonus() -> int:
+	return _attack_tech_bonus
 
 
 ## Test hook (GS-003, ADR-0008): queues [param count] research completions for
@@ -110,3 +132,4 @@ static func advance_research_timers(_state: GameState, player: int) -> Array:
 static func reset() -> void:
 	_economy_tech_income_bonus.clear()
 	_queued_completions.clear()
+	_attack_tech_bonus = 1

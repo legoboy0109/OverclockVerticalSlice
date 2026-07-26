@@ -70,3 +70,24 @@ static func clone(unit: UnitState) -> UnitState:
 ## [member UnitState.current_hp] directly outside this function.
 static func apply_hp_delta(unit: UnitState, delta: int) -> void:
 	unit.current_hp = clampi(unit.current_hp + delta, 0, unit.type.hp)
+
+
+## The attack value Combat uses (ADR-0010's forward-declared Unit-owned
+## contract, TR-unit-006): [param unit]'s base attack (from its
+## [UnitTypeDef]) plus the flat Attack-Tech bonus when the unit's owner holds
+## Attack Tech. Computed [b]live[/b] every call — never baked at construction —
+## so an already-built unit reflects its owner researching Attack Tech mid-match
+## (Research tech-unlock flags are permanent, ADR-0018).
+##
+## The bonus [b]magnitude[/b] is Research-owned and read at call time via the
+## forward-declared [method Research.attack_tech_bonus] (mirroring
+## [method Research.economy_tech_income_bonus], ADR-0006/0018) — never hardcoded
+## in Unit code (control-manifest). The [i]gate[/i] is read directly from
+## [member PlayerState.has_attack_tech] (ADR-0001, sole-writer Research). O(1).
+##
+## Scope: typed to [UnitState] for the VS unit roster (Story 004). Combat may
+## widen the contract to [EntityState] for a Defensive Structure's attack during
+## Combat-epic wiring; deferred here (no structure uses Attack Tech in the VS).
+static func effective_attack(state: GameState, unit: UnitState) -> int:
+	var bonus: int = Research.attack_tech_bonus() if state.per_player[unit.owner].has_attack_tech else 0
+	return unit.type.attack + bonus
