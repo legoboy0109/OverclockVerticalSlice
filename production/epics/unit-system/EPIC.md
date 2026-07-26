@@ -66,7 +66,7 @@ This epic is complete when:
 | 003 | Pure ops — can_attack, reset_turn_flags, clone, apply_hp_delta | Logic | Complete | ADR-0007 | 004, 005, 015 | ✅ (3rd) |
 | 004 | effective_attack — live research-tech fold | Logic | Ready | ADR-0007 | 006 | ✅ |
 | 005 | effective_defense + two-flag independence | Logic | Ready | ADR-0007 | 006, 007 | ✅ |
-| 006 | Movement & AP cost fields (UnitConfig) | Logic | Ready | ADR-0009 | 008, 009 | ✅ |
+| 006 | Movement & AP cost fields (UnitConfig) | Logic | Complete | ADR-0009 | 008, 009 | ✅ |
 | 007 | Faction read-sites — effective_produce/move_cost | Logic | Ready | ADR-0012 | 011 | defer |
 | 008 | Lifecycle states + edge-case guards | Logic | Ready | ADR-0007 | 012 | ✅ |
 | 009 | duplicate()/serialization completeness audit | Logic | Ready | ADR-0001 | 015 | defer |

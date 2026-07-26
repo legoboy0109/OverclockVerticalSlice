@@ -24,6 +24,11 @@ Balance="*res://src/core/economy/balance.gd"
 ; UnitTypes.SCOUT/TROOPER/HEAVY/SNIPER as a bare global reference.
 UnitTypes="*res://src/core/unit/unit_types.gd"
 
+; Thin, logic-free config Autoload (ADR-0009), a sibling of Balance. Loads the
+; UnitConfig movement-tuning resource once at boot; UnitConfig.surcharge_for()
+; reads UnitBalance.units.soft_move_penalty_x10 internally.
+UnitBalance="*res://src/core/unit/unit_balance.gd"
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg")

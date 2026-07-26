@@ -1,12 +1,12 @@
 # Story 006: Movement & AP Cost Fields (Unit-Owned Values, Consumed Cross-System)
 
 > **Epic**: Unit System
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Logic
 > **Estimate**: 3 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-26
 
 ## Context
 
@@ -77,3 +77,21 @@
 
 - Depends on: Story 001 (`move_cost`/`soft_move_cap`), Story 002 (`tiles_moved_this_turn`), Story 003 (`reset_turn_flags` zeroes the counter).
 - Unlocks: Movement epic (hard dep: reads `move_cost`+`soft_move_cap`+`SOFT_MOVE_PENALTY`+`tiles_moved_this_turn`); AP Economy integration.
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-26
+**Criteria**: 2/2 passing (+ 6 extra rigor cases: all 4 units, penalty-1.5 & 3.0 boundaries)
+**Deviations** (ADVISORY — faithful reconciliations of ADR-0009's internally-inconsistent `UnitConfig` sketch, which showed a static method reading an instance `@export`; user-approved 2026-07-26):
+- Penalty tunable is loaded via a **sibling `UnitBalance` Autoload** (`UnitBalance.units`, mirroring `Balance.economy`) rather than a field on the AP-Economy-owned `Balance` — the ADR's own named option; no cross-epic edit.
+- Added a pure `surcharge_with_penalty(move_cost, penalty_x10)` DI primitive so the fixed-point ceil math is testable without the global. Movement's ADR-0009 call site `UnitConfig.surcharge_for(unit.move_cost)` is unchanged.
+Neither changes any contract Movement depends on.
+**Test Evidence**: Logic — `tests/unit/unit_cost_fields_test.gd` (8 tests: ladder-arithmetic guard, `surcharge_for` per-unit + all-four, `.tres` smoke-check, penalty-1.5/2.0/3.0 ceil boundaries). Full suite 206/206 PASS.
+**Code Review**: Complete — `/code-review` APPROVED (godot-gdscript-specialist, CLEAN; ceil-division verified exhaustively across 500 cases).
+
+**Files delivered**:
+- `src/core/unit/unit_config.gd` (`UnitConfig` Resource + `surcharge_for` / `surcharge_with_penalty` statics)
+- `src/core/unit/unit_balance.gd` (`UnitBalance` autoload) + `project.godot` registration
+- `data/units/unit_config.tres`
+- `tests/unit/unit_cost_fields_test.gd`
