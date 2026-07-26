@@ -8,75 +8,92 @@
 #   review         ↔  In Review
 #   done           ↔  Complete
 #   blocked        ↔  Blocked
+#
+# NOTE: Sprint 2 is a Pre-Production planning + de-risking sprint. Its tasks
+# produce design/planning artifacts, a Core backlog, and perf spikes — not
+# dev-stories with test files. `file:` points to the primary artifact each
+# task produces (or the sprint plan). /story-done does not apply to planning
+# tasks; mark them done here directly as their artifacts land + pass review.
+# Sprint 1 (all 7 stories done, QA APPROVED) is archived in
+# production/sprints/sprint-1.md and the story Completion Notes.
 
-sprint: 1
-goal: "Implement the Foundation spine (GameState core + AP Economy) in the resolved cross-epic order, unblocking the Turn FSM and win-check stories that depend on both."
-start: "2026-07-27"
-end: "2026-08-07"
-generated: "2026-07-25"
+sprint: 2
+goal: "Vertical Slice Enablement — Core backlog breakdown, blocking rulings/spikes, VS scoping, and the UX/art artifacts the slice depends on; clears the four CONCERNS from the 2026-07-26 Pre-Prod → Production gate."
+start: "2026-08-10"
+end: "2026-08-21"
+generated: "2026-07-26"
 updated: "2026-07-26"
 
 stories:
-  - id: "gs-001"
-    name: "GameState Core — Data Model, Read API & clone()"
-    file: "production/epics/game-state-turn-manager/story-001-gamestate-core-model-read-clone.md"
+  - id: "s2-01"
+    name: "Core-layer epic + story breakdown (VS-critical path: movement → command-interface → combat → HUD → minimal AI)"
+    file: "production/epics/"
     priority: must-have
-    status: done
+    status: ready-for-dev
+    owner: ""
+    estimate_days: 2.5
+    blocker: ""
+    completed: ""
+  - id: "s2-02"
+    name: "Resolve per-player-index guard ruling (ADR addendum / control-manifest guardrail)"
+    file: "docs/architecture/control-manifest.md"
+    priority: must-have
+    status: ready-for-dev
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: "2026-07-26"
-  - id: "ap-001"
-    name: "AP Income Formula, EconomyConfig & Balance Autoload"
-    file: "production/epics/ap-economy/story-001-ap-income-econconfig-balance.md"
+    completed: ""
+  - id: "s2-03"
+    name: "QQ-05 (reachable/pathfinding perf) + QQ-06 (AI lookahead perf) spikes"
+    file: "prototypes/"
     priority: must-have
-    status: done
+    status: ready-for-dev
     owner: ""
-    estimate_days: 0.5
+    estimate_days: 1.5
     blocker: ""
-    completed: "2026-07-26"
-  - id: "ap-002"
-    name: "AP Spend Contract — can_afford & spend"
-    file: "production/epics/ap-economy/story-002-ap-spend-contract.md"
+    completed: ""
+  - id: "s2-04"
+    name: "Vertical Slice scope definition (one playable turn + mandated playtests + PROCEED/PIVOT/KILL criteria)"
+    file: "production/vertical-slice/"
     priority: must-have
-    status: done
+    status: ready-for-dev
     owner: ""
-    estimate_days: 0.5
+    estimate_days: 1
+    blocker: "s2-01"
+    completed: ""
+  - id: "s2-05"
+    name: "UX specs for VS screens: core HUD, main menu, pause"
+    file: "design/ux/hud.md"
+    priority: should-have
+    status: backlog
+    owner: ""
+    estimate_days: 1.5
     blocker: ""
-    completed: "2026-07-26"
-  - id: "ap-003"
-    name: "AP reset_turn & discard"
-    file: "production/epics/ap-economy/story-003-ap-reset-discard.md"
-    priority: must-have
-    status: done
+    completed: ""
+  - id: "s2-06"
+    name: "Record AD-ART-BIBLE sign-off verdict in art bible"
+    file: "design/art/art-bible.md"
+    priority: should-have
+    status: backlog
     owner: ""
     estimate_days: 0.25
     blocker: ""
-    completed: "2026-07-26"
-  - id: "gs-002"
-    name: "Action Command Model, apply_action Pipeline & Event Signal"
-    file: "production/epics/game-state-turn-manager/story-002-apply-action-pipeline.md"
-    priority: must-have
-    status: done
+    completed: ""
+  - id: "s2-07"
+    name: "Entity inventory for VS-scope entities"
+    file: "design/assets/entity-inventory.md"
+    priority: should-have
+    status: backlog
     owner: ""
-    estimate_days: 0.5
+    estimate_days: 0.75
     blocker: ""
-    completed: "2026-07-26"
-  - id: "gs-003"
-    name: "Turn FSM — start_match, start_turn 4-Step Sequence, EndTurnAction & Round Increment"
-    file: "production/epics/game-state-turn-manager/story-003-turn-fsm-start-of-turn-sequence.md"
-    priority: must-have
-    status: done
+    completed: ""
+  - id: "s2-08"
+    name: "Difficulty-curve + player-journey design docs"
+    file: "design/difficulty-curve.md"
+    priority: nice-to-have
+    status: backlog
     owner: ""
-    estimate_days: 0.5
+    estimate_days: 1
     blocker: ""
-    completed: "2026-07-26"
-  - id: "gs-004"
-    name: "Win-Check, GameOver & MAX_ROUNDS/Tiebreak Terminal Conditions"
-    file: "production/epics/game-state-turn-manager/story-004-win-check-terminal-conditions.md"
-    priority: must-have
-    status: done
-    owner: ""
-    estimate_days: 0.5
-    blocker: ""
-    completed: "2026-07-26"
+    completed: ""
