@@ -1,0 +1,8 @@
+# Tech Debt Register
+
+Advisory deviations and forward-looking items logged at story close. Each entry
+names the story it was raised from. Track/triage via `/tech-debt`.
+
+- **2026-07-26** (GS-001 GameState Core): `GameState.current_ap(player)` and `faction_of(player)` do a raw `per_player[player]` index with no bounds check — an out-of-range player index throws an unhandled runtime error rather than returning a sentinel. Undocumented contract. Before Story 002 builds on this, either add a test locking in the crash-on-bad-caller behavior (acceptable for a trusted internal API) or make an explicit design decision to return a sentinel. — tracked from `production/epics/game-state-turn-manager/story-001-gamestate-core-model-read-clone.md`
+- **2026-07-26** (GS-001 GameState Core): `entities_by_id` is a plain untyped `Dictionary`; `entity_at()`'s `entities_by_id.get(id)` returns `Variant` coerced to `-> EntityState`, safe only by write-discipline convention. ADR-0001 (Risks, line 269) marks typed `Dictionary[int, EntityState]` as RESOLVED/available (Godot 4.4+). Tighten to the typed dict when Story 002 starts writing to it from multiple call sites, to make the return statically sound. — tracked from `production/epics/game-state-turn-manager/story-001-gamestate-core-model-read-clone.md`
+- **2026-07-26** (GS-001 GameState Core): `entity_at()` occupancy/entities desync path — if `grid.occupant_at` returns a valid id absent from `entities_by_id`, it degrades safely to `null` (no crash) but is untested. No mutator exists yet to produce the desync; add a regression test alongside Story 002's `apply_action`/`place`/`remove` mutators. — tracked from `production/epics/game-state-turn-manager/story-001-gamestate-core-model-read-clone.md`
