@@ -350,6 +350,7 @@ static func _ensure_dispatch_registered() -> void:
 	if _dispatch_registered:
 		return
 	register_verb(Action.Verb.END_TURN, _validate_end_turn, _apply_end_turn)
+	register_verb(Action.Verb.MOVE, Movement.validate, Movement.apply)
 	_dispatch_registered = true
 
 

@@ -9,7 +9,7 @@ Engine: Redot 26.2 (Godot 4.6-compatible fork)
 | [Game State & Turn Manager](game-state-turn-manager/EPIC.md) | Foundation | Game State & Turn Manager | design/gdd/game-state-turn-manager.md | 4 stories (4 Complete) | Complete |
 | [AP Economy](ap-economy/EPIC.md) | Foundation | AP Economy | design/gdd/ap-economy.md | 3 stories (3 Complete) | Complete |
 | [Unit System](unit-system/EPIC.md) | Core | Unit System | design/gdd/unit-system.md | 10 stories | Ready |
-| [Movement](movement/EPIC.md) | Core | Movement System | design/gdd/movement-system.md | 3 stories (1 Complete) | In Progress |
+| [Movement](movement/EPIC.md) | Core | Movement System | design/gdd/movement-system.md | 3 stories (2 Complete) | In Progress |
 | [Combat Resolution](combat-resolution/EPIC.md) | Core | Combat Resolution | design/gdd/combat-resolution.md | Not yet created | Ready |
 | [Base & Production](base-production/EPIC.md) | Core | Base & Production | design/gdd/base-production.md | Not yet created | Ready |
 | [Research / Tech](research-tech/EPIC.md) | Core | Research / Tech | design/gdd/research-tech.md | Not yet created | Ready |

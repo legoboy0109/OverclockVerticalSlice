@@ -185,3 +185,75 @@ static func _cost_for_depth(unit: UnitState, tiles_entered: int) -> int:
 ## exactly that boundary depth is not yet surcharged. O(1).
 static func _is_surcharged_at_depth(unit: UnitState, depth: int) -> bool:
 	return depth > max(0, unit.type.soft_move_cap - unit.tiles_moved_this_turn)
+
+
+## The public forwarder for [method _cost_for_depth] — Story 002's billing
+## entry point, sharing the exact same summation [method reachable] uses for
+## its per-depth cost (the reachable-vs-billed agreement invariant depends on
+## there being exactly one implementation; this call is the load-bearing part
+## of that guarantee, ADR-0009 Implementation Notes). O(1).
+static func move_path_cost(unit: UnitState, tiles_entered: int) -> int:
+	return _cost_for_depth(unit, tiles_entered)
+
+
+## [MoveAction]'s [code]validate()[/code] handler (ADR-0002 verb-handler
+## contract) — pure, total, never mutates. Resolves the mover via
+## [method GameState.entity_at]([member MoveAction.from]); rejects with
+## [constant Action.Reason.NO_SUCH_ENTITY] if no entity is there, it is not a
+## [UnitState], or it is not owned by [member Action.player]. Confirms
+## [member MoveAction.to] is present in [method reachable]'s result set at
+## [i]exactly[/i] the reported [member Movement.ReachableTile.min_cost] for
+## [member MoveAction.tiles_entered] — a mismatch (stale/forged
+## [code]tiles_entered[/code] that doesn't match the destination's true
+## min-cost) rejects with [constant Action.Reason.ILLEGAL_TARGET], the same as
+## an absent destination. Finally confirms [method AP.can_afford] for the
+## computed cost, rejecting with [constant Action.Reason.CANT_AFFORD].
+## Returns [constant Action.Reason.OK] only when every check passes.
+static func validate(state: GameState, action: Action) -> int:
+	# Typed as the base Action (the ADR-0002 dispatch contract calls every
+	# handler with an Action; matching _validate_end_turn) — cast to MoveAction.
+	var move: MoveAction = action as MoveAction
+	var entity: EntityState = state.entity_at(move.from)
+	if entity == null or not (entity is UnitState) or entity.owner != move.player:
+		return Action.Reason.NO_SUCH_ENTITY
+	var unit: UnitState = entity as UnitState
+
+	var cost: int = move_path_cost(unit, move.tiles_entered)
+
+	var destination: ReachableTile = null
+	for r: ReachableTile in reachable(state, unit):
+		if r.tile == move.to:
+			destination = r
+			break
+	if destination == null or destination.min_cost != cost:
+		return Action.Reason.ILLEGAL_TARGET
+
+	if not AP.can_afford(state, unit.owner, cost):
+		return Action.Reason.CANT_AFFORD
+
+	return Action.Reason.OK
+
+
+## [MoveAction]'s [code]apply()[/code] handler (ADR-0002 verb-handler
+## contract) — assumes [method validate] already passed; never fails. Resolves
+## the mover, computes [param action]'s exact cost via [method move_path_cost]
+## (the same summation [method validate] used), then commits in order: (1)
+## [method AP.spend] (ADR-0006 — sole AP deductor), (2)
+## [method GridState.move] (ADR-0005 — sole occupancy mutator), (3)
+## [member UnitState.position] update, (4)
+## [member UnitState.tiles_moved_this_turn] increment — the cumulative counter
+## [method reachable]/[method _cost_for_depth] read as their [code]m[/code]
+## term, so a later move (same turn or a split multi-call move) bills
+## correctly with no extra bookkeeping. Returns a single [UnitMovedEvent].
+static func apply(state: GameState, action: Action) -> Array[Event]:
+	# Base-Action signature per the ADR-0002 dispatch contract — cast to MoveAction.
+	var move: MoveAction = action as MoveAction
+	var unit: UnitState = state.entity_at(move.from) as UnitState
+	var cost: int = move_path_cost(unit, move.tiles_entered)
+
+	AP.spend(state, unit.owner, cost)
+	state.grid.move(move.from, move.to)
+	unit.position = move.to
+	unit.tiles_moved_this_turn += move.tiles_entered
+
+	return [UnitMovedEvent.new(unit.entity_id, move.from, move.to, cost)] as Array[Event]

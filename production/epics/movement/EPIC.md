@@ -48,7 +48,7 @@ no Movement story implements it. No existing Unit System story currently enforce
 | # | Story | Type | Status | ADR |
 |---|-------|------|--------|-----|
 | 001 | Reachable-Tile Search (`Movement.reachable()`) | Logic | Complete | ADR-0009 |
-| 002 | Committed Move (`Movement.move()` / `MoveAction`) | Logic | Ready | ADR-0009 |
+| 002 | Committed Move (`Movement.move()` / `MoveAction`) | Logic | Complete | ADR-0009 |
 | 003 | Movement Determinism & No-Stale-Cache Guarantees | Integration | Ready | ADR-0009 |
 
 ## Definition of Done

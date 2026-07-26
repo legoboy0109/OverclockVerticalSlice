@@ -9,12 +9,16 @@
 # Static-table isolation note (per coordinator direction): GameState's
 # _validators/_appliers dispatch tables are class-level statics shared across
 # every test in the whole suite run (they represent code-behavior, not
-# per-instance data, per ADR-0002). Production code only ever registers
-# Action.Verb.END_TURN. Two tests here register a throwaway Verb.MOVE handler
-# to exercise pipeline-generic behavior no concrete verb provides yet
-# (affordability atomicity); BOTH assert Verb.MOVE is absent up front and call
-# GameState.unregister_verb(Verb.MOVE) in cleanup so nothing leaks into another
-# test under any load order. The regression test for "dispatch via enum, not
+# per-instance data, per ADR-0002). Production code registers
+# Action.Verb.END_TURN (GS-003) and Action.Verb.MOVE (Movement, ADR-0009) in
+# _ensure_dispatch_registered. One test here registers a throwaway handler on a
+# still-free verb (Verb.BUILD — Base & Production has not landed) to exercise
+# pipeline-generic affordability atomicity no concrete verb provides here; it
+# asserts BUILD is absent up front and calls GameState.unregister_verb(Verb.BUILD)
+# in cleanup so nothing leaks into another test under any load order. A separate
+# test uses the (also unregistered) Verb.ATTACK to check the unknown-verb
+# rejection path. (Verb.MOVE was the throwaway originally, but is now a real
+# registered handler.) The regression test for "dispatch via enum, not
 # get_class()" routes a real EndTurnAction end-to-end rather than a fake handler.
 #
 # Naming follows tests/README.md: [system]_[feature]_test.gd + test_[scenario]_[expected].
@@ -50,24 +54,30 @@ class _SignalSpy:
 # affordability, proving step 3/4 leaves AP untouched — the same mechanism a
 # real verb's validate() will rely on.
 func test_insufficient_ap_action_rejected_with_zero_state_change() -> void:
-	# Arrange — register a throwaway verb (Verb.MOVE, unused by any other
-	# concrete handler in this story) whose validate() always reports
+	# Arrange — register a throwaway verb whose validate() always reports
 	# CANT_AFFORD, and whose apply() would mutate AP if ever (wrongly)
 	# reached — proving the pipeline never calls apply() after a rejection.
+	# Uses Verb.BUILD: a verb whose owning Core epic (Base & Production,
+	# ADR-0017) has not landed, so it is still unregistered and free to borrow
+	# as a scratch handler — and distinct from the Verb.ATTACK used by the
+	# unregistered-verb-rejection test below, so the two never share a verb.
+	# (Verb.MOVE was used here originally, but Movement, ADR-0009, now registers
+	# a REAL MOVE handler in _ensure_dispatch_registered — see movement.gd — so
+	# MOVE is no longer a free throwaway verb.)
 	var state := _make_state(2, 0)
 	state.per_player[0].current_ap = 2
-	# Precondition — Verb.MOVE must start unregistered (no leak from any prior
+	# Precondition — Verb.BUILD must start unregistered (no leak from any prior
 	# test); this test owns its lifecycle and cleans up via unregister_verb.
-	assert_bool(GameState._validators.has(Action.Verb.MOVE)).is_false()
+	assert_bool(GameState._validators.has(Action.Verb.BUILD)).is_false()
 	GameState.register_verb(
-		Action.Verb.MOVE,
+		Action.Verb.BUILD,
 		func(_s: GameState, _a: Action) -> int: return Action.Reason.CANT_AFFORD,
 		func(s: GameState, _a: Action) -> Array:
 			s.per_player[0].current_ap = 0  # would prove atomicity broken if ever called
 			return []
 	)
 	var action := Action.new()
-	action.verb = Action.Verb.MOVE
+	action.verb = Action.Verb.BUILD
 	action.player = 0
 	# Act
 	var result: ActionResult = state.apply_action(action)
@@ -77,10 +87,10 @@ func test_insufficient_ap_action_rejected_with_zero_state_change() -> void:
 	assert_array(result.events).is_empty()
 	assert_int(state.per_player[0].current_ap).is_equal(2)
 	assert_int(state.entities_by_id.size()).is_equal(0)
-	# Cleanup — fully remove the throwaway Verb.MOVE handler so it cannot leak
-	# into any later test in the process (a real Movement epic test, etc.).
-	GameState.unregister_verb(Action.Verb.MOVE)
-	assert_bool(GameState._validators.has(Action.Verb.MOVE)).is_false()
+	# Cleanup — fully remove the throwaway Verb.BUILD handler so it cannot leak
+	# into any later test in the process (a real Base & Production epic test, etc.).
+	GameState.unregister_verb(Action.Verb.BUILD)
+	assert_bool(GameState._validators.has(Action.Verb.BUILD)).is_false()
 
 
 # --- Dispatch-safety: unregistered verb / bare Action -> clean UNKNOWN_VERB reject --

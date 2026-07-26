@@ -1,12 +1,12 @@
 # Story 002: Committed Move (`Movement.move()` / `MoveAction`)
 
 > **Epic**: Movement
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Logic
 > **Estimate**: 3 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-26
 
 ## Context
 
@@ -89,3 +89,23 @@
 
 - Depends on: Story 001 (`Movement.reachable()`, `_cost_for_depth`), Foundation `apply_action`/`register_verb` pipeline (Game State & Turn Manager epic — Complete), `AP.can_afford`/`AP.spend` (AP Economy epic — Complete), `GridState.move()` (Grid & Terrain epic — Complete).
 - Unlocks: Story 003 (integration tests exercise `move()` for the tie-break/no-stale-cache proofs); Combat Resolution epic (a unit may move then attack in the same turn); Command & Action Interface epic (constructs `MoveAction` from player input).
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-26
+**Criteria**: 6/6 passing (across 11 tests — AC-5 split-move and AC-6 authoritative-vs-clone each split into 2)
+**Deviations** (all ADVISORY):
+- `MoveAction` payload resolved to `from`/`to`/`tiles_entered` (the story's open note; per ADR-0009's shape — a path array for move-animation is a later Presentation-epic concern). No downstream contract impact.
+- Two out-of-original-file edits, both justified: `game_state.gd` (+1 line MOVE dispatch registration — pre-approved, ADR-0002's prescribed seam) and `tests/unit/apply_action_pipeline_test.gd` (existing GS-002 test's throwaway verb switched MOVE→BUILD, distinct from its neighbor's ATTACK — a necessary consequence of MOVE becoming a real registered verb; test-only, intent preserved, header updated).
+- Two implementation-bug fixes applied during dev (agent ran out mid-debug): `validate`/`apply` signatures widened `MoveAction`→`Action` + internal cast (ADR-0002 dispatch contract); the throwaway-verb collision above.
+**Test Evidence**: Logic — `tests/unit/movement/move_action_test.gd` (11 tests, all 6 ACs + NO_SUCH_ENTITY/ILLEGAL_TARGET/event-field extras). Full suite 230/230 PASS.
+**Code Review**: Complete — `/code-review` APPROVED (godot-gdscript-specialist, CLEAN). Both correctness-critical properties verified airtight: validate()-totality/apply()-can't-fail atomicity, and the reachable-vs-billed agreement (incl. the forged-`tiles_entered` angle, foreclosed by `_cost_for_depth` strict monotonicity).
+
+**Files delivered**:
+- `src/core/movement/movement.gd` (appended `move_path_cost`/`validate`/`apply`)
+- `src/core/action/move_action.gd` (new `MoveAction`)
+- `src/core/event/unit_moved_event.gd` (new `UnitMovedEvent`)
+- `src/core/game_state/game_state.gd` (+1 line MOVE registration)
+- `tests/unit/movement/move_action_test.gd` (new)
+- `tests/unit/apply_action_pipeline_test.gd` (throwaway-verb fix)
