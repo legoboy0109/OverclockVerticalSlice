@@ -30,11 +30,11 @@ stories:
     name: "AP Income Formula, EconomyConfig & Balance Autoload"
     file: "production/epics/ap-economy/story-001-ap-income-econconfig-balance.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-26"
   - id: "ap-002"
     name: "AP Spend Contract — can_afford & spend"
     file: "production/epics/ap-economy/story-002-ap-spend-contract.md"

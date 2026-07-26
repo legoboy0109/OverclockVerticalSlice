@@ -1,12 +1,12 @@
 # Story 001: AP Income Formula, EconomyConfig & Balance Autoload
 
 > **Epic**: AP Economy
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Logic
 > **Estimate**: 3-4 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-26
 
 ## Context
 
@@ -31,6 +31,7 @@
 - Required: "`Research.economy_tech_income_bonus()` returns the fully-capped term; callers must add it verbatim and never re-apply `ECONOMY_TECH_TIER_THRESHOLD`" — source: ADR-0006
 - Required: "Non-negativity must be enforced by construction (`max(0, n)` floor)" — source: ADR-0006
 - Required: "Fractional gameplay coefficients must be stored as scaled integers and computed via integer arithmetic" — source: ADR-0003 (all income terms are integer)
+- Guardrail: "`AP.income()`/`ap_income_breakdown()` are O(1) integer arithmetic + two O(1) forward-declared reads; called a small constant number of times per turn (turn-reset, AI per-turn eval, HUD on start-of-turn), never per-frame or per-candidate — no perf concern" — source: ADR-0006, ADR-0003, ADR-0011, ADR-0016
 - Forbidden: "Never use one shared `BalanceConfig` Resource for all systems' tuning constants" — source: ADR-0006
 - Forbidden: "Never hardcode tuning constants as GDScript `const`s" — source: ADR-0006
 - Forbidden: "Never thread an explicit `config: EconomyConfig` parameter through every `AP` call site" — source: ADR-0006 (`income(player)`, not `income(player, config)`)
@@ -90,6 +91,7 @@ static func income(state: GameState, player: int) -> int:
 - **Faction fold (ADR-0012)**: fold `Δ_base`/`Δ_tier1`/`Δ_tier2` from the player's `FactionDef` into the respective terms, then apply the `BASE_INCOME_FLOOR` guard so a subtractive delta can't push income below the floor. Under Neutral all deltas are 0 → identity. Read the faction from `state.per_player[player].faction` (ADR-0001).
 - **⚠️ Forward-declared cross-system calls (stub strategy — GDD Test Strategy + TR-apecon-014):** `BaseProduction.completed_outpost_count(state, player)` and `Research.economy_tech_income_bonus(state, player)` are owned by systems not yet built (ADR-0007 impl). In GDScript a call to an absent `class_name` won't parse, so create **thin stub classes** (`BaseProduction`/`Research` with just these static functions) that the unit test controls — e.g. `completed_outpost_count` returns a test-settable value, `economy_tech_income_bonus` computes the capped term from `has_economy_tech` + a stubbed count. Every AC above is testable *now* against these stubs; the real bodies replace them when those epics land. `has_economy_tech` is a `PlayerState` field (ADR-0001) — read directly, no call.
 - All arithmetic is integer; no RNG anywhere.
+- **Performance contract.** `income()` and `ap_income_breakdown()` are **O(1)** — a fixed handful of integer `+`/`×`/`min`/`max` ops over the tiered formula's terms, plus exactly one O(1) call each to the forward-declared `BaseProduction.completed_outpost_count(state, player)` and `Research.economy_tech_income_bonus(state, player)`, plus a constant-size faction fold (`Δ_base`/`Δ_tier1`/`Δ_tier2` read off one `FactionDef`). No loops, no allocation, no per-entity scan. They are called a **small constant number of times per turn** — the start-of-turn income snapshot (Story 003, once per player-turn), the AI's per-turn economic evaluation (ADR-0011 lists `AP.income(state, player)` among its per-turn reads), and the HUD income-breakdown panel (ADR-0016, driven by the `start_turn` signal, not per-frame) — never per-frame and never on the AI's per-candidate `clone()` path. No performance concern at any Vertical-Slice scale; turn-based play has no per-frame simulation deadline.
 
 ---
 
@@ -140,7 +142,7 @@ Full plan: `production/qa/qa-plan-sprint-1-2026-07-26.md`
 **Required evidence**:
 - `tests/unit/ap_income_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created and passing — `tests/unit/ap_income_test.gd` (17 tests; 104/104 suite green)
 
 ---
 
@@ -148,3 +150,16 @@ Full plan: `production/qa/qa-plan-sprint-1-2026-07-26.md`
 
 - Depends on: **GS Story 001** (GameState/PlayerState data model — `per_player[].faction`/`has_economy_tech`, `active_player`) must be DONE. **Stub dependency**: thin `BaseProduction`/`Research` stub classes for the two forward-declared calls (see note above).
 - Unlocks: Story 002, Story 003
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-26
+**Criteria**: 7/8 fully passing; AC-8 partial — its Neutral-default half (exactly 3 income terms, no fourth) is covered, its faction income-delta fold + `BASE_INCOME_FLOOR` half is DEFERRED per the governing ADR-0006 Risks section (explicitly punts the fold + floor to the Alpha faction-asymmetry prototype / ADR-0012). Building them now would contradict the ADR. Confirmed with the user before implementation.
+**Deviations**:
+- ADR-compliant partial-defer of AC-8 (above) — the implementation deliberately builds *less* than the story text to obey the governing ADR.
+- `project.godot` `[autoload]` registration of `Balance` (outside the story's listed file set) — architecturally required by ADR-0006 (`AP` reads `Balance.economy` as a bare global, never a threaded config param). Valid, not scope creep.
+- AC-5 layering: `AP.income()` never reads `has_economy_tech` (the flag-default guard lives in `Research` per ADR-0006). This story's test only proves AP is flag-agnostic/purely additive; the real "flag must not default true" regression belongs to the future Research epic's test suite.
+**Test Evidence**: Logic — `tests/unit/ap_income_test.gd` (17 tests; full suite 104/104, exit 0). Includes the C3 double-cap regression guard (n6 vs n7 → 26/27) and a per-player-index guard added during code review.
+**Code Review**: Complete — `/code-review` verdict APPROVED WITH SUGGESTIONS (godot-gdscript-specialist: CLEAN; qa-tester: solid coverage). Both convergent findings fixed pre-close: retargeted the misnamed flag-false test + added the player-index coverage test.
+**Files**: `src/core/economy/{ap,economy_config,balance}.gd`, `data/balance/economy_config.tres`, `project.godot` (autoload line), `tests/unit/ap_income_test.gd`.
