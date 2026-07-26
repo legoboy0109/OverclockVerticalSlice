@@ -66,11 +66,11 @@ stories:
     name: "Turn FSM — start_match, start_turn 4-Step Sequence, EndTurnAction & Round Increment"
     file: "production/epics/game-state-turn-manager/story-003-turn-fsm-start-of-turn-sequence.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-26"
   - id: "gs-004"
     name: "Win-Check, GameOver & MAX_ROUNDS/Tiebreak Terminal Conditions"
     file: "production/epics/game-state-turn-manager/story-004-win-check-terminal-conditions.md"

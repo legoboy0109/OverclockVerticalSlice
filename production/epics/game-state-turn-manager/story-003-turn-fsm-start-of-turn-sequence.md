@@ -1,12 +1,12 @@
 # Story 003: Turn FSM — start_match, start_turn 4-Step Sequence, EndTurnAction & Round Increment
 
 > **Epic**: Game State & Turn Manager
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Logic
 > **Estimate**: 3-4 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-26
 
 ## Context
 
@@ -89,10 +89,45 @@ static func apply(state: GameState, action: Action) -> Array:   # assumes valida
     return state.start_turn(next_player)
 ```
 
-- **⚠️ Cross-epic forward-declared seam (read before implementing):** step 3 (`BaseProduction.advance_build_timers`, `Research.advance_research_timers`), step 2 (`Unit.reset_turn_flags`, `Structure.reset_turn_flags`), and step 4 (`AP.reset_turn`, `AP.discard`) reference classes/functions owned by systems **not yet built** (AP Economy / ADR-0006, Base & Production, Research, Unit System). Per ADR-0008 these are deliberately forward-declared contracts. In GDScript a static call to a not-yet-defined `class_name` will not parse — so this story is **implementation-blocked until at least the `AP` class (AP Economy epic / ADR-0006) exists**, and the build/research/flag calls need either their owning systems present or test-double stubs injected. **Options for the implementer:** (a) implement the AP Economy epic first (recommended — it is the other Foundation dependency and provides `AP.reset_turn`/`AP.discard`); (b) implement `start_turn`/`EndTurnAction.apply` against thin stubs for the not-yet-present systems and swap them for real calls as each lands (differential-test the swap). Surface this at `/story-readiness` — do not silently invent the missing systems.
+- **Seam resolution (decided at /story-readiness 2026-07-26):** AP now exists
+  (`AP.reset_turn`/`AP.discard`, AP-003 ✓), so step 4 and EndTurn discard call
+  real code. The remaining step-2/step-3 contracts are implemented against the
+  shared stub layer (`tests/helpers/stubs/`), following the same
+  forward-declared-contract pattern `AP.income()` already uses for
+  `BaseProduction.completed_outpost_count`/`Research.economy_tech_income_bonus`.
+  `GameState.start_turn`/`EndTurnAction.apply` in `src/` call the contracts
+  verbatim; the stubs satisfy them until each owning epic lands and replaces the
+  stub (class_name-collision discipline per the stub headers). In GDScript a
+  static call to a not-yet-defined `class_name` will not parse, so every symbol
+  the pseudocode names must exist (real or stub) before this story compiles.
+  - **Step 3 (timers):** extend the existing shared stubs —
+    `BaseProduction.advance_build_timers(state, player) -> Array[Event]` and
+    `Research.advance_research_timers(state, player) -> Array[Event]`. Default
+    return `[]`. Add a test hook so a queued completion (a) bumps the
+    stub's `completed_outpost_count`/`has_economy_tech` that `AP.income()` reads
+    (so the step-4 same-turn snapshot observes it) and (b) returns a
+    `StructureCompletedEvent`/`TechCompletedEvent`. Keep `reset()` clearing the
+    new queues.
+  - **Step 2 (flag resets):** add thin stubs `Unit.reset_turn_flags(EntityState)`
+    and `Structure.reset_turn_flags(EntityState)` (utility classes, mirroring the
+    `BaseProduction`/`Research` stub shape), plus minimal `UnitState` /
+    `StructureState` (`extends EntityState`) stubs carrying one test-observable
+    per-turn flag each (e.g. `has_moved`/`has_acted := false` on reset). Enough
+    for the `e is UnitState` / `e is StructureState` dispatch and to assert the
+    reset happened + that non-active-player entities were skipped. Each stub
+    header must carry the single-declaration class_name-collision note.
+  - **Completion-event types:** create `StructureCompletedEvent` and
+    `TechCompletedEvent` as real `src/core/event/` `Event` subclasses (per this
+    story's scoping) so the "completion events flow through `action_applied`"
+    test has concrete types. (Ownership nuance: these arguably belong to the
+    B&P/Research epics; scoped here only because start_turn's step-3 stub emits
+    them and they must exist for the signal-flow test. Flag for reconciliation
+    when those epics land.)
+  - Do not silently invent the missing systems beyond these agreed stubs.
 - **Carry-forward W2 (from Grid epic):** `MapDefinition.build_grid` currently places HQs with placeholder entity ids `0`/`1`. `start_match`'s entity construction is the correct home for real `next_entity_id`-allocated HQ placement — resolve W2 here by having `start_match` (not `build_grid`) place HQs with ids drawn from `GameState.next_entity_id`, or reconcile the two so ids never collide. See Grid Story 003/004 Completion Notes.
 - The two timer-advance calls in step 3 must stay commutative (order between build vs research must not matter). Steps 2 and 3 must both finish before step 4's snapshot.
 - `StructureCompletedEvent`/`TechCompletedEvent` are appended by the step-3 advances and flow through the existing `action_applied` signal (Story 002) — no new signal.
+- **Performance**: `start_turn` runs once per turn, not per frame. Cost is one `entities()` pass for the step-2 flag reset — O(E log E) dominated by `entities()`' stable-order sort (E = total entity count; step 2 filters to the active player but still visits all) — plus the two O(timers) step-3 advances and an O(1) `AP.reset_turn` snapshot. Negligible at VS entity counts; no per-frame or per-action path. `EndTurnAction.apply` adds only an O(1) discard + player switch + the same `start_turn` call.
 
 ---
 
@@ -144,7 +179,7 @@ Full plan: `production/qa/qa-plan-sprint-1-2026-07-26.md`
 **Required evidence**:
 - `tests/unit/turn_sequencing_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created — 17 tests, all passing
 
 ---
 
@@ -152,3 +187,15 @@ Full plan: `production/qa/qa-plan-sprint-1-2026-07-26.md`
 
 - Depends on: Story 001, Story 002 must be DONE. **Soft cross-epic dependency**: AP Economy epic (ADR-0006 `AP` class) for `AP.reset_turn`/`AP.discard`; Base & Production / Research / Unit System for their forward-declared start-of-turn contracts (or test stubs). See the cross-epic seam note above.
 - Unlocks: Story 004
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-26
+**Criteria**: 5/5 passing (all COVERED, none deferred). 17 tests total; full suite 161/161, exit 0.
+**Deviations**:
+- HQs constructed as plain `EntityState` (not stub `StructureState`) so `src/` never depends on test doubles — correct dependency direction. Consequence: HQs skip step-2 dispatch until ADR-0007's real `StructureState` lands. Documented in-code + covered by `test_start_turn_step2_safely_skips_plain_entity_state_neither_unit_nor_structure`.
+- Step-3 build-vs-research call-order commutativity is a design-time invariant (ADR-0008 + code review), NOT test-enforced — no seam exists without refactoring step 3 to an orderable `Array[Callable]`. Recorded in the renamed `test_income_total_same_regardless_of_which_system_supplies_the_completion`.
+**Test Evidence**: Logic — `tests/unit/turn_sequencing_test.gd` (17 tests, all passing). Depends on shared stubs (`BaseProduction`/`Research` extended + new `Unit`/`Structure`/`UnitState`/`StructureState`), all under `tests/helpers/stubs/` with delete-on-real-epic collision headers.
+**Code Review**: Complete — APPROVED WITH SUGGESTIONS (godot-gdscript-specialist + qa-tester). 3 quick fixes applied before close: renamed the misleading commutativity test + added its clarifying comment, added a 3rd-EndTurn round-wrap test, added a plain-EntityState-HQ-skipped test. Both reviewers CONVERGED that the sharpest finding was the commutativity test misrepresenting coverage — resolved by the rename.
+**Tech debt logged (for ADR-0007 / B&P / Research):** HQ-type/StructureState seam; StructureCompletedEvent/TechCompletedEvent ownership reconciliation; step-3 commutativity-seam (orderable `Array[Callable]`).

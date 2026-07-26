@@ -89,6 +89,13 @@ static var _dispatch_registered: bool = false
 ## The match's terminal status. See [enum MatchStatus].
 @export var match_status: int = MatchStatus.IN_PROGRESS
 
+## The player who moved first this match, set exactly once by [method
+## start_match] and never mutated afterward (ADR-0008). [method
+## _apply_end_turn] compares an incoming [code]next_player[/code] against
+## this field to decide whether control has looped back to the starting
+## player — the signal [member round_number] increments on.
+@export var starting_player: int = 0
+
 
 ## Returns [param player]'s AP available to spend this turn. O(1) array index.
 func current_ap(player: int) -> int:
@@ -135,6 +142,134 @@ func faction_of(player: int) -> FactionDef:
 ## affects the original, and vice versa.
 func clone() -> GameState:
 	return duplicate_deep() as GameState
+
+
+## The canonical start-of-turn sequence (ADR-0008, TR-gamestate-007) — a
+## [GameState]-owned instance method, called in exactly two places: once by
+## [method start_match] for the starting player, and once per turn by
+## [method _apply_end_turn] for the next player. Runs these 4 steps in this
+## exact order, never reordered:
+## [br]1. Set [member active_player] to [param player].
+## [br]2. Reset per-turn flags for [param player]'s entities, in stable
+## [member entity_id]-ascending order ([method entities]) — dispatched to
+## the owning system's forward-declared contract
+## ([code]Unit.reset_turn_flags[/code] / [code]Structure.reset_turn_flags[/code]),
+## never inlined here (control-manifest forbidden pattern: [GameState] owns
+## only the timing, not flag semantics).
+## [br]3. Advance build and research timers for [param player]
+## ([code]BaseProduction.advance_build_timers[/code] then
+## [code]Research.advance_research_timers[/code]) — the two calls are
+## commutative (order between them must never affect the result); both
+## fully complete before step 4 runs.
+## [br]4. Snapshot [param player]'s AP income for the turn
+## ([code]AP.reset_turn[/code]) — deliberately last, so a structure/tech
+## completed this same turn in step 3 is already reflected in the income
+## this snapshot freezes (never reorder step 4 before step 3).
+##
+## Returns every [Event] step 3 appended (completions), in the order they
+## happened — flows through the existing [signal action_applied] once the
+## caller ([method _apply_end_turn] via [method apply_action], or
+## [method start_match]) finishes. No new signal or polling path.
+##
+## O(entity count): one filtered pass over [method entities] (dominated by
+## its stable-order sort) plus two per-system O(entity count) passes and one
+## O(1) AP snapshot — runs once per player per turn, never per-frame/per-action.
+##
+## Usage:
+## [codeblock]
+## var events: Array = state.start_turn(1) # begin player 1's turn
+## for e in events:
+##     if e is StructureCompletedEvent:
+##         pass # a structure finished building as this turn began
+## [/codeblock]
+func start_turn(player: int) -> Array:
+	# 1. Set active player.
+	active_player = player
+
+	# 2. Reset per-turn flags for this player's entities, stable id order.
+	for e: EntityState in entities():
+		if e.owner != player:
+			continue
+		if e is UnitState:
+			Unit.reset_turn_flags(e)
+		elif e is StructureState:
+			Structure.reset_turn_flags(e)
+
+	# 3. Advance build + research timers (commutative order; both before step 4).
+	var events: Array = []
+	events.append_array(BaseProduction.advance_build_timers(self, player))
+	events.append_array(Research.advance_research_timers(self, player))
+
+	# 4. AP income snapshot — after step 3, so same-turn completions count.
+	AP.reset_turn(self, player)
+
+	return events
+
+
+## Constructs a brand-new match [GameState] from [param map] (ADR-0001/0005
+## grid construction) and runs the Setup->PlayerTurn(starting) transition
+## (ADR-0008, ADR-0012): builds the grid, places both HQs as entities with
+## real [member next_entity_id]-allocated ids, sets [member starting_player]
+## (immutable after this call), initializes [member round_number] to 1 and
+## [member match_status] to [constant MatchStatus.IN_PROGRESS], then runs
+## [method start_turn] exactly once for [param starting_player] — the first
+## start-of-turn, which deliberately does [b]not[/b] increment
+## [member round_number] (only [method _apply_end_turn]'s loop-back check does).
+##
+## [b]HQ entity id allocation (Grid epic Story 003/004 carry-forward "W2"):[/b]
+## [method MapDefinition.build_grid] places the two HQs into
+## [member GridState.occupancy] using placeholder ids [code]0[/code]/[code]1[/code]
+## (documented in its own doc comment as provisional, pending a caller that
+## drives real entity allocation). This method is that caller: since
+## [member next_entity_id] always starts at [code]0[/code] on a freshly
+## constructed [GameState], allocating the two HQ [EntityState]s from
+## [member next_entity_id] here yields ids [code]0[/code] and [code]1[/code]
+## in [member hq_tiles] order — exactly matching what [method build_grid]
+## already wrote into occupancy — with zero risk of collision against any
+## later-created entity, because every subsequent allocator call reads the
+## already-incremented [member next_entity_id]. No structure/unit type
+## schema exists yet (ADR-0007 lands later), so each HQ is constructed as a
+## plain [EntityState] — sufficient for grid occupancy/read-API identity;
+## it deliberately does not participate in [method start_turn]'s step-2
+## [code]is UnitState[/code]/[code]is StructureState[/code] dispatch.
+##
+## O(width*height) dominated by [method MapDefinition.build_grid], plus
+## [method start_turn]'s cost — a one-time, load-time construction, never a
+## per-frame or per-action path.
+##
+## Usage:
+## [codeblock]
+## var state: GameState = GameState.start_match(map_def, 0) # player 0 moves first
+## # state.active_player == 0, state.round_number == 1,
+## # state.match_status == GameState.MatchStatus.IN_PROGRESS,
+## # state.per_player[0].current_ap == AP.income(state, 0)
+## [/codeblock]
+static func start_match(map: MapDefinition, starting_player: int) -> GameState:
+	var state := GameState.new()
+
+	state.grid = MapDefinition.build_grid(map)
+
+	state.per_player = [PlayerState.new(), PlayerState.new()]
+
+	# Place both HQs as entities, ids allocated from next_entity_id — lands
+	# on 0/1 (matching build_grid's already-placed occupancy ids) because
+	# next_entity_id starts at 0 on a fresh GameState. hq_tiles[i] belongs to
+	# player i (mirroring MapDefinition.build_grid's own placement order).
+	for player: int in map.hq_tiles.size():
+		var hq := EntityState.new()
+		hq.entity_id = state.next_entity_id
+		hq.owner = player
+		hq.position = map.hq_tiles[player]
+		state.entities_by_id[hq.entity_id] = hq
+		state.next_entity_id += 1
+
+	state.starting_player = starting_player
+	state.round_number = 1
+	state.match_status = MatchStatus.IN_PROGRESS
+
+	state.start_turn(starting_player) # First start-of-turn; no round increment.
+
+	return state
 
 
 ## Registers [param verb]'s [code]validate[/code]/[code]apply[/code] handlers
@@ -196,13 +331,34 @@ static func _validate_end_turn(_state: GameState, _action: Action) -> int:
 	return Action.Reason.OK
 
 
-## [EndTurnAction]'s [code]apply()[/code] handler. [b]Story 002 stub[/b]: the
-## real end-of-turn sequence (AP discard, next-player switch, conditional
-## [code]round_number[/code] increment, [code]start_turn()[/code] for the
-## next player) is Story 003 (ADR-0008) — deliberately out of scope here so
-## the pipeline is testable in isolation. Returns no events.
-static func _apply_end_turn(_state: GameState, _action: Action) -> Array:
-	return []
+## [EndTurnAction]'s [code]apply()[/code] handler (ADR-0008). Runs, in
+## order: (1) discard the outgoing (currently-active) player's unspent AP —
+## no banking; (2) determine the next player via strict 2-player alternation
+## ([code]1 - outgoing[/code] — out of scope for any future N-player mode,
+## see ADR-0008 Risks); (3) increment [member round_number] [b]only[/b] if
+## [param next_player] equals [member starting_player] (control has looped
+## back to whoever moved first this match); (4) run [method start_turn] for
+## [param next_player] and return its events.
+##
+## Deliberately implemented here (a private static handler on [GameState]),
+## not as a method on [EndTurnAction] itself — ADR-0002 forbids embedding
+## [code]validate()[/code]/[code]apply()[/code] directly on an [Action]
+## subclass (the command-pattern the control manifest explicitly bans), and
+## the control manifest separately forbids a standalone [code]TurnManager[/code]
+## utility class. [GameState] is the correct owner: it already owns
+## [method apply_action]/[method start_turn]/[method clone]/[method start_match]
+## directly, so turn-orchestration living here matches that existing
+## precedent rather than inventing a second home for it.
+##
+## Assumes validation already passed ([method _validate_end_turn] is
+## unconditionally OK for the active player) — never fails.
+static func _apply_end_turn(state: GameState, _action: Action) -> Array:
+	var outgoing: int = state.active_player
+	AP.discard(state, outgoing)
+	var next_player: int = 1 - outgoing # 2-player VS: strict alternation.
+	if next_player == state.starting_player:
+		state.round_number += 1 # Control looped back to the starting player.
+	return state.start_turn(next_player)
 
 
 ## [b]Cross-story seam (flag for Story 003 / ADR-0008):[/b] whether
