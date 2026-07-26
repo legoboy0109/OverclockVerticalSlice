@@ -39,11 +39,11 @@ stories:
     name: "AP Spend Contract — can_afford & spend"
     file: "production/epics/ap-economy/story-002-ap-spend-contract.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-26"
   - id: "ap-003"
     name: "AP reset_turn & discard"
     file: "production/epics/ap-economy/story-003-ap-reset-discard.md"

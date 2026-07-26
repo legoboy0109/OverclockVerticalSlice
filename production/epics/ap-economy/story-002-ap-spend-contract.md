@@ -1,12 +1,12 @@
 # Story 002: AP Spend Contract — can_afford & spend
 
 > **Epic**: AP Economy
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Logic
 > **Estimate**: 2-3 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-26
 
 ## Context
 
@@ -27,6 +27,7 @@
 - Required: "`AP.can_afford()` must stay a pure query; `AP.spend()` must be the sole AP mutator, atomic, gated to `player == active_player`, called only from inside a verb handler's `apply()`" — source: ADR-0006
 - Required: "Non-negativity must be enforced by construction (`spend()` bounds checks)" — source: ADR-0006
 - Required: "`AP` must be a static utility class with only pure/static functions taking `GameState` explicitly" — source: ADR-0006
+- Guardrail: "`can_afford()`/`spend()`/`current_ap()` are O(1) (comparisons + one subtraction, no loops/allocation); the highest-frequency AP calls — every verb `validate()`, the Command UI affordability filter, and the AI's per-candidate loop — but trivially cheap and never per-frame, so no perf concern" — source: ADR-0006, ADR-0003, ADR-0002, ADR-0011, ADR-0015
 - Forbidden: "Never put `income()`/`spend()`/`can_afford()` directly on `GameState`/`PlayerState`" — source: ADR-0006
 - Forbidden: "Never make AP Economy an instance-based service object" — source: ADR-0006
 
@@ -72,6 +73,7 @@ static func spend(state: GameState, player: int, amount: int) -> bool:
 - `spend` is called only from inside a verb handler's `apply()` (ADR-0002 step 5) — but this story only implements `spend` itself; it does not wire callers (those are the Movement/Combat/etc. epics).
 - The `0 ≤ current_ap ≤ income_this_turn` invariant is structural: `spend`'s `amount ≤ current_ap` lower-bounds it at 0; the upper bound is established by `reset_turn` (Story 003) and never exceeded because `spend` only decreases. Test the invariant across a spend sequence.
 - Integer only; no RNG.
+- **Performance contract.** `current_ap()`, `can_afford()`, and `spend()` are all **O(1)** — `current_ap` is one `per_player[player]` array index; `can_afford` is two integer comparisons; `spend` is a fixed handful of comparisons plus one subtraction. No loops, no allocation, no per-entity scan. These are the **highest-frequency** functions in the AP system: `can_afford` gates every verb handler's `validate()` (ADR-0002), backs the Command & Action Interface's per-verb `menu_model()` affordability filter on every selection change (ADR-0015), and is evaluated once per candidate action in the AI's per-turn decision loop (ADR-0011, the AI's hottest path); `spend` runs once per committed action inside a verb handler's `apply()` (ADR-0002 step 5). Even at that call volume they are trivially cheap and never per-frame — no performance concern at any Vertical-Slice scale.
 
 ---
 
@@ -115,7 +117,7 @@ Full plan: `production/qa/qa-plan-sprint-1-2026-07-26.md`
 **Required evidence**:
 - `tests/unit/ap_spend_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created and passing — `tests/unit/ap_spend_test.gd` (14 tests; 118/118 suite green)
 
 ---
 
@@ -123,3 +125,15 @@ Full plan: `production/qa/qa-plan-sprint-1-2026-07-26.md`
 
 - Depends on: Story 001 (shares `ap.gd`), **GS Story 001** (PlayerState.current_ap, active_player) must be DONE.
 - Unlocks: Story 003
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-26
+**Criteria**: 7/7 passing (0 deferred). Appended `current_ap`/`can_afford`/`spend` to the shared `ap.gd` (AP-001's `income`/`ap_income_breakdown` byte-identical, undisturbed).
+**Deviations**:
+- Out-of-range `player` index into `current_ap`/`can_afford`/`spend` crashes on the raw `per_player[player]` array access (no bounds check). Scope-consistent with GS-001's same-shaped read API; a cross-cutting "trusted internal API vs. bounds-check" contract question for the whole `AP`/`GameState` read surface, not an AP-002 defect. ADR-0006 doesn't require caller-side validation. Folded into the existing GS-001 tech-debt entry.
+- AC-7's invariant test (`test_invariant_...`) only exercises the **lower** bound — `spend` can never violate `current_ap ≤ income_this_turn` by construction (it only decreases). The real upper-bound proof (that `reset_turn` re-establishes `current_ap == income_this_turn` even from a stale-higher value) belongs to Story 003 — carried as a handoff note to AP-003's QA (logged in tech-debt register).
+**Test Evidence**: Logic — `tests/unit/ap_spend_test.gd` (14 tests; full suite 118/118, exit 0). Atomicity proven for all 3 rejection branches (over-balance, inactive-player, negative — each with a paired state-unchanged assertion).
+**Code Review**: Complete — `/code-review` verdict APPROVED WITH SUGGESTIONS (godot-gdscript-specialist: CLEAN; qa-tester: solid coverage, atomicity proven). Added the `can_afford(player, 0)` boundary test pre-close per the reviewers' cheap-gap suggestion.
+**Files**: `src/core/economy/ap.gd` (append), `tests/unit/ap_spend_test.gd`.

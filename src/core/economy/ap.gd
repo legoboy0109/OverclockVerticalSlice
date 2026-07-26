@@ -5,11 +5,12 @@
 ## verb-handler shape ADR-0002 established for Movement/Combat/Base &
 ## Production/Research (static, stateless, `state` passed explicitly).
 ##
-## Story 001 implements only the income side of the contract:
-## [method ap_income_breakdown] and [method income]. `current_ap`,
-## `can_afford`, `spend`, `reset_turn`, and `discard` belong to Story 002/003
-## and are intentionally NOT implemented here — this file is shared across all
-## three AP stories and will be appended to, not re-authored.
+## Story 001 implements the income side of the contract: [method
+## ap_income_breakdown] and [method income]. Story 002 adds the read/spend
+## side: [method current_ap], [method can_afford], and [method spend].
+## `reset_turn` and `discard` belong to Story 003 and are intentionally NOT
+## implemented here — this file is shared across all three AP stories and
+## will be appended to, not re-authored.
 ##
 ## [b]Deliberately excluded (see ADR-0006 Risks):[/b] no faction income-delta
 ## fold and no `BASE_INCOME_FLOOR` guard — ADR-0006 explicitly defers both to
@@ -55,3 +56,48 @@ static func ap_income_breakdown(state: GameState, player: int) -> Dictionary:
 static func income(state: GameState, player: int) -> int:
 	var b: Dictionary = ap_income_breakdown(state, player)
 	return b["base"] + b["outpost"] + b["econ_tech"]
+
+
+## Thin read facade over [param player]'s [member PlayerState.current_ap],
+## mirroring [method GameState.current_ap]. O(1) — a single array index, no
+## computation.
+static func current_ap(state: GameState, player: int) -> int:
+	return state.per_player[player].current_ap
+
+
+## Pure precondition query: can [param player] currently afford [param
+## amount]? Deliberately [b]ungated[/b] on active-player — unlike [method
+## spend], this must stay callable for any player so the AI's per-candidate
+## evaluation loop and the HUD/Command-interface affordability preview can ask
+## about either player's pool without it being their turn. Never mutates
+## state. O(1) — two integer comparisons.
+static func can_afford(state: GameState, player: int, amount: int) -> bool:
+	return amount >= 0 and amount <= state.per_player[player].current_ap
+
+
+## The sole mutator of [member PlayerState.current_ap] (ADR-0006). Atomic: every
+## precondition is checked before the single [code]-=[/code] write, so a
+## rejected spend never partially mutates state and needs no rollback.
+##
+## Rejects if [param player] is not [member GameState.active_player] (Rule 7
+## — only the active player's pool is mutable this way), rejects a negative
+## [param amount], treats [param amount] of exactly 0 as a no-op success, and
+## rejects spending more than [param player]'s current pool. Returns
+## [code]true[/code] only when the deduction actually happened (or was a
+## legal no-op).
+##
+## Called only from inside a verb handler's [code]apply()[/code] (ADR-0002
+## step 5) — this function does not know or care who calls it. O(1) — a
+## fixed handful of comparisons plus one subtraction.
+static func spend(state: GameState, player: int, amount: int) -> bool:
+	if player != state.active_player:
+		return false
+	if amount < 0:
+		return false
+	if amount == 0:
+		return true
+	var ps: PlayerState = state.per_player[player]
+	if amount > ps.current_ap:
+		return false
+	ps.current_ap -= amount
+	return true
