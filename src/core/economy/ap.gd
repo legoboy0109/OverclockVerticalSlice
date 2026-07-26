@@ -8,9 +8,10 @@
 ## Story 001 implements the income side of the contract: [method
 ## ap_income_breakdown] and [method income]. Story 002 adds the read/spend
 ## side: [method current_ap], [method can_afford], and [method spend].
-## `reset_turn` and `discard` belong to Story 003 and are intentionally NOT
-## implemented here — this file is shared across all three AP stories and
-## will be appended to, not re-authored.
+## Story 003 adds the turn-boundary writers: [method reset_turn] (start-of-turn
+## frozen-income snapshot) and [method discard] (end-of-turn zero, no banking).
+## This file is shared across all three AP stories — extended incrementally,
+## never re-authored.
 ##
 ## [b]Deliberately excluded (see ADR-0006 Risks):[/b] no faction income-delta
 ## fold and no `BASE_INCOME_FLOOR` guard — ADR-0006 explicitly defers both to
@@ -101,3 +102,61 @@ static func spend(state: GameState, player: int, amount: int) -> bool:
 		return false
 	ps.current_ap -= amount
 	return true
+
+
+## Freezes [param player]'s AP income for the whole turn (start-of-turn
+## reset, ADR-0006 Rule 1/5). Evaluates [method income] exactly once and
+## stores the result in [member PlayerState.income_this_turn], then sets
+## [member PlayerState.current_ap] equal to it. No mid-turn recompute: once
+## frozen, the snapshot is immune to same-turn increases (an outpost
+## completing later this turn) and decreases (an outpost destroyed later
+## this turn) alike — only the [i]next[/i] call to [method reset_turn]
+## re-evaluates it.
+##
+## Calling this twice for the same player in the same turn with no
+## intervening [method discard] is well-defined: the second call
+## re-evaluates [method income] fresh and overwrites both fields
+## (last-write-wins). There is no accumulation or banking across the two
+## calls — both are plain field overwrites, never additive.
+##
+## Called only from [code]GameState.start_turn[/code]'s step 4 (ADR-0008),
+## after step 3's build/research timer advance, so a just-completed Economy
+## Outpost counts toward this same turn's income. This function is the
+## writer only — the calling/timing contract belongs to GS Story 003; this
+## story does not wire that call.
+##
+## O(1): two field writes plus one [method income] call (itself O(1) per
+## Story 001, bounded outpost/tech term, no scan). Runs once per player per
+## turn via ADR-0008 step 4 — not on any per-action or per-frame path.
+##
+## Usage:
+## [codeblock]
+## AP.reset_turn(state, 0)
+## # state.per_player[0].income_this_turn == AP.income(state, 0) at call time
+## # state.per_player[0].current_ap == state.per_player[0].income_this_turn
+## [/codeblock]
+static func reset_turn(state: GameState, player: int) -> void:
+	var ps: PlayerState = state.per_player[player]
+	ps.income_this_turn = income(state, player)
+	ps.current_ap = ps.income_this_turn
+
+
+## Discards [param player]'s unspent AP at end of turn (ADR-0006 Rule 1) — a
+## hard, observable write to exactly 0, not merely "treated as irrelevant."
+## No banking: whatever remained in [member PlayerState.current_ap] is gone;
+## the next [method reset_turn] call starts fresh from [method income] alone,
+## never `income + leftover`.
+##
+## Called only from [code]EndTurnAction.apply()[/code] before switching
+## players (ADR-0008). This function is the writer only — the calling/timing
+## contract belongs to GS Story 003; this story does not wire that call.
+##
+## O(1): a single field write.
+##
+## Usage:
+## [codeblock]
+## AP.discard(state, 0)
+## # state.per_player[0].current_ap == 0
+## [/codeblock]
+static func discard(state: GameState, player: int) -> void:
+	state.per_player[player].current_ap = 0

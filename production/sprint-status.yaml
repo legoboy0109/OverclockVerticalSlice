@@ -48,11 +48,11 @@ stories:
     name: "AP reset_turn & discard"
     file: "production/epics/ap-economy/story-003-ap-reset-discard.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.25
     blocker: ""
-    completed: ""
+    completed: "2026-07-26"
   - id: "gs-002"
     name: "Action Command Model, apply_action Pipeline & Event Signal"
     file: "production/epics/game-state-turn-manager/story-002-apply-action-pipeline.md"

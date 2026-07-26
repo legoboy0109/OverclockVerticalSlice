@@ -1,12 +1,12 @@
 # Story 003: AP reset_turn & discard — Start-of-Turn Freeze / End-of-Turn Discard
 
 > **Epic**: AP Economy
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Logic
 > **Estimate**: 2 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-26
 
 ## Context
 
@@ -41,6 +41,7 @@
 - [ ] **GIVEN** a player's `income_this_turn` was frozen at 18 and one of those outposts is destroyed during the opponent's turn, **WHEN** `income_this_turn` is read again before this player's next reset, **THEN** it still returns 18; only the **next** `reset_turn` drops it (frozen income is immune to same-turn increase **and** decrease).
 - [ ] **GIVEN** a player ends their turn with `current_ap = 4`, **WHEN** `discard` resolves, **THEN** `current_ap` is set to **0** (not merely "irrelevant") and remains 0 through the opponent's turn until this player's next reset.
 - [ ] **GIVEN** a player ends the turn with unspent AP, **WHEN** the next turn begins via `reset_turn`, **THEN** it starts at `income`, never `income + leftover` (no banking).
+- [ ] **GIVEN** `reset_turn` is called twice for the same player in the same turn with no intervening `discard`, **WHEN** the second call runs, **THEN** it re-evaluates `income()` fresh and overwrites both `income_this_turn` and `current_ap` with the new snapshot (last-write-wins; no accumulation, no banking across the two calls) — e.g. first call freezes 18, an outpost then completes, second call overwrites to 24, not 42.
 
 ---
 
@@ -63,6 +64,7 @@ static func discard(state: GameState, player: int) -> void:
 - These two functions are the **writers** that ADR-0008's `GameState.start_turn` (step 4) and `EndTurnAction.apply()` call — implementing them here **unblocks GS Story 003** (which references `AP.reset_turn`/`AP.discard`). This story implements the AP-side functions only; the *timing* (when they're called) is owned by GS Story 003.
 - Testing: exercise the freeze by setting the stubbed `completed_outpost_count` to 4, calling `reset_turn` (income frozen at 18), then flipping the stub to 5 and asserting `income_this_turn` is still 18 until the next `reset_turn` (mirror for a decrease to 3 → still 18 until next reset). No real Base&Production/Research needed — use the same stubs as Story 001.
 - Integer only; no RNG.
+- **Performance**: O(1). `reset_turn` is two field writes on `PlayerState` plus one `income()` call (itself O(1) per Story 001 — bounded outpost/tech term, no scan); `discard` is a single field write. Both run **once per player per turn** via ADR-0008 step 4 and `EndTurnAction`, not on any per-action or per-frame path — no performance budget concern. (Contrast Story 002's `spend`/`can_afford`, which *are* the hot per-action AP path.)
 
 ---
 
@@ -78,7 +80,7 @@ static func discard(state: GameState, player: int) -> void:
 
 ## QA Test Cases
 
-**Test file**: `tests/unit/ap_reset_discard_test.gd` (~8 unit tests)
+**Test file**: `tests/unit/ap_reset_discard_test.gd` (~9 unit tests)
 **Requires shared fixtures**: `BaseProduction`/`Research` stubs — see
 `production/qa/qa-plan-sprint-1-2026-07-26.md` "Shared Test Fixtures Required".
 
@@ -95,8 +97,8 @@ static func discard(state: GameState, player: int) -> void:
 - No banking: player ends turn with unspent AP → next turn starts at `income`, never
   `income + leftover`.
 
-Edge case: `reset_turn` called twice in a row without an intervening `discard` — flag if the
-expected behavior is ambiguous rather than assuming.
+Edge case: `reset_turn` called twice in a row without an intervening `discard` — second
+call overwrites (last-write-wins); assert no accumulation of `income_this_turn`/`current_ap`.
 
 Full plan: `production/qa/qa-plan-sprint-1-2026-07-26.md`
 
@@ -108,7 +110,7 @@ Full plan: `production/qa/qa-plan-sprint-1-2026-07-26.md`
 **Required evidence**:
 - `tests/unit/ap_reset_discard_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created — 12 tests, all passing
 
 ---
 
@@ -116,3 +118,12 @@ Full plan: `production/qa/qa-plan-sprint-1-2026-07-26.md`
 
 - Depends on: Story 001 (`income()`), **GS Story 001** (PlayerState.current_ap/income_this_turn). Uses the same forward-declared `BaseProduction`/`Research` stubs as Story 001.
 - Unlocks: **GS Story 003** (Turn FSM `start_turn`/`EndTurnAction` call these writers)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-26
+**Criteria**: 7/7 passing (all COVERED, none deferred)
+**Deviations**: None
+**Test Evidence**: Logic — `tests/unit/ap_reset_discard_test.gd` (12 tests, full suite 130/130 pass, exit 0)
+**Code Review**: Complete — APPROVED WITH SUGGESTIONS; both suggestions (discard-on-zero idempotence, interposed-spend-then-reset) applied and re-verified before close
