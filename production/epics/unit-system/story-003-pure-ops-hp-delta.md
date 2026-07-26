@@ -1,12 +1,12 @@
 # Story 003: Unit-Owned Pure Operations — can_attack, reset_turn_flags, duplicate, apply_hp_delta
 
 > **Epic**: Unit System
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Logic
 > **Estimate**: 3-4 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-26
 
 ## Context
 
@@ -80,4 +80,18 @@
 ## Dependencies
 
 - Depends on: Story 002 (`UnitState` schema).
-- Unlocks: GS-003 `start_turn()` step-2 real-call migration; Combat epic (`can_attack`, `apply_hp_delta`, ADR-0010); AI epic (`duplicate` backs lookahead, ADR-0011).
+- Unlocks: GS-003 `start_turn()` step-2 real-call migration; Combat epic (`can_attack`, `apply_hp_delta`, ADR-0010); AI epic (`clone` backs lookahead, ADR-0011).
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-26 (implemented jointly with Story 002)
+**Criteria**: 4/4 passing
+**Deviations** (ADVISORY — engine-forced, user-approved 2026-07-26):
+- **`duplicate` → `clone`**: GDD Rule 2a and the TR-unit-003/004 registry text name the op `duplicate(unit)`, but GDScript reserves that name — a `class_name` script is itself a `Resource` with a built-in `Resource.duplicate(bool)`, so `Unit.duplicate(x)` resolves to the built-in and rejects the `UnitState` arg (confirmed at runtime). Renamed to `Unit.clone(unit)`, matching `GameState.clone()`. **Reconciliation owed**: update `design/gdd/unit-system.md` Rule 2a + TR-unit-003/004 registry text to say `clone` (logged in `docs/tech-debt-register.md`).
+**Test Evidence**: Logic — `tests/unit/unit_ops_test.gd` (can_attack, reset_turn_flags, clone independence + shared `type` via a real `preload`d template, apply_hp_delta clamp). Full suite 198/198 PASS.
+**Code Review**: Complete — `/code-review` APPROVED (godot-gdscript-specialist, CLEAN).
+
+**Files delivered**:
+- `src/core/unit/unit.gd` (`Unit extends RefCounted`: `can_attack`/`reset_turn_flags`/`clone`/`apply_hp_delta` static ops)
+- `tests/unit/unit_ops_test.gd`

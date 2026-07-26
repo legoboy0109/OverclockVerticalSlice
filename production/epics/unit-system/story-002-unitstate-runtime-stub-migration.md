@@ -1,12 +1,12 @@
 # Story 002: UnitState Runtime Schema + Stub Migration (Sprint-1 Seam Closure)
 
 > **Epic**: Unit System
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Logic
 > **Estimate**: 3-4 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-26
 
 ## Context
 
@@ -77,3 +77,18 @@
 
 - Depends on: Story 001 (`UnitTypeDef`); ADR-0001 `EntityState`/`GameState.next_entity_id` (landed via GS-003/GS-004).
 - Unlocks: Story 003; Stories 004–008; GS-004 win-check + Combat epic (read `UnitState.hp`/schema); Base & Production (instantiates `UnitState`).
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-26 (implemented jointly with Story 003 — the `class_name` stub migration only compiles when both land together)
+**Criteria**: 3/3 passing
+**Deviations**: None specific to this story. (See Story 003 for the shared `duplicate`→`clone` rename.)
+**Test Evidence**: Logic — `tests/unit/unit_state_test.gd` (fresh-defaults + entity_id uniqueness); stub deletion + `turn_sequencing_test.gd` migration (`has_acted`→`has_attacked`). Full suite 198/198 PASS.
+**Code Review**: Complete — `/code-review` APPROVED (godot-gdscript-specialist, CLEAN, clone-safety contract verified in production code).
+
+**Files delivered**:
+- `src/core/unit/unit_state.gd` (`UnitState extends EntityState`, all fields `@export`)
+- Deleted `tests/helpers/stubs/unit_state_stub.gd` + `unit_stub.gd`
+- Migrated `tests/unit/turn_sequencing_test.gd` (`has_acted`→`has_attacked`, now exercises the real `Unit.reset_turn_flags`)
+- `tests/unit/unit_state_test.gd`

@@ -8,9 +8,10 @@
 # MapDefinitionFactory-style inline builder for the one test that exercises
 # start_match's grid+HQ construction. Uses the shared BaseProduction/Research
 # stubs' GS-003 extensions (advance_build_timers/advance_research_timers +
-# queue_completion) and the Unit/Structure/UnitState/StructureState stubs for
-# the step-2 flag-reset dispatch. No RNG, no time-dependent asserts, no file I/O;
-# each test resets every shared stub for isolation.
+# queue_completion) and the real Unit/UnitState classes (Unit System Story
+# 002/003) plus the Structure/StructureState stubs for the step-2 flag-reset
+# dispatch. No RNG, no time-dependent asserts, no file I/O; each test resets
+# every shared stub for isolation.
 #
 # Naming follows tests/README.md: [system]_[feature]_test.gd + test_[scenario]_[expected].
 extends GdUnitTestSuite
@@ -236,14 +237,14 @@ func test_step2_flag_reset_and_step3_timers_both_complete_before_step4_when_both
 	var unit := UnitState.new()
 	unit.entity_id = 0
 	unit.owner = 0
-	unit.has_acted = true
+	unit.has_attacked = true
 	state.entities_by_id[unit.entity_id] = unit
 	BaseProduction.queue_completion(0) # +2 (tier1 outpost)
 	Research.queue_completion(0, 3) # +3 (economy tech term)
 	# Act
 	var events: Array = state.start_turn(0)
 	# Assert — step 2 ran (flag reset).
-	assert_bool(unit.has_acted).is_false()
+	assert_bool(unit.has_attacked).is_false()
 	# Step 3 produced both completions; step 4 observes both same turn.
 	assert_int(events.size()).is_equal(2)
 	assert_int(state.per_player[0].current_ap).is_equal(15) # 10 base + 2 + 3
@@ -252,16 +253,16 @@ func test_step2_flag_reset_and_step3_timers_both_complete_before_step4_when_both
 # --- Step 2 dispatch: active player's entities reset, opponent's untouched --
 
 func test_start_turn_step2_resets_only_active_players_entities() -> void:
-	# Arrange — one unit per player, both starting has_acted = true.
+	# Arrange — one unit per player, both starting has_attacked = true.
 	var state := GameStateFactory.make_state(2, 0)
 	var unit_p0 := UnitState.new()
 	unit_p0.entity_id = 0
 	unit_p0.owner = 0
-	unit_p0.has_acted = true
+	unit_p0.has_attacked = true
 	var unit_p1 := UnitState.new()
 	unit_p1.entity_id = 1
 	unit_p1.owner = 1
-	unit_p1.has_acted = true
+	unit_p1.has_attacked = true
 	state.entities_by_id[0] = unit_p0
 	state.entities_by_id[1] = unit_p1
 	var structure_p0 := StructureState.new()
@@ -272,9 +273,9 @@ func test_start_turn_step2_resets_only_active_players_entities() -> void:
 	# Act — start_turn for player 0 only.
 	state.start_turn(0)
 	# Assert — player 0's entities reset, player 1's untouched.
-	assert_bool(unit_p0.has_acted).is_false()
+	assert_bool(unit_p0.has_attacked).is_false()
 	assert_bool(structure_p0.has_acted).is_false()
-	assert_bool(unit_p1.has_acted).is_true()
+	assert_bool(unit_p1.has_attacked).is_true()
 
 
 func test_start_turn_step2_safely_skips_plain_entity_state_neither_unit_nor_structure() -> void:
@@ -292,13 +293,13 @@ func test_start_turn_step2_safely_skips_plain_entity_state_neither_unit_nor_stru
 	var unit := UnitState.new()
 	unit.entity_id = 1
 	unit.owner = 0
-	unit.has_acted = true
+	unit.has_attacked = true
 	state.entities_by_id[1] = unit
 	# Act — must not crash on the plain EntityState.
 	state.start_turn(0)
 	# Assert — the real unit was reset; the plain HQ was left untouched (it has
 	# no per-turn flag and hit neither dispatch branch).
-	assert_bool(unit.has_acted).is_false()
+	assert_bool(unit.has_attacked).is_false()
 
 
 # --- AC5: zero-legal-actions player can still end_turn (no softlock) -------
