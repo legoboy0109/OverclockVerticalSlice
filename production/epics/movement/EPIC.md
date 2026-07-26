@@ -4,7 +4,7 @@
 > **GDD**: design/gdd/movement-system.md
 > **Architecture Module**: Movement (Core Layer)
 > **Status**: Ready
-> **Stories**: Not yet created — run `/create-stories movement`
+> **Stories**: 3 stories created
 
 ## Overview
 
@@ -21,7 +21,7 @@ integer-only, and deterministic (stable tile order).
 
 | ADR | Decision Summary | Engine Risk |
 |-----|-----------------|-------------|
-| ADR-0009: Reachable search / pathfinding | Hand-rolled BFS over flat visited/cost arrays; `reachable()` returns tile + min_cost + is_surcharged; no `AStarGrid2D` | LOW *(QQ-05 perf spike pending — Sprint 2 S2-03)* |
+| ADR-0009: Reachable search / pathfinding | Hand-rolled BFS over flat visited/cost arrays; `reachable()` returns tile + min_cost + is_surcharged; no `AStarGrid2D` | LOW *(QQ-05 CLEARED 2026-07-25 — PASS, ~2.0ms/call worst-case; ADR-0009 Accepted 2026-07-25)* |
 | ADR-0003: Deterministic simulation | Integer-only cost math; stable iteration; no engine RNG | LOW |
 | ADR-0007: Entity/stat schema | Reads unit move-cost fields | MEDIUM (shared) |
 | ADR-0002: apply_action | `move()` commits atomically via the pipeline | LOW |
@@ -38,7 +38,18 @@ All 14 requirements are ADR-traced (0 untraced). Full requirement text in
 | ADR-0007 (unit stats) | TR-movement-012 | ✅ |
 | ADR-0002 (apply_action) | TR-movement-014 | ✅ |
 
-**Untraced Requirements**: None.
+**Untraced Requirements**: None. **Note**: TR-movement-012 (schema enforces `move_cost >= 1`,
+`soft_move_cap >= 0` at load) is governed by ADR-0007 and owned by Unit System, not this epic —
+no Movement story implements it. No existing Unit System story currently enforces it either
+(flagged as a Unit System backlog gap, not a Movement blocker).
+
+## Stories
+
+| # | Story | Type | Status | ADR |
+|---|-------|------|--------|-----|
+| 001 | Reachable-Tile Search (`Movement.reachable()`) | Logic | Ready | ADR-0009 |
+| 002 | Committed Move (`Movement.move()` / `MoveAction`) | Logic | Ready | ADR-0009 |
+| 003 | Movement Determinism & No-Stale-Cache Guarantees | Integration | Ready | ADR-0009 |
 
 ## Definition of Done
 
@@ -46,10 +57,11 @@ This epic is complete when:
 - All stories are implemented, reviewed, and closed via `/story-done`
 - All acceptance criteria from `design/gdd/movement-system.md` are verified
 - All Logic and Integration stories have passing test files in `tests/`
-- The QQ-05 reachable/pathfinding perf spike (Sprint 2 S2-03) has a PROCEED verdict before movement stories are estimated/committed
+- The QQ-05 reachable/pathfinding perf spike (Sprint 2 S2-03) has a PROCEED verdict before movement stories are estimated/committed — **DONE**: QQ-05 concluded 2026-07-25 with a PASS verdict (`prototypes/qq05-reachable-bench/README.md`); ADR-0009 Accepted the same day.
 
 ## Next Step
 
-Run `/create-stories movement` to break this epic into implementable stories.
-**Gate story creation on the QQ-05 perf spike result** (S2-03) — its outcome may
-change the allocation/enumeration strategy. VS-critical: build after Unit System.
+Run `/story-readiness production/epics/movement/story-001-reachable-tile-search.md` then
+`/dev-story` to begin implementation. Story order: 001 → 002 → 003 (each depends on the
+previous). Unit System's Stories 001/002/006 must be implemented first (Movement reads
+`UnitTypeDef`/`UnitState`/`UnitConfig`).
