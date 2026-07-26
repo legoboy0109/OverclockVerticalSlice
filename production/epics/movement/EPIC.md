@@ -3,8 +3,8 @@
 > **Layer**: Core
 > **GDD**: design/gdd/movement-system.md
 > **Architecture Module**: Movement (Core Layer)
-> **Status**: Ready
-> **Stories**: 3 stories created
+> **Status**: Complete — all 3 stories implemented, reviewed, and closed (2026-07-26)
+> **Stories**: 3 stories created (3 Complete)
 
 ## Overview
 
@@ -49,7 +49,7 @@ no Movement story implements it. No existing Unit System story currently enforce
 |---|-------|------|--------|-----|
 | 001 | Reachable-Tile Search (`Movement.reachable()`) | Logic | Complete | ADR-0009 |
 | 002 | Committed Move (`Movement.move()` / `MoveAction`) | Logic | Complete | ADR-0009 |
-| 003 | Movement Determinism & No-Stale-Cache Guarantees | Integration | Ready | ADR-0009 |
+| 003 | Movement Determinism & No-Stale-Cache Guarantees | Integration | Complete | ADR-0009 |
 
 ## Definition of Done
 

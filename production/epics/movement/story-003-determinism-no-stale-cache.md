@@ -1,12 +1,12 @@
 # Story 003: Movement Determinism & No-Stale-Cache Guarantees
 
 > **Epic**: Movement
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Integration
 > **Estimate**: 2 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-26
 
 ## Context
 
@@ -69,7 +69,7 @@
 **Required evidence**:
 - `tests/integration/movement/movement_determinism_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created — `tests/integration/movement/movement_determinism_test.gd` (4 tests, passing)
 
 ---
 
@@ -77,3 +77,14 @@
 
 - Depends on: Story 001 (`Movement.reachable()`), Story 002 (`Movement.move()`) — both must be implemented for this story's tests to have anything to exercise.
 - Unlocks: None within Movement — closes the epic's determinism/no-cache TR-IDs. Downstream consumers (AI Opponent epic's clone-parity requirements, Command & Action Interface's replay/animation) rely on these guarantees but are not blocked by this story specifically (they depend on Stories 001–002 directly).
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-26
+**Criteria**: 2/2 passing (across 4 tests)
+**Deviations** (ADVISORY):
+- **AC-1 reframed** (user-approved 2026-07-26): the GDD's literal tie-break AC ("identical tile *sequence* walked by `move()`") is untestable because the ADR-0009 design is **pathless** — cost is a pure function of path *length*, `move()` is an atomic `from→to` commit, and `reachable()` exposes no path (so there is no walked sequence), while `reachable()`'s result-ordering determinism is already proven by Story 001. Reframed as an adversarial two-equal-path board proving `reachable()` returns an identical ordered result set across repeated calls + on `clone()`, and `move()` commits identically from two independent identical states (tie is a non-issue by construction). **GDD reconciliation owed** — logged in `docs/tech-debt-register.md`.
+- Verification-only story: no production code touched; no latent determinism/cache bug surfaced.
+**Test Evidence**: Integration — `tests/integration/movement/movement_determinism_test.gd` (4 tests: two-equal-path repeated-call determinism, clone parity, deterministic commit, no-stale-cache corridor). Full suite 234/234 PASS.
+**Code Review**: Complete — `/code-review` APPROVED (godot-gdscript-specialist, CLEAN; all 4 tests hand-traced as genuinely rigorous — real two-path tie, geometrically-forced corridor chokepoint, same-state-object no-cache proof, independent-states commit proof).
