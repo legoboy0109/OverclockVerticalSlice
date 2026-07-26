@@ -9,11 +9,13 @@
 ## so no field is silently dropped by [code]duplicate_deep()[/code]
 ## (storage-usage requirement, ADR-0001/ADR-0007).
 ##
-## This story implements the read-only query API only. [member terrain] is
-## static after load; [member occupancy] is mutable but this class exposes no
-## mutators yet — [code]place[/code]/[code]remove[/code]/[code]move[/code]
-## land in Story 002 and must be the grid's only mutators (ADR-0005), called
-## only from inside [code]apply_action[/code] handlers.
+## Story 001 shipped the read-only query API. Story 002 adds
+## [method place]/[method remove]/[method move] — the grid's only mutators
+## (ADR-0005). [member terrain] stays static after load; [member occupancy] is
+## the only field these methods ever write. All three are called only from
+## inside [code]apply_action[/code] handlers by architectural convention, but
+## that call-context rule is enforced by code review, not by a runtime guard
+## in this class.
 ##
 ## Usage:
 ## [codeblock]
@@ -131,3 +133,88 @@ func neighbors(x: int, y: int) -> Array[Vector2i]:
 ## arithmetic, O(1).
 func manhattan_distance(a: Vector2i, b: Vector2i) -> int:
 	return absi(a.x - b.x) + absi(a.y - b.y)
+
+
+## Places [param entity_id] at [param x], [param y], enforcing the
+## single-occupant invariant (ADR-0005, TR-grid-003). Re-validates
+## internally — never trust a caller's prior [method is_passable] check.
+## Fails (returns [code]false[/code], state left completely unchanged) if:
+## the tile is out-of-bounds, its terrain is [constant Terrain.IMPASSABLE],
+## the tile already holds an occupant, or [param entity_id] is
+## [constant EMPTY_OCCUPANT] (-1) — that value is the empty sentinel and
+## cannot be distinguished from "no occupant" once stored, so placing it is
+## rejected as a no-op rather than silently corrupting [method occupant_at].
+## On success, writes [param entity_id] into [member occupancy] and returns
+## [code]true[/code]. O(1).
+## [codeblock]
+## if grid.place(42, 3, 4):
+##     print("unit 42 now occupies (3,4)")
+## [/codeblock]
+func place(entity_id: int, x: int, y: int) -> bool:
+	if entity_id == EMPTY_OCCUPANT:
+		return false
+	if not in_bounds(x, y):
+		return false
+	if terrain_at(x, y) == Terrain.IMPASSABLE:
+		return false
+	if occupant_at(x, y) != EMPTY_OCCUPANT:
+		return false
+	occupancy[index(x, y)] = entity_id
+	return true
+
+
+## Clears any occupant at [param x], [param y]. Idempotent and never throws:
+## returns [code]false[/code] as a no-op (no mutation) if the tile is
+## out-of-bounds, its terrain is [constant Terrain.IMPASSABLE], or it is
+## already empty. On a genuinely occupied, in-bounds, passable-terrain tile,
+## sets its occupancy to [constant EMPTY_OCCUPANT] and returns
+## [code]true[/code]. O(1).
+## [codeblock]
+## grid.remove(3, 4) # safe to call even if (3,4) was already empty
+## [/codeblock]
+func remove(x: int, y: int) -> bool:
+	if not in_bounds(x, y):
+		return false
+	if terrain_at(x, y) == Terrain.IMPASSABLE:
+		return false
+	if occupant_at(x, y) == EMPTY_OCCUPANT:
+		return false
+	occupancy[index(x, y)] = EMPTY_OCCUPANT
+	return true
+
+
+## Atomically relocates whatever occupies [param from] to [param to].
+## Validate-before-mutate: every failure condition is checked before either
+## array write happens, so a rejected call leaves [member occupancy]
+## completely untouched, and an accepted call never passes through an
+## observable intermediate state where both tiles hold the occupant. Fails
+## (returns [code]false[/code]) if [param from] is out-of-bounds or empty, or
+## if [param to] is out-of-bounds, [constant Terrain.IMPASSABLE], or already
+## occupied.
+## [b]`from == to`[/b]: treated as a successful no-op-equivalent — if
+## [param from] is a valid, occupied, in-bounds tile, [code]move[/code]
+## returns [code]true[/code] and leaves the occupant in place (checking "is
+## [param to] occupied" against a tile's own current occupant would otherwise
+## always fail a same-tile move, even though nothing is actually contested).
+## O(1).
+## [codeblock]
+## if grid.move(Vector2i(3, 4), Vector2i(3, 5)):
+##     print("occupant relocated")
+## [/codeblock]
+func move(from: Vector2i, to: Vector2i) -> bool:
+	if not in_bounds(from.x, from.y):
+		return false
+	var entity_id: int = occupant_at(from.x, from.y)
+	if entity_id == EMPTY_OCCUPANT:
+		return false
+	if from == to:
+		return true
+	if not in_bounds(to.x, to.y):
+		return false
+	if terrain_at(to.x, to.y) == Terrain.IMPASSABLE:
+		return false
+	if occupant_at(to.x, to.y) != EMPTY_OCCUPANT:
+		return false
+	occupancy[index(from.x, from.y)] = EMPTY_OCCUPANT
+	occupancy[index(to.x, to.y)] = entity_id
+	return true

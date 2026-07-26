@@ -53,7 +53,7 @@ validator and the two map-authoring modes (Authored / Procedural Center).
 | # | Story | Type | Status | ADR |
 |---|-------|------|--------|-----|
 | 001 | GridState Core Data Model & Read Query API | Logic | Complete | ADR-0005 |
-| 002 | Grid Mutation API — place/remove/move & Single-Occupant Invariant | Logic | Ready | ADR-0005 |
+| 002 | Grid Mutation API — place/remove/move & Single-Occupant Invariant | Logic | Complete | ADR-0005 |
 | 003 | MapDefinition & Authored Build Pipeline | Logic | Ready | ADR-0005 |
 | 004 | Procedural Center Terrain Generation & Self-Correcting Reachability | Logic | Ready | ADR-0005 |
 
