@@ -1,12 +1,12 @@
 # Story 004: Win-Check, GameOver & MAX_ROUNDS/Tiebreak Terminal Conditions
 
 > **Epic**: Game State & Turn Manager
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Logic
 > **Estimate**: 3 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-26
 
 ## Context
 
@@ -41,6 +41,8 @@
 - [ ] **GIVEN** two HQs would be destroyed in the same resolution step (future AoE), **WHEN** the win-check resolves, **THEN** the **non-active** player wins (an attacker cannot win by an action that also destroys their own HQ) — documented deterministic rule, no undefined draw.
 - [ ] **GIVEN** `MAX_ROUNDS` is set and reached with no HQ destroyed, **WHEN** the cap is hit, **THEN** the `TIEBREAK_METRIC` decides the winner and `match_status` → `GameOver`; the tiebreak is computed purely from state.
 - [ ] **GIVEN** `MAX_ROUNDS` is unset (VS default), **WHEN** rounds advance, **THEN** no round-cap terminal ever triggers (the cap is opt-in).
+- [ ] **GIVEN** an HQ is destroyed on the same resolution step that `MAX_ROUNDS` is reached, **WHEN** `run_win_check` runs, **THEN** the HQ-destruction outcome decides the winner (checked first, returns before the round-cap branch) — a decisive victory always takes precedence over the metric tiebreak.
+- [ ] **GIVEN** `MAX_ROUNDS` is reached and both players have an equal `TIEBREAK_METRIC`, **WHEN** the tiebreak resolves, **THEN** the **non-active** player wins — the same deterministic rule as the simultaneous-HQ case (AC3); no undefined draw.
 
 ---
 
@@ -69,7 +71,7 @@
 
 ## QA Test Cases
 
-**Test file**: `tests/unit/win_check_terminal_test.gd` (~8 unit tests)
+**Test file**: `tests/unit/win_check_terminal_test.gd` (~10 unit tests)
 **Requires shared fixtures**: HQ-at-0-hp test double — see
 `production/qa/qa-plan-sprint-1-2026-07-26.md` "Shared Test Fixtures Required".
 
@@ -85,12 +87,15 @@
 - **Composition test**: win-check sets GameOver → the very next `apply_action` call returns
   `GAME_OVER` (Story 002's step-1 gate + this story's step-6 setter working together).
 
-⚠️ **Gap flagged during QA planning (unresolved by the GDD) — resolve with game-designer before
-writing these two edge cases, do not silently invent a rule:**
-- Tiebreak-vs-HQ-destruction precedence: `MAX_ROUNDS` reached the exact round the second HQ would
-  also be destroyed — which terminal condition wins?
-- Tied-tiebreak-metric: `TIEBREAK_METRIC` computed from a state with equal metrics for both
-  players — no resolution specified.
+**Edge-case rules (RESOLVED 2026-07-26 — approved deterministic rulings, now AC6/AC7):**
+- **Tiebreak-vs-HQ-destruction precedence** → HQ-destruction wins. `run_win_check` checks
+  HQ-destruction first and returns before the `MAX_ROUNDS`/tiebreak branch, so a decisive victory
+  always beats the anti-drag metric fallback. Test: construct a state at `MAX_ROUNDS` with a
+  destroyed HQ in the same step → assert winner = the HQ-destruction opponent, not the tiebreak
+  metric winner.
+- **Tied-tiebreak-metric** → non-active player wins (same deterministic rule as the simultaneous-HQ
+  case). Test: `MAX_ROUNDS` reached with equal `TIEBREAK_METRIC` for both players → assert
+  `match_status = GameOver(winner = non-active player)`, no draw.
 
 Full plan: `production/qa/qa-plan-sprint-1-2026-07-26.md`
 
@@ -102,7 +107,7 @@ Full plan: `production/qa/qa-plan-sprint-1-2026-07-26.md`
 **Required evidence**:
 - `tests/unit/win_check_terminal_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created — 16 tests, all passing
 
 ---
 
@@ -110,3 +115,17 @@ Full plan: `production/qa/qa-plan-sprint-1-2026-07-26.md`
 
 - Depends on: Story 002 (pipeline step 6 call site + step 1 lockout), Story 003 (round increment for the MAX_ROUNDS boundary) must be DONE. **Soft cross-epic dependency**: entity stat schema (ADR-0007) for HQ-hp detection, or test doubles. See the cross-epic seam note above.
 - Unlocks: None (last story in this epic)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-26
+**Criteria**: 7/7 passing (all COVERED, none deferred). 16 tests total; full suite 177/177, exit 0.
+**Deviations**:
+- `StructureDestroyedEvent`/`GameOverEvent` created in `src/core/event/` scoped to this story. `StructureDestroyedEvent` arguably belongs to Combat/ADR-0010 (its real producer is Combat's `destroy_entity()` hook, which adds `entity_id`); flagged in-code for reconciliation when that epic lands.
+- Tiebreak: only `TiebreakMetric.UNIT_COUNT` is implemented — total-HQ-hp / tiles-controlled metrics need ADR-0007's entity-stat schema. Enum left extensible; `_compute_tiebreak_metric` has a documented intentional fallback-to-tie for an unrecognized metric.
+- Detection is EVENT-BASED per ADR-0010 (scan events for `StructureDestroyedEvent{is_hq}`) — the forbidden hp re-scan is NOT used. Filled the existing step-6 `run_win_check` hook (no second call site).
+**Test Evidence**: Logic — `tests/unit/win_check_terminal_test.gd` (16 tests, all passing). End-to-end tests use the register/unregister-verb discipline (GS-002 Concern B).
+**Code Review**: Complete — APPROVED WITH SUGGESTIONS (godot-gdscript-specialist + qa-tester). 4 fixes applied before close: added 2 edge tests (owner-0→winner-1 reverse direction; non-HQ `is_hq=false` stays IN_PROGRESS), replaced a fragile array-equality assertion with `events.size()`, strengthened the mid-turn test to assert AC2's "leftover AP ignored" clause + toned down its synchronicity claim, and documented the metric-fallback-to-tie. Both reviewers independently confirmed the AC6 precedence test is load-bearing.
+**Tech debt logged (for Combat/ADR-0010 & ADR-0007):** StructureDestroyedEvent ownership reconciliation; tiebreak_metric expansion beyond UNIT_COUNT.
+**Engine note:** adding new `class_name` event files triggered a stale global-class-cache parse error until `./redot --headless --import` was run — pure engine tooling, not a code defect. Candidate for a `tests/README` note or a hook.

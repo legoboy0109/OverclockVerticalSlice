@@ -75,8 +75,8 @@ stories:
     name: "Win-Check, GameOver & MAX_ROUNDS/Tiebreak Terminal Conditions"
     file: "production/epics/game-state-turn-manager/story-004-win-check-terminal-conditions.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-26"

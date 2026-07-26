@@ -16,12 +16,14 @@
 ## or receive a [GameState] directly and never touch it.
 ##
 ## Story 001 shipped the data model, the side-effect-free read API, and
-## [method clone]. Story 002 (this story) adds [method apply_action], the
+## [method clone]. Story 002 added [method apply_action], the
 ## [signal action_applied] signal, and the verb-dispatch/registration
-## mechanism — with only [EndTurnAction]'s handlers concretely wired.
-## [code]start_match[/code]/[code]start_turn[/code]/the real end-of-turn
-## sequence are Story 003; win-check logic is Story 004
-## ([method run_win_check] is a no-op stub here).
+## mechanism — with only [EndTurnAction]'s handlers concretely wired. Story
+## 003 wired [code]start_match[/code]/[code]start_turn[/code]/the real
+## end-of-turn sequence. Story 004 (this story) implements [method
+## run_win_check]: HQ-destruction detection (event-based, via
+## [StructureDestroyedEvent]) and the optional [member max_rounds]/[member
+## tiebreak_metric] anti-drag terminal predicate.
 ##
 ## Usage:
 ## [codeblock]
@@ -39,9 +41,19 @@
 class_name GameState
 extends Resource
 
-## Match terminal status. [code]IN_PROGRESS[/code] is the default; later
-## stories (Story 004) transition to [code]GAME_OVER[/code] via win-check.
+## Match terminal status. [code]IN_PROGRESS[/code] is the default; [method
+## run_win_check] (Story 004) transitions to [code]GAME_OVER[/code].
 enum MatchStatus { IN_PROGRESS, GAME_OVER }
+
+## Which metric [method run_win_check]'s MAX_ROUNDS/tiebreak fallback uses to
+## pick a winner when the round cap is reached with no HQ destroyed
+## (TR-gamestate-016, ADR-0001). Only [constant TiebreakMetric.UNIT_COUNT] is
+## computable from current state — HQ hp / tiles-controlled tiebreak metrics
+## both require entity-stat-schema fields (ADR-0007: [code]StructureState.hp[/code],
+## structure-type identity) that do not exist yet. This enum is deliberately
+## left extensible (more members may be added once ADR-0007 lands); it is not
+## a closed/final set.
+enum TiebreakMetric { UNIT_COUNT }
 
 ## Signal fired exactly once, synchronously, at the very end of
 ## [method apply_action]'s pipeline — [b]only[/b] when [code]result.ok ==
@@ -95,6 +107,27 @@ static var _dispatch_registered: bool = false
 ## this field to decide whether control has looped back to the starting
 ## player — the signal [member round_number] increments on.
 @export var starting_player: int = 0
+
+## The winning player once [member match_status] is [constant
+## MatchStatus.GAME_OVER], or [code]-1[/code] while the match is still
+## [constant MatchStatus.IN_PROGRESS] (no winner yet). Sole writer: [method
+## run_win_check].
+@export var winner: int = -1
+
+## Optional round cap for the anti-drag terminal predicate (TR-gamestate-016,
+## ADR-0001). [code]0[/code] (the default) means [b]unset/OFF[/b] — the round
+## cap never fires regardless of how high [member round_number] climbs; this
+## is an opt-in cap, not a default game length. When set to a positive value
+## [code]N[/code], [method run_win_check] ends the match once [member
+## round_number] exceeds [code]N[/code] (i.e. all [code]N[/code] rounds have
+## fully completed) with no HQ destroyed, deciding the winner via [member
+## tiebreak_metric].
+@export var max_rounds: int = 0
+
+## Which metric decides the winner when [member max_rounds] is reached with no
+## HQ destroyed. See [enum TiebreakMetric]. Defaults to the only metric
+## currently computable from state.
+@export var tiebreak_metric: int = TiebreakMetric.UNIT_COUNT
 
 
 ## Returns [param player]'s AP available to spend this turn. O(1) array index.
@@ -405,9 +438,9 @@ func check_faction_reassignment(_player: int) -> int:
 ## [code]validate()[/code] didn't return [constant Action.Reason.OK] —
 ## nothing has mutated yet at this point (atomicity), (5) dispatch to the
 ## owning system's [code]apply()[/code] (assumes validation passed; may not
-## fail), (6) run the (Story 004-owned, no-op here) win-check, (7) emit
-## [signal action_applied] and return the [ActionResult] — emission happens
-## only on success (ADR-0004).
+## fail), (6) run [method run_win_check] (HQ-destruction / MAX_ROUNDS-tiebreak
+## terminal check), (7) emit [signal action_applied] and return the
+## [ActionResult] — emission happens only on success (ADR-0004).
 ##
 ## Dispatch is exclusively by [member Action.verb] through the
 ## [code]Dictionary[int, Callable][/code] tables built by
@@ -467,7 +500,7 @@ func apply_action(action: Action) -> ActionResult:
 	var applier: Callable = _appliers[action.verb]
 	var events: Array = applier.call(self, action)
 
-	# 6. run_win_check — call site only; Story 004 owns the logic.
+	# 6. run_win_check — HQ-destruction / MAX_ROUNDS-tiebreak terminal check.
 	run_win_check(events)
 
 	# 7. Emit only on success (ADR-0004), then return.
@@ -476,11 +509,121 @@ func apply_action(action: Action) -> ActionResult:
 	return result
 
 
-## Win-check call site (ADR-0002 step 6). [b]Story 002 no-op stub[/b] — Story
-## 004 owns the real HQ-at-0 → [constant MatchStatus.GAME_OVER] logic (keyed
-## off a [code]StructureDestroyedEvent{is_hq}[/code] in [param events], per
-## the control manifest). Deliberately does nothing here so
-## [method apply_action]'s pipeline is fully testable before Story 004 lands;
-## do not duplicate win-check logic elsewhere.
-func run_win_check(_events: Array) -> void:
-	pass
+## Win-check — [method apply_action]'s pipeline step 6 (ADR-0002; TR-gamestate-010).
+## Evaluates terminal conditions in strict precedence order and sets [member
+## match_status]/[member winner] synchronously, inside the same commit that
+## triggered them:
+##
+## [br]1. [b]HQ-destruction (decisive, checked first):[/b] scans [param
+## events] for any [StructureDestroyedEvent] with [member
+## StructureDestroyedEvent.is_hq] `true` — never a separate HQ hp re-scan
+## (ADR-0010, control-manifest Core Layer Rules). If both players' HQs are
+## destroyed in the same step, the [b]non-active player wins[/b] (an attacker
+## cannot win by an action that also destroys their own HQ) — an explicit
+## deterministic branch, not incidental ordering. If exactly one HQ is
+## destroyed, its owner's opponent wins. Either way this method sets [member
+## match_status] to [constant MatchStatus.GAME_OVER], sets [member winner],
+## appends a [GameOverEvent] to [param events], and returns immediately — a
+## decisive victory always takes precedence over the MAX_ROUNDS/tiebreak
+## fallback below, even if the round cap is reached in the very same step.
+## [br]2. [b]MAX_ROUNDS/tiebreak (anti-drag fallback, only reached if no HQ was
+## destroyed this step):[/b] if [member max_rounds] is set ([code]> 0[/code])
+## and [member round_number] has exceeded it (all [member max_rounds] rounds
+## have fully completed), computes [member tiebreak_metric] per player —
+## [constant TiebreakMetric.UNIT_COUNT] counts each player's entities in
+## [member entities_by_id] via the stable-order [method entities] scan
+## (ADR-0003) — and the higher metric wins. An exact tie resolves to the
+## [b]non-active player[/b] — the same deterministic rule as the simultaneous-
+## HQ case, so there is never an undefined draw. Sets [member match_status],
+## [member winner], and appends a [GameOverEvent], same as branch 1.
+## [br]3. Otherwise leaves [member match_status] at [constant
+## MatchStatus.IN_PROGRESS] — no terminal condition met.
+##
+## Idempotency/safety: if [member match_status] is already [constant
+## MatchStatus.GAME_OVER] this is a no-op (though [method apply_action]'s
+## step-1 lockout normally prevents [method run_win_check] from ever being
+## reached again post-GameOver, so this guard is defense-in-depth, not the
+## primary lockout mechanism).
+##
+## O(entity count) at worst (branch 2's [method entities] scan, run once per
+## commit, never per-frame) — negligible for turn-based play (control-manifest
+## Performance Guardrail). Integer-only, no RNG (ADR-0003).
+##
+## Usage:
+## [codeblock]
+## # inside apply_action, after apply() returns events:
+## run_win_check(events) # may mutate match_status/winner and append a GameOverEvent
+## [/codeblock]
+func run_win_check(events: Array) -> void:
+	if match_status == MatchStatus.GAME_OVER:
+		return
+
+	# --- 1. HQ-destruction: decisive, checked first, event-based only. ------
+	var destroyed_hq_owners: Array[int] = []
+	for e: Event in events:
+		if e is StructureDestroyedEvent and e.is_hq:
+			destroyed_hq_owners.append(e.owner)
+
+	if not destroyed_hq_owners.is_empty():
+		var hq_winner: int
+		if destroyed_hq_owners.size() >= 2:
+			# Simultaneous double-HQ destruction (AC3) — the attacker cannot
+			# win by an action that also destroys their own HQ; the
+			# non-active player wins, an explicit deterministic branch.
+			hq_winner = 1 - active_player
+		else:
+			# Exactly one HQ destroyed — its owner's opponent wins.
+			hq_winner = 1 - destroyed_hq_owners[0]
+		match_status = MatchStatus.GAME_OVER
+		winner = hq_winner
+		var hq_game_over := GameOverEvent.new()
+		hq_game_over.winner = hq_winner
+		events.append(hq_game_over)
+		return # AC6: decisive victory always beats the tiebreak fallback.
+
+	# --- 2. MAX_ROUNDS/tiebreak: anti-drag fallback, opt-in, off by default. -
+	if max_rounds <= 0:
+		return # Unset (AC5) — the round cap never fires.
+	if round_number <= max_rounds:
+		return # Cap not yet reached.
+
+	var metric_by_player: Array[int] = _compute_tiebreak_metric()
+	var tiebreak_winner: int
+	if metric_by_player[0] > metric_by_player[1]:
+		tiebreak_winner = 0
+	elif metric_by_player[1] > metric_by_player[0]:
+		tiebreak_winner = 1
+	else:
+		# Exact tie (AC7) — non-active player wins, same rule as branch 1.
+		tiebreak_winner = 1 - active_player
+
+	match_status = MatchStatus.GAME_OVER
+	winner = tiebreak_winner
+	var tiebreak_game_over := GameOverEvent.new()
+	tiebreak_game_over.winner = tiebreak_winner
+	events.append(tiebreak_game_over)
+
+
+## Computes [member tiebreak_metric] for each of the two players, in player-
+## index order (index 0 = player 0's metric, index 1 = player 1's). Pure,
+## integer-only, no RNG (ADR-0003) — private helper for [method run_win_check]'s
+## branch 2 only.
+##
+## [constant TiebreakMetric.UNIT_COUNT] (the only implemented metric today):
+## counts entities in [member entities_by_id] by [member EntityState.owner],
+## scanned via the stable [member entity_id]-ascending [method entities] order
+## (ADR-0003) even though a plain count does not depend on visitation order —
+## kept for consistency with every other order-sensitive entity pass on this
+## class, and so a future metric (e.g. total hp) that DOES care about order
+## can be added here without an ordering regression.
+func _compute_tiebreak_metric() -> Array[int]:
+	var counts: Array[int] = [0, 0]
+	match tiebreak_metric:
+		TiebreakMetric.UNIT_COUNT:
+			for e: EntityState in entities():
+				counts[e.owner] += 1
+	# No default branch by design: an unrecognized metric (bad save data / a
+	# future enum value not yet handled) intentionally falls through to [0, 0],
+	# which run_win_check resolves as a tie → non-active player wins. A silent
+	# deterministic fallback is preferred here over a hard error mid-commit.
+	return counts
