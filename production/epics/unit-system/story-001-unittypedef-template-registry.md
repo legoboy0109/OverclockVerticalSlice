@@ -1,12 +1,12 @@
 # Story 001: UnitTypeDef Template Resource + Registry (Roster Data)
 
 > **Epic**: Unit System
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Config/Data
 > **Estimate**: 2 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-26
 
 ## Context
 
@@ -79,3 +79,18 @@
 
 - Depends on: None (foundational).
 - Unlocks: Story 002 (`UnitState.type: UnitTypeDef`), Stories 004/005 (read `base_attack`/`base_defense`), Base & Production (`producible_types: Array[UnitTypeDef]`).
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-26
+**Criteria**: 3/3 passing (no deferred items)
+**Deviations**: ADVISORY only — TR-unit-001's registry text names the template ".tres UnitStats"; implementation uses `UnitTypeDef` per ADR-0007's canonical naming (the ADR is the implementation source of truth; registry prose is illustrative). Not tracked as tech debt.
+**Test Evidence**: Config/Data — 6 unit tests in `tests/unit/unit_typedef_test.gd` (all pass); full suite 183/183 green. Smoke report `production/qa/smoke-2026-07-26.md` present (ADVISORY satisfied).
+**Code Review**: Complete — `/code-review` APPROVED (godot-gdscript-specialist + godot-specialist), no required changes, 3 optional suggestions deferred.
+
+**Files delivered**:
+- `src/core/unit/unit_type_def.gd` (UnitTypeDef Resource)
+- `data/units/{scout,trooper,heavy,sniper}.tres` (Rule 3 stat table)
+- `src/core/unit/unit_types.gd` + `project.godot` autoload registration (UnitTypes registry)
+- `tests/unit/unit_typedef_test.gd` (6 tests)

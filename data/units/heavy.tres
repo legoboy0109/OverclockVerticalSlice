@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Heavy"
+hp = 10
+attack = 5
+attack_range = 2
+move_cost = 3
+soft_move_cap = 2
+produce_cost = 7

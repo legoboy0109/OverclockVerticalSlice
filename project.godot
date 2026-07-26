@@ -19,6 +19,11 @@ config/features=PackedStringArray("4.6", "Forward Plus")
 ; AP's static functions read Balance.economy internally.
 Balance="*res://src/core/economy/balance.gd"
 
+; Thin, logic-free registry Autoload (ADR-0007), mirroring Balance's idiom.
+; Preloads the 4 VS UnitTypeDef presets once at boot; any system reads
+; UnitTypes.SCOUT/TROOPER/HEAVY/SNIPER as a bare global reference.
+UnitTypes="*res://src/core/unit/unit_types.gd"
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg")

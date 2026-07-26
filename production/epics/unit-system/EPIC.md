@@ -61,7 +61,7 @@ This epic is complete when:
 
 | # | Story | Type | Status | ADR | TRs | VS-critical |
 |---|-------|------|--------|-----|-----|-------------|
-| 001 | UnitTypeDef template resource + registry | Config/Data | Ready | ADR-0007 | 001, 014 | ✅ (1st) |
+| 001 | UnitTypeDef template resource + registry | Config/Data | Complete | ADR-0007 | 001, 014 | ✅ (1st) |
 | 002 | UnitState runtime schema + stub migration | Logic | Ready | ADR-0007 | 002, 003, 014, 015 | ✅ (2nd) |
 | 003 | Pure ops — can_attack, reset_turn_flags, duplicate, apply_hp_delta | Logic | Ready | ADR-0007 | 004, 005, 015 | ✅ (3rd) |
 | 004 | effective_attack — live research-tech fold | Logic | Ready | ADR-0007 | 006 | ✅ |
