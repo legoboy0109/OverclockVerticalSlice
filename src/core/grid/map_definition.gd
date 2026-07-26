@@ -7,12 +7,13 @@
 ## reachability -> init-occupancy pipeline, returning a ready-to-play
 ## [GridState] or [code]null[/code] on rejection.
 ##
-## Story 003 implements the AUTHORED branch of [method build_grid] only. The
-## [code]proc_*[/code] fields below are declared now so the `.tres` schema is
-## complete and stable, but they are inert until Story 004 implements
-## [code]Mode.PROCEDURAL[/code] generation — building a [code]PROCEDURAL[/code]
-## [MapDefinition] today always fails with a logged "not yet implemented"
-## error and returns [code]null[/code].
+## Story 003 implemented the AUTHORED branch of [method build_grid]. Story 004
+## implements [code]Mode.PROCEDURAL[/code] via [method generate_procedural]:
+## a dedicated seeded [RandomNumberGenerator] ([member proc_seed]) places
+## Cover/Impassable features in a central band, mirrors them if
+## [member proc_symmetric], and self-corrects HQ-to-HQ reachability by
+## thinning Impassable features in a fixed, seed-stable order — never by
+## re-rolling. See [method generate_procedural] for the full contract.
 ##
 ## Usage:
 ## [codeblock]
@@ -57,23 +58,26 @@ const MAX_DIM: int = 24
 ## [code]width * height[/code] entries or the map is rejected.
 @export var authored_terrain: PackedByteArray
 
-## Seed for procedural generation. Story-004-only; inert in this story.
+## Seed for procedural generation, consumed by [method generate_procedural]
+## via a dedicated [RandomNumberGenerator] instance — never the engine's
+## global RNG (ADR-0003 Rule 1).
 @export var proc_seed: int
 
 ## Width (in tiles) of the central feature band, perpendicular to the
-## HQ-to-HQ axis. Story-004-only; inert in this story.
+## HQ-to-HQ axis. [code]>= min(width, height)[/code] clamps to whole-board
+## scatter. See [method generate_procedural].
 @export var proc_band_width: int
 
-## Feature density as a scaled integer (30 = 0.30), per ADR-0003 Rule 2.
-## Story-004-only; inert in this story.
+## Feature density as a scaled integer (30 = 0.30), per ADR-0003 Rule 2. See
+## [method generate_procedural].
 @export var proc_density_x100: int
 
 ## Cover-vs-Impassable feature split as a scaled integer (70 = 0.70 Cover
-## share), per ADR-0003 Rule 2. Story-004-only; inert in this story.
+## share), per ADR-0003 Rule 2. See [method generate_procedural].
 @export var proc_feature_mix_x100: int
 
-## Whether procedural features mirror across the board center.
-## Story-004-only; inert in this story.
+## Whether procedural features mirror across the board center. See
+## [method generate_procedural].
 @export var proc_symmetric: bool = true
 
 ## The two HQ tile coordinates (exactly 2, one per player, VS 1v1 scope).
@@ -91,8 +95,8 @@ const MAX_DIM: int = 24
 ## [member width]/[member height] both lie in
 ## [code][MIN_DIM, MAX_DIM][/code]; (2) for [constant Mode.AUTHORED], validate
 ## [member authored_terrain].size() == width*height; (3) lay terrain —
-## AUTHORED copies [member authored_terrain] verbatim, PROCEDURAL is Story
-## 004 and currently always rejects; (4) validate [member hq_tiles] has
+## AUTHORED copies [member authored_terrain] verbatim, PROCEDURAL delegates to
+## [method generate_procedural]; (4) validate [member hq_tiles] has
 ## exactly 2 distinct in-bounds, non-Impassable entries that are mutually
 ## reachable via [method _hqs_mutually_reachable]; (5) initialize occupancy to all-empty
 ## and place both HQs via [method GridState.place]; (6) return the built
@@ -105,7 +109,11 @@ const MAX_DIM: int = 24
 ##
 ## Deterministic: building the same [MapDefinition] twice yields
 ## byte-identical [member GridState.terrain] and [member GridState.occupancy]
-## — no RNG runs anywhere in the AUTHORED branch. O(width*height).
+## — the AUTHORED branch runs no RNG at all, and the PROCEDURAL branch's
+## [method generate_procedural] draws exclusively from a dedicated seeded
+## [RandomNumberGenerator] ([member proc_seed]), never the engine's global RNG
+## (ADR-0003 Rule 1). O(width*height) for AUTHORED; PROCEDURAL adds
+## [method generate_procedural]'s cost (see its doc comment).
 ## [codeblock]
 ## var grid_a := MapDefinition.build_grid(map_def)
 ## var grid_b := MapDefinition.build_grid(map_def)
@@ -120,25 +128,23 @@ static func build_grid(map_def: MapDefinition) -> GridState:
 		push_error("MapDefinition.build_grid: height %d out of range [%d, %d]" % [map_def.height, MIN_DIM, MAX_DIM])
 		return null
 
-	if map_def.mode == Mode.PROCEDURAL:
-		push_error("MapDefinition.build_grid: Mode.PROCEDURAL is not yet implemented (Story 004)")
-		return null
+	var tile_count: int = map_def.width * map_def.height
+	var terrain := PackedByteArray()
 
-	if map_def.mode != Mode.AUTHORED:
+	# 2-3. Lay terrain — AUTHORED copies verbatim; PROCEDURAL generates.
+	if map_def.mode == Mode.AUTHORED:
+		# Validate authored_terrain size (TR-grid-012).
+		if map_def.authored_terrain.size() != tile_count:
+			push_error("MapDefinition.build_grid: authored_terrain.size() %d != width*height %d" % [map_def.authored_terrain.size(), tile_count])
+			return null
+		terrain.resize(tile_count)
+		for i: int in tile_count:
+			terrain[i] = map_def.authored_terrain[i]
+	elif map_def.mode == Mode.PROCEDURAL:
+		terrain = generate_procedural(map_def)
+	else:
 		push_error("MapDefinition.build_grid: unrecognized mode %d" % map_def.mode)
 		return null
-
-	# 2. Validate authored_terrain size (AUTHORED branch, TR-grid-012).
-	var tile_count: int = map_def.width * map_def.height
-	if map_def.authored_terrain.size() != tile_count:
-		push_error("MapDefinition.build_grid: authored_terrain.size() %d != width*height %d" % [map_def.authored_terrain.size(), tile_count])
-		return null
-
-	# 3. Lay terrain — AUTHORED copies verbatim.
-	var terrain := PackedByteArray()
-	terrain.resize(tile_count)
-	for i: int in tile_count:
-		terrain[i] = map_def.authored_terrain[i]
 
 	# 4. Validate HQ tiles, then HQ-to-HQ reachability.
 	if map_def.hq_tiles.size() != 2:
@@ -241,6 +247,195 @@ static func _hqs_mutually_reachable(width: int, height: int, terrain: PackedByte
 		frontier = next_frontier
 
 	return false
+
+
+## Generates Procedural Center terrain (ADR-0005, TR-grid-009/-010/-011/-012):
+## a central band of Cover/Impassable features around the board's midline,
+## with a deterministic self-correcting reachability pass. Returns a
+## [code]width*height[/code] [PackedByteArray] of [enum GridState.Terrain]
+## values — never [code]null[/code]; an all-[constant GridState.Terrain.PLAIN]
+## board is always reachable given [method build_grid] has already rejected
+## out-of-bounds/Impassable-sitting HQs by the time this could matter, so
+## thinning always converges.
+##
+## [b]Determinism (the whole point of this story)[/b]: every random draw comes
+## from one dedicated [RandomNumberGenerator] instance seeded with
+## [member proc_seed] — never the engine's global [code]randi()[/code]/
+## [code]randf()[/code] family (ADR-0003 Rule 1, banned project-wide). Three
+## things are fixed, seed-independent, and stable across runs so the seeded
+## draws always line up the same way against the same structure:
+## [br]1. the candidate tile list is built in ascending flat-index
+## ([code]y*width+x[/code]) order before any RNG runs;
+## [br]2. that list is Fisher-Yates shuffled in place using
+## [code]rng.randi_range[/code] (index [code]n-1[/code] down to [code]1[/code]) —
+## the classic in-place shuffle, so draw order is a pure function of list
+## length; the first [code]count[/code] shuffled entries are selected, then
+## each selected tile draws one more [code]rng.randi_range(0, 99)[/code] to
+## decide Cover vs Impassable, in shuffle order;
+## [br]3. the self-correction thinning pass (below) walks ascending flat index
+## and involves no RNG at all — it is a pure function of the already-generated
+## layout.
+## No re-roll ever happens: on a reachability failure, features are removed
+## (never re-picked) until the BFS passes, or every candidate feature in the
+## band has been thinned (the density clamp), which is logged via
+## [method @GlobalScope.push_error] and never emits an unplayable map.
+##
+## Algorithm:
+## [br]1. Start all-Plain.
+## [br]2. Compute the candidate band: if [member proc_band_width] is
+## [code]>= min(width, height)[/code], the candidate set is the whole board
+## (clamped to whole-board scatter, TR-grid-012's band-clamp AC). Otherwise
+## the band is centered on the board and oriented perpendicular to the
+## HQ-to-HQ axis: if the two [member hq_tiles] differ more in [code]x[/code]
+## than [code]y[/code], the band is a vertical strip of columns (perpendicular
+## to a mostly-horizontal HQ axis); otherwise (including an exact tie) it is a
+## horizontal strip of rows. [member hq_tiles] and [member deploy_tiles] tiles
+## are excluded from the candidate set entirely — a feature is never placed on
+## them.
+## [br]3. Select [code]candidates.size() * proc_density_x100 / 100[/code]
+## (integer division) tiles via the seeded shuffle-and-take above.
+## [member proc_feature_mix_x100] is the Cover share: each selected tile
+## becomes Cover if its draw is [code]< proc_feature_mix_x100[/code], else
+## Impassable.
+## [br]4. If [member proc_symmetric], every selected tile's feature is mirrored
+## onto its counterpart across the board center: across the vertical midline
+## for a vertical band, the horizontal midline for a horizontal band, or a
+## 180-degree point reflection for the whole-board-scatter case. The mirror
+## write is skipped (not forced) if the mirror tile is the tile itself, or is
+## an excluded HQ/deploy tile — exclusions always win over symmetry.
+## [br]5. Self-correct: run [method _hqs_mutually_reachable]; on failure, scan
+## ascending flat index for the first remaining Impassable feature tile, set
+## it (and its symmetric partner, if any) back to Plain, and re-test. Repeat
+## until reachable or every feature is thinned.
+## [codeblock]
+## var terrain := MapDefinition.generate_procedural(map_def)
+## # terrain.size() == map_def.width * map_def.height
+## # generate_procedural(map_def) called again returns a byte-identical array
+## [/codeblock]
+static func generate_procedural(map_def: MapDefinition) -> PackedByteArray:
+	var width: int = map_def.width
+	var height: int = map_def.height
+	var tile_count: int = width * height
+
+	var terrain := PackedByteArray()
+	terrain.resize(tile_count)
+	terrain.fill(GridState.Terrain.PLAIN)
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = map_def.proc_seed
+
+	# Excluded set: HQ tiles + deploy tiles, membership-only (never iterated),
+	# so Dictionary insertion order has zero influence on determinism.
+	var excluded: Dictionary = {}
+	for hq: Vector2i in map_def.hq_tiles:
+		excluded[hq] = true
+	for deploy: Vector2i in map_def.deploy_tiles:
+		excluded[deploy] = true
+
+	# Band orientation: whole-board scatter if the band clamps to >= the
+	# smaller dimension; otherwise perpendicular to the HQ-to-HQ axis.
+	var whole_board: bool = map_def.proc_band_width >= mini(width, height)
+	var vertical_band: bool = false
+	if not whole_board and map_def.hq_tiles.size() == 2:
+		var hq_a: Vector2i = map_def.hq_tiles[0]
+		var hq_b: Vector2i = map_def.hq_tiles[1]
+		# Differ more in x => HQ axis is mostly horizontal => band is vertical
+		# (a strip of columns). Ties default to a horizontal band (rows).
+		vertical_band = absi(hq_a.x - hq_b.x) > absi(hq_a.y - hq_b.y)
+
+	# Candidate list, fixed ascending flat-index order (pre-RNG).
+	var candidates: Array[Vector2i] = []
+	if whole_board:
+		for y: int in height:
+			for x: int in width:
+				var tile := Vector2i(x, y)
+				if not excluded.has(tile):
+					candidates.append(tile)
+	elif vertical_band:
+		var band_w: int = map_def.proc_band_width
+		var x_start: int = (width - band_w) / 2
+		var x_end: int = x_start + band_w # exclusive
+		for y: int in height:
+			for x: int in range(maxi(0, x_start), mini(width, x_end)):
+				var tile := Vector2i(x, y)
+				if not excluded.has(tile):
+					candidates.append(tile)
+	else:
+		var band_h: int = map_def.proc_band_width
+		var y_start: int = (height - band_h) / 2
+		var y_end: int = y_start + band_h # exclusive
+		for y: int in range(maxi(0, y_start), mini(height, y_end)):
+			for x: int in width:
+				var tile := Vector2i(x, y)
+				if not excluded.has(tile):
+					candidates.append(tile)
+
+	# Deterministic seeded selection: in-place Fisher-Yates shuffle, then take
+	# the first `count` entries. Draw order is a pure function of list length.
+	for i: int in range(candidates.size() - 1, 0, -1):
+		var j: int = rng.randi_range(0, i)
+		var tmp: Vector2i = candidates[i]
+		candidates[i] = candidates[j]
+		candidates[j] = tmp
+
+	var count: int = candidates.size() * map_def.proc_density_x100 / 100
+
+	# Mirror axis matching the band orientation (point reflection for
+	# whole-board scatter, since there is no single band axis).
+	var mirror_of := func(tile: Vector2i) -> Vector2i:
+		if whole_board:
+			return Vector2i(width - 1 - tile.x, height - 1 - tile.y)
+		elif vertical_band:
+			return Vector2i(width - 1 - tile.x, tile.y)
+		else:
+			return Vector2i(tile.x, height - 1 - tile.y)
+
+	for i: int in count:
+		var tile: Vector2i = candidates[i]
+		var draw: int = rng.randi_range(0, 99)
+		var feature: int = GridState.Terrain.COVER if draw < map_def.proc_feature_mix_x100 else GridState.Terrain.IMPASSABLE
+		terrain[_index(tile.x, tile.y, width)] = feature
+
+		if map_def.proc_symmetric:
+			var mirror: Vector2i = mirror_of.call(tile)
+			if mirror != tile and not excluded.has(mirror):
+				terrain[_index(mirror.x, mirror.y, width)] = feature
+
+	# Reachability self-correction: no re-roll, ever. Thin Impassable features
+	# in fixed ascending flat-index order and re-test until connected, or
+	# until every feature has been thinned (the density clamp).
+	if map_def.hq_tiles.size() == 2:
+		var hq_a: Vector2i = map_def.hq_tiles[0]
+		var hq_b: Vector2i = map_def.hq_tiles[1]
+		while not _hqs_mutually_reachable(width, height, terrain, hq_a, hq_b):
+			var thinned_this_pass: bool = false
+			for idx: int in tile_count:
+				if terrain[idx] == GridState.Terrain.IMPASSABLE:
+					terrain[idx] = GridState.Terrain.PLAIN
+					if map_def.proc_symmetric:
+						var idx_x: int = idx % width
+						var idx_y: int = idx / width
+						var mirror: Vector2i = mirror_of.call(Vector2i(idx_x, idx_y))
+						var mirror_idx: int = _index(mirror.x, mirror.y, width)
+						if terrain[mirror_idx] == GridState.Terrain.IMPASSABLE:
+							terrain[mirror_idx] = GridState.Terrain.PLAIN
+					thinned_this_pass = true
+					break
+			if not thinned_this_pass:
+				# Density-clamp backstop (ADR-0005 TR-grid-012: never emit an
+				# unplayable map). This is defensive: under the current invariants
+				# it is unreachable, because generation starts all-Plain and never
+				# places a feature on an HQ/deploy tile (they're excluded from the
+				# candidate set), so once every Impassable feature is thinned the
+				# board is entirely Plain+Cover — and Cover is passable — leaving
+				# the two (in-bounds, non-Impassable, distinct) HQs trivially
+				# connected. It is kept as a guarantee should those invariants ever
+				# change (e.g. mutable terrain, HQ tiles allowed on features).
+				# Never re-roll; proceed with the fully-thinned (all-Plain) band.
+				push_error("MapDefinition.generate_procedural: density clamp — HQs %s/%s still unreachable after fully thinning Impassable features; proceeding with an all-Plain band" % [hq_a, hq_b])
+				break
+
+	return terrain
 
 
 ## Flat-array index helper mirroring [method GridState.index] — duplicated

@@ -189,16 +189,10 @@ func test_build_grid_hq_tile_on_impassable_terrain_returns_null() -> void:
 	assert_object(grid).is_null()
 
 
-# A PROCEDURAL-mode MapDefinition is rejected (Story 004 stub) rather than
-# crashing or silently producing a grid.
-func test_build_grid_procedural_mode_returns_null_stub() -> void:
-	# Arrange
-	var map_def := _make_open_map()
-	map_def.mode = MapDefinition.Mode.PROCEDURAL
-	# Act
-	var grid: GridState = MapDefinition.build_grid(map_def)
-	# Assert
-	assert_object(grid).is_null()
+# NOTE: the former `test_build_grid_procedural_mode_returns_null_stub` (a Story
+# 003 regression-guard asserting PROCEDURAL rejected until implemented) was
+# removed when Story 004 landed the PROCEDURAL branch. Procedural-mode build
+# behavior is now covered by tests/unit/grid_procedural_generation_test.gd.
 
 
 # --- Code-review follow-ups (2026-07-25) ---
