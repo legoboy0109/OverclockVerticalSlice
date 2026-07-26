@@ -91,3 +91,20 @@ static func apply_hp_delta(unit: UnitState, delta: int) -> void:
 static func effective_attack(state: GameState, unit: UnitState) -> int:
 	var bonus: int = Research.attack_tech_bonus() if state.per_player[unit.owner].has_attack_tech else 0
 	return unit.type.attack + bonus
+
+
+## The defense value Combat's damage formula subtracts (ADR-0010's
+## `defense(defender)` term, TR-unit-006/007): [param unit]'s base defense (from
+## its [UnitTypeDef], 0 across the whole VS roster) plus the flat Defense-Tech
+## bonus when the unit's owner holds Defense Tech. Computed [b]live[/b] every
+## call (Research flags are permanent, ADR-0018).
+##
+## Independent of [method effective_attack]: the [member PlayerState.has_defense_tech]
+## gate and the Defense-Tech magnitude never touch Attack Tech's flag/bonus, and
+## vice-versa — the two tech folds share this class but read disjoint state. The
+## Defense-Tech [b]magnitude[/b] is read at call time from the forward-declared
+## [method Research.defense_tech_bonus] (mirroring [method effective_attack]'s
+## Research seam) — never hardcoded in Unit code. O(1).
+static func effective_defense(state: GameState, unit: UnitState) -> int:
+	var bonus: int = Research.defense_tech_bonus() if state.per_player[unit.owner].has_defense_tech else 0
+	return unit.type.defense + bonus

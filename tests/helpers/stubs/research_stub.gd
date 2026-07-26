@@ -58,6 +58,11 @@ static var _queued_completions: Dictionary = {}
 ## (e.g. +3) to prove Unit code reads the value rather than hardcoding it.
 static var _attack_tech_bonus: int = 1
 
+## Test-controllable flat Defense-Tech bonus magnitude (Unit-005, TR-unit-006).
+## Independent of [member _attack_tech_bonus] — the two tech magnitudes never
+## alias. Same forward-declaration semantics as Attack Tech.
+static var _defense_tech_bonus: int = 1
+
 
 ## Sets the stubbed, [b]already-capped[/b] economy-tech income term for
 ## [param player]. This is the value AP adds verbatim — pass what the AC expects
@@ -87,6 +92,20 @@ static func set_attack_tech_bonus(bonus: int) -> void:
 ## Attack-Tech [TechDef] magnitude; the stub returns the test-set value.
 static func attack_tech_bonus() -> int:
 	return _attack_tech_bonus
+
+
+## Sets the stubbed flat Defense-Tech bonus magnitude (Unit-005).
+static func set_defense_tech_bonus(bonus: int) -> void:
+	_defense_tech_bonus = bonus
+
+
+## Forward-declared contract (ADR-0018, TR-unit-006): the flat Defense-Tech bonus
+## magnitude Unit System's [method Unit.effective_defense] adds when the unit's
+## owner holds Defense Tech. Flat (not per-player) — the owner gate is read from
+## [member PlayerState.has_defense_tech] by the caller. Real impl reads the
+## Defense-Tech [TechDef] magnitude; the stub returns the test-set value.
+static func defense_tech_bonus() -> int:
+	return _defense_tech_bonus
 
 
 ## Test hook (GS-003, ADR-0008): queues [param count] research completions for
@@ -133,3 +152,4 @@ static func reset() -> void:
 	_economy_tech_income_bonus.clear()
 	_queued_completions.clear()
 	_attack_tech_bonus = 1
+	_defense_tech_bonus = 1

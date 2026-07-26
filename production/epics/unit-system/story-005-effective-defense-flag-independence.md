@@ -1,12 +1,12 @@
 # Story 005: effective_defense + Two-Flag Independence Proof
 
 > **Epic**: Unit System
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Logic
 > **Estimate**: 2-3 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-26
 
 ## Context
 
@@ -81,3 +81,20 @@
 
 - Depends on: Story 001, Story 002, Story 004 (shares the live/config-injection pattern; independence AC needs both formulas present).
 - Unlocks: Combat epic damage formula.
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-26
+**Criteria**: 5/5 passing (8 tests)
+**Deviations** (all ADVISORY):
+- Reads `unit.type.defense` (the real ADR-0007 schema, 0 for all VS units) rather than the story's `base_defense` wording.
+- Same forward-declared Research seam as Story 004: the Defense-Tech magnitude is read at call time via `Research.defense_tech_bonus()` (never hardcoded); the gate (`has_defense_tech`) read directly from `PlayerState`. The real Research epic implements the accessor later (ADR-0007/0018 TechDef-magnitude gap already logged as tech debt from Story 004 — no new entry).
+- Typed `unit: UnitState`; structure-defense generality deferred to Combat wiring.
+**Test Evidence**: Logic — `tests/unit/effective_defense_test.gd` (8 tests: base_defense=0 all types; un-researched/researched; tracks-injected-not-hardcoded; **flag independence both directions** with distinct magnitudes 2≠3 so cross-contamination is unambiguous; both-flags-true; live defense-flag flip). Full suite 246/246 PASS.
+**Code Review**: Complete — `/code-review` APPROVED (godot-gdscript-specialist, CLEAN; flag independence verified at the CODE level — `_attack_tech_bonus`/`_defense_tech_bonus` are separate statics, folds read disjoint state, no aliasing; the both-directions tests confirmed non-trivially-passable against the classic re-coupling failure modes).
+
+**Files delivered**:
+- `src/core/unit/unit.gd` (appended `Unit.effective_defense`)
+- `tests/helpers/stubs/research_stub.gd` (added forward-declared `defense_tech_bonus()` + setter + reset)
+- `tests/unit/effective_defense_test.gd`
