@@ -1,7 +1,7 @@
 # Story 001: Reachable-Tile Search (`Movement.reachable()`)
 
 > **Epic**: Movement
-> **Status**: Blocked — Unit System Stories 001/002/006 (UnitTypeDef/UnitState/UnitConfig) are Ready but not yet implemented in `src/`; Movement's code reads their fields directly
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Logic
 > **Estimate**: 4 hours
@@ -109,3 +109,20 @@
 
 - Depends on: Unit System Story 001 (`UnitTypeDef.move_cost`/`soft_move_cap`), Story 002 (`UnitState.position`/`owner`/`tiles_moved_this_turn`), Story 006 (`UnitConfig.surcharge_for()`); Grid & Terrain epic (`GridState.in_bounds`/`terrain_at`/`is_passable`/`occupant_at`/`index` — Complete).
 - Unlocks: Story 002 (`move()` shares `_cost_for_depth`), Story 003 (determinism/no-cache integration tests exercise this search).
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-26
+**Criteria**: 11/11 passing (across 13 tests — AC-4 and AC-10/11 each split for the regression-pair + mid-turn-clone edges)
+**Deviations** (ADVISORY — pre-approved adaptations to the shipped dependency code, all confirmed correct by code review; no downstream contract change):
+- Reads `unit.type.move_cost`/`unit.type.soft_move_cap` (stats live on `UnitTypeDef`, not directly on `UnitState` — the ADR-0009 pseudocode pre-dated that schema).
+- Uses the named `GridState.EMPTY_OCCUPANT` const instead of a bare `-1` literal.
+- No public `move_path_cost` wrapper — `_cost_for_depth` stays a shared private static; the public forwarder belongs to Story 002 per its own notes.
+- Minor test-isolation nit: the penalty-1.5 test (AC-9) mutates the `UnitBalance` autoload then restores it before its asserts — code review confirmed the restore-before-assert ordering is sufficient under GDScript's error model (optional `after_test()` hardening noted, not required).
+**Test Evidence**: Logic — `tests/unit/movement/reachable_search_test.gd` (13 tests, all 11 ACs). Full suite 219/219 PASS.
+**Code Review**: Complete — `/code-review` APPROVED (godot-gdscript-specialist, CLEAN; BFS min-length≡min-cost correctness, manifest compliance, and determinism all verified).
+
+**Files delivered**:
+- `src/core/movement/movement.gd` (`Movement` static class: `reachable()` BFS-by-depth + `ReachableTile` + the traversal/cost/neighbor helpers)
+- `tests/unit/movement/reachable_search_test.gd`
