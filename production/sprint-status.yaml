@@ -57,11 +57,11 @@ stories:
     name: "Action Command Model, apply_action Pipeline & Event Signal"
     file: "production/epics/game-state-turn-manager/story-002-apply-action-pipeline.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-26"
   - id: "gs-003"
     name: "Turn FSM — start_match, start_turn 4-Step Sequence, EndTurnAction & Round Increment"
     file: "production/epics/game-state-turn-manager/story-003-turn-fsm-start-of-turn-sequence.md"

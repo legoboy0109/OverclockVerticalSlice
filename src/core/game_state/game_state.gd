@@ -15,10 +15,13 @@
 ## is a thin, logic-free lookup pointer only; unit tests and the AI construct
 ## or receive a [GameState] directly and never touch it.
 ##
-## Story 001 ships the data model, the side-effect-free read API, and
-## [method clone]. [code]apply_action[/code]/[code]end_turn[/code]/
-## [code]start_match[/code]/[code]start_turn[/code] are later stories
-## (Story 002/003) — not implemented here.
+## Story 001 shipped the data model, the side-effect-free read API, and
+## [method clone]. Story 002 (this story) adds [method apply_action], the
+## [signal action_applied] signal, and the verb-dispatch/registration
+## mechanism — with only [EndTurnAction]'s handlers concretely wired.
+## [code]start_match[/code]/[code]start_turn[/code]/the real end-of-turn
+## sequence are Story 003; win-check logic is Story 004
+## ([method run_win_check] is a no-op stub here).
 ##
 ## Usage:
 ## [codeblock]
@@ -28,6 +31,10 @@
 ##
 ## var clone := state.clone()
 ## clone.per_player[0].current_ap = 5 # does not affect state.per_player[0]
+##
+## var action := EndTurnAction.new()
+## action.player = state.active_player
+## var result: ActionResult = state.apply_action(action)
 ## [/codeblock]
 class_name GameState
 extends Resource
@@ -35,6 +42,26 @@ extends Resource
 ## Match terminal status. [code]IN_PROGRESS[/code] is the default; later
 ## stories (Story 004) transition to [code]GAME_OVER[/code] via win-check.
 enum MatchStatus { IN_PROGRESS, GAME_OVER }
+
+## Signal fired exactly once, synchronously, at the very end of
+## [method apply_action]'s pipeline — [b]only[/b] when [code]result.ok ==
+## true[/code] (ADR-0004). A rejected action is a true no-op by the
+## validate-before-mutate atomicity guarantee, so nothing is emitted for it.
+## Subscribers (HUD, Board Renderer) must never mutate state from inside their
+## handler.
+signal action_applied(result: ActionResult)
+
+## Verb-keyed dispatch tables, [code]Dictionary[int, Callable][/code], shared
+## by every [GameState] instance — dispatch is pure code-behavior, not
+## per-match data, so it deliberately lives on the class, never as an
+## [code]@export[/code]ed instance field (it must never be walked by
+## [method clone]'s [code]duplicate_deep()[/code]). Built once and reused
+## across every call (control-manifest Performance Guardrail); never
+## dispatched via [code]get_class()[/code] (ADR-0002 — for a GDScript class
+## that returns the base engine class name, not its [code]class_name[/code]).
+static var _validators: Dictionary = {}
+static var _appliers: Dictionary = {}
+static var _dispatch_registered: bool = false
 
 ## The authoritative logical board. Owned inside this state, decoupled from
 ## any render node (ADR-0001, TR-grid-005/-006).
@@ -108,3 +135,196 @@ func faction_of(player: int) -> FactionDef:
 ## affects the original, and vice versa.
 func clone() -> GameState:
 	return duplicate_deep() as GameState
+
+
+## Registers [param verb]'s [code]validate[/code]/[code]apply[/code] handlers
+## into the shared, class-level dispatch tables — the mechanism other Core
+## epics (Movement, Combat, Base & Production, Research) use to plug their
+## verb into [method apply_action] when those systems land (out of scope for
+## this story; only [constant Action.Verb.END_TURN] is registered here).
+##
+## Idempotent by design: registering the same [param verb] again simply
+## overwrites its table entry (last-write-wins), so re-registration is always
+## safe — a test may re-register a verb between runs with no accumulation and
+## no need to "unregister" first. Registration is a one-time, load-time
+## concern (control-manifest guardrail: never rebuild the table itself inside
+## the [method apply_action] hot path); overwriting an entry is O(1) and
+## carries no cost even if called repeatedly.
+##
+## Usage:
+## [codeblock]
+## GameState.register_verb(Action.Verb.MOVE, Movement.validate, Movement.apply)
+## [/codeblock]
+static func register_verb(verb: int, validator: Callable, applier: Callable) -> void:
+	_validators[verb] = validator
+	_appliers[verb] = applier
+
+
+## Removes [param verb]'s handlers from the shared dispatch tables entirely
+## (unlike [method register_verb]'s overwrite, this fully clears the key so
+## [code]_validators.has(verb)[/code] becomes [code]false[/code] again). No-op
+## if the verb was never registered. Primarily a test-hygiene tool: a test that
+## registers a throwaway verb into the process-wide static tables must call this
+## in cleanup to avoid leaving a stub that a later test (or a real Core epic's
+## first test suite) could silently inherit under load-order variation.
+static func unregister_verb(verb: int) -> void:
+	_validators.erase(verb)
+	_appliers.erase(verb)
+
+
+## Populates the shared dispatch tables exactly once per process (guarded by
+## [member _dispatch_registered], not per-[GameState]-instance state) with
+## this story's only concrete handler pair: [constant Action.Verb.END_TURN].
+## Safe to call every time [method apply_action] runs — the guard makes every
+## call after the first a single boolean check, never a per-call Dictionary
+## rebuild (control-manifest Performance Guardrail).
+static func _ensure_dispatch_registered() -> void:
+	if _dispatch_registered:
+		return
+	register_verb(Action.Verb.END_TURN, _validate_end_turn, _apply_end_turn)
+	_dispatch_registered = true
+
+
+## [EndTurnAction]'s [code]validate()[/code] handler (owning system: this
+## class — there is no dedicated TurnManager class, per the control
+## manifest's forbidden patterns). Unconditionally OK for the active
+## player — [method apply_action]'s step 2 active-player gate already
+## enforces the "active player only" half; this handler adds no further
+## affordability/legality check (TR-gamestate-017, ADR-0002). Pure — reads
+## nothing, mutates nothing.
+static func _validate_end_turn(_state: GameState, _action: Action) -> int:
+	return Action.Reason.OK
+
+
+## [EndTurnAction]'s [code]apply()[/code] handler. [b]Story 002 stub[/b]: the
+## real end-of-turn sequence (AP discard, next-player switch, conditional
+## [code]round_number[/code] increment, [code]start_turn()[/code] for the
+## next player) is Story 003 (ADR-0008) — deliberately out of scope here so
+## the pipeline is testable in isolation. Returns no events.
+static func _apply_end_turn(_state: GameState, _action: Action) -> Array:
+	return []
+
+
+## [b]Cross-story seam (flag for Story 003 / ADR-0008):[/b] whether
+## [member PlayerState.faction]/[member PlayerState.is_ai_controlled] have
+## left Setup and become immutable (ADR-0001, ADR-0012 — "same lock as
+## [code]is_ai_controlled[/code]", ADR-0011). [code]MatchStatus[/code]
+## (ADR-0001) has only [code]IN_PROGRESS[/code]/[code]GAME_OVER[/code] — there
+## is no persisted [code]SETUP[/code] value, and this story adds none: ADR-0012
+## explicitly places the Setup FSM and the Setup→PlayerTurn transition with
+## "Turn Manager / [code]start_match()[/code]" (Story 003's territory), not
+## here. No concrete faction-assignment [Action] verb exists yet in this
+## story's scope, so there is nothing in [method apply_action]'s dispatch
+## table to gate today.
+##
+## This method is the enforceable seam a future faction-assignment verb's
+## [code]validate()[/code] handler calls. Until Story 003 actually models a
+## pre-[code]start_match()[/code] Setup phase, every [GameState] this story
+## can construct or hand to [method apply_action] is — by construction —
+## already past that boundary, so this always returns [code]true[/code].
+## [b]Story 003 must revisit this[/b] once [code]start_match()[/code] and a
+## real Setup phase exist, and should replace the unconditional [code]true[/code]
+## with an actual phase check.
+func is_faction_locked() -> bool:
+	return true
+
+
+## Pure query a future faction-(re)assignment verb's [code]validate()[/code]
+## would call: is assigning [param player]'s faction/[code]is_ai_controlled[/code]
+## still legal? Returns [constant Action.Reason.OK] pre-lock,
+## [constant Action.Reason.FACTION_LOCKED] once [method is_faction_locked] is
+## [code]true[/code]. See [method is_faction_locked]'s doc comment for the
+## Story 003 seam note — [param player] is accepted (matching the shape a
+## real handler needs) but unused by today's unconditional guard.
+func check_faction_reassignment(_player: int) -> int:
+	if is_faction_locked():
+		return Action.Reason.FACTION_LOCKED
+	return Action.Reason.OK
+
+
+## The sole mutation vector for [GameState] (ADR-0001, ADR-0002). Runs the
+## fixed 7-step pipeline in order: (1) reject if the match is already over,
+## (2) reject if [param action] isn't the active player's, (3) dispatch to
+## the owning system's pure, total [code]validate()[/code], (4) reject if
+## [code]validate()[/code] didn't return [constant Action.Reason.OK] —
+## nothing has mutated yet at this point (atomicity), (5) dispatch to the
+## owning system's [code]apply()[/code] (assumes validation passed; may not
+## fail), (6) run the (Story 004-owned, no-op here) win-check, (7) emit
+## [signal action_applied] and return the [ActionResult] — emission happens
+## only on success (ADR-0004).
+##
+## Dispatch is exclusively by [member Action.verb] through the
+## [code]Dictionary[int, Callable][/code] tables built by
+## [method _ensure_dispatch_registered] — never [code]action.get_class()[/code]
+## (ADR-0002; for a GDScript-defined class that returns the base engine class
+## name, not its [code]class_name[/code]). A verb with no registered handler
+## (any of the 6 not-yet-implemented verbs, or a bare [code]Action.new()[/code]
+## whose [member Action.verb] defaults to -1) is rejected cleanly with
+## [constant Action.Reason.UNKNOWN_VERB] rather than crashing the dispatch
+## lookup — this guard is a precondition to step 3, not an extra pipeline step.
+##
+## Idempotency is stateless re-validation: resubmitting an already-applied
+## [Action] re-runs this same pipeline against current state and is rejected
+## naturally by step 3/4 (no dedup IDs, no seen-set, ADR-0002).
+##
+## O(1): one Dictionary lookup + one [code]validate()[/code] call + (on pass)
+## one [code]apply()[/code] call + one [code]emit_signal[/code] on success —
+## negligible for turn-based play (control-manifest Performance Guardrail).
+##
+## Usage:
+## [codeblock]
+## var action := EndTurnAction.new()
+## action.player = state.active_player
+## var result: ActionResult = state.apply_action(action)
+## if not result.ok:
+##     push_warning("rejected: %d" % result.reason)
+## [/codeblock]
+func apply_action(action: Action) -> ActionResult:
+	_ensure_dispatch_registered()
+
+	# 1. GameOver gate — post-GameOver lockout (TR-gamestate-010).
+	if match_status == MatchStatus.GAME_OVER:
+		return ActionResult.new(false, Action.Reason.GAME_OVER, [])
+
+	# 2. Active-player gate (applies to EndTurnAction too — active player only).
+	if action.player != active_player:
+		return ActionResult.new(false, Action.Reason.NOT_ACTIVE_PLAYER, [])
+
+	# Dispatch-safety guard (precondition to step 3, not a new pipeline step):
+	# fail loud-but-safe if this verb has no registered handler — 6 of 7 verbs
+	# are legitimately unregistered until their own Core epic lands, and a bare
+	# Action.new() defaults verb to -1. Without this, the step-3 Dictionary
+	# lookup would crash the caller (UI/AI) instead of returning a clean
+	# rejection, breaking apply_action's uniform-ActionResult contract.
+	if not _validators.has(action.verb):
+		return ActionResult.new(false, Action.Reason.UNKNOWN_VERB, [])
+
+	# 3. validate() — pure, total; dispatch by verb enum, never get_class().
+	var validator: Callable = _validators[action.verb]
+	var reason: int = validator.call(self, action)
+
+	# 4. Reject if not OK — atomic: nothing has mutated yet.
+	if reason != Action.Reason.OK:
+		return ActionResult.new(false, reason, [])
+
+	# 5. apply() — mutates; assumes validation passed; may not fail.
+	var applier: Callable = _appliers[action.verb]
+	var events: Array = applier.call(self, action)
+
+	# 6. run_win_check — call site only; Story 004 owns the logic.
+	run_win_check(events)
+
+	# 7. Emit only on success (ADR-0004), then return.
+	var result := ActionResult.new(true, Action.Reason.OK, events)
+	action_applied.emit(result)
+	return result
+
+
+## Win-check call site (ADR-0002 step 6). [b]Story 002 no-op stub[/b] — Story
+## 004 owns the real HQ-at-0 → [constant MatchStatus.GAME_OVER] logic (keyed
+## off a [code]StructureDestroyedEvent{is_hq}[/code] in [param events], per
+## the control manifest). Deliberately does nothing here so
+## [method apply_action]'s pipeline is fully testable before Story 004 lands;
+## do not duplicate win-check logic elsewhere.
+func run_win_check(_events: Array) -> void:
+	pass

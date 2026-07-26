@@ -1,12 +1,12 @@
 # Story 002: Action Command Model, apply_action Pipeline & Event Signal
 
 > **Epic**: Game State & Turn Manager
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Logic
 > **Estimate**: 4 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-26
 
 ## Context
 
@@ -112,6 +112,7 @@ apply_action(action):
 - **run_win_check** (step 6): call site only here; the logic (HQ-at-0 → GameOver) is Story 004. For this story, `run_win_check` may be a minimal no-op/pass-through so the pipeline is testable — Story 004 replaces it with the full check. Do not duplicate the logic.
 - Faction lock: enforce in the pipeline (or a Setup→PlayerTurn transition gate) — once the match has left Setup, an action re-assigning `faction`/`is_ai_controlled` returns `FACTION_LOCKED`. Same gate locks both fields.
 - Determinism: no RNG anywhere in the pipeline; iterate entities in `entity_id` order for any order-sensitive pass.
+- **Performance**: `apply_action` is the sole mutation vector, so every committed action — player *and* the AI's per-candidate evaluation loop (ADR-0011) — flows through it. The pipeline itself is O(1): one `Dictionary[int, Callable]` lookup + one `validate()` call + (on pass) one `apply()` call + one `emit_signal` on success (2–3 subscribers in VS scope). Negligible for turn-based play — not a per-frame path. The one guardrail: build `_validators`/`_appliers` **once** (at construction/registration), never allocate the dispatch Dictionary or per-call `ActionResult` scratch inside the hot path. Per control-manifest Performance Guardrails (`docs/architecture/control-manifest.md`, ADR-0002 line 137 / ADR-0004 line 139).
 
 ---
 
@@ -160,7 +161,7 @@ Full plan: `production/qa/qa-plan-sprint-1-2026-07-26.md`
 **Required evidence**:
 - `tests/unit/apply_action_pipeline_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created — 14 tests, all passing
 
 ---
 
@@ -168,3 +169,16 @@ Full plan: `production/qa/qa-plan-sprint-1-2026-07-26.md`
 
 - Depends on: Story 001 must be DONE
 - Unlocks: Story 003, Story 004
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-26
+**Criteria**: 7/7 passing (all COVERED, none deferred). 14 tests total; full suite 144/144, exit 0.
+**Deviations**: ActionResult promoted to its own top-level `class_name` file (not nested in action.gd) — pre-approved clarification of ADR-0002's Key Interfaces sketch (GDScript inner classes aren't globally type-hintable), not a Decision deviation.
+**Test Evidence**: Logic — `tests/unit/apply_action_pipeline_test.gd` (14 tests, all passing)
+**Code Review**: Complete — APPROVED WITH SUGGESTIONS (godot-gdscript-specialist + qa-tester). Concern A (unregistered-verb crash → clean `UNKNOWN_VERB` reject + guard + 2 tests) and Concern B (static dispatch-table test pollution → `unregister_verb()` + AC1 cleanup fix + precondition asserts) both fixed and re-verified before close.
+**Advisory notes (logged as tech debt for GS-003 / Movement):**
+- ⚠️ `is_faction_locked()` returns `true` unconditionally — no `SETUP` MatchStatus state exists yet. GS-003's `start_match()`/Setup FSM (ADR-0008/0012) must replace it with a real phase check and add a test exercising the `OK` branch of `check_faction_reassignment()`.
+- AC3 (determinism) and AC4 (idempotency-by-revalidation) tests are thin while `_apply_end_turn` is a no-op stub — re-strengthen once a real state-mutating verb lands (Story 003+).
+- QA bullet 2's "illegal target" half has no stub test — deferred until a concrete targeted verb exists.
