@@ -22,7 +22,14 @@
 ## empty/passable/in-bounds manhattan==1 deploy frontier), the [ProduceAction]
 ## verb handler ([method validate_produce]/[method apply_produce]), and
 ## [method effective_production_cap] (the ADR-0012 two-sided cap fold, == base
-## under Neutral). Cancel (Story 005) is still out of scope here.
+## under Neutral).
+##
+## [b]Scope added (Story 005):[/b] [method cancel_refund] (fixed-point integer
+## refund math, ADR-0017 D6) and the [CancelBuildAction] verb handler
+## ([method validate_cancel]/[method apply_cancel]) — the voluntary terminal
+## exit for an under-construction structure (credits refund AP, clears the grid,
+## erases the entity). Combat-destruction's terminal exit ([code]destroy_entity[/code],
+## ADR-0010) is a separate path that never refunds.
 ##
 ## Usage:
 ## [codeblock]
@@ -318,6 +325,108 @@ static func completed_outpost_count(state: GameState, player: int) -> int:
 ## a hardcoded literal. O(1).
 static func defensive_attack_cost() -> int:
 	return StructureBalance.base_production.defensive_attack_cost
+
+
+## The AP refunded for cancelling a structure whose base build cost is
+## [param build_cost] (ADR-0017 D5/D6, TR-baseprod-013) — [b]fixed-point integer
+## percent[/b]: [code]build_cost * cancel_refund_pct / 100[/code], where
+## [member BaseProductionConfig.cancel_refund_pct] is read from the
+## [code]StructureBalance[/code] Autoload (Story 001's config, default 50), never
+## a hardcoded literal or a float rate (control-manifest forbids the GDD's
+## [code]CANCEL_REFUND_RATE: float = 0.5[/code]; the economy is integer-only per
+## ADR-0003).
+##
+## GDScript's [code]*[/code] and [code]/[/code] share precedence and associate
+## left-to-right, so this evaluates as [code](build_cost * pct) / 100[/code] —
+## the multiply happens before the integer division, avoiding a premature
+## truncation to 0. Integer [code]/[/code] truncates toward zero, which equals
+## [code]floor[/code] for these non-negative operands: 4→2, 9→4, 6→3, odd 5→2
+## (floors, never rounds). O(1). Pure — no [param state] needed (faction never
+## folds the refund; the rate is a flat B&P config).
+static func cancel_refund(build_cost: int) -> int:
+	return build_cost * StructureBalance.base_production.cancel_refund_pct / 100
+
+
+## [CancelBuildAction]'s [code]validate()[/code] handler (ADR-0017 D5, ADR-0002,
+## TR-baseprod-013) — [b]pure and total[/b]: checks every failure condition,
+## never mutates [param state]. Registered into the dispatch table by
+## [method GameState._ensure_dispatch_registered].
+##
+## Checks, in order: (1) [param action].structure_id resolves to a live
+## [StructureState] ([constant Action.Reason.NO_SUCH_ENTITY] otherwise); (2) that
+## structure is owned by [member GameState.active_player]
+## ([constant Action.Reason.ILLEGAL_TARGET] otherwise — you cannot cancel an
+## opponent's build); (3) it is
+## [constant StructureState.BuildStatus.UNDER_CONSTRUCTION]
+## ([constant Action.Reason.NOT_UNDER_CONSTRUCTION] otherwise — a Completed
+## structure can only be combat-destroyed, never cancelled; Rule 10).
+##
+## Idempotency (ADR-0002): re-running this against current state re-validates
+## fresh — a structure that completed or was destroyed between preview and commit
+## is caught here, so [method apply_cancel] can lean on it as a commit re-check.
+##
+## O(1) — one [Dictionary] lookup plus two field comparisons (control-manifest
+## Performance Guardrail).
+static func validate_cancel(state: GameState, action: CancelBuildAction) -> int:
+	var entity: EntityState = state.entities_by_id.get(action.structure_id, null)
+	if entity == null or not (entity is StructureState):
+		return Action.Reason.NO_SUCH_ENTITY
+	var structure: StructureState = entity
+	if structure.owner != state.active_player:
+		return Action.Reason.ILLEGAL_TARGET
+	if structure.build_status != StructureState.BuildStatus.UNDER_CONSTRUCTION:
+		return Action.Reason.NOT_UNDER_CONSTRUCTION
+	return Action.Reason.OK
+
+
+## [CancelBuildAction]'s [code]apply()[/code] handler (ADR-0017 D5, ADR-0002,
+## TR-baseprod-013) — re-runs [method validate_cancel] first (idempotent commit
+## re-validation, ADR-0002: a structure that completed or was destroyed between
+## preview and commit is rejected here with [b]no mutation at all[/b]). Only
+## after that passes does this mutate, atomically: (1) compute the refund via
+## [method cancel_refund] on the structure's base [member StructureTypeDef.build_cost];
+## (2) [method AP.credit] the refund to the owner's pool (the AP-owned write
+## path — never a direct [member PlayerState.current_ap] mutation); (3)
+## [method GridState.remove] the structure's tile; (4)
+## [method Dictionary.erase] the entity from [member GameState.entities_by_id]
+## (the "in `entities_by_id` ⇔ alive" invariant's terminal exit, ADR-0017 D1);
+## (5) append one [StructureCancelledEvent] carrying the [member StructureCancelledEvent.refund]
+## so presentation reads the credited amount from the event, never re-deriving it.
+##
+## Returns [code][][/code] (no event, no mutation) on the defensive
+## re-validation-failure path — the same atomicity guarantee
+## [method GameState.apply_action] provides for a normal first commit; matters
+## only for a caller invoking [method apply_cancel] directly without going
+## through [method GameState.apply_action] (e.g. a test), so the re-validation is
+## not bypassable.
+##
+## O(1) plus the internal [method validate_cancel] re-check (control-manifest
+## Performance Guardrail).
+static func apply_cancel(state: GameState, action: CancelBuildAction) -> Array[Event]:
+	if validate_cancel(state, action) != Action.Reason.OK:
+		return []
+	var player: int = state.active_player
+	var structure: StructureState = state.entities_by_id[action.structure_id]
+	var refund: int = cancel_refund(structure.type.build_cost)
+	AP.credit(state, player, refund)
+	# validate_cancel (re-run above) guarantees this is a live StructureState, and
+	# every structure is Grid.place'd when built (apply_build) — so remove() cannot
+	# fail here. Assert it loudly rather than silently discard the bool: a false
+	# return would mean an entities_by_id/Grid desync (an entity with no grid
+	# occupant), leaving a half-committed cancel (AP credited, entity erased, event
+	# emitted) with a stale grid cell. Mirrors apply_build/apply_produce's Grid
+	# tripwire. (Dev-only; assert is stripped in release, matching convention.)
+	var removed: bool = state.grid.remove(structure.position.x, structure.position.y)
+	assert(removed, "BaseProduction.apply_cancel: Grid.remove failed on a live structure's tile — entities_by_id/Grid desync.")
+	state.entities_by_id.erase(structure.entity_id)
+
+	var evt := StructureCancelledEvent.new()
+	evt.entity_id = structure.entity_id
+	evt.structure_type = structure.type
+	evt.owner = player
+	evt.tile = structure.position
+	evt.refund = refund
+	return [evt] as Array[Event]
 
 
 ## Returns every legal deploy tile for a unit produced by [param producer]

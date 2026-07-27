@@ -104,6 +104,36 @@ static func spend(state: GameState, player: int, amount: int) -> bool:
 	return true
 
 
+## Credits [param amount] AP to [param player]'s pool — the additive counterpart
+## to [method spend], introduced for the cancel-build refund (ADR-0017 D5, Story
+## 005). Keeps [b]every[/b] [member PlayerState.current_ap] write inside this AP
+## module (control-manifest: `current_ap` is AP-owned; a verb handler must never
+## write it directly) — the same reason [method reset_turn]/[method discard]
+## live here rather than on their calling systems.
+##
+## Gated to [param player] == [member GameState.active_player] (mirrors [method spend]:
+## only the active player's pool is mutable during their turn — a cancel is a
+## voluntary same-turn action by the structure's owner, who is the active
+## player). Rejects a negative [param amount]; treats an [param amount] of
+## exactly 0 as a no-op success (a 0-cost structure refunds nothing but the
+## cancel still succeeds). There is no upper cap on the pool — a refund can
+## legitimately raise [member PlayerState.current_ap] above the turn's frozen
+## income snapshot (the refunded AP is spendable again this same turn).
+##
+## Returns [code]true[/code] only when the credit actually happened (or was a
+## legal 0-no-op). Called only from inside [method BaseProduction.apply_cancel]
+## (ADR-0002 step 5). O(1) — a fixed handful of comparisons plus one addition.
+static func credit(state: GameState, player: int, amount: int) -> bool:
+	if player != state.active_player:
+		return false
+	if amount < 0:
+		return false
+	if amount == 0:
+		return true
+	state.per_player[player].current_ap += amount
+	return true
+
+
 ## Freezes [param player]'s AP income for the whole turn (start-of-turn
 ## reset, ADR-0006 Rule 1/5). Evaluates [method income] exactly once and
 ## stores the result in [member PlayerState.income_this_turn], then sets

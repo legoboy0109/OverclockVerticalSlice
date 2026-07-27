@@ -1,12 +1,12 @@
 # Story 005: Cancel Build & Fixed-Point Refund
 
 > **Epic**: Base & Production
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Logic
 > **Estimate**: 2 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -50,6 +50,11 @@
 - **Cancel verb**: a typed `CancelBuildAction` subclass (ADR-0002). `validate_cancel(state, structure)` is pure/total: structure is owner's AND `build_status == UNDER_CONSTRUCTION`. A Completed structure → reject (only combat-destroyed). `apply_cancel` (only after validate): compute `refund = structure.type.build_cost * config.cancel_refund_pct / 100` (integer division = floor); **credit** `refund` AP to the owner's pool (via the AP credit path); `Grid.remove(structure.position)`; `entities_by_id.erase(structure.entity_id)`; append the cancel event and put `refund` on the `ActionResult` so presentation reads it (registry `balance_constant_in_presentation_layer` forbidden).
 - **Refund math is integer fixed-point** (D6): `cancel_refund_pct = 50` (Story 001's config). `build_cost * 50 / 100` truncates toward zero = floor for non-negative operands: 4→2, 9→4, 6→3, 5→2. No float, no `floori(float × 0.5)`.
 - **Combat destruction never refunds** (Rule 10 / AP Economy Rule 6): the terminal exit for a combat-destroyed structure is `GameState.destroy_entity` (ADR-0010, Story 007), which never calls `cancel_build`. This story's AC verifies the refund function is not on the destruction path.
+- **Test migration — `CANCEL_BUILD` unregistered-sentinel re-treatment (mandatory):** registering the real `CANCEL_BUILD` handler in `GameState._ensure_dispatch_registered` flips `GameState._validators.has(Action.Verb.CANCEL_BUILD)` from `false`→`true`, which **breaks two existing tests** that currently borrow `CANCEL_BUILD` as a *guaranteed-unregistered* sentinel verb (the same way Story 002 forced BUILD→CANCEL_BUILD):
+  - `tests/unit/win_check_terminal_test.gd` — `.is_false()` assertions (≈ lines 88/119/132) + a temporary register/unregister round-trip.
+  - `tests/unit/apply_action_pipeline_test.gd` — `.is_false()` assertion (≈ line 73); its `unregister_verb(CANCEL_BUILD)` (≈ line 94) would now **erase the real handler**, corrupting later tests via the static `_dispatch_registered` guard.
+
+  **Constraint:** after this story, `RESEARCH` is the **only** verb still unregistered (Research epic pending), and `apply_action_pipeline_test` already uses `RESEARCH` for its unknown-verb test (≈ line 108) — so these tests cannot simply rename `CANCEL_BUILD`→`RESEARCH`. Re-treat by pointing the "stays-unregistered" assertions at `RESEARCH`, and for the *borrow-a-temp-verb* round-trips use a **save-and-restore of an already-registered verb** (register a stub, assert, then re-register the real handler in teardown) rather than relying on a second free unregistered slot. Verify the full suite is green after migration — no test may leave `CANCEL_BUILD` unregistered in the shared dispatch table.
 
 ---
 
@@ -59,6 +64,10 @@
 - Build placement — Story 002. Production — Story 004.
 - The real end-to-end cancel via `apply_action` on the full stack — Story 010 covers the under-construction-destroyed-no-refund integration case; voluntary cancel's pure slice is here.
 - Tuning the refund rate outside the default (30–60 range) — data-driven config, not a code change.
+
+**In scope (do not skip):** the `CANCEL_BUILD` unregistered-sentinel re-treatment in `tests/unit/win_check_terminal_test.gd` and `tests/unit/apply_action_pipeline_test.gd` (see Implementation Notes) — registering the real handler forces it.
+
+**Performance:** no perf impact expected — `apply_cancel` is O(1): one integer refund (`build_cost * pct / 100`), one AP credit, one `Grid.remove`, one `entities_by_id.erase`. No hot-loop or per-frame cost.
 
 ---
 
@@ -78,11 +87,21 @@
 **Required evidence**:
 - `tests/unit/base-production/cancel_build_refund_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created — `tests/unit/base-production/cancel_build_refund_test.gd` (10 tests, passing)
 
 ---
 
 ## Dependencies
 
-- **Depends on**: Story 001 (`BaseProductionConfig.cancel_refund_pct`, `BuildStatus`), Story 002 (structures are placed Under-Construction, the only cancelable state).
+- **Depends on**: Story 001 (`BaseProductionConfig.cancel_refund_pct`, `BuildStatus`), Story 002 (structures are placed Under-Construction, the only cancelable state; also established the BUILD→CANCEL_BUILD sentinel-migration precedent this story repeats for CANCEL_BUILD→RESEARCH).
 - **Unlocks**: Story 008 (determinism covers `cancel`), Story 010 (integration exercises the under-construction-destroyed-no-refund contrast).
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27
+**Criteria**: 5/5 passing (all COVERED; AC-combat-no-refund honestly scope-narrowed — full destroy_entity-vs-cancel contrast owed to Story 007/010, documented in-test)
+**Deviations**: All ADVISORY — (1) `AP.credit` new Foundation refund writer (additive, review-validated correct + active-player-gated like `spend`); (2) `NOT_UNDER_CONSTRUCTION` Reason + `StructureCancelledEvent` (additive); (3) `int`-reason dispatch vs ADR D5's `ActionResult` sketch (matches real dispatch); (4) `apply_cancel` `Grid.remove` desync tripwire added during review (consistency with `apply_build`/`apply_produce`); (5) two test files migrated `CANCEL_BUILD`→`RESEARCH` (the story's in-scope re-treatment).
+**Test Evidence**: Logic — `tests/unit/base-production/cancel_build_refund_test.gd` (10 tests) + 5 `AP.credit` tests in `tests/unit/ap_spend_test.gd`. Full suite 451/451, exit 0.
+**Code Review**: Complete — APPROVED (godot-gdscript-specialist CLEAN, both focal points [AP.credit + shared-RESEARCH migration] validated; qa-tester gaps GAP-1..6 all fixed: AP.credit gate tests, Grid.remove tripwire, per-type removal parity, 0-cost boundary, not-owned AP-unchanged, next_entity_id).
+**Tech debt**: BP-005 (control-manifest "sole AP mutator" wording, docs-only) logged → `/create-control-manifest`.

@@ -101,6 +101,72 @@ func test_spend_by_inactive_player_b_returns_false_and_changes_no_pool() -> void
 	assert_int(state.per_player[1].current_ap).is_equal(10)
 
 
+# --- credit(): additive refund path (Story 005 — cancel-build refund) -------
+
+func test_credit_2_to_5_returns_true_and_leaves_7() -> void:
+	# Arrange — the active player's pool at 5.
+	var state := GameStateFactory.make_state(1, 0)
+	state.per_player[0].current_ap = 5
+	# Act
+	var result := AP.credit(state, 0, 2)
+	# Assert — additive, not overwrite.
+	assert_bool(result).is_true()
+	assert_int(state.per_player[0].current_ap).is_equal(7)
+
+
+func test_credit_0_returns_true_and_is_a_noop() -> void:
+	# Arrange — a 0-cost structure refunds nothing but the cancel still succeeds.
+	var state := GameStateFactory.make_state(1, 0)
+	state.per_player[0].current_ap = 5
+	# Act
+	var result := AP.credit(state, 0, 0)
+	# Assert
+	assert_bool(result).is_true()
+	assert_int(state.per_player[0].current_ap).is_equal(5)
+
+
+func test_credit_negative_1_returns_false_and_leaves_unchanged() -> void:
+	# Arrange
+	var state := GameStateFactory.make_state(1, 0)
+	state.per_player[0].current_ap = 5
+	# Act
+	var result := AP.credit(state, 0, -1)
+	# Assert — a negative credit is rejected (no covert spend via credit).
+	assert_bool(result).is_false()
+	assert_int(state.per_player[0].current_ap).is_equal(5)
+
+
+func test_credit_by_inactive_player_returns_false_and_changes_no_pool() -> void:
+	# Arrange — Player 0 active, Player 1 inactive. credit is active-player-gated
+	# like spend (Rule 7) — this directly exercises that gate (the cancel-build
+	# call site can't reach it because validate_cancel rejects non-owners first,
+	# so this is the gate's only direct coverage).
+	var state := GameStateFactory.make_state(2, 0)
+	state.per_player[0].current_ap = 5
+	state.per_player[1].current_ap = 10
+	# Act — inactive player 1 attempts to be credited.
+	var result := AP.credit(state, 1, 3)
+	# Assert — rejected; neither pool changes.
+	assert_bool(result).is_false()
+	assert_int(state.per_player[0].current_ap).is_equal(5)
+	assert_int(state.per_player[1].current_ap).is_equal(10)
+
+
+func test_credit_can_raise_current_ap_above_frozen_income_snapshot() -> void:
+	# Arrange — income frozen at 10, pool already at 10 (fully un-spent). A refund
+	# is a mid-turn credit with NO upper cap: the refunded AP is spendable again
+	# this same turn, so current_ap may legitimately exceed income_this_turn
+	# (ADR-0006: the snapshot is a floor-setting event, not a live ceiling).
+	var state := GameStateFactory.make_state(1, 0)
+	state.per_player[0].income_this_turn = 10
+	state.per_player[0].current_ap = 10
+	# Act
+	var result := AP.credit(state, 0, 4)
+	# Assert — 14 > the frozen 10; no clamp to the snapshot.
+	assert_bool(result).is_true()
+	assert_int(state.per_player[0].current_ap).is_equal(14)
+
+
 # --- can_afford(): pure query, no mutation -----------------------------------
 
 func test_can_afford_3_from_5_returns_true_and_does_not_mutate() -> void:

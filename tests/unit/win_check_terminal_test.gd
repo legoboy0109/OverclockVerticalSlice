@@ -8,14 +8,17 @@
 # using GameStateFactory for state setup.
 #
 # StructureDestroyedEvent/GameOverEvent are forward-declared Foundation event
-# types (see their doc comments). Real Combat (ADR-0010) now exists as of
-# Combat Resolution Story 004, which registers Action.Verb.ATTACK for real —
-# so the end-to-end tests here drive their throwaway destruction stand-in via
-# Action.Verb.CANCEL_BUILD instead (still genuinely unregistered — CancelBuild
-# is Base & Production Story 005's territory; Story 002 registered the real
-# BUILD verb, which retired Verb.BUILD as this fixture's scratch verb),
-# mirroring apply_action_pipeline_test.gd's registered-verb + unregister_verb
-# pattern (asserts the verb slot is absent up front, unregisters in cleanup).
+# types (see their doc comments). Real Combat (ADR-0010) exists as of Combat
+# Resolution Story 004 (registers ATTACK), and Base & Production Stories 002/004/005
+# now register BUILD/PRODUCE/CANCEL_BUILD for real — so the end-to-end tests here
+# drive their throwaway destruction stand-in via Action.Verb.RESEARCH, the last
+# verb still genuinely unregistered (Research is its own later epic). This
+# migration mirrors the incremental scratch-verb re-treatment each epic performs
+# (BUILD→CANCEL_BUILD by Story 002, now CANCEL_BUILD→RESEARCH by Story 005); when
+# the Research epic lands and registers RESEARCH, its story must re-treat these
+# fixtures again (no enum verb will remain unregistered — switch to a bare -1
+# verb or a save-and-restore of a registered handler). Pattern: assert the verb
+# slot is absent up front, register a stub, unregister in cleanup.
 #
 # No RNG, no time-dependent asserts, no file I/O; each test builds its own
 # isolated state. Naming follows tests/README.md:
@@ -85,14 +88,14 @@ func test_hq_destroyed_through_apply_action_end_to_end_sets_game_over_and_next_a
 	# other story) whose apply() returns a StructureDestroyedEvent{is_hq,
 	# owner=1}, standing in for Combat's not-yet-built destroy_entity() hook.
 	var state := _make_state(2, 0)
-	assert_bool(GameState._validators.has(Action.Verb.CANCEL_BUILD)).is_false()
+	assert_bool(GameState._validators.has(Action.Verb.RESEARCH)).is_false()
 	GameState.register_verb(
-		Action.Verb.CANCEL_BUILD,
+		Action.Verb.RESEARCH,
 		func(_s: GameState, _a: Action) -> int: return Action.Reason.OK,
 		func(_s: GameState, _a: Action) -> Array: return [_hq_destroyed(1)]
 	)
 	var action := Action.new()
-	action.verb = Action.Verb.CANCEL_BUILD
+	action.verb = Action.Verb.RESEARCH
 	action.player = 0
 	# Act
 	var result: ActionResult = state.apply_action(action)
@@ -108,15 +111,15 @@ func test_hq_destroyed_through_apply_action_end_to_end_sets_game_over_and_next_a
 	# Composition (GS-002 step-1 lockout + this story's step-6 setter):
 	# the VERY NEXT apply_action is rejected GAME_OVER.
 	var next_action := Action.new()
-	next_action.verb = Action.Verb.CANCEL_BUILD
+	next_action.verb = Action.Verb.RESEARCH
 	next_action.player = 1
 	var next_result: ActionResult = state.apply_action(next_action)
 	assert_bool(next_result.ok).is_false()
 	assert_int(next_result.reason).is_equal(Action.Reason.GAME_OVER)
 	assert_array(next_result.events).is_empty()
 	# Cleanup.
-	GameState.unregister_verb(Action.Verb.CANCEL_BUILD)
-	assert_bool(GameState._validators.has(Action.Verb.CANCEL_BUILD)).is_false()
+	GameState.unregister_verb(Action.Verb.RESEARCH)
+	assert_bool(GameState._validators.has(Action.Verb.RESEARCH)).is_false()
 
 
 # --- Mid-turn immediacy: GameOver set synchronously, before apply_action returns --
@@ -129,14 +132,14 @@ func test_win_condition_mid_turn_sets_game_over_and_leftover_ap_cannot_be_spent(
 	# but the post-GameOver step-1 lockout rejects any further action regardless.
 	var state := _make_state(2, 0)
 	state.per_player[0].current_ap = 5 # leftover AP that must become irrelevant
-	assert_bool(GameState._validators.has(Action.Verb.CANCEL_BUILD)).is_false()
+	assert_bool(GameState._validators.has(Action.Verb.RESEARCH)).is_false()
 	GameState.register_verb(
-		Action.Verb.CANCEL_BUILD,
+		Action.Verb.RESEARCH,
 		func(_s: GameState, _a: Action) -> int: return Action.Reason.OK,
 		func(_s: GameState, _a: Action) -> Array: return [_hq_destroyed(1)]
 	)
 	var action := Action.new()
-	action.verb = Action.Verb.CANCEL_BUILD
+	action.verb = Action.Verb.RESEARCH
 	action.player = 0
 	# Act
 	var result: ActionResult = state.apply_action(action)
@@ -147,13 +150,13 @@ func test_win_condition_mid_turn_sets_game_over_and_leftover_ap_cannot_be_spent(
 	# rejected GAME_OVER even though the AP still sits unspent in the pool.
 	assert_int(state.per_player[0].current_ap).is_equal(5)
 	var followup := Action.new()
-	followup.verb = Action.Verb.CANCEL_BUILD
+	followup.verb = Action.Verb.RESEARCH
 	followup.player = 0
 	var followup_result: ActionResult = state.apply_action(followup)
 	assert_bool(followup_result.ok).is_false()
 	assert_int(followup_result.reason).is_equal(Action.Reason.GAME_OVER)
 	# Cleanup.
-	GameState.unregister_verb(Action.Verb.CANCEL_BUILD)
+	GameState.unregister_verb(Action.Verb.RESEARCH)
 
 
 # --- AC3: simultaneous double-HQ destruction -> non-active player wins ------
@@ -350,14 +353,14 @@ func test_game_over_event_flows_through_action_applied_signal() -> void:
 	var state := _make_state(2, 0)
 	var spy := _SignalSpy.new()
 	state.action_applied.connect(spy._on_action_applied)
-	assert_bool(GameState._validators.has(Action.Verb.CANCEL_BUILD)).is_false()
+	assert_bool(GameState._validators.has(Action.Verb.RESEARCH)).is_false()
 	GameState.register_verb(
-		Action.Verb.CANCEL_BUILD,
+		Action.Verb.RESEARCH,
 		func(_s: GameState, _a: Action) -> int: return Action.Reason.OK,
 		func(_s: GameState, _a: Action) -> Array: return [_hq_destroyed(1)]
 	)
 	var action := Action.new()
-	action.verb = Action.Verb.CANCEL_BUILD
+	action.verb = Action.Verb.RESEARCH
 	action.player = 0
 	# Act
 	var result: ActionResult = state.apply_action(action)
@@ -373,4 +376,4 @@ func test_game_over_event_flows_through_action_applied_signal() -> void:
 			assert_int(e.winner).is_equal(0)
 	assert_bool(saw_game_over).is_true()
 	# Cleanup.
-	GameState.unregister_verb(Action.Verb.CANCEL_BUILD)
+	GameState.unregister_verb(Action.Verb.RESEARCH)
