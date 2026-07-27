@@ -67,11 +67,11 @@ stories:
     name: "Glyph anchoring convention (GLYPH_OFFSETS)"
     file: "production/epics/board-renderer/story-005-glyph-anchoring-convention.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"  # Complete-with-notes: visual AC-3/AC-4 owed. ★ Board Renderer epic 5/5 COMPLETE
 
   # --- S3-02 · Command & Action Interface epic (8 in-slice; 009 trimmed) ---
   - id: "cai-001"
@@ -170,11 +170,11 @@ stories:
     name: "Combat + production scoring"
     file: "production/epics/ai-opponent/story-003-combat-production-scoring.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"
   - id: "ai-004"
     name: "Economy + positional scoring cadence (research stubbed)"
     file: "production/epics/ai-opponent/story-004-economy-positional-scoring-cadence.md"

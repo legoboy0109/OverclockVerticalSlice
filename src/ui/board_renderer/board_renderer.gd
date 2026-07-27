@@ -25,8 +25,8 @@
 ## [b]Out of scope for Story 001[/b] (see neighbouring Board Renderer
 ## stories, since landed): [code]TileMapLayer[/code] nodes/scene-tree
 ## structure (002/003), [method pick_at] (004 — now implemented; see its own
-## doc comment), glyph offsets (005, still pending), any
-## [code]GridState[/code] reads.
+## doc comment), glyph offsets (005 — now implemented; see [method glyph_anchor]'s
+## own doc comment), any [code]GridState[/code] reads.
 ##
 ## Usage:
 ## [codeblock]
@@ -128,6 +128,45 @@ const OVERLAY_TINTS: Dictionary = {
 	OverlayClass.AFTER_MOVE_ECHO: Color(1.0, 0.25, 0.25, 0.4),
 }
 
+## The 12 on-board glyph classes (ADR-0013 §5, Story 005; taxonomy source:
+## AC-4 / game-hud.md TR-hud-010/011 + command-action-interface.md
+## TR-cmdui-017's D-3 echo). Each value doubles as the [code]glyph_class[/code]
+## [code]int[/code] passed to [method glyph_anchor] and to
+## [method GlyphOffsets.offset_for] — these names are the sanctioned way to
+## spell that int (never a bare numeric literal at a call site). Lives here
+## (not on [GlyphOffsets]) so HUD/CAI consumers, which already hold a
+## [BoardRenderer] reference and call [code]board_renderer.glyph_anchor(...)[/code]
+## the same way they call [method set_overlay] with [enum OverlayClass], get
+## one consistent import surface for both on-board enums.
+enum GlyphClass {
+	HP_PIP, ## Unit hp pips — first claim on non-overlapping screen space
+	## (hp-pip-never-occluded, game-hud.md CR-5/TR-hud-011); see
+	## [GlyphOffsets]'s class doc comment for the authoring-discipline note.
+	HAS_ACTED, ## Has-acted marker.
+	TECH_MARKER, ## Tech (Attack/Defense) marker.
+	STRUCTURE_HP, ## Structure hp glyph (distinct from unit [constant HP_PIP]).
+	BUILD_TIMER_BADGE, ## Build-timer badge.
+	RESEARCH_MARKER, ## Research-in-progress marker.
+	AP_COST_BADGE, ## AP-cost badge (preview/hover).
+	DAMAGE_NUMBER, ## Floating damage number.
+	COVER_GLYPH, ## Cover-tile glyph.
+	TURNS_NUMERAL, ## Turns-remaining numeral.
+	TARGET_BRACKET, ## Target-lock bracket.
+	D3_ECHO, ## D-3 after-move attack echo (TR-cmdui-017,
+	## command-action-interface.md §B.7) — shares this exact anchor mechanism
+	## with the six Game HUD glyph classes above.
+}
+
+## Default on-disk location of the [GlyphOffsets] data resource (ADR-0013
+## §5) — art/UX-authored external data, never hardcoded literals in this
+## file. Loaded lazily by [method glyph_anchor] on first use, not in
+## [method _ready], so [method glyph_anchor] works the same way
+## [method pick_at] already does: on a bare [code]BoardRenderer.new()[/code]
+## instance with no [code]add_child()[/code]/[code]_ready()[/code] required
+## (Story 004 precedent, [member occupant_pick_regions]).
+const DEFAULT_GLYPH_OFFSETS_PATH: String = "res://data/ui/glyph_offsets.tres"
+
+
 ## Result of [method pick_at] (ADR-0013 §4, Story 004) — occupant-priority
 ## click resolution. [member tile] is always populated (either the hit
 ## occupant's own tracked tile, or the plain diamond under the click via
@@ -198,6 +237,20 @@ var occupant_layer: Node2D
 ## The real live wiring (populating this array from actual occupant scenes)
 ## is that unassigned owner's job, not this story's.
 var occupant_pick_regions: Array[OccupantPickRegion] = []
+
+## [b]Injectable glyph-offset data seam (ADR-0013 §5, Story 005).[/b] The
+## art/UX-authored [code]GLYPH_OFFSETS[/code] table [method glyph_anchor]
+## reads. Defaults to [code]null[/code] and is lazy-loaded from
+## [constant DEFAULT_GLYPH_OFFSETS_PATH] by [method glyph_anchor] itself on
+## first use — never in [method _ready] — so [method glyph_anchor] works on a
+## bare [code]BoardRenderer.new()[/code] instance with no
+## [code]add_child()[/code]/[code]_ready()[/code], matching
+## [member occupant_pick_regions]'s injectable-seam precedent. Tests (and any
+## future caller) may set this directly to a custom [GlyphOffsets] instance
+## before the first [method glyph_anchor] call to override every offset with
+## zero code change (AC-2) — once set (by injection or by the lazy load),
+## [method glyph_anchor] never reloads it.
+var glyph_offsets: GlyphOffsets = null
 
 
 ## Builds the Story 002 scene-tree skeleton (ADR-0013 §2) and populates
@@ -408,6 +461,39 @@ func pick_at(screen_pos: Vector2) -> PickResult:
 	result.tile = screen_to_grid(screen_pos)
 	result.occupant_entity_id = -1
 	return result
+
+
+## Computes the on-board anchor point for [param glyph_class] at [param tile]
+## (ADR-0013 §5, Story 005): exactly
+## [code]grid_to_screen(tile) + glyph_offsets.offset_for(glyph_class)[/code] —
+## no other computation path exists (AC-1). [param glyph_class] is a plain
+## [code]int[/code] per this story's exact signature; pass one of
+## [enum GlyphClass]'s named values, which are the sanctioned way to spell it
+## (never a bare numeric literal at the call site).
+##
+## [b]The ONE anchor path for every on-board glyph[/b] (Control Manifest,
+## ADR-0013 §5): both Game HUD's on-board glyph layer (TR-hud-010/011) and
+## Command & Action Interface's D-3 echo (TR-cmdui-017) must call this method
+## rather than re-deriving [code]grid_to_screen(tile) + <own offset>[/code]
+## themselves — keeping every glyph on one shared formula is what makes
+## [member glyph_offsets] a single retunable source of truth (AC-2).
+##
+## [b]hp-pip-never-occluded is NOT enforced here[/b] (game-hud.md CR-5/
+## TR-hud-011): this method does zero overlap detection or runtime
+## arbitration between simultaneously-placed glyphs on one tile — that
+## guarantee comes entirely from how [member glyph_offsets]' values are
+## [i]authored[/i] (see [GlyphOffsets]'s class doc comment). Building any such
+## arbitration here would contradict ADR-0013 §5's explicit decision.
+##
+## Lazy-loads [member glyph_offsets] from [constant DEFAULT_GLYPH_OFFSETS_PATH]
+## on first call if it is still [code]null[/code] — see that member's doc
+## comment for why this happens here and not in [method _ready]. Camera model
+## (OQ-8) is intentionally not decided by this method; the formula is
+## camera-model-agnostic by construction (ADR-0013 §5). O(1).
+func glyph_anchor(tile: Vector2i, glyph_class: int) -> Vector2:
+	if glyph_offsets == null:
+		glyph_offsets = load(DEFAULT_GLYPH_OFFSETS_PATH)
+	return grid_to_screen(tile) + glyph_offsets.offset_for(glyph_class)
 
 
 ## Populates [member overlay_layer] with exactly [param tiles], all tagged

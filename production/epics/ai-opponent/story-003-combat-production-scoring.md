@@ -1,12 +1,12 @@
 # Story 003: Verb Scoring — `combat_value`, `production_value`, `action_score`, Lethal Floor, HQ Siege
 
 > **Epic**: AI Opponent (Minimal Vertical Slice)
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Feature
 > **Type**: Logic
 > **Estimate**: M (4h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -78,7 +78,7 @@
 **Story Type**: Logic
 **Required evidence**: `tests/unit/ai-opponent/ai_combat_production_scoring_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created + passing — `tests/unit/ai-opponent/ai_combat_production_scoring_test.gd` (21 fns, 21/21 PASS)
 
 ---
 
@@ -86,3 +86,13 @@
 
 - Depends on: Story 002 (enumeration skeleton)
 - Unlocks: Story 004 (economy/research/positional completes the verb set), Story 005 (comparator needs real scores)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27
+**Criteria**: all worked examples pass with EXACT values — AC-11 (combat_value 2.0 / action_score 1.00); AC-12 (4.0 / base 2.00 → floored 3.50); AC-29 (HQ siege: `ap_cost_opponent_paid_for(HQ)` = 12 not 0, ≈1.5 / ≈0.75 > pass_threshold); AC-14 (bands ×0.9/1.0/1.1 → 3.6/4.0/4.4; Trooper reachable 4.4/1.10); AC-21 (move+attack combo via `legal_targets_from` at combined cost); MIN_DAMAGE edge (combat_value strictly >0); CR-7 (two lethal candidates both floor post-hoc to 3.5; non-lethal never floored).
+**Implementation**: filled scoring into `src/gameplay/ai/ai.gd`'s Story-002 stubs (`_score_move_and_attack_candidates`, `_score_production_candidates`) + new private helpers (`_combat_value`, `_ap_cost_opponent_paid_for` [reads `produce_cost`/`build_cost` LIVE; `HQ_SIEGE_VALUE`=12 for the HQ via `is_hq()` reference identity], `_action_score` [post-hoc lethal floor, never a pre-filter], `_production_value`, `_reachability_multiplier` [3-band code const, not AIConfig]). `choose_action` public shape / enumeration order / no-array contract byte-for-byte unchanged from ai-002.
+**Test Evidence**: Logic — `tests/unit/ai-opponent/ai_combat_production_scoring_test.gd` (21 fns, 21/21 PASS; full suite 577/577, no regressions). Fixtures use real throwaway TypeDefs (per codebase idiom) except AC-29's HQ, which uses the real `StructureTypes.HQ` so `is_hq()`'s reference-identity check holds.
+**Deviations**: None. **Scope**: economy/research/positional scoring (004), tie-break (005), cadence-cap (004), full-turn ordering (006) correctly left out.
+**Code Review**: not separately run (specialist-authored, exact-value test-covered); recommend a light pass at sprint close-out.

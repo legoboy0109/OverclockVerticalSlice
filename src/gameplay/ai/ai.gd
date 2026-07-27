@@ -46,6 +46,16 @@ class_name AI
 extends RefCounted
 
 
+## `REACHABILITY_MULTIPLIER`'s fixed 3-band (GDD Formulas/Tuning Knobs,
+## ADR-0011 §6 / Story 001's exclusion list) — deliberately [b]code
+## constants[/b], never [AIConfig] fields ("the GDD itself calls the
+## multiplier band 'fixed 3-band', deliberately not meant to be casually
+## retuned"). See [method _reachability_multiplier] for the selection rule.
+const _REACHABILITY_MULTIPLIER_REACHABLE := 1.1
+const _REACHABILITY_MULTIPLIER_IN_CONTACT := 1.0
+const _REACHABILITY_MULTIPLIER_ISOLATED := 0.9
+
+
 ## Running-best candidate carrier (ADR-0011 §2) — the sole mutable slot the
 ## streaming max-scan reassigns per iteration. Never collected into an
 ## [code]Array[/code]; exactly one instance is live at a time during
@@ -131,28 +141,271 @@ static func _entities_in_enumeration_order(state: GameState) -> Array[EntityStat
 	return out
 
 
-## Per-unit move/attack candidate enumeration (ADR-0011 §2) — stub for Story
-## 002. The real implementation (Stories 003/004) will walk
-## [method Movement.reachable] for positional/retreat/setup-advance scoring
-## plus [method Combat.legal_targets_from] for every reachable tile (covering
-## bare moves and move+attack combos in one pass) and the zero-move
-## [method Combat.legal_targets] case — scored against [code]AIBalance.ai[/code]'s
-## knobs. This story only proves the call boundary and the running-best
-## threading shape: it performs no enumeration and returns [param best]
-## unchanged.
-static func _score_move_and_attack_candidates(_lookahead: GameState, _entity: EntityState, \
+## Per-unit attack candidate enumeration (ADR-0011 §2, Story 003) — scores
+## [param entity]'s legal attacks, both stationary (zero-move,
+## [method Combat.legal_targets]) and move+attack combos (every
+## [method Movement.reachable] tile, via [method Combat.legal_targets_from]),
+## via [method _combat_value]/[method _action_score]. [b]Bare, non-attacking
+## repositioning moves (pure advance/retreat/setup) are Story 004's scope —
+## not enumerated here.[/b] Only a [code]UnitState[/code] [param entity] that
+## can still attack ([method Unit.can_attack]) is considered; a
+## [code]StructureState[/code] (Defensive Structure) is scored too, at its
+## real position only (structures never move).
+##
+## Cost of a stationary attack is [member CombatConfig.attack_cost] (unit) or
+## [code]BaseProduction.defensive_attack_cost()[/code] (structure), read
+## indirectly by constructing the same [AttackAction] [method Combat.apply]
+## would charge — this helper does not duplicate Combat's cost table, it
+## composes [method Movement.move_path_cost] with that same per-attacker-kind
+## cost via [method _attack_ap_cost_for]. A move+attack combo's cost is
+## [code]move_path_cost + attack_cost[/code] (Edge Cases' combo rule, AC-21).
+##
+## Every candidate is affordability-gated via [method AP.can_afford] before
+## scoring (TR-ai-005) — an unaffordable candidate never reaches
+## [method _action_score]/the running-best comparison. Replaces [param best]
+## with a strictly higher-scoring candidate (interim `>` comparator — the
+## epsilon/[code]ap_cost[/code]/[code]entity_id[/code] tie-break is Story 005's
+## scope per this story's Implementation Notes; this story only proves the
+## formulas produce the documented worked-example numbers).
+static func _score_move_and_attack_candidates(lookahead: GameState, entity: EntityState, \
 		_economy_investments_committed: int, best: _Candidate) -> _Candidate:
+	if entity is UnitState and not Unit.can_attack(entity):
+		return best
+
+	# Stationary (zero-move) attacks from the entity's real position.
+	for tr: Combat.TargetResult in Combat.legal_targets(lookahead, entity):
+		var target: EntityState = lookahead.entity_at(tr.tile)
+		var cost: int = _attack_ap_cost_for(entity)
+		best = _consider_attack(lookahead, entity, target, entity.position, tr.tile, cost, best)
+
+	# Move+attack combos — every reachable tile, scored via legal_targets_from
+	# at the combined move + attack AP cost (Edge Cases, AC-21). Structures
+	# never move, so this only applies to a UnitState entity.
+	if entity is UnitState:
+		var unit: UnitState = entity
+		for r: Movement.ReachableTile in Movement.reachable(lookahead, unit):
+			for tr: Combat.TargetResult in Combat.legal_targets_from(lookahead, unit, r.tile):
+				var target: EntityState = lookahead.entity_at(tr.tile)
+				var cost: int = r.min_cost + _attack_ap_cost_for(unit)
+				best = _consider_attack(lookahead, unit, target, r.tile, tr.tile, cost, best)
+
 	return best
 
 
-## Per-structure unit-production candidate enumeration (ADR-0011 §2) — stub
-## for Story 002. The real implementation will walk
-## [method BaseProduction.legal_deploy_tiles] per producible unit type,
-## scoring via [code]production_value[/code] (Story 003/004). This story
-## performs no enumeration and returns [param best] unchanged.
-static func _score_production_candidates(_lookahead: GameState, _entity: EntityState, \
-		_economy_investments_committed: int, best: _Candidate) -> _Candidate:
+## Scores one candidate attack ([param attacker] at hypothetical
+## [param from_tile] against the entity occupying [param target_tile]) and
+## folds it into [param best] if affordable and strictly better. Isolated so
+## both the stationary and move+attack combo loops in
+## [method _score_move_and_attack_candidates] share exactly one scoring/gate/
+## fold path (never two parallel copies). The constructed [AttackAction] is
+## returned unattempted — [b]never applied[/b] here; only the caller
+## ([code]AITurnDriver[/code]) ever calls [code]apply_action[/code] (ADR-0011 §1).
+static func _consider_attack(lookahead: GameState, attacker: EntityState, target: EntityState, \
+		from_tile: Vector2i, target_tile: Vector2i, ap_cost: int, best: _Candidate) -> _Candidate:
+	if not AP.can_afford(lookahead, attacker.owner, ap_cost):
+		return best
+
+	var hp_removed: int = mini(Combat.preview_damage(lookahead, attacker, target), _current_hp_of(target))
+	var is_kill: bool = hp_removed >= _current_hp_of(target)
+	var value: float = _combat_value(hp_removed, is_kill, target)
+	var base_score: float = value / float(ap_cost)
+	var score: float = _action_score(base_score, is_kill)
+
+	if score > best.score:
+		var action := AttackAction.new()
+		action.player = attacker.owner
+		action.attacker_tile = from_tile
+		action.target_tile = target_tile
+		return _Candidate.new(action, score, ap_cost, attacker.entity_id)
 	return best
+
+
+## `combat_value(attacker, target)` (GDD Formulas, AC-1/AC-6/AC-7):
+## `ap_cost_opponent_paid_for(target) × (hp_removed / target_max_hp) +
+## (is_kill ? KILL_DENIAL_RATE × ap_cost_opponent_paid_for(target) : 0)`.
+## [param hp_removed] and [param is_kill] are pre-computed by the caller
+## (shared with the [code]is_immediately_lethal[/code] read [method _action_score]
+## needs — computed once, never re-derived). Strictly positive for any legal
+## target, including a non-lethal HQ chip, because [param hp_removed] is never
+## 0 (Combat's [code]MIN_DAMAGE=1[/code] floor on any legal, landed attack) and
+## [method _ap_cost_opponent_paid_for] is never 0/undefined for any target kind.
+static func _combat_value(hp_removed: int, is_kill: bool, target: EntityState) -> float:
+	var ap_cost_opponent_paid: float = float(_ap_cost_opponent_paid_for(target))
+	var target_max_hp: float = float(_max_hp_of(target))
+	var value: float = ap_cost_opponent_paid * (float(hp_removed) / target_max_hp)
+	if is_kill:
+		value += AIBalance.ai.kill_denial_rate * ap_cost_opponent_paid
+	return value
+
+
+## `ap_cost_opponent_paid_for(target)` (GDD Formulas, AC-1) — read [b]live[/b]
+## from the target's own field, never a memorized/hardcoded table: a
+## [code]UnitState[/code] target's [code]type.produce_cost[/code]; a
+## [code]StructureState[/code] target's [code]type.build_cost[/code] —
+## [b]except[/b] the HQ (identified via [method StructureState.is_hq], never a
+## parallel flag), which has no [code]build_cost[/code] and substitutes
+## [code]AIBalance.ai.hq_siege_value[/code] (12) instead (AC-29's regression
+## guard: an undefined/0 HQ weight would silently zero every siege attack's
+## score).
+static func _ap_cost_opponent_paid_for(target: EntityState) -> int:
+	if target is StructureState and (target as StructureState).is_hq():
+		return AIBalance.ai.hq_siege_value
+	if target is UnitState:
+		return (target as UnitState).type.produce_cost
+	return (target as StructureState).type.build_cost
+
+
+## [param target]'s full (undamaged) hp stat — [code]type.hp[/code] for either
+## entity kind (the [code]combat_value[/code] denominator; never
+## [code]current_hp[/code], which is the pre-attack remaining hp the numerator
+## already accounts for).
+static func _max_hp_of(target: EntityState) -> int:
+	if target is UnitState:
+		return (target as UnitState).type.hp
+	return (target as StructureState).type.hp
+
+
+## [param target]'s current hp at scoring time — the shared read both
+## [method _consider_attack]'s [code]hp_removed[/code] clamp and
+## [code]is_kill[/code] check use, isolated so both entity kinds resolve
+## through one accessor.
+static func _current_hp_of(target: EntityState) -> int:
+	if target is UnitState:
+		return (target as UnitState).current_hp
+	return (target as StructureState).current_hp
+
+
+## The real AP cost [param attacker] would spend on this attack — mirrors
+## [code]Combat._attack_cost_for[/code]'s attacker-kind dispatch exactly
+## (Combat's own cost function is private, so this composes the two public
+## costs it dispatches between: [member CombatConfig.attack_cost] for a
+## [code]UnitState[/code] attacker, [code]BaseProduction.defensive_attack_cost()[/code]
+## for a [code]StructureState[/code] attacker) rather than reaching into
+## Combat's private internals — keeps this read on the approved query surface
+## (ADR-0011 §5: [code]CombatConfig[/code]/[code]BaseProduction[/code] public
+## reads only).
+static func _attack_ap_cost_for(attacker: EntityState) -> int:
+	if attacker is StructureState:
+		return BaseProduction.defensive_attack_cost()
+	return CombatBalance.combat.attack_cost
+
+
+## Per-structure unit-production candidate enumeration (ADR-0011 §2, Story
+## 003) — per owned, [constant StructureState.BuildStatus.COMPLETED]
+## [param entity] with at least one [code]producible_types[/code] entry, walks
+## [method BaseProduction.legal_deploy_tiles] once and scores every
+## (unit_type, deploy_tile) pair via [method _production_value]/
+## [method _action_score]. Affordability-gated via [method AP.can_afford]
+## before scoring (TR-ai-005) — an unaffordable candidate never reaches the
+## running-best comparison. A non-producer structure (0 AP cost to check,
+## empty [code]producible_types[/code]) or an under-construction producer
+## contributes nothing.
+static func _score_production_candidates(lookahead: GameState, entity: EntityState, \
+		_economy_investments_committed: int, best: _Candidate) -> _Candidate:
+	if not (entity is StructureState):
+		return best
+	var producer: StructureState = entity
+	if producer.build_status != StructureState.BuildStatus.COMPLETED:
+		return best
+	if producer.type.producible_types.is_empty():
+		return best
+
+	var deploy_tiles: Array[Vector2i] = BaseProduction.legal_deploy_tiles(lookahead, producer, null)
+	if deploy_tiles.is_empty():
+		return best
+
+	for unit_type: UnitTypeDef in producer.type.producible_types:
+		var cost: int = Unit.effective_produce_cost(lookahead, unit_type, producer.owner)
+		if not AP.can_afford(lookahead, producer.owner, cost):
+			continue
+		for tile: Vector2i in deploy_tiles:
+			var multiplier: float = _reachability_multiplier(lookahead, producer.owner, tile, unit_type)
+			var value: float = _production_value(unit_type, multiplier)
+			var score: float = _action_score(value / float(cost), false)
+			if score > best.score:
+				var action := ProduceAction.new()
+				action.player = producer.owner
+				action.producer_id = producer.entity_id
+				action.unit_type = unit_type
+				action.tile = tile
+				best = _Candidate.new(action, score, cost, producer.entity_id)
+
+	return best
+
+
+## `production_value(unit_type, deploy_tile)` (GDD Formulas, AC-1/AC-6):
+## `produce_cost(unit_type) × REACHABILITY_MULTIPLIER`. [param multiplier] is
+## pre-selected by [method _reachability_multiplier] — kept as a separate,
+## directly-testable function so the worked example (Trooper 4 ×
+## 1.1 = 4.4, AC-14) is checkable without re-deriving the band selection.
+static func _production_value(unit_type: UnitTypeDef, multiplier: float) -> float:
+	return float(unit_type.produce_cost) * multiplier
+
+
+## `REACHABILITY_MULTIPLIER`'s fixed 3-band (GDD Formulas/Tuning Knobs) — a
+## [b]code constant[/b], deliberately never an [AIConfig] field (ADR-0011 §6,
+## Story 001's exclusion list). [b]1.1[/b] if [param unit_type], deployed on
+## [param deploy_tile], could reach at least one live enemy entity this turn
+## (within [code]attack_range + soft_move_cap[/code] of some enemy, measured
+## via [method GridState.manhattan_distance] — the deterministic proxy for
+## "within reach": a unit that could close the remaining distance and still
+## attack this same turn). [b]1.0[/b] if not reachable-this-turn but the two
+## sides are already [b]in contact[/b] — operationally: some friendly entity
+## and some enemy entity are each within the [i]other's[/i]
+## [code]attack_range + soft_move_cap[/code] reach (GDD's operational
+## definition, verbatim). [b]0.9[/b] otherwise (isolated / opening-turn
+## production). Deterministic and constructable from board state alone — no
+## vague "active fight" judgment.
+static func _reachability_multiplier(lookahead: GameState, owner: int, deploy_tile: Vector2i, unit_type: UnitTypeDef) -> float:
+	var enemies: Array[EntityState] = []
+	var friendlies: Array[EntityState] = []
+	for e: EntityState in lookahead.entities():
+		if e.owner == owner:
+			friendlies.append(e)
+		else:
+			enemies.append(e)
+
+	var own_reach: int = unit_type.attack_range + unit_type.soft_move_cap
+	for enemy: EntityState in enemies:
+		if lookahead.grid.manhattan_distance(deploy_tile, enemy.position) <= own_reach:
+			return _REACHABILITY_MULTIPLIER_REACHABLE
+
+	for friendly: EntityState in friendlies:
+		if not (friendly is UnitState):
+			continue
+		var friendly_unit: UnitState = friendly
+		var friendly_reach: int = friendly_unit.type.attack_range + friendly_unit.type.soft_move_cap
+		for enemy: EntityState in enemies:
+			if not (enemy is UnitState):
+				continue
+			var enemy_unit: UnitState = enemy
+			var enemy_reach: int = enemy_unit.type.attack_range + enemy_unit.type.soft_move_cap
+			var dist: int = lookahead.grid.manhattan_distance(friendly_unit.position, enemy_unit.position)
+			if dist <= friendly_reach or dist <= enemy_reach:
+				return _REACHABILITY_MULTIPLIER_IN_CONTACT
+
+	return _REACHABILITY_MULTIPLIER_ISOLATED
+
+
+## `action_score(action)` (GDD Formulas, AC-1/AC-6b, CR-7) — the one shared
+## scale every verb's [code]base_score[/code] lands on:
+## [code]is_immediately_lethal(action) ? max(base_score, LETHAL_FLOOR_BONUS) :
+## base_score[/code]. Applied [b]post-hoc[/b], strictly after
+## [param base_score] has already been computed from the real formula — never
+## a pre-filter that short-circuits enumeration (CR-7, control-manifest
+## Required rule for this layer). Two competing lethal candidates therefore
+## both reach this function with their own real [param base_score] before
+## either is floored, which is what lets Story 005's tie-break compare them
+## correctly once both land on the identical [code]LETHAL_FLOOR_BONUS[/code]
+## floor rather than "first lethal found wins."
+static func _action_score(base_score: float, is_immediately_lethal: bool) -> float:
+	if is_immediately_lethal:
+		return maxf(base_score, AIBalance.ai.lethal_floor_bonus)
+	return base_score
+
+
+## Per-structure build/economy candidate enumeration (ADR-0011 §2) — stub for
+## Story 002. The real implementation will walk
 
 
 ## Per-structure build/economy candidate enumeration (ADR-0011 §2) — stub for

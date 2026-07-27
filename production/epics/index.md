@@ -13,7 +13,7 @@ Engine: Redot 26.2 (Godot 4.6-compatible fork)
 | [Combat Resolution](combat-resolution/EPIC.md) | Core | Combat Resolution | design/gdd/combat-resolution.md | 8 stories (8 Complete) | Complete |
 | [Base & Production](base-production/EPIC.md) | Core | Base & Production | design/gdd/base-production.md | 10 stories (9 Complete, 003 Superseded) | Complete |
 | [Research / Tech](research-tech/EPIC.md) | Core | Research / Tech | design/gdd/research-tech.md | Not yet created | Ready |
-| [Board Renderer](board-renderer/EPIC.md) | Presentation | Board Renderer (iso projection/picking/overlays) | ADR-0013 (TR-grid-008) | 5 stories | Ready |
+| [Board Renderer](board-renderer/EPIC.md) | Presentation | Board Renderer (iso projection/picking/overlays) | ADR-0013 (TR-grid-008) | 5 stories (5 Complete) | Complete |
 | [Command & Action Interface](command-action-interface/EPIC.md) | Presentation | Command & Action Interface | design/gdd/command-action-interface.md | 9 stories | Ready |
 | [Game HUD](game-hud/EPIC.md) | Presentation | Game HUD | design/gdd/game-hud.md | 8 stories | Ready |
 | [AI Opponent](ai-opponent/EPIC.md) | Feature | AI Opponent (minimal VS) | design/gdd/ai-opponent.md | 8 stories | Ready |

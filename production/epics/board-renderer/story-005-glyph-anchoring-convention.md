@@ -1,12 +1,12 @@
 # Story 005: On-Board Glyph Anchoring Convention — `GLYPH_OFFSETS`
 
 > **Epic**: Board Renderer
-> **Status**: Ready
+> **Status**: Complete (with notes — visual AC-3/AC-4 owed)
 > **Layer**: Presentation
 > **Type**: Logic
 > **Estimate**: S–M (2–3h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -73,7 +73,7 @@
 **Story Type**: Logic
 **Required evidence**: `tests/unit/board-renderer/glyph_offset_anchor_test.gd` — must exist and pass (blocking); plus advisory `production/qa/evidence/board-renderer-glyph-legibility-evidence.md` (Visual/Feel legibility + hp-pip priority)
 
-**Status**: [ ] Not yet created
+**Status**: [x] Logic test created + passing — `tests/unit/board-renderer/glyph_offset_anchor_test.gd` (10 fns, covers AC-1/AC-2); advisory visual evidence `production/qa/evidence/board-renderer-glyph-legibility-evidence.md` (AC-3/AC-4 OWED — windowed session)
 
 ---
 
@@ -81,3 +81,13 @@
 
 - Depends on: Story 001 (`grid_to_screen` is the base anchor point)
 - Unlocks: the Game HUD on-board glyph layer (TR-hud-010/011) and CAI's D-3 echo (TR-cmdui-017)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27 (Complete with notes)
+**Criteria**: AC-1 (anchor = `grid_to_screen(tile) + GLYPH_OFFSETS[class]`, no other path) + AC-2 (data-driven: change the resource → anchor reflects it, zero code change) auto-verified + PASS. AC-3 (hp-pip-never-occluded) + AC-4 (12-class legibility at 1080p/1440p) are **OWED — visual** (advisory; hp-pip priority is an authoring guarantee, not runtime).
+**Implementation**: `src/ui/board_renderer/glyph_offsets.gd` (`GlyphOffsets extends Resource`, per-class `Vector2` `@export` + `offset_for(int)`) + `data/ui/glyph_offsets.tres`; extended `board_renderer.gd` with `enum GlyphClass` (12 classes, ON BoardRenderer alongside `OverlayClass` for one consumer import surface) + `glyph_anchor(tile, glyph_class)` (lazy-loads the resource on first call, injectable for tests — mirrors the `pick_at` bare-instance pattern). Story 001-004 code untouched.
+**Test Evidence**: Logic — `tests/unit/board-renderer/glyph_offset_anchor_test.gd` (10 fns, 10/10 PASS; full suite 577/577). Advisory `production/qa/evidence/board-renderer-glyph-legibility-evidence.md` (AC-3/AC-4 owed, sign-off DEFERRED).
+**Deviations**: None. Camera model (OQ-8) correctly left open (formula is camera-agnostic); no runtime glyph arbitration built (authoring discipline per ADR).
+**Code Review**: not separately run (specialist-authored, test-covered); recommend a light pass at sprint close-out.

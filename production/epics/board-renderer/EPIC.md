@@ -3,8 +3,8 @@
 > **Layer**: Presentation
 > **GDD**: (ADR-driven — no dedicated GDD; producer-side requirement is TR-grid-008 in design/gdd/grid-terrain.md)
 > **Architecture Module**: Board Renderer (Presentation Layer)
-> **Status**: Ready
-> **Stories**: 5 stories (see `## Stories` below) — none implemented yet
+> **Status**: Complete (2026-07-27 — all 5 stories closed; visual sign-offs for br-002/br-003/br-005 owed a windowed session)
+> **Stories**: 5 stories (see `## Stories` below) — **5/5 Complete** (br-001..005)
 
 ## Overview
 
