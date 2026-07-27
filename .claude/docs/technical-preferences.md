@@ -9,7 +9,7 @@
 - **Language**: GDScript (primary). C# may be added incrementally for
   performance-critical systems (deep AI search, large-map pathfinding) if
   profiling shows GDScript is a bottleneck — Redot supports mixing both.
-- **Rendering**: Forward+ (default renderer; 2D top-down has no need for Mobile/Compatibility's reduced feature set)
+- **Rendering**: Forward+ (default renderer; 2D isometric has no need for Mobile/Compatibility's reduced feature set)
 - **Physics**: Godot Physics 2D (standard for grid-based tactics; Jolt targets 3D and is not relevant here)
 
 ## Input & Platform
@@ -40,10 +40,10 @@
 
 - **Target Framerate**: 60 FPS
 - **Frame Budget**: 16.6 ms/frame
-- **Draw Calls**: < 500 (generous for 2D top-down; TileMap batching should keep this low)
+- **Draw Calls**: < 500 (generous for 2D isometric; TileMap batching should keep this low)
 - **Memory Ceiling**: [TO BE CONFIGURED — set when target hardware is known; 2D tactics is light]
 
-> Defaults for a 2D top-down tactics game; re-tune against real target hardware
+> Defaults for a 2D isometric tactics game; re-tune against real target hardware
 > once the prototype exists. Turn-based means no hard real-time constraint —
 > 60 FPS is for smooth camera/UI feel, not simulation deadlines.
 

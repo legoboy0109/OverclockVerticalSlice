@@ -7,11 +7,18 @@
 
 ## Elevator Pitch
 
-> It's a 2D top-down sci-fi turn-based tactics game where you spend a single pool
+> It's a 2D isometric sci-fi turn-based tactics game where you spend a single pool
 > of action points — on building, producing, moving, fighting, and researching —
 > to out-tempo a rival commander for control of a contested star sector. Victory
 > goes not to the bigger army, but to whoever compounds their action-point
 > advantage fastest.
+
+> **Projection note (2026-07-25):** OVERCLOCK renders in **2:1 isometric (dimetric)**
+> projection (revised from the original "top-down" framing) — see `design/art/art-bible.md`
+> (Map Projection Decision) and `docs/architecture/change-impact-2026-07-23-isometric-projection.md`.
+> This is a **view-layer** decision: every rule, coordinate, and distance is computed in
+> projection-invariant logical grid space. Competitor references below to *Advance Wars*
+> keep "top-down" — that describes those games, not OVERCLOCK.
 
 **10-second test:** Every turn you have limited action points and more things you
 want to do than points to do them with. You choose. So does your opponent. Whoever
@@ -104,7 +111,7 @@ compounds that budget fastest.**
 
 1. **Unified Action-Point economy** — one per-turn AP budget spent across build, produce,
    move, attack, and research; movement and actions have per-unit AP costs.
-2. **Grid tactical combat** — Advance Wars-style readable top-down grid; predictable
+2. **Grid tactical combat** — Advance Wars-style readable grid (rendered in 2:1 isometric); predictable
    (deterministic) combat resolution, terrain, unit types with rock-paper-scissors roles.
 3. **Base building & unit production** — structures produce units and expand economy/AP
    capacity, all paid from the same AP pool.
@@ -205,6 +212,13 @@ that rewards *timing/sequencing*, this pillar says **choose timing.**
 ### Pillar 3: Readable Board, Deep Decisions
 Advance Wars clarity: the state is always visually legible at a glance, even though the
 decisions underneath are deep. Complexity lives in the *choices*, never in the *UI or fog*.
+
+The board now renders **isometric**, which adds depth-stacking, elevation, and occlusion the
+original top-down framing did not have. The art bible's iso-proofed legibility principles
+(silhouette reads at the shipping camera angle; depth cues stay subordinate to neon actors) are
+the design answer — and **the vertical-slice legibility playtest is a hard gate on this pillar**:
+if the board is not readable at a glance under the shipping isometric camera, the depth gets
+fixed or cut, not shipped.
 
 *Design test*: If added depth would make the board harder to read at a glance, this
 pillar says **find a clearer expression or cut it.**

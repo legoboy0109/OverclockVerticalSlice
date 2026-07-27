@@ -274,6 +274,14 @@ destruction refunds nothing (0).
 `floor(9×0.6)=5`, Defensive `floor(6×0.6)=3`. `floor` keeps every result a non-negative integer across
 the whole range — no degenerate output at either boundary.
 
+> **Implementation note (representation, non-behavioral — ADR-0017):** the architecture stores
+> `CANCEL_REFUND_RATE` as a **fixed-point integer percent** `cancel_refund_pct` (default **50**, tunable
+> range **30–60**) rather than a float, computing `refund = build_cost * cancel_refund_pct / 100` via
+> integer division. This keeps the AP-refund path integer-only (ADR-0003 bans floats in the economy
+> path; same fixed-point discipline as Movement's `soft_move_penalty_x10`). It is numerically identical
+> to `floor(build_cost × rate)` across the entire 0.3–0.6 range — every worked example above is
+> unchanged. No design or value change.
+
 ### `economy_outpost_payback` — derived ROI (informational, not a runtime value)
 
 `payback_turns_from_completion = build_cost / OUTPOST_BONUS_TIER1 = 4 / 2 = 2.0`

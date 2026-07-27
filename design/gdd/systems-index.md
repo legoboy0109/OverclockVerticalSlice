@@ -9,12 +9,18 @@
 
 ## Overview
 
-OVERCLOCK is a 2D top-down sci-fi turn-based tactics game whose defining mechanic is a
+OVERCLOCK is a 2D isometric sci-fi turn-based tactics game whose defining mechanic is a
 **single unified action-point (AP) economy** — build, produce, move, attack, and research
 all draw from one per-turn pool, and victory goes to whoever compounds tempo fastest. The
 system set is therefore small and tightly coupled: a foundational board + turn + AP layer,
 a core layer of gameplay systems that all spend from the one pool, a presentation layer built
 around a readable pre-commit action interface (Pillar 3), and two Feature systems (AI, factions).
+
+> **Projection note (2026-07-25):** The board renders in **2:1 isometric (dimetric)** projection
+> (revised from the original "top-down" framing) — see `design/art/art-bible.md` and
+> `docs/architecture/change-impact-2026-07-23-isometric-projection.md`. A view-layer decision only:
+> all system rules and coordinates are computed in projection-invariant grid space. The
+> Board Renderer / grid→screen transform is a Presentation-layer concern (ADR-0013), not a rules change.
 
 This index scopes GDD authoring to the **Vertical Slice** tier (the current build target — the
 concept prototype already validated the core loop). Twelve systems are Vertical-Slice tier; the
