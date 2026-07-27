@@ -1,12 +1,12 @@
 # Story 010: HUD / Command-Interface Read-Surface (Unit Data Exposure)
 
 > **Epic**: Unit System
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: UI
 > **Estimate**: 2 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -78,3 +78,14 @@
 
 - Depends on: Story 001, Story 002, Story 004 (`effective_attack`); ADR-0016's `GameStateReader` facade (Game HUD epic — define the contract now, implement against a local test double until the facade exists).
 - Unlocks: Game HUD epic, Command & Action Interface epic.
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27
+**Criteria**: 3/3 passing (no deferred items)
+**Deviations**: None. Approach (user choice): shipped a minimal `src/core/game_state/game_state_reader.gd` facade stub (`GameStateReader`, `unit_info(entity_id) -> Dictionary` value-snapshot) that the Game HUD epic supersedes with ADR-0016 §1's full getter set. AC-2 "structural read-only" achieved by returning a fresh value-snapshot (no back-ref to live state) — the correct mechanism given GDScript has no access modifiers.
+**Test Evidence**: UI — interaction test at `tests/unit/unit-system/unit_read_surface_test.gd` (5 tests; full suite 375/375, exit 0). Strengthened during code review: added the missing-id `{}` total-function test; upgraded the AC-2 structural guard from a `has_method("apply_action")` blocklist to a `get_script_method_list()` allowlist (only `_init` + `unit_info` are script-defined).
+**Code Review**: Complete — `/code-review` APPROVED (gdscript-specialist CLEAN; qa-tester GAPS, both applied).
+**Tracked TODO**: `unit_info`'s non-`UnitState` guard branch is uncoverable until `StructureState` exists (Base & Production epic) — `NOTE(structures)` marker in the test flags the covering test to add then.
+**Note (CI)**: new `class_name GameStateReader` needed a one-time `./redot --headless --quit --editor` cache rescan before `gdunit4_runner.gd` compiled (same as Story 007) — flag for CI pipeline owner.
