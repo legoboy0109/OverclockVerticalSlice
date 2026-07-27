@@ -1,12 +1,12 @@
 # Story 009: duplicate() / Serialization Completeness for Save + AI Snapshot
 
 > **Epic**: Unit System
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Logic
 > **Estimate**: 2 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-26
 
 ## Context
 
@@ -64,7 +64,7 @@
 **Required evidence**:
 - `tests/unit/unit-system/unit_serialization_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created and passing (7 tests, full suite 359/359)
 
 ---
 
@@ -72,3 +72,12 @@
 
 - Depends on: Story 002, Story 003.
 - Unlocks: any future save/load epic (documented foundation, not implemented now); AI epic lookahead correctness.
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-26
+**Criteria**: 3/3 passing (all COVERED by tests, no deferrals)
+**Deviations**: None — no new production code required; all 7 `UnitState` fields already correctly `@export`'d, non-float, non-engine-ref
+**Test Evidence**: Logic — `tests/unit/unit-system/unit_serialization_test.gd` (7 test functions; first reflection-based test in the codebase, `get_property_list()` semantics independently verified against live Godot 4.6 docs); full suite 359/359 passing
+**Code Review**: Complete — `/code-review` initial verdict APPROVED WITH SUGGESTIONS; a real logic gap (a tautological "no unexpected field" test) was found and fixed — replaced with a genuine schema-drift guard deriving the Resource-builtin allowlist at runtime — re-verified → final verdict APPROVED
