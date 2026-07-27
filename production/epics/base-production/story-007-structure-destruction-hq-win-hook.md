@@ -1,12 +1,12 @@
 # Story 007: Structure Destruction & HQ Win-Hook (Real-Schema Coverage)
 
 > **Epic**: Base & Production
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Logic
 > **Estimate**: 3 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -77,7 +77,7 @@
 **Required evidence**:
 - `tests/unit/base-production/structure_destruction_hq_win_hook_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created — `tests/unit/base-production/structure_destruction_hq_win_hook_test.gd` (4 tests, passing)
 
 ---
 
@@ -85,3 +85,13 @@
 
 - **Depends on**: Story 001 (real `StructureState` + HQ template) + Combat epic (Complete — `destroy_entity`, `StructureDestroyedEvent{is_hq}`, `run_win_check`, damage formula / cover-immunity).
 - **Unlocks**: Story 010 (integration exercises the real HQ 0hp → `GameOver` + subsequent-reject path).
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27
+**Criteria**: 4/4 passing (all COVERED; HQ-win-signal and cover-immunity mutation-verified load-bearing)
+**Deviations**: None — no `src/` change. `destroy_entity`/`StructureDestroyedEvent{is_hq}`/`run_win_check`/cover-immunity were all shipped and correct for the real schema (Combat epic Story 005); this story is real-`StructureState`-schema coverage in the B&P suite. Intentional (documented) overlap with `tests/unit/combat/destroy_entity_test.gd`.
+**Test Evidence**: Logic — `tests/unit/base-production/structure_destruction_hq_win_hook_test.gd` (4 tests). Full suite 460/460, exit 0.
+**Code Review**: Complete — APPROVED (godot-gdscript-specialist CLEAN — verified static typing, `Combat.damage`-purity on un-placed entities, cover math, `run_win_check` winner logic, `Research.reset()` isolation; qa-tester TESTABLE with live mutation testing — forcing `is_hq=false` → 3 hard failures, setting `cover_dr=0` → the differential control fails, proving both are load-bearing not decorative; no must-fix). Advisory (not blocking): add an `is_hq`-false mutation-style assertion to the non-HQ test for evidence parity with the HQ test.
+**Tech debt**: None new.
