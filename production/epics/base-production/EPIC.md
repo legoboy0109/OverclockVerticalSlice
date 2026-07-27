@@ -57,7 +57,7 @@ All 17 requirements are ADR-traced (0 untraced). Full requirement text in
 | ~~003~~ | ~~Start-of-Turn Timers, Outpost Count & Flag Reset~~ — **merged into 002** ([superseded](story-003-start-of-turn-timers-outpost-count-flag-reset.md)) | Logic | Superseded | — |
 | 004 | [Produce Verb & `legal_deploy_tiles`](story-004-produce-legal-deploy-tiles.md) | Logic | ✅ Complete | ADR-0017 (D4), ADR-0006/0007/0012 |
 | 005 | [Cancel Build & Fixed-Point Refund](story-005-cancel-build-refund.md) | Logic | ✅ Complete | ADR-0017 (D5/D6) |
-| 006 | [Defensive Structure Attack](story-006-defensive-structure-attack.md) | Logic | Ready | ADR-0010, ADR-0017 |
+| 006 | [Defensive Structure Attack](story-006-defensive-structure-attack.md) | Logic | ✅ Complete | ADR-0010, ADR-0017 |
 | 007 | [Structure Destruction & HQ Win-Hook](story-007-structure-destruction-hq-win-hook.md) | Logic | Ready | ADR-0010 |
 | 008 | [Determinism & Clone Isolation](story-008-determinism-clone-isolation.md) | Logic | Ready | ADR-0003 |
 | 009 | [Production HUD Read-Surface](story-009-production-hud-read-surface.md) | UI | Ready | ADR-0016 |

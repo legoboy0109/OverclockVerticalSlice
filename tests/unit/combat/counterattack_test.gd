@@ -445,4 +445,8 @@ func _make_defensive_structure_low_hp(entity_id: int, owner: int, pos: Vector2i)
 	structure.type.attack_range = 2
 	structure.type.targeting_mode = UnitTypeDef.TargetingMode.DIRECT
 	structure.type.min_range = 1
+	# Used as a firing ATTACKER — must be Completed (Base & Production Story 006's
+	# Combat.validate structure-attacker gate rejects a non-Completed attacker
+	# NOT_COMPLETED). See destroy_entity_test.gd's _make_defensive_structure.
+	structure.build_status = StructureState.BuildStatus.COMPLETED
 	return structure

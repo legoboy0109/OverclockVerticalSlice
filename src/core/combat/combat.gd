@@ -390,8 +390,13 @@ static func blocked_reason(state: GameState, attacker: EntityState, direction: V
 ## Story 005): a [code]UnitState[/code] attacker is rejected iff
 ## [method Unit.can_attack] is false (already attacked this turn); a
 ## [code]StructureState[/code] attacker (the Defensive Structure) is rejected
-## iff [member StructureState.has_attacked] is already [code]true[/code]; any
-## other entity kind is rejected defensively. This is what makes [method apply]'s
+## first iff it is not [constant StructureState.BuildStatus.COMPLETED]
+## ([constant Action.Reason.NOT_COMPLETED] — only a Completed structure fires,
+## GDD Rule 8; a fresh Under-Construction Defensive Structure is inert for
+## attack, closing the BP-002 attack-inertness invariant, Base & Production
+## Story 006) and then iff [member StructureState.has_attacked] is already
+## [code]true[/code]; any other entity kind is rejected defensively. This is
+## what makes [method apply]'s
 ## later [code]attacker.has_attacked = true[/code] write safe for both kinds —
 ## each has its own [code]has_attacked[/code] field; (4) [method AP.can_afford]
 ## against the attacker-kind-appropriate cost — [member CombatConfig.attack_cost]
@@ -422,6 +427,8 @@ static func validate(state: GameState, action: AttackAction) -> int:
 		if not Unit.can_attack(attacker):
 			return Action.Reason.ILLEGAL_TARGET   # already attacked this turn
 	elif attacker is StructureState:
+		if attacker.build_status != StructureState.BuildStatus.COMPLETED:
+			return Action.Reason.NOT_COMPLETED    # only a Completed structure fires (Rule 8; BP-002 attack-inertness — a fresh Under-Construction Defensive Structure is inert for ATTACK)
 		if attacker.has_attacked:
 			return Action.Reason.ILLEGAL_TARGET   # Defensive Structure already fired this turn
 	else:

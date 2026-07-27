@@ -131,6 +131,11 @@ func _make_defensive_structure(entity_id: int, owner: int, pos: Vector2i) -> Str
 	structure.type.attack_range = 2
 	structure.type.targeting_mode = UnitTypeDef.TargetingMode.DIRECT
 	structure.type.min_range = 1
+	# A firing Defensive Structure must be Completed (Base & Production Story 006
+	# added the build_status==COMPLETED gate to Combat.validate's structure-attacker
+	# branch — only an operational structure fires). This fixture is always used
+	# as an ATTACKER, so it must be Completed or validate now rejects it NOT_COMPLETED.
+	structure.build_status = StructureState.BuildStatus.COMPLETED
 	return structure
 
 
