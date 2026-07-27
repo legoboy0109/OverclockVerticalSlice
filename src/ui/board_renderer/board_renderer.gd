@@ -22,9 +22,11 @@
 ## (art bible §8.4). Story 002 depends on this exact contract; do not change
 ## [method grid_to_screen]'s return convention without updating that story.
 ##
-## [b]Out of scope for this story[/b] (see neighbouring Board Renderer
-## stories): [code]TileMapLayer[/code] nodes/scene-tree structure (002/003),
-## [method pick_at] (004), glyph offsets (005), any [code]GridState[/code] reads.
+## [b]Out of scope for Story 001[/b] (see neighbouring Board Renderer
+## stories, since landed): [code]TileMapLayer[/code] nodes/scene-tree
+## structure (002/003), [method pick_at] (004 — now implemented; see its own
+## doc comment), glyph offsets (005, still pending), any
+## [code]GridState[/code] reads.
 ##
 ## Usage:
 ## [codeblock]
@@ -126,6 +128,31 @@ const OVERLAY_TINTS: Dictionary = {
 	OverlayClass.AFTER_MOVE_ECHO: Color(1.0, 0.25, 0.25, 0.4),
 }
 
+## Result of [method pick_at] (ADR-0013 §4, Story 004) — occupant-priority
+## click resolution. [member tile] is always populated (either the hit
+## occupant's own tracked tile, or the plain diamond under the click via
+## [method screen_to_grid]); [member occupant_entity_id] is [code]-1[/code]
+## when no occupant region was hit, matching the grid's own
+## [code]-1[/code]-for-empty convention. Shape is exact per ADR-0013 §4 —
+## do not add fields without updating that ADR.
+class PickResult extends RefCounted:
+	var tile: Vector2i
+	var occupant_entity_id: int # -1 if none.
+
+
+## One entry of the [member occupant_pick_regions] injectable seam (Story
+## 004) — see that member's doc comment for the full ownership-gap context.
+## [member rect] is an authored per-occupant clickable region in screen
+## space (never derived from [method grid_to_screen] alone — see
+## [method pick_at]); [member tile]/[member entity_id] are that occupant's
+## own state-tracked identity, returned as-is by [method pick_at] rather
+## than re-derived geometrically from the click.
+class OccupantPickRegion extends RefCounted:
+	var rect: Rect2
+	var entity_id: int
+	var tile: Vector2i
+
+
 ## Board-layout placement offset applied uniformly to every projected screen
 ## position. Designer/technical-art/UX-tunable; defaults to no offset.
 @export var origin_offset_px: Vector2 = Vector2.ZERO
@@ -148,6 +175,29 @@ var overlay_layer: TileMapLayer
 ## sort. See the class doc comment's scene-tree section for the
 ## z-index/y-sort division of labor this node anchors.
 var occupant_layer: Node2D
+
+## [b]Injectable occupant-pick-region seam (ADR-0013 §4, Story 004).[/b]
+## Ordered back-to-front matching [member occupant_layer]'s Y-sort paint
+## order (i.e. the same order real occupant children would visually draw
+## in); [method pick_at] tests it in [i]reverse[/i] so the front-most
+## (closest-to-camera) region wins ties, per ADR-0013 §4 step 1. Defaults to
+## empty, which makes [method pick_at] degrade to plain
+## [method screen_to_grid] for every click — the correct, harmless default
+## until real regions are wired in.
+##
+## [b]⚠ Ownership gap — do not treat this as the real convention:[/b] the
+## per-sprite [Rect2]/mask "occupant clickable-region authoring" that would
+## populate this array from live occupant sprites has [b]no confirmed
+## owning epic yet[/b] (ADR-0013 Consequences/Risks; tracked as vertical-
+## slice build-seam S3-05, `production/vertical-slice/scope.md` §8(b)).
+## This member exists purely as a settable seam so [method pick_at]'s
+## priority logic is unit-testable now via injected
+## [OccupantPickRegion] mocks (this story's tests) — it is deliberately
+## [i]not[/i] wired to [member occupant_layer]'s placeholder occupants, and
+## nothing here invents a real "derive [Rect2] from a sprite" convention.
+## The real live wiring (populating this array from actual occupant scenes)
+## is that unassigned owner's job, not this story's.
+var occupant_pick_regions: Array[OccupantPickRegion] = []
 
 
 ## Builds the Story 002 scene-tree skeleton (ADR-0013 §2) and populates
@@ -312,6 +362,52 @@ func grid_to_screen(tile: Vector2i) -> Vector2:
 ## alternates, never NaNs. Exact inverse of [method grid_to_screen]. O(1).
 func screen_to_grid(px: Vector2) -> Vector2i:
 	return _unproject(px, TILE_WIDTH_PX, TILE_HEIGHT_PX, origin_offset_px)
+
+
+## Resolves a screen-space click to [PickResult] via occupant-priority
+## picking, then diamond fallback (ADR-0013 §4, Story 004):
+## [codeblock]
+## 1. Test member occupant_pick_regions front-to-back in Y-sort draw order —
+##    i.e. iterate the array in REVERSE, since it is stored back-to-front —
+##    so a later-drawn/"in front" occupant wins the click over one behind it.
+## 2. Each region's rect is an authored per-occupant clickable Rect2 (the
+##    injectable seam — see member occupant_pick_regions; NEVER derived from
+##    grid_to_screen).
+## 3. The first region whose rect contains screen_pos wins: return its own
+##    OccupantPickRegion.tile/entity_id as-is (state-tracked identity, not
+##    re-derived geometrically from the click).
+## 4. No region hit -> plain screen_to_grid(screen_pos) fallback, an
+##    empty-tile click; occupant_entity_id = -1.
+## [/codeblock]
+## Exact inverse is never assumed here — an occupant's [member
+## OccupantPickRegion.tile] may legitimately differ from
+## [code]screen_to_grid(screen_pos)[/code] (a tall sprite's clickable region
+## can overlap an adjacent tile's diamond; ADR-0013 §4, art bible §8.8).
+##
+## [b]⚠ See [member occupant_pick_regions] for the unresolved
+## occupant-clickable-region-authoring ownership gap[/b] (S3-05,
+## `production/vertical-slice/scope.md` §8(b)) — this method only consumes
+## whatever that array currently holds; it does not define how real occupant
+## scenes populate it.
+##
+## [b]CAI boundary (ADR-0013 §4, Control Manifest):[/b] Command & Action
+## Interface must consume [method pick_at] as its [i]one[/i] click-routing
+## entry point — it must [b]never[/b] call [method screen_to_grid] directly
+## for routing decisions. [method screen_to_grid]/[method grid_to_screen]
+## remain fair game for CAI's own overlay/preview positioning, just not for
+## resolving what a click actually hit. O(occupant_pick_regions.size()).
+func pick_at(screen_pos: Vector2) -> PickResult:
+	var result := PickResult.new()
+	var region_count := occupant_pick_regions.size()
+	for i in range(region_count - 1, -1, -1):
+		var region: OccupantPickRegion = occupant_pick_regions[i]
+		if region.rect.has_point(screen_pos):
+			result.tile = region.tile
+			result.occupant_entity_id = region.entity_id
+			return result
+	result.tile = screen_to_grid(screen_pos)
+	result.occupant_entity_id = -1
+	return result
 
 
 ## Populates [member overlay_layer] with exactly [param tiles], all tagged

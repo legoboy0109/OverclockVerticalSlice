@@ -1,12 +1,12 @@
 # Story 004: Occupant-Priority Picking — `pick_at()` / `PickResult`
 
 > **Epic**: Board Renderer
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: Logic
 > **Estimate**: M (3–4h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -78,7 +78,7 @@
 **Story Type**: Logic
 **Required evidence**: `tests/unit/board-renderer/pick_at_occupant_priority_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created + passing — `tests/unit/board-renderer/pick_at_occupant_priority_test.gd` (7 fns, 7/7 PASS)
 
 ---
 
@@ -86,3 +86,13 @@
 
 - Depends on: Story 001 (`screen_to_grid` fallback path), Story 002 (Y-sort draw order defines occupant test order)
 - Unlocks: CAI's one click-routing entry point (TR-cmdui-004) — CAI Story 006 is explicitly blocked on this
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27
+**Criteria**: 5/5 covered by 7 automated tests — diamond fallback (`{screen_to_grid(p), -1}`); occupant region wins over the geometrically-underlying tile; front-most occupant wins on overlap **+ the front/back swap test proving order is respected, not hardcoded**; `PickResult.tile` = occupant's own tracked tile (not a re-derived click); `occupant_entity_id = -1` when no hit; plus OOB graceful fallback + just-outside-rect no-match.
+**Implementation**: extended `src/ui/board_renderer/board_renderer.gd` — `class PickResult extends RefCounted {tile, occupant_entity_id}` + `pick_at(screen_pos)` (occupant-priority front-to-back in Y-sort order, then `screen_to_grid` fallback). Story 001/002/003 code untouched.
+**Test Evidence**: Logic — `tests/unit/board-renderer/pick_at_occupant_priority_test.gd` (7 fns, 7/7 PASS; full suite 547/547, no regressions).
+**Deviations**: None. **Key seam**: occupant clickable-region source is an **injectable** `occupant_pick_regions` list (`{rect, entity_id, tile}`) — real per-sprite Rect2/mask authoring is deliberately NOT invented here; it stays **build-seam S3-05** (scope.md §8b, unassigned). Tests inject mocks; the real live feed plugs in later. Documented in the function's doc comment.
+**Code Review**: not separately run (specialist-authored, fully test-covered); recommend a light pass at sprint close-out.

@@ -58,11 +58,11 @@ stories:
     name: "pick_at (occupant priority, diamond fallback)"
     file: "production/epics/board-renderer/story-004-pick-at-occupant-priority.md"
     priority: must-have
-    status: in_progress
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"
   - id: "br-005"
     name: "Glyph anchoring convention (GLYPH_OFFSETS)"
     file: "production/epics/board-renderer/story-005-glyph-anchoring-convention.md"
