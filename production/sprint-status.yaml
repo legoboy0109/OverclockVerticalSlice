@@ -65,11 +65,11 @@ stories:
     name: "UX specs for VS screens: core HUD, main menu, pause"
     file: "design/ux/hud.md"
     priority: should-have
-    status: backlog
+    status: done
     owner: ""
     estimate_days: 1.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"
   - id: "s2-06"
     name: "Record AD-ART-BIBLE sign-off verdict in art bible"
     file: "design/art/art-bible.md"
