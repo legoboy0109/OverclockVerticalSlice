@@ -345,9 +345,9 @@ Testable pass/fail for `/story-done` and `/ux-review`:
 
 ## Open Questions
 
-1. **Player journey absent** — no `design/player-journey.md` (backlogged S2-08). The HUD's
-   "player context on arrival" is designed from assumptions (mid-match, focused, self-paced).
-   Revisit once the journey map exists. Template: `.claude/docs/templates/player-journey.md`.
+1. ~~**Player journey absent**~~ — ✅ **RESOLVED 2026-07-27 (S2-08):** `design/player-journey.md`
+   now exists and its alignment check confirms this HUD's mid-match/focused/self-paced arrival
+   assumption is consistent with the journey's Orientation/First-Mastery phases (no rework needed).
 2. **`selection_changed` emit seam** (scope.md §8a) — the detail panel (element 7) consumes a
    CAI selection signal forward-declared by ADR-0016 §6 with no dedicated emit-story. This spec
    names the expected signal (`selection_changed`) as the target for the CAI addendum. Build-time

@@ -213,8 +213,9 @@ Tier: **Standard** (WCAG 2.1 AA + CVAA).
 
 ## Open Questions
 
-1. **Player journey absent** (`design/player-journey.md`, backlogged S2-08) — arrival context
-   designed from assumptions; revisit when the journey map exists.
+1. ~~**Player journey absent**~~ — ✅ **RESOLVED 2026-07-27 (S2-08):** `design/player-journey.md`
+   now exists; its alignment check confirms this menu's cold-boot / return-from-match arrival
+   assumptions are consistent with the journey (no rework needed).
 2. **New Skirmish → side/faction pick?** The VS is symmetric (scope.md §5), so New Skirmish can
    launch straight into the match with no pre-match pick. If the VS build wants a side choice or
    a map confirm, that's a tiny intermediate screen (flag, not authored here).

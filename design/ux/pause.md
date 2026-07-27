@@ -222,7 +222,9 @@ Tier: **Standard**.
 
 ## Open Questions
 
-1. **Player journey absent** (backlogged S2-08) — arrival context assumed; revisit later.
+1. ~~**Player journey absent**~~ — ✅ **RESOLVED 2026-07-27 (S2-08):** `design/player-journey.md`
+   now exists; its alignment check confirms this pause spec's self-paced-interrupt framing is
+   consistent with the journey's no-time-pressure treatment (no rework needed).
 2. **Pause during resolve/AI turn** — can the player pause mid-commit-animation or during the
    opponent's AI turn? Simplest rule: pause is always allowed and freezes whatever is on screen;
    any in-flight animation resumes on Resume. Confirm the freeze/resume semantics with the
