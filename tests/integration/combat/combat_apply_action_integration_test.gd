@@ -128,20 +128,19 @@ func _move(from: Vector2i, to: Vector2i, tiles_entered: int, player: int) -> Mov
 	return action
 
 
-# A real StructureState HQ-stand-in fixture (the story's explicitly-sanctioned
-# use of structure_state_stub.gd — the real StructureState doesn't exist until
-# Base & Production lands; "real" in this story's scope means real
-# GameState/GridState/apply_action dispatch, not real B&P entity classes).
-# Sets BOTH type.hp and current_hp to hp so _apply_damage_to's inline clamp
-# never surprises the fixture (mirrors structure_state_stub.gd's documented trap).
+# A real StructureState HQ fixture claiming the real StructureTypes.HQ
+# template identity (ADR-0007/Story 001: is_hq() == type == StructureTypes.HQ,
+# a Resource-ref check against the real, immutable HQ const). The real HQ's
+# own hp (40) comfortably exceeds every [param hp] this suite passes, so the
+# inline clamp ceiling never interferes; [param hp] only sets current_hp
+# (a per-instance field), never the shared template's hp.
 func _make_hq(entity_id: int, owner: int, pos: Vector2i, hp: int) -> StructureState:
 	var hq := StructureState.new()
 	hq.entity_id = entity_id
 	hq.owner = owner
 	hq.position = pos
-	hq.type.hp = hp
+	hq.type = StructureTypes.HQ
 	hq.current_hp = hp
-	hq.is_hq_flag = true
 	return hq
 
 
@@ -280,8 +279,11 @@ func test_hq_destroyed_through_real_combat_pipeline_sets_game_over_and_next_acti
 	_place(state, trooper)
 	var hq := _make_hq(2, 1, Vector2i(1, 0), 1) # placeholder hp, corrected below
 	var expected_dmg: int = Combat.damage(state, trooper, hq)
+	# Exactly-lethal HQ: set the PER-INSTANCE current_hp only. Never write
+	# hq.type.hp — hq.type is the shared, immutable StructureTypes.HQ registry
+	# const (ADR-0007 / control-manifest "never mutate registry consts"), and the
+	# real HQ hp (40) is only a non-interfering ceiling here since expected_dmg <= 40.
 	hq.current_hp = expected_dmg
-	hq.type.hp = expected_dmg
 	_place(state, hq)
 	var action := _attack(trooper.position, hq.position, 0)
 

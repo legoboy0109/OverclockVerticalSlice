@@ -34,6 +34,18 @@ UnitBalance="*res://src/core/unit/unit_balance.gd"
 ; damage()/preview_damage() read CombatBalance.combat.* internally.
 CombatBalance="*res://src/core/combat/combat_balance.gd"
 
+; Thin, logic-free registry Autoload (ADR-0007), mirroring UnitTypes' idiom.
+; Preloads the 5 VS StructureTypeDef presets (HQ, Economy/Production Outpost,
+; Defensive Structure, Research Lab) once at boot; any system reads
+; StructureTypes.HQ/ECONOMY_OUTPOST/... as a bare global reference.
+StructureTypes="*res://src/core/structure/structure_types.gd"
+
+; Thin, logic-free config Autoload (ADR-0017 D6), a sibling of Balance/
+; UnitBalance/CombatBalance. Loads the BaseProductionConfig tuning resource
+; once at boot; Base & Production (and cross-system readers like Combat's
+; defensive_attack_cost) read StructureBalance.base_production.* internally.
+StructureBalance="*res://src/core/base_production/structure_balance.gd"
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg")

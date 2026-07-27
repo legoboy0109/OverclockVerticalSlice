@@ -268,13 +268,13 @@ func test_start_turn_step2_resets_only_active_players_entities() -> void:
 	var structure_p0 := StructureState.new()
 	structure_p0.entity_id = 2
 	structure_p0.owner = 0
-	structure_p0.has_acted = true
+	structure_p0.has_attacked = true
 	state.entities_by_id[2] = structure_p0
 	# Act — start_turn for player 0 only.
 	state.start_turn(0)
 	# Assert — player 0's entities reset, player 1's untouched.
 	assert_bool(unit_p0.has_attacked).is_false()
-	assert_bool(structure_p0.has_acted).is_false()
+	assert_bool(structure_p0.has_attacked).is_false()
 	assert_bool(unit_p1.has_attacked).is_true()
 
 

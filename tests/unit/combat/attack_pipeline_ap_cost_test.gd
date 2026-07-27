@@ -78,12 +78,15 @@ func _make_unit(entity_id: int, owner: int, type: UnitTypeDef, pos: Vector2i) ->
 
 # Sets BOTH type.hp and current_hp explicitly to the same value, so the
 # _apply_damage_to inline clamp ceiling never surprises a fixture that expects
-# a specific starting hp (structure_state_stub.gd's documented trap).
+# a specific starting hp. type is a fresh StructureTypeDef (real
+# StructureState.type is null by default, ADR-0007) carrying only the hp this
+# story's fixtures need; defense defaults to StructureTypeDef's own 0.
 func _make_structure(entity_id: int, owner: int, pos: Vector2i, hp: int = 10) -> StructureState:
 	var structure := StructureState.new()
 	structure.entity_id = entity_id
 	structure.owner = owner
 	structure.position = pos
+	structure.type = StructureTypeDef.new()
 	structure.type.hp = hp
 	structure.current_hp = hp
 	return structure

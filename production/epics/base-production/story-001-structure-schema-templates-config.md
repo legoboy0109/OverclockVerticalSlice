@@ -1,12 +1,12 @@
 # Story 001: Structure Schema, Templates & Config — StructureTypeDef / StructureState / StructureTypes / BaseProductionConfig
 
 > **Epic**: Base & Production
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Logic
 > **Estimate**: 4 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -106,3 +106,19 @@ The three stubs (`structure_state_stub.gd`, `structure_stub.gd`, `base_productio
 
 - **Depends on**: None (foundation of the epic). Uses the already-shipped `UnitTypes` (Unit System, Complete) for `producible_types` Resource-refs and `EntityState` (Foundation, Complete).
 - **Unlocks**: All other Base & Production stories (002–010) — they build/produce/cancel/attack against this schema, registry, and config.
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27
+**Criteria**: 9/9 passing (no deferred items)
+**Deviations** (all ADVISORY, code-review-confirmed sound):
+- `StructureTypeDef` gained `targeting_mode`/`min_range` — required by `combat.gd`'s structure-attacker reads; **ADR-0007 Key-Interfaces footnote owed** (logged to tech-debt register).
+- `StructureState.is_hq()` returns `type == StructureTypes.HQ` (Resource-ref, satisfies `game_state.gd:219`); replaces the stub's `is_hq_flag`.
+- MAX_OUTPOST disabled via a dedicated `max_outpost_count_enabled: bool = false` (count stays 10) rather than overloading `== 0`.
+- Stub `has_acted` mapped to real `has_attacked`.
+- **Scope (user-approved):** deleted `tests/helpers/stubs/structure_state_stub.gd` and migrated ~7 Complete-epic test files (Combat/Movement/turn-sequencing) to the real schema — an unavoidable `class_name StructureState` collision.
+- **Code-review found + fixed:** `combat_apply_action_integration_test.gd:283` mutated the shared `StructureTypes.HQ` const (latent false-green); removed the unnecessary line.
+**Test Evidence**: Logic — `tests/unit/base-production/structure_schema_templates_config_test.gd` (11 tests; full suite 386/386, exit 0, order-independent after the fix).
+**Code Review**: Complete — `/code-review` APPROVED (gdscript-specialist CLEAN; qa-tester found the shared-const mutation, fixed).
+**Note (CI)**: new `class_name` scripts + autoloads required the class-cache rebuild (`./redot --headless --quit --editor`) — handled by the committed CI fix.

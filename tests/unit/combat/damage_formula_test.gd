@@ -77,12 +77,15 @@ func _make_unit(entity_id: int, owner: int, type: UnitTypeDef, pos: Vector2i) ->
 	return unit
 
 
-# A defense-2 HQ-style structure defender, per the story's stub extension.
+# A defense-2 HQ-style structure defender. type is a fresh StructureTypeDef
+# (real StructureState.type is null by default, ADR-0007) carrying only the
+# defense value this story's fixtures need.
 func _make_structure(entity_id: int, owner: int, defense: int, pos: Vector2i) -> StructureState:
 	var structure := StructureState.new()
 	structure.entity_id = entity_id
 	structure.owner = owner
 	structure.position = pos
+	structure.type = StructureTypeDef.new()
 	structure.type.defense = defense
 	return structure
 

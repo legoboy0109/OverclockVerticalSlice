@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="BaseProductionConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/core/base_production/base_production_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+cancel_refund_pct = 50
+defensive_attack_cost = 1
+max_outpost_count = 10
+max_outpost_count_enabled = false

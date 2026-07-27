@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Economy Outpost"
+hp = 8
+build_cost = 4
+build_time = 1
+production_cap = 0
+producible_types = []
+defense = 0
+can_counterattack = false

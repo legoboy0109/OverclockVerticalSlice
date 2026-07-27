@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/units/scout.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+display_name = "HQ"
+hp = 40
+build_cost = 0
+build_time = 0
+production_cap = 2
+producible_types = [ExtResource("2")]
+defense = 2
+can_counterattack = false

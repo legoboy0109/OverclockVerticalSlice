@@ -1,0 +1,46 @@
+## BaseProductionConfig — Base & Production-owned global tuning constants.
+##
+## Core-layer config asset per ADR-0017 D6. A dedicated [Resource] (`.tres`),
+## mirroring [EconomyConfig]/[UnitConfig]'s config-as-Resource pattern
+## (ADR-0006/0009) — never GDScript `const`s, never stored on [GameState] (it
+## is static, shared, read-only tuning data, so it must never ride along on
+## [method GameState.clone]'s `duplicate_deep()` pass).
+##
+## Loaded once at boot by the thin, logic-free [code]StructureBalance[/code]
+## Autoload and read via [code]StructureBalance.base_production.*[/code].
+##
+## [b]Ownership:[/b] non-template Base & Production constants only — per-type
+## stat values (`hp`, `build_cost`, etc.) live on [StructureTypeDef], not here
+## (ADR-0007 owns templates; this Resource owns the generic constants every
+## structure type shares).
+class_name BaseProductionConfig
+extends Resource
+
+## Fixed-point integer percent (not a float rate) refunded on voluntary
+## cancel of an Under-Construction structure: `refund = build_cost *
+## cancel_refund_pct / 100` via integer division (floors toward the harsher
+## side, e.g. 4→2, 9→4, 6→3, odd 5→2). Keeps the AP-refund path integer-only
+## per ADR-0003; numerically identical to the GDD's `floor(build_cost × 0.5)`
+## across the whole tunable range (30–60). Story 005 owns the refund
+## arithmetic itself — this Resource only stores the constant.
+@export var cancel_refund_pct: int = 50
+
+## AP cost to fire a Defensive Structure — deliberately lower than the unit
+## `attack_cost`, its reward for immobility (Rule 8). Base-&-Production-owned
+## but read cross-system by Combat (ADR-0010) to price a structure attacker's
+## action, the same cross-system-config-read pattern as
+## [code]EconomyConfig[/code]'s tier threshold.
+@export var defensive_attack_cost: int = 1
+
+## Hard ceiling on total completed outposts, if [member max_outpost_count_enabled]
+## is ever flipped on. Documented tuning lever only — a nameable cap AP
+## income could be given if playtest needs it (ADR-0017 D6).
+@export var max_outpost_count: int = 10
+
+## Whether [member max_outpost_count] is actually enforced. `false` in the VS
+## (Section G "disabled" toggle) — the only bound on `completed_outpost_count`
+## is board-tile availability + AP; no `build()` call is ever rejected on
+## count grounds while this is `false`. A dedicated bool (rather than
+## overloading `max_outpost_count == 0` as "disabled") keeps "the cap is off"
+## and "the cap is zero" from ever being ambiguous to a future reader.
+@export var max_outpost_count_enabled: bool = false

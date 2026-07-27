@@ -105,15 +105,27 @@ func _make_frail_type() -> UnitTypeDef:
 
 # Sets BOTH type.hp and current_hp explicitly to the same value, so the
 # _apply_damage_to inline clamp ceiling never surprises a fixture (mirrors
-# attack_pipeline_ap_cost_test.gd's documented trap).
+# attack_pipeline_ap_cost_test.gd's documented trap). NOTE: is_hq=true claims
+# the real StructureTypes.HQ template identity (ADR-0007: is_hq() == type ==
+# StructureTypes.HQ, a Resource-ref check against the real, immutable HQ
+# const -- never a mutable per-fixture flag) -- the [param hp] argument is
+# IGNORED in that branch (the real HQ's own hp/defense are load-bearing;
+# callers needing an exact-lethal HQ fixture must compute their lethal hp
+# against the real HQ's stats via Combat.damage(), not pass a fixture number).
+# A non-HQ fixture (is_hq=false, the default) keeps the fresh-per-fixture
+# StructureTypeDef this suite's other ACs depend on.
 func _make_structure(entity_id: int, owner: int, pos: Vector2i, hp: int = 10, is_hq: bool = false) -> StructureState:
 	var structure := StructureState.new()
 	structure.entity_id = entity_id
 	structure.owner = owner
 	structure.position = pos
-	structure.type.hp = hp
-	structure.current_hp = hp
-	structure.is_hq_flag = is_hq
+	if is_hq:
+		structure.type = StructureTypes.HQ
+		structure.current_hp = structure.type.hp
+	else:
+		structure.type = StructureTypeDef.new()
+		structure.type.hp = hp
+		structure.current_hp = hp
 	return structure
 
 
@@ -162,12 +174,17 @@ func test_unit_reduced_to_zero_hp_removed_same_step_grid_and_entities() -> void:
 # --- AC-2: HQ destruction event -----------------------------------------------
 
 func test_hq_reduced_to_zero_hp_appends_structure_destroyed_event_is_hq_true() -> void:
-	# Arrange -- Heavy (atk 5) vs an enemy HQ (defense 0, hp 5): lethal exactly.
+	# Arrange -- Heavy (atk 5) vs the real HQ template (StructureTypes.HQ,
+	# defense 2): current_hp set exactly to the real computed damage so the
+	# hit is lethal exactly. is_hq=true claims real HQ identity (ADR-0007) --
+	# hp/defense are the real template's, not a fixture-picked number.
 	var state := _make_state()
 	var heavy := _make_unit(1, 0, UnitTypes.HEAVY, Vector2i(0, 0))
-	var enemy_hq := _make_structure(2, 1, Vector2i(1, 0), 5, true)
+	var enemy_hq := _make_structure(2, 1, Vector2i(1, 0), 0, true)
 	_place(state, heavy)
 	_place(state, enemy_hq)
+	var lethal_damage: int = Combat.damage(state, heavy, enemy_hq)
+	enemy_hq.current_hp = lethal_damage
 	var action := _make_action(heavy.position, enemy_hq.position, 0)
 	# Act
 	var events: Array[Event] = Combat.apply(state, action)
@@ -304,16 +321,17 @@ func test_structure_attacker_already_attacked_this_turn_rejected() -> void:
 # --- AC-6: HQ-at-exact-damage -> correct event shape via run_win_check -------
 
 func test_hq_at_exact_damage_destroyed_event_drives_run_win_check_game_over() -> void:
-	# Arrange -- Heavy (atk 5) vs an enemy HQ at hp exactly == computed damage.
+	# Arrange -- Heavy (atk 5) vs the real HQ template (StructureTypes.HQ,
+	# defense 2) at hp exactly == the real computed damage. is_hq=true claims
+	# real HQ identity (ADR-0007); the real template's hp (40) comfortably
+	# exceeds current_hp so the inline clamp ceiling never interferes.
 	var state := _make_state()
 	var heavy := _make_unit(1, 0, UnitTypes.HEAVY, Vector2i(0, 0))
-	var enemy_hq := _make_structure(2, 1, Vector2i(1, 0), 10, true)
-	enemy_hq.type.defense = 0
+	var enemy_hq := _make_structure(2, 1, Vector2i(1, 0), 0, true)
 	_place(state, heavy)
 	_place(state, enemy_hq)
 	var expected_damage: int = Combat.damage(state, heavy, enemy_hq)
 	enemy_hq.current_hp = expected_damage
-	enemy_hq.type.hp = expected_damage # keep the inline clamp ceiling in agreement
 	var action := _make_action(heavy.position, enemy_hq.position, 0)
 	# Act
 	var events: Array[Event] = Combat.apply(state, action)

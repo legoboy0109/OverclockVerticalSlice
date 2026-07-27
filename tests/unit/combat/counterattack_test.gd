@@ -137,16 +137,25 @@ func _make_area_counter_type(min_range: int = 2, attack_range: int = 4, hp: int 
 
 
 # Sets BOTH type.hp and current_hp explicitly to the same value, so the
-# _apply_damage_to inline clamp ceiling never surprises a fixture (mirrors
-# structure_state_stub.gd's documented trap).
+# _apply_damage_to inline clamp ceiling never surprises a fixture. NOTE:
+# is_hq=true claims the real StructureTypes.HQ template identity (ADR-0007:
+# is_hq() == type == StructureTypes.HQ, a Resource-ref check against the
+# real, immutable HQ const) -- [param hp] is ignored in that branch. Never
+# invoked with is_hq=true in this suite today (no HQ-identity fixture is
+# needed here), but kept schema-faithful for signature parity with
+# destroy_entity_test.gd's identical helper.
 func _make_structure(entity_id: int, owner: int, pos: Vector2i, hp: int = 10, is_hq: bool = false) -> StructureState:
 	var structure := StructureState.new()
 	structure.entity_id = entity_id
 	structure.owner = owner
 	structure.position = pos
-	structure.type.hp = hp
-	structure.current_hp = hp
-	structure.is_hq_flag = is_hq
+	if is_hq:
+		structure.type = StructureTypes.HQ
+		structure.current_hp = structure.type.hp
+	else:
+		structure.type = StructureTypeDef.new()
+		structure.type.hp = hp
+		structure.current_hp = hp
 	return structure
 
 
