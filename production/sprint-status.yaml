@@ -22,36 +22,36 @@ goal: "Vertical Slice Enablement — Core backlog breakdown, blocking rulings/sp
 start: "2026-08-10"
 end: "2026-08-21"
 generated: "2026-07-26"
-updated: "2026-07-26"
+updated: "2026-07-27"
 
 stories:
   - id: "s2-01"
     name: "Core-layer epic + story breakdown (VS-critical path: movement → command-interface → combat → HUD → minimal AI)"
     file: "production/epics/"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 2.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"
   - id: "s2-02"
     name: "Resolve per-player-index guard ruling (ADR addendum / control-manifest guardrail)"
     file: "docs/architecture/control-manifest.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"
   - id: "s2-03"
     name: "QQ-05 (reachable/pathfinding perf) + QQ-06 (AI lookahead perf) spikes"
     file: "prototypes/"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 1.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-25"
   - id: "s2-04"
     name: "Vertical Slice scope definition (one playable turn + mandated playtests + PROCEED/PIVOT/KILL criteria)"
     file: "production/vertical-slice/"
@@ -59,7 +59,7 @@ stories:
     status: ready-for-dev
     owner: ""
     estimate_days: 1
-    blocker: "s2-01"
+    blocker: ""
     completed: ""
   - id: "s2-05"
     name: "UX specs for VS screens: core HUD, main menu, pause"

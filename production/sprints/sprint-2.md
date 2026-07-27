@@ -62,8 +62,8 @@ sprint that clears the four CONCERNS from the 2026-07-26 Pre-Prod → Production
 
 ## Definition of Done for this Sprint
 - [ ] All Must Have tasks completed
-- [ ] Core VS-critical epics + stories exist and pass `/story-readiness`
-- [ ] Per-player-index ruling applied; QQ-05/QQ-06 verdicts recorded
+- [x] Core VS-critical epics + stories exist and pass `/story-readiness` — S2-01 done 2026-07-27: 4 epics (board-renderer, command-action-interface, game-hud, ai-opponent) + 30 stories
+- [x] Per-player-index ruling applied; QQ-05/QQ-06 verdicts recorded — S2-02 ruling applied 2026-07-27; QQ-05 (~2.0ms/call) + QQ-06 (~3.7ms p95) both PASS, ADR-0009/0011 Accepted 2026-07-25
 - [ ] VS scope doc written with PROCEED/PIVOT/KILL criteria
 - [ ] QQ spike code has passing measurement tests where applicable
 - [ ] Design/UX/art artifacts reviewed (`/ux-review`, AD sign-off)
