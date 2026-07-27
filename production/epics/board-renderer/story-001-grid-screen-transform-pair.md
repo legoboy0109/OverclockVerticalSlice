@@ -1,12 +1,12 @@
 # Story 001: Grid↔Screen Transform Pair — `grid_to_screen` / `screen_to_grid`
 
 > **Epic**: Board Renderer
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: Logic
 > **Estimate**: S (2–3h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -76,7 +76,7 @@
 **Story Type**: Logic
 **Required evidence**: `tests/unit/board-renderer/transform_round_trip_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created + passing — `tests/unit/board-renderer/transform_round_trip_test.gd` (8 test fns, 8/8 PASS)
 
 ---
 
@@ -84,3 +84,13 @@
 
 - Depends on: None (first story — the root of the epic)
 - Unlocks: Story 002 (sprite placement anchor), Story 003 (overlay reuses config), Story 004 (`pick_at` diamond fallback calls `screen_to_grid`), Story 005 (glyph anchor calls `grid_to_screen`). **Also the hard unlock for CAI Story 006 and the HUD glyph layer.**
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27
+**Criteria**: 4/4 passing (0 deferred) — all covered by automated tests
+**Implementation**: `src/ui/board_renderer/board_renderer.gd` (NEW — `class_name BoardRenderer extends Node2D`; `grid_to_screen`/`screen_to_grid` + shared static `_project`/`_unproject` helpers, consts `TILE_WIDTH_PX`/`TILE_HEIGHT_PX`, `@export origin_offset_px`). First Presentation-layer file → sets `src/ui/` as the Presentation bucket (CAI/HUD follow).
+**Test Evidence**: Logic — `tests/unit/board-renderer/transform_round_trip_test.gd` (8 test fns, 8/8 PASS; full suite 512/512, no regressions).
+**Deviations**: None. AC-3 (variable tile dims) resolved via the shared static `_project`/`_unproject` (single ADR-0013 §1 formula; instance methods use the consts, tests pass 127×63) — instance API identical to spec, no forbidden pattern.
+**Code Review**: Complete — APPROVED (2026-07-27; one non-blocking suggestion to tighten the AC-2 boundary-test comment on a future pass).

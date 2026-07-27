@@ -22,6 +22,7 @@ start: "2026-07-28"
 end: "2026-08-08"
 generated: "2026-07-27"
 updated: "2026-07-27"
+# br-001 done (story-done 2026-07-27) — first VS-build story complete
 
 stories:
   # --- S3-01 · Board Renderer epic (5 in-slice) ---
@@ -29,11 +30,11 @@ stories:
     name: "Grid↔screen transform pair (iso 2:1 dimetric + inverse pick)"
     file: "production/epics/board-renderer/story-001-grid-screen-transform-pair.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"
   - id: "br-002"
     name: "Y-sort depth + scene skeleton"
     file: "production/epics/board-renderer/story-002-y-sort-depth-scene-skeleton.md"
