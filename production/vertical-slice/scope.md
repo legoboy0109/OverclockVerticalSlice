@@ -147,9 +147,13 @@ its own future prototype) · persistence / linked missions · full narrative/cam
   representative Neon Retro-Future terrain with at least one cover terrain type
   (cover −1, per the concept prototype baseline).
 - **Two sides at parity** (symmetric — faction asymmetry is out of slice). Each side:
-  1 HQ (sole producer) + a small starting roster.
-- **Producible roster** (concept-prototype baseline AP costs): Scout 2 · Trooper 4 ·
-  Heavy 6. Attack 2 AP. Deterministic combat, free counterattacks.
+  1 HQ (sole producer of Scout) + **1 pre-placed Production Outpost** (unlocks Trooper/Heavy) +
+  a small starting roster. *(The pre-placed Production Outpost resolves the produce-roster
+  question below without adding the out-of-slice build verb — recorded in
+  `design/assets/entity-inventory.md` §"VS Scoping Decisions" 2, S2-07.)*
+- **Producible roster** (concept-prototype baseline AP costs): Scout 2 (from HQ) ·
+  Trooper 4 · Heavy 6 (from the pre-placed Production Outpost). Attack 2 AP. Deterministic
+  combat, free counterattacks. *(Sniper deferred — not in this roster.)*
 - **Economy:** base income 10 AP/turn, unspent AP lost. **Flat 10/turn** both sides
   (no outposts in slice — see §7).
 - **Win condition:** destroy the enemy HQ → GAME_OVER (win-check logic exists from

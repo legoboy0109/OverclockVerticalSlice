@@ -83,11 +83,11 @@ stories:
     name: "Entity inventory for VS-scope entities"
     file: "design/assets/entity-inventory.md"
     priority: should-have
-    status: backlog
+    status: done
     owner: ""
     estimate_days: 0.75
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"
   - id: "s2-08"
     name: "Difficulty-curve + player-journey design docs"
     file: "design/difficulty-curve.md"

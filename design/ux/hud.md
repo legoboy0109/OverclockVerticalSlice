@@ -352,12 +352,12 @@ Testable pass/fail for `/story-done` and `/ux-review`:
    CAI selection signal forward-declared by ADR-0016 §6 with no dedicated emit-story. This spec
    names the expected signal (`selection_changed`) as the target for the CAI addendum. Build-time
    seam, not a design gap.
-3. **VS produce roster / producer content** — base-production has the HQ produce **Scout only**
-   (`producible_types = {Scout}`, `production_cap = 2`); Trooper/Heavy come from a Production
-   Outpost, which is a build-outpost (out of VS). `scope.md` §5 lists Scout/Trooper/Heavy as
-   producible. Reconcile at the VS build: pre-place a Production Outpost per side, let the VS HQ
-   produce the full roster, or pre-place the Trooper/Heavy starting rosters. The **Produce
-   control design is unaffected** (generic over `producible_types`).
+3. **VS produce roster / producer content** — ✅ **RESOLVED 2026-07-27 (S2-07):** the VS
+   **pre-places a Production Outpost per side**, so the HQ produces Scout (`producible_types =
+   {Scout}`) and the Production Outpost produces Trooper/Heavy — the full scope §5 roster is
+   producible with **no build verb**, base-production rules intact. Recorded in
+   `design/assets/entity-inventory.md` and `scope.md` §5. The Produce control design was
+   unaffected either way (generic over the selected producer's `producible_types`).
 4. **AP-counter dominance ratio (1.8×)** — provisional; confirm with art-director against the
    shipping isometric camera during the iso-legibility playtest.
 5. **Camera model (OQ-8)** — spec assumes a **fixed camera** (near-certain; Grid & Terrain's
