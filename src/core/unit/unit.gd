@@ -22,6 +22,14 @@
 class_name Unit
 extends RefCounted
 
+## Move-cost floor (ADR-0012 §3): "[code]MIN_MOVE_COST[/code] already exists"
+## as a conceptual rule (Movement's Approved [code]move_cost >= 1[/code]), but
+## no named symbol existed in [code]src/[/code] before this story. Materializes
+## that floor as a real [code]Unit[/code]-owned const so
+## [method effective_move_cost]'s [code]max(MIN_MOVE_COST, …)[/code] binds to a
+## symbol, not a magic literal.
+const MIN_MOVE_COST := 1
+
 
 ## Pure precondition query: can [param unit] currently attack? Combat reads
 ## this (ADR-0010) but Unit owns/tests it (GDD Rule 2a). O(1).
@@ -108,3 +116,41 @@ static func effective_attack(state: GameState, unit: UnitState) -> int:
 static func effective_defense(state: GameState, unit: UnitState) -> int:
 	var bonus: int = Research.defense_tech_bonus() if state.per_player[unit.owner].has_defense_tech else 0
 	return unit.type.defense + bonus
+
+
+## The AP cost to produce a unit of [param unit_type] for [param player]
+## (ADR-0012 §3's Faction-identity read-site, TR-unit-011): [param unit_type]'s
+## base [member UnitTypeDef.produce_cost] plus [param player]'s faction's
+## [member FactionUnitDelta.cost_delta] for that type (0 if the faction carries
+## no entry for it — orphaned/absent is inert, [method Faction.unit_delta]),
+## floored at [code]1[/code] so a subtractive delta can never reach a free or
+## negative-cost verb (CR-3). Computed [b]live[/b] every call, never baked —
+## same discipline as [method effective_attack]/[method effective_defense].
+##
+## Under [code]Factions.NEUTRAL[/code] (empty [member FactionDef.unit_deltas]),
+## [code]d[/code] is always [code]null[/code], so this returns exactly
+## [code]unit_type.produce_cost[/code] — the ADR-0012 §5 Neutral no-op
+## regression pin. Combat stats ([code]attack[/code]/[code]defense[/code]/
+## [code]attack_range[/code]) are [b]not[/b] read or folded here — they stay
+## faction-identity-locked per ADR-0012 CR-6 (this story does not touch them).
+static func effective_produce_cost(state: GameState, unit_type: UnitTypeDef, player: int) -> int:
+	var d: FactionUnitDelta = Faction.unit_delta(state.faction_of(player), unit_type)
+	return maxi(1, unit_type.produce_cost + (d.cost_delta if d else 0))
+
+
+## The AP cost to move [param unit_type] one tile for [param player]
+## (ADR-0012 §3's Faction-identity read-site, TR-unit-011): [param unit_type]'s
+## base [member UnitTypeDef.move_cost] plus [param player]'s faction's
+## [member FactionUnitDelta.move_cost_delta] for that type (0 if absent/
+## orphaned — [method Faction.unit_delta]), floored at [constant MIN_MOVE_COST]
+## so a subtractive delta can never reach a free or negative move (CR-3, the
+## conceptual floor Movement already enforced, now a named symbol here).
+## Computed live every call, same discipline as the other [code]effective_*[/code]
+## functions on this class.
+##
+## Under [code]Factions.NEUTRAL[/code] this returns exactly
+## [code]unit_type.move_cost[/code] (Neutral no-op, ADR-0012 §5). Combat stats
+## are not read or folded here — see [method effective_produce_cost]'s note.
+static func effective_move_cost(state: GameState, unit_type: UnitTypeDef, player: int) -> int:
+	var d: FactionUnitDelta = Faction.unit_delta(state.faction_of(player), unit_type)
+	return maxi(MIN_MOVE_COST, unit_type.move_cost + (d.move_cost_delta if d else 0))
