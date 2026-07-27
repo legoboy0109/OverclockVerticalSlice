@@ -1,12 +1,12 @@
 # Story 008: Lifecycle States + Edge-Case Guards (Summoning Sickness, Destroy-on-0, AP Gating)
 
 > **Epic**: Unit System
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Logic
 > **Estimate**: 3-4 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-26
 
 ## Context
 
@@ -70,7 +70,7 @@
 **Required evidence**:
 - `tests/unit/unit-system/unit_lifecycle_test.gd` — must exist and pass (integration-style, fakes for Grid/Combat/Movement)
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created and passing (9 tests, full suite 352/352)
 
 ---
 
@@ -78,3 +78,12 @@
 
 - Depends on: Story 002, Story 003 (`apply_hp_delta`), Story 006 (AP cost values); Combat epic (`destroy_entity`, ADR-0010, Accepted), AP Economy (landed).
 - Unlocks: GS-004 win-check (reads the Destroyed transition).
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-26
+**Criteria**: 4/4 passing (all COVERED by tests, no deferrals)
+**Deviations**: None — no new production code required; no "Produced" state enum added (ADR-0007 forbidden-pattern respected)
+**Test Evidence**: Logic — `tests/unit/unit-system/unit_lifecycle_test.gd` (9 test functions covering AC-1..4); full suite 352/352 passing
+**Code Review**: Complete — `/code-review` initial verdict APPROVED WITH SUGGESTIONS; the one item both reviewers raised (AC-4's two failure tests were byte-identical AP=0 fixtures on a cost-1 Scout) was fixed by switching the boundary trio to Trooper (`move_cost 2`, distinct AP values 0/2/1), re-verified → final verdict APPROVED. Optional suggestions (frame-await synchronicity probe; mirrored move-doesn't-gate-attack test) declined as low-value.
