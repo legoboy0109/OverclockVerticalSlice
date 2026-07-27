@@ -315,6 +315,27 @@ N/A — greenfield decision, no existing code to migrate.
   recursively deep-copies `Resource` instances stored as *Dictionary values*, not only direct
   exported `Resource`-typed properties, on the pinned Redot 26.2 build.
 
+## Addenda
+
+### Addendum (S2-02, 2026-07-27): Per-player-index access is a trusted contract
+
+The read API's per-player accessors (`current_ap(player)`, `faction_of(player)`,
+and the sibling `AP.*(state, player)` / `Unit.effective_*` reads) treat the
+`player` index as a **trusted internal contract**: an out-of-range or invalid
+index is a programmer error and is allowed to fail-fast (crash) — no accessor
+bounds-guards the index or returns a sentinel. Rationale: the simulation is
+single-process and entirely in-repo; every player index originates from
+`active_player` or a `0/1` literal in 2-player VS, so a bad index is definitionally
+a bug that must surface loudly in tests rather than be masked as a corrupt-but-valid
+state an AI `clone()` would silently score (ADR-0003 determinism). This mirrors the
+existing trusted-`entity_id` contract on `destroy_entity()`. The lone sanctioned
+bounds-guard boundary is the `GameStateReader` presentation facade (ADR-0016 §1),
+which already returns empty on an unresolvable `entity_id` and is the only place a
+future stale-UI-lag player-index guard may be added. Enforced via Foundation-layer
+Required/Forbidden guardrails in `control-manifest.md` (Manifest Version 2026-07-27).
+Resolves the GS-001/AP-001/002 tech-debt entry. The surface already behaved this way
+uniformly, so no core accessor changed.
+
 ## Related Decisions
 - ADR-0002: Action / `apply_action` command model (defines the mutation logic this ADR's method
   signature stubs out)

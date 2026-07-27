@@ -1,9 +1,9 @@
 # Control Manifest
 
 > **Engine**: Godot 4.6 (Redot 26.2, Godot-4.6-compatible fork)
-> **Last Updated**: 2026-07-25
-> **Manifest Version**: 2026-07-25
-> **ADRs Covered**: ADR-0001 through ADR-0018 (all Accepted)
+> **Last Updated**: 2026-07-27
+> **Manifest Version**: 2026-07-27
+> **ADRs Covered**: ADR-0001 through ADR-0018 (all Accepted; ADR-0001 has an S2-02 per-player-index addendum)
 > **Status**: Active — regenerate with `/create-control-manifest update` when ADRs change
 
 `Manifest Version` is the date this manifest was generated. Story files embed this
@@ -31,6 +31,8 @@ each rule, see the referenced ADR.
 - **`entity_id` must be a single incrementing `int` field (`next_entity_id`) living directly on `GameState`, bumped on entity creation via `apply_action`** — source: ADR-0001
 - **Every state field must be a plain serializable value — no engine object references (`Node`, `RID`)** — source: ADR-0001
 - **`GameState` must expose a side-effect-free read API: `active_player`, `current_ap(player)`, `round_number`, `match_status`, `entities()`, `entity_at(tile)`, `grid`, `faction_of(player)`** — source: ADR-0001
+- **Per-player-index parameters are a trusted internal contract — accessors indexing `per_player[player]` (`GameState.current_ap`/`faction_of`, all `AP.*(state, player)`, `Unit.effective_*` via `unit.owner`, any `effective_X(state, base, player)`) must NOT bounds-guard the index; an out-of-range/invalid player index is a programmer error and must fail-fast (crash), never return a sentinel (`0`/`null`/`{}`)** — source: ADR-0001 (read-API), S2-02 ruling
+- **The `GameStateReader` presentation facade is the sole sanctioned bounds-guard boundary: it already returns empty (`{}`/`[]`) on an unresolvable `entity_id`, and is the ONLY place a future out-of-range `player` guard (stale UI-state lag) may be added — the core mutation/query layer stays trusted-crash** — source: ADR-0016 §1 (read-only facade), S2-02 ruling
 - **`faction_of(player)` must be stored and `starting_loadout` applied once at Setup, then locked** — source: ADR-0001
 - **`GameState` must support an optional `MAX_ROUNDS` cap + `TIEBREAK_METRIC` anti-drag terminal predicate** — source: ADR-0001
 - **`end_turn()` must be unconditionally legal for the active player — no softlock** — source: ADR-0001
@@ -96,6 +98,7 @@ each rule, see the referenced ADR.
 - **Never use `RefCounted` + a hand-written `clone()`** — a forgotten field fails silently (reverts to class default) instead of test-visibly, a manual-sync regression risk on the most safety-critical operation — source: ADR-0001
 - **Never conflate state ownership with event propagation in a single event-bus-core Autoload** — violates single-responsibility and drags a global-bus dependency into every unit test — source: ADR-0001
 - **Never represent entities as plain Dictionaries** — loses static typing/autocomplete in the AI's hot loops — source: ADR-0001
+- **Never add a defensive bounds-guard returning a safe-default snapshot to a core per-player-index accessor** — a swallowed bad index lets an AI `clone()` score a corrupt state and turns a caller bug into a silent test-green instead of a loud fail; the sim is single-process/all-in-repo so every player index originates from `active_player` or a `0/1` literal and a bad one is definitionally a programmer error — source: S2-02 ruling (ADR-0001, ADR-0003 determinism)
 - **Never build a separate injectable `EntityIdAllocator` object** — disproportionate machinery for one incrementing integer that must itself stay in sync under `clone()` — source: ADR-0001
 - **Never dispatch a verb via `Object.get_class()`** — for a GDScript-defined class it returns the base engine class name (`"RefCounted"`), so `match action.get_class()` silently never matches — source: ADR-0002
 - **Never use snapshot-and-rollback for atomicity** — pays a full `clone()` cost on every committed action, doubling the AI's already-hot `clone()` usage — source: ADR-0002
