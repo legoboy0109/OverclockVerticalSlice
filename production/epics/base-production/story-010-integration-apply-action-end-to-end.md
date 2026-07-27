@@ -1,12 +1,12 @@
 # Story 010: Integration — apply_action End-to-End (Real Grid + AP + Turn Manager + Unit + Combat)
 
 > **Epic**: Base & Production
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Integration
 > **Estimate**: 4 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -87,7 +87,7 @@
 **Required evidence**:
 - `tests/integration/base-production/integration_apply_action_end_to_end_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created — `tests/integration/base-production/integration_apply_action_end_to_end_test.gd` (10 tests, all passing)
 
 ---
 
@@ -95,3 +95,12 @@
 
 - **Depends on**: Stories 001–007 (ALL) — schema/config, build + `legal_build_tiles`, start-of-turn timers + `completed_outpost_count`, produce, cancel, defensive attack, and structure destruction / HQ win-hook. Uses the real Grid, AP, Turn Manager (Foundation, Complete), Unit + Combat (Core, Complete).
 - **Unlocks**: Epic Definition-of-Done (the BLOCKING Integration gate) and the AP-income / start-of-turn regression against the real `BaseProduction` (replacing the Sprint-1 stub).
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27
+**Criteria**: 8/8 passing (all COVERED by the 10-test integration suite; Rule-6 income-ordering proof hand-verified load-bearing by qa-tester — income_at_n2=14 vs n3=16). Full suite 504/504, exit 0.
+**Deviations**: None. No `src/` change — every AC composed correctly through the real `apply_action`/`start_turn`/`destroy_entity` stack (the gate's positive result: Stories 001–007 wire together with no composition bug). Review-time hardening (added `StructurePlacedEvent`/`StructureCompletedEvent` assertions to AC-1/AC-2 for event-stream symmetry with AC-7; cleaned a stale AC-8 comment) was in-scope test tightening.
+**Test Evidence**: Integration (BLOCKING) satisfied by `tests/integration/base-production/integration_apply_action_end_to_end_test.gd` (10 tests).
+**Code Review**: Complete — APPROVED (godot-gdscript-specialist APPROVE-WITH-SUGGESTIONS traced every claim vs real code incl. start_turn step-3-before-4; qa-tester TESTABLE, no must-fix, hand-proved AC-2 ordering; 2 advisories fixed in-review).

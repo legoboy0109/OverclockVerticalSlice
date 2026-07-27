@@ -3,8 +3,8 @@
 > **Layer**: Core
 > **GDD**: design/gdd/base-production.md
 > **Architecture Module**: Base & Production (Core Layer)
-> **Status**: Ready
-> **Stories**: 10 stories (see `## Stories` below) — all Ready, none implemented
+> **Status**: ✅ Complete (2026-07-27)
+> **Stories**: 10 stories (see `## Stories` below) — 9 Complete, 1 Superseded (003 → merged into 002)
 
 ## Overview
 
@@ -61,7 +61,7 @@ All 17 requirements are ADR-traced (0 untraced). Full requirement text in
 | 007 | [Structure Destruction & HQ Win-Hook](story-007-structure-destruction-hq-win-hook.md) | Logic | ✅ Complete | ADR-0010 |
 | 008 | [Determinism & Clone Isolation](story-008-determinism-clone-isolation.md) | Logic | ✅ Complete | ADR-0003 |
 | 009 | [Production HUD Read-Surface](story-009-production-hud-read-surface.md) | UI | ✅ Complete | ADR-0016 |
-| 010 | [Integration — apply_action End-to-End](story-010-integration-apply-action-end-to-end.md) | Integration | Ready | ADR-0002, ADR-0017 |
+| 010 | [Integration — apply_action End-to-End](story-010-integration-apply-action-end-to-end.md) | Integration | ✅ Complete | ADR-0002, ADR-0017 |
 
 ## Definition of Done
 
@@ -73,7 +73,9 @@ This epic is complete when:
 
 ## Next Step
 
-The 10-story breakdown is authored (all Ready). Story 001 (schema/templates/config) is
-the foundation and depends on nothing; Story 010 (integration) depends on 001–007.
-Run `/story-readiness [story-file]` before starting a story, then `/dev-story` to implement.
-Not on the minimal VS-critical path — schedule after the Unit/Movement/Combat slice.
+✅ **Epic complete (2026-07-27).** All 9 live stories implemented, reviewed (APPROVED),
+and closed via `/story-done`; 003 Superseded (merged into 002). Every Logic/Integration
+story has passing tests; the real `BaseProduction` class replaced the Sprint-1 stub and
+the AP-income / start-of-turn ordering is regression-tested end-to-end against the real
+implementation (Story 010's BLOCKING integration gate — full suite 504/504, exit 0).
+Sprint close-out: `/smoke-check sprint` → `/team-qa sprint` before any `/gate-check`.
