@@ -42,6 +42,8 @@ dist/
 .godot/
 *.translation
 export_presets.cfg
+# GdUnit4 generated test reports (HTML/XML) — regenerated on every run
+reports/
 # Redot editor binary + local symlink (136 MB — do not commit; each dev supplies their own)
 redot.linuxbsd.editor.x86_64
 /redot
@@ -145,3 +147,10 @@ $RECYCLE.BIN/
 *.msm
 *.msp
 *.lnk
+
+# === Studio: ephemeral / local-only state ===
+# Ephemeral session state + audit trail (per .claude/docs/directory-structure.md)
+production/session-state/active.md
+production/session-logs/
+# Per-developer agent memory — local learnings, not shared in VC
+.claude/agent-memory/
