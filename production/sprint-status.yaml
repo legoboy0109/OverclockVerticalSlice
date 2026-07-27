@@ -287,13 +287,13 @@ stories:
     completed: ""
   - id: "s3-07-qaplan"
     name: "QA plan for the VS build (/qa-plan sprint)"
-    file: "production/qa/qa-plan-sprint-3.md"
+    file: "production/qa/qa-plan-sprint-3-2026-07-27.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"
   - id: "s3-08-spikes"
     name: "Art/tech de-risk spikes: Boom-cyan hue side-by-side; glow-shader 2D/uniform"
     file: "design/art/art-bible.md"
