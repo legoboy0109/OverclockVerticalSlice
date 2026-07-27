@@ -86,6 +86,46 @@ const OVERLAY_Z_INDEX: int = 1
 ## never this constant nor any custom depth math.
 const OCCUPANT_Z_INDEX: int = 2
 
+## The 9-class overlay taxonomy (ADR-0013 §3; taxonomy source:
+## [code]command-action-interface.md[/code] Visual/Audio §B). Each value
+## doubles as [member overlay_layer]'s [TileMapLayer] atlas [code]source_id[/code]
+## for that class (see [method _build_overlay_tile_source]) — passed to
+## [method set_overlay] as a plain [code]int[/code] per the story's exact
+## signature, with these names as the sanctioned way to spell that int.
+## Placeholder art only (flat-tinted solid diamonds, [constant OVERLAY_TINTS]);
+## the real hatch/pattern/glyph treatment §B specifies is technical-art's
+## later pass, not this story's scope.
+enum OverlayClass {
+	MOVE_IN_CAP, ## §B.1 — in-cap (base-cost) move fill.
+	MOVE_OVER_CAP, ## §B.1 — over-cap (surcharged) move hatch.
+	ATTACK_TARGET, ## §B.3 — valid attack target-lock ring.
+	BLOCKED_BY_FRIENDLY, ## §B.2/§B.3 — blocked-by-friendly stop-glyph.
+	OUT_OF_RANGE, ## §B.3 — out-of-range fade-to-nothing.
+	AREA_DEAD_ZONE, ## §B.3 — AREA targeting dead-zone.
+	BUILD_DEPLOY_GO_TILE, ## §B.4/§B.5 — legal build tile + deploy tile
+	## ("go-tile" — shared bright cool-white language).
+	CANCEL_REFUND, ## §B — Cancel Build's distinct-gesture refund affordance tile.
+	AFTER_MOVE_ECHO, ## §B.7 — D-3 after-move attack marker (shrunk/dimmed
+	## target-lock echo).
+}
+
+## Flat placeholder tint per [enum OverlayClass], used to bake each class's
+## atlas entry (see [method _build_overlay_tile_source]). One distinct color
+## per class is sufficient for this story's mechanism proof — real
+## hatch/pattern/outline/glyph authoring per command-action-interface.md §B
+## is technical-art's later pass, not re-derived here.
+const OVERLAY_TINTS: Dictionary = {
+	OverlayClass.MOVE_IN_CAP: Color(0.75, 0.9, 1.0, 0.85),
+	OverlayClass.MOVE_OVER_CAP: Color(0.85, 0.65, 0.35, 0.85),
+	OverlayClass.ATTACK_TARGET: Color(1.0, 0.25, 0.25, 0.9),
+	OverlayClass.BLOCKED_BY_FRIENDLY: Color(0.4, 0.4, 0.4, 0.85),
+	OverlayClass.OUT_OF_RANGE: Color(0.3, 0.3, 0.35, 0.4),
+	OverlayClass.AREA_DEAD_ZONE: Color(0.5, 0.2, 0.5, 0.6),
+	OverlayClass.BUILD_DEPLOY_GO_TILE: Color(0.75, 0.9, 1.0, 0.85),
+	OverlayClass.CANCEL_REFUND: Color(0.9, 0.3, 0.2, 0.75),
+	OverlayClass.AFTER_MOVE_ECHO: Color(1.0, 0.25, 0.25, 0.4),
+}
+
 ## Board-layout placement offset applied uniformly to every projected screen
 ## position. Designer/technical-art/UX-tunable; defaults to no offset.
 @export var origin_offset_px: Vector2 = Vector2.ZERO
@@ -97,9 +137,10 @@ const OCCUPANT_Z_INDEX: int = 2
 var floor_layer: TileMapLayer
 
 ## Reachable/target/build overlay layer (ADR-0013 §2/§3). Shares the floor's
-## iso shape config; [method set_overlay]/[method clear_overlay] land in
-## Story 003 — this story only creates the empty layer at the correct
-## z-index band.
+## iso shape config; populated exclusively through [method set_overlay]/
+## [method clear_overlay] (Story 003) — no other code may call
+## [code]overlay_layer.set_cell[/code]/[code]overlay_layer.clear[/code]
+## directly, so this class stays the single choke point for overlay writes.
 var overlay_layer: TileMapLayer
 
 ## Y-sorted occupant group (ADR-0013 §2). [member Node2D.y_sort_enabled] is
@@ -117,6 +158,7 @@ var occupant_layer: Node2D
 func _ready() -> void:
 	floor_layer = _build_iso_tilemap_layer("FloorTileMapLayer", FLOOR_Z_INDEX)
 	overlay_layer = _build_iso_tilemap_layer("OverlayTileMapLayer", OVERLAY_Z_INDEX)
+	_build_overlay_tile_source()
 	occupant_layer = _build_occupant_layer()
 	_build_placeholder_occupants()
 
@@ -139,6 +181,53 @@ func _build_iso_tilemap_layer(node_name: String, z_index_value: int) -> TileMapL
 	layer.tile_set = tile_set
 	add_child(layer)
 	return layer
+
+
+## Adds one dedicated [TileSetAtlasSource] per [enum OverlayClass] to
+## [member overlay_layer]'s [TileSet] (ADR-0013 §3). Each source is a single
+## 1x1-cell atlas wrapping a runtime-baked flat-tinted diamond
+## [ImageTexture] ([constant OVERLAY_TINTS]) sized to the shared
+## [constant TILE_WIDTH_PX]/[constant TILE_HEIGHT_PX], and is registered
+## under [code]source_id == int(class_id)[/code] — this is what lets
+## [method set_overlay]/[method clear_overlay] and this story's tests
+## identify a populated cell's class via
+## [method TileMapLayer.get_cell_source_id] alone. Only adds sources to
+## [member overlay_layer]'s own [TileSet] instance; never touches
+## [member floor_layer]'s [TileSet] or its shared
+## [member TileSet.tile_shape]/[member TileSet.tile_size] config (ADR-0013 §3
+## — the floor/overlay alignment guarantee comes from
+## [method _build_iso_tilemap_layer] configuring both identically, not from
+## this method).
+func _build_overlay_tile_source() -> void:
+	var tile_size := Vector2i(int(TILE_WIDTH_PX), int(TILE_HEIGHT_PX))
+	for class_id in OverlayClass.values():
+		var source := TileSetAtlasSource.new()
+		source.texture = _build_diamond_texture(tile_size, OVERLAY_TINTS[class_id])
+		source.texture_region_size = tile_size
+		source.create_tile(Vector2i.ZERO)
+		overlay_layer.tile_set.add_source(source, class_id)
+
+
+## Bakes a flat-tinted 2:1 iso diamond [ImageTexture] at [param tile_size],
+## filled with [param tint] inside the diamond and transparent outside it —
+## the placeholder atlas art for one [enum OverlayClass] entry (see
+## [method _build_overlay_tile_source]). Deliberately the simplest possible
+## per-class visual (solid tint, no hatch/pattern/glyph); real art is
+## technical-art's later pass per command-action-interface.md §B.
+func _build_diamond_texture(tile_size: Vector2i, tint: Color) -> ImageTexture:
+	var image := Image.create(tile_size.x, tile_size.y, false, Image.FORMAT_RGBA8)
+	var half_width := tile_size.x * 0.5
+	var half_height := tile_size.y * 0.5
+	for y in tile_size.y:
+		for x in tile_size.x:
+			# Point-in-diamond test: |dx|/half_width + |dy|/half_height <= 1.
+			var dx := absf(x + 0.5 - half_width)
+			var dy := absf(y + 0.5 - half_height)
+			if dx / half_width + dy / half_height <= 1.0:
+				image.set_pixel(x, y, tint)
+			else:
+				image.set_pixel(x, y, Color(0.0, 0.0, 0.0, 0.0))
+	return ImageTexture.create_from_image(image)
 
 
 ## Constructs the Y-sorted [code]OccupantLayer[/code] (ADR-0013 §2): a plain
@@ -223,6 +312,39 @@ func grid_to_screen(tile: Vector2i) -> Vector2:
 ## alternates, never NaNs. Exact inverse of [method grid_to_screen]. O(1).
 func screen_to_grid(px: Vector2) -> Vector2i:
 	return _unproject(px, TILE_WIDTH_PX, TILE_HEIGHT_PX, origin_offset_px)
+
+
+## Populates [member overlay_layer] with exactly [param tiles], all tagged
+## [param class_id] (ADR-0013 §3, story-003). Always clears any prior overlay
+## first (equivalent to [method clear_overlay]), so a second call
+## [b]replaces[/b] the previous overlay rather than accumulating on top of
+## it — this holds even for an empty [param tiles], which is therefore
+## equivalent to a bare [method clear_overlay] call. [param class_id] is a
+## plain [code]int[/code] per this story's exact signature; pass one of
+## [enum OverlayClass]'s named values, which are the sanctioned way to spell
+## it (never a bare numeric literal at the call site).
+##
+## [b]Structural boundary (ADR-0013 §3, Control Manifest):[/b] this is the
+## [i]only[/i] sanctioned way to place an overlay tile. Consumers (Command &
+## Action Interface, any future system) must call this — and
+## [method clear_overlay] — and must never touch [method grid_to_screen]/
+## [method screen_to_grid] or call [code]overlay_layer.set_cell[/code]
+## directly for overlay placement; floor/overlay screen alignment is
+## guaranteed by [member overlay_layer] sharing the floor's exact [TileSet]
+## config (see [method _build_iso_tilemap_layer]), which only holds if this
+## method stays the single write path.
+func set_overlay(tiles: Array[Vector2i], class_id: int) -> void:
+	clear_overlay()
+	for tile in tiles:
+		overlay_layer.set_cell(tile, class_id, Vector2i.ZERO)
+
+
+## Empties [member overlay_layer] of every populated cell (ADR-0013 §3,
+## story-003). A no-op, never an error, when the overlay is already empty —
+## see the class-level boundary note on [method set_overlay] for why this is
+## the only sanctioned way to clear overlay tiles.
+func clear_overlay() -> void:
+	overlay_layer.clear()
 
 
 ## Pure closed-form forward projection, parameterized on tile dimensions and

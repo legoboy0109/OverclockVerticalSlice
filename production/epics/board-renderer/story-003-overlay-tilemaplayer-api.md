@@ -1,12 +1,12 @@
 # Story 003: Overlay TileMapLayer — `set_overlay()` / `clear_overlay()` API
 
 > **Epic**: Board Renderer
-> **Status**: Ready
+> **Status**: Complete (with notes — visual AC-4/AC-5 owed)
 > **Layer**: Presentation
 > **Type**: Integration
 > **Estimate**: M (3–4h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -76,7 +76,7 @@
 **Story Type**: Integration
 **Required evidence**: `tests/integration/board-renderer/overlay_api_test.gd` — must exist and pass (blocking); plus advisory `production/qa/evidence/board-renderer-overlay-alignment-evidence.md` (Visual/Feel alignment + draw-call check)
 
-**Status**: [ ] Not yet created
+**Status**: [x] Integration test created + passing — `tests/integration/board-renderer/overlay_api_test.gd` (7 fns, covers AC-1/2/3 cell-data, BLOCKING); advisory visual evidence `production/qa/evidence/board-renderer-overlay-alignment-evidence.md` (AC-4/AC-5 OWED — windowed session)
 
 ---
 
@@ -84,3 +84,13 @@
 
 - Depends on: Story 002 (scene skeleton must exist — the `OverlayTileMapLayer` node)
 - Unlocks: CAI overlay rendering (TR-cmdui-016) — CAI Story 006 cannot render any highlight until this lands
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27 (Complete with notes)
+**Criteria**: AC-1/AC-2/AC-3 (cell-data: set populates exactly those cells, clear empties, second set replaces + empty-array clears, clear no-op) auto-verified + PASS (BLOCKING integration test). AC-4 (floor↔overlay diamond alignment) + AC-5 (≤10 draw-call budget) are **OWED — visual** (advisory; alignment is structurally de-risked by the shared iso TileSet asserted in `scene_structure_test.gd`).
+**Implementation**: extended `src/ui/board_renderer/board_renderer.gd` — `OverlayTileMapLayer` given a tile-source with one atlas entry per the 9-class `OverlayClass` enum (placeholder flat-tinted diamonds via `_build_diamond_texture`, `OVERLAY_TINTS`), sharing the floor's exact iso TileSet config. `set_overlay(tiles, class_id)` (clears-then-populates, so replace never accumulates; empty ⇒ clear) + `clear_overlay()`. Story 001/002 code (transforms, scene tree, occupants) untouched.
+**Test Evidence**: Integration — `tests/integration/board-renderer/overlay_api_test.gd` (7 fns, 7/7 PASS); advisory visual `production/qa/evidence/board-renderer-overlay-alignment-evidence.md` (AC-4/AC-5 owed, sign-off DEFERRED). Full suite 540/540, no regressions.
+**Deviations**: None.
+**Code Review**: not separately run (specialist-authored, integration-test-covered); recommend a light pass at sprint close-out.

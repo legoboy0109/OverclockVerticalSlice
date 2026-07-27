@@ -49,16 +49,16 @@ stories:
     name: "Overlay TileMapLayer API (set_overlay/clear_overlay)"
     file: "production/epics/board-renderer/story-003-overlay-tilemaplayer-api.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"  # Complete-with-notes: visual AC-4/AC-5 owed (windowed session)
   - id: "br-004"
     name: "pick_at (occupant priority, diamond fallback)"
     file: "production/epics/board-renderer/story-004-pick-at-occupant-priority.md"
     priority: must-have
-    status: ready-for-dev
+    status: in_progress
     owner: ""
     estimate_days: 0.5
     blocker: ""
@@ -161,11 +161,11 @@ stories:
     name: "Query-facade enumeration order (allowlist)"
     file: "production/epics/ai-opponent/story-002-query-facade-enumeration-order.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.25
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"
   - id: "ai-003"
     name: "Combat + production scoring"
     file: "production/epics/ai-opponent/story-003-combat-production-scoring.md"

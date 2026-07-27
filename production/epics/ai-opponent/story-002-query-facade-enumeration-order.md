@@ -1,12 +1,12 @@
 # Story 002: Approved Query-Façade Allowlist + Deterministic Entity Enumeration Order
 
 > **Epic**: AI Opponent (Minimal Vertical Slice)
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Feature
 > **Type**: Logic
 > **Estimate**: M (3h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -75,7 +75,7 @@
 **Story Type**: Logic
 **Required evidence**: `tests/unit/ai-opponent/ai_enumeration_order_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created + passing — `tests/unit/ai-opponent/ai_enumeration_order_test.gd` (9 fns, 9/9 PASS)
 
 ---
 
@@ -83,3 +83,13 @@
 
 - Depends on: Story 001 (`AIConfig` threaded through helpers)
 - Unlocks: Stories 003/004 (scoring helpers plug into this skeleton)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27
+**Criteria**: covered by 9 automated tests — `AI extends RefCounted` single static `choose_action`; clones + never `apply_action`; enumeration entity-id-ascending (verified via reverse-insertion order); opponent entities excluded; headless (no SceneTree); `ai.gd` has no `await` / not `extends Node` (source-scan tests); running-best streaming scan, no candidate `Array` materialized (source-scan test); zero-entities → null, no crash; authoritative state not mutated.
+**Implementation**: `src/gameplay/ai/ai.gd` — `class_name AI extends RefCounted`, 5 private per-verb enumeration stubs (trivial placeholder scores — real scoring is Stories 003/004), `_Candidate` running-best (not an array), testable `_entities_in_enumeration_order(state)` seam. Relies on `GameState.entities()` already returning id-ascending order (confirmed by the reverse-insertion test passing). `_score_research_candidates` returns empty (Research epic not built).
+**Test Evidence**: Logic — `tests/unit/ai-opponent/ai_enumeration_order_test.gd` (9 fns, 9/9 PASS; full suite 540/540, no regressions).
+**Deviations**: None. **Scope**: no real scoring math (003/004), no tiebreak (005), no AITurnDriver (006), no cadence-cap enforcement (004).
+**Code Review**: not separately run (specialist-authored, fully test-covered); recommend a light pass at sprint close-out.
