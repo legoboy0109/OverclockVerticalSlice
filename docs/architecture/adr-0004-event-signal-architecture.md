@@ -1,7 +1,7 @@
 # ADR-0004: Event / Signal Architecture (State → Presentation)
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-07-23

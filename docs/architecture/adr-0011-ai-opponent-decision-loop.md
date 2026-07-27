@@ -1,13 +1,21 @@
 # ADR-0011: AI Opponent Decision Loop & Scoring Module Shape
 
 ## Status
-Proposed
+Accepted
 
-> **Not Accept-ready.** Per the same gating pattern as ADR-0009/QQ-05, this ADR cannot move to
-> Accepted until the QQ-06 performance spike (TR-ai-012: enumerate→commit loop wall-clock at N≤24
-> units on the pinned 14×16 board) confirms the full-re-enumeration strategy below meets a concrete
-> ms budget. Until then this ADR documents the module shape and loop architecture; the numeric
-> perf ceiling in AC-9b remains the GDD's own `[PLACEHOLDER]`.
+> **QQ-06 perf spike CLEARED 2026-07-25 (performance-analyst, PASS).** The enumerate→commit loop
+> (TR-ai-012) at N≤24 units on the pinned 14×16 board measures **~3.7 ms p95 / ~3.68 ms mean** per
+> full `choose_action()` pass (845 candidates scored per pass, under a deliberately upward-biased
+> clone-cost model); a full 5-commit streaming turn totals ~16.4 ms of compute — the entire turn's
+> enumeration fits inside one 60 FPS frame, before the 0.35 s `commit_pacing_sec` even applies. The
+> full-re-enumeration strategy below meets budget with ~2 orders of magnitude of headroom, so OQ-1's
+> incremental-invalidation fallback is not needed at this scale. Bench:
+> `prototypes/spikes/qq06_ai_loop_bench.gd`.
+>
+> **ACCEPTED 2026-07-25** as part of the bottom-up 18-ADR Accept batch (this ADR's Depends-On set
+> reached Accepted together). Non-blocking follow-ups: (a) replace ai-opponent.md AC-9b's
+> `[PLACEHOLDER]` with ~3.7 ms; (b) re-run the bench against the real `AI`/`Movement`/`Combat`
+> classes once `src/` exists, as a regression check (this spike used faithful stand-ins).
 
 ## Date
 2026-07-24
@@ -21,7 +29,7 @@ Proposed
 | **Knowledge Risk** | LOW — this ADR composes patterns already validated in ADR-0001/0002/0003/0004/0006/0009/0010 (static utility class, `Resource`-based config, `clone()`/`apply_action`, typed Dictionary). The one new element, a `Node` coroutine using `await get_tree().create_timer(...).timeout` for inter-commit pacing, is standard GDScript 2.0 async syntax (stable since 4.0, unaffected by any 4.4–4.6 change in `breaking-changes.md`). |
 | **References Consulted** | `docs/engine-reference/godot/VERSION.md`, `breaking-changes.md`, `deprecated-apis.md`; `docs/registry/architecture.yaml` (full read) |
 | **Post-Cutoff APIs Used** | None |
-| **Verification Required** | QQ-06 perf spike (TR-ai-012) before Accepted; no engine-API verification needed |
+| **Verification Required** | QQ-06 perf spike (TR-ai-012) before Accepted; no engine-API verification needed. **QQ-06 CLEARED 2026-07-25 (PASS, ~3.7 ms p95 — see Status).** |
 
 ## ADR Dependencies
 
@@ -30,7 +38,7 @@ Proposed
 | **Depends On** | ADR-0001 (`GameState`/`clone()`/`entities()`/`entity_at()` — the AI's entire read surface), ADR-0002 (`apply_action`/typed `Action` subclasses/verb-handler shape — the AI constructs and commits through the exact same pipeline a human does), ADR-0003 (determinism: no RNG, stable iteration order — directly binds this ADR's entity-enumeration order), ADR-0004 (`action_applied` signal — how presentation observes each AI commit for TR-ai-013's streaming requirement), ADR-0006 (`AP.can_afford`/`current_ap`/`income`; `gameplay_config_storage`/`ap_economy_module_shape` patterns this ADR's `AIConfig`/`AI` mirror), ADR-0007 (`UnitTypeDef`/`StructureTypeDef` fields the scoring formulas read: `produce_cost`, `build_cost`, `hp`, `attack`), ADR-0009 (`Movement.reachable()` — candidate move tiles + cost), ADR-0010 (`Combat.legal_targets()`/`legal_targets_from()`/`preview_damage()`; `GameState.destroy_entity()`'s win-check path the AI's own lethal commits ride) |
 | **Enables** | None yet. Faction Identity (ADR-0012, per faction-identity.md AC-24/TR-faction-015) will later confirm the AI reads `effective_X` through the same shared call sites with no AI-only branch — this ADR's "AI reads only through approved queries, no direct field access" decision is exactly what makes that possible without changes here. |
 | **Blocks** | AI Opponent epic implementation; Game State & Turn Manager's turn-handoff wiring (needs `PlayerState.is_ai_controlled` and the `AITurnDriver` hookup point this ADR introduces) |
-| **Ordering Note** | Eleventh ADR; the last of the seven Hard-dependency systems' architecture to land before this one could be written. Should not be marked Accepted before the QQ-06 spike (see Status). No epic may implement against this ADR while Proposed, per the project's ADR lifecycle rule. |
+| **Ordering Note** | Eleventh ADR; the last of the seven Hard-dependency systems' architecture to land before this one could be written. **QQ-06 CLEARED 2026-07-25 (PASS); ACCEPTED 2026-07-25 as part of the bottom-up 18-ADR Accept batch.** |
 
 ## Context
 
@@ -526,7 +534,7 @@ N/A — greenfield.
   tree, TR-ai-001 has regressed.
 - **Streaming**: an integration test drives `AITurnDriver.run_ai_turn` inside a running scene tree
   and asserts `action_applied` fires once per commit with the configured `commit_pacing_sec` gap
-  between them (AC-9b, once the QQ-06 spike sets the real numeric ceiling).
+  between them (AC-9b; the QQ-06 spike set the ceiling at ~3.7 ms p95 per pass — 2026-07-25, PASS).
 - **Cross-knob invariant**: loading an `AIConfig.tres` with `economy_horizon`/`economy_decay` raised
   toward their safe-range maxima without also raising `lethal_floor_bonus` must fail the load-time
   assert, not silently start the match.

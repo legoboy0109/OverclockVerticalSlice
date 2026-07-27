@@ -1,7 +1,7 @@
 # ADR-0012: Faction Identity Modifier Framework (FactionDef, effective_X Resolution, Setup Lifecycle)
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-07-24

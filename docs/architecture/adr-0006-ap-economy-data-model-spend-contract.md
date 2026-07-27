@@ -1,7 +1,7 @@
 # ADR-0006: AP Economy Data Model & Spend Contract
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-07-23

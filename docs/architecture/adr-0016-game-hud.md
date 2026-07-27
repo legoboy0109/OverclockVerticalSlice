@@ -1,7 +1,7 @@
 # ADR-0016: Game HUD (Read-Only Facade, AP-Counter FSM, Audio Ownership)
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-07-24

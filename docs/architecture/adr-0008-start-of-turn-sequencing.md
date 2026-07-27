@@ -1,7 +1,7 @@
 # ADR-0008: Shared Start-of-Turn Sequencing
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-07-23

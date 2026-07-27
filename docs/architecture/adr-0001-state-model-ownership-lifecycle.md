@@ -1,7 +1,7 @@
 # ADR-0001: State Model Ownership & Lifecycle
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-07-23

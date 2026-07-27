@@ -1,7 +1,7 @@
 # ADR-0015: Command & Action Interface FSM (State Machine, Recompute Tiers, Commit Routing)
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-07-24

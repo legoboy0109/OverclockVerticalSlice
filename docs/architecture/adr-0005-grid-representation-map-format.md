@@ -1,7 +1,7 @@
 # ADR-0005: Grid Representation & Map-Definition Format
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-07-23

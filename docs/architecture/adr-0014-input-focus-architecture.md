@@ -1,7 +1,7 @@
 # ADR-0014: Input & Focus Architecture (Board Cursor, Dual-Focus, Input Lock)
 
 ## Status
-Proposed
+Accepted
 
 > ⚠️ **HIGH engine risk, per architecture.md's own flag** (one of the two ADRs — 0013, 0014 —
 > architecture.md named as requiring WebSearch verification before Accepted). The load-bearing
@@ -13,7 +13,14 @@ Proposed
 > an accepted architectural fact (rather than a GDD-embedded spot-check) and adds the one genuinely
 > new piece of engine reasoning this ADR needs: how `BoardCursor` keyboard/gamepad input and native
 > `Control` focus traversal share the same input actions without colliding — confirmed by the
-> godot-specialist validation pass (§5.5), not yet independently spiked live.
+> godot-specialist validation pass (§5.5), and now independently spiked live.
+>
+> **Engine spike CLEARED 2026-07-25 (user, windowed Redot session, PASS).** All checks confirmed:
+> a focused `Button` eats arrow keys via `focus_neighbor` traversal; `BoardCursor` moves when no
+> `Control` holds focus; a `Control` holding keyboard-focus-only still intercepts; the genuine
+> unknown — a `Control` holding mouse-hover-focus-only — correctly does **not** intercept arrow
+> keys; and `Control.FOCUS_CLICK` is skipped by keyboard/gamepad traversal as expected. **ACCEPTED
+> 2026-07-25** as part of the bottom-up 18-ADR Accept batch.
 
 ## Date
 2026-07-24
@@ -24,10 +31,10 @@ Proposed
 |-------|-------|
 | **Engine** | Redot 26.2 (Godot 4.6-compatible fork) |
 | **Domain** | Input / UI (Control focus) |
-| **Knowledge Risk** | HIGH per architecture.md's flag, downgraded to LOW residual — the dual-focus API surface this ADR depends on was already confirmed present via direct `ClassDB` binary introspection (`game-hud.md`, 2026-07-22). The one unverified piece is this ADR's own new claim about Godot's input-consumption order (Control focus vs. `_unhandled_input`), covered by the godot-specialist pass below and a pre-Accepted spike (Validation Criteria). |
+| **Knowledge Risk** | HIGH per architecture.md's flag, downgraded to LOW residual — the dual-focus API surface this ADR depends on was already confirmed present via direct `ClassDB` binary introspection (`game-hud.md`, 2026-07-22). The one previously-unverified piece — Godot's input-consumption order (Control focus vs. `_unhandled_input`) — is now **CLEARED 2026-07-25 (PASS)**, see Status and Validation Criteria. |
 | **References Consulted** | `docs/engine-reference/godot/VERSION.md`, `modules/input.md`, `breaking-changes.md`, `deprecated-apis.md`; `design/gdd/game-hud.md` (Input notes, OQ-5 resolution — the ClassDB check); `design/gdd/command-action-interface.md` (Input mapping, OQ-6); `docs/architecture/adr-0005-grid-representation-map-format.md`, `docs/architecture/adr-0013-isometric-board-rendering.md` |
 | **Post-Cutoff APIs Used** | `Control.grab_click_focus()` (4.6, mouse-click focus, distinct from `grab_focus()`); dual-focus `focus`/`hover` `StyleBox` theme slots (4.6); optionally the 4.5 "recursive Control disable" feature for inert-container suppression (its exact property identifier is not confirmed against this project's engine-reference corpus — named as a possibility, not relied upon; see §6). None are deprecated (`deprecated-apis.md` clean for this domain). |
-| **Verification Required** | Pre-Accepted spike: confirm arrow-key input reaches a focused `Control`'s `focus_neighbor` traversal (never `_unhandled_input`) when a `Control` holds focus, and reaches `_unhandled_input` (driving `BoardCursor`) when no `Control` holds focus — see Validation Criteria. Also spot-check `Control.FOCUS_CLICK`'s traversal-suppression semantics for the `MENU_KEYBOARD_NAV = false` path. |
+| **Verification Required** | Engine spike (arrow-key routing between focused-`Control` `focus_neighbor` traversal and `_unhandled_input`-driven `BoardCursor`, plus `Control.FOCUS_CLICK` suppression semantics) — see Validation Criteria. **CLEARED 2026-07-25 (PASS)** — see Status. |
 
 ## ADR Dependencies
 
@@ -394,17 +401,16 @@ const WEST: Vector2i
 - `BoardCursor`'s on-screen indicator glyph remains an art-bible gap (both GDDs already named
   this) — this ADR fixes the anchor math (`grid_to_screen(cursor.grid_pos)`, reusing ADR-0013) but
   not the pixels.
-- The `FOCUS_CLICK` fallback for `MENU_KEYBOARD_NAV = false` is asserted from documentation, not
-  yet spiked live — see Risks.
+- The `FOCUS_CLICK` fallback for `MENU_KEYBOARD_NAV = false` was asserted from documentation and
+  is now confirmed live — see Risks.
 - The forward-declared `INPUT_LOCK_MS ≥ AP_TICK_DURATION_MS` invariant has no enforcement code
   until ADR-0016 lands; a default violating it could ship silently in the interim.
 
 ### Risks
-- **Input-consumption-order claim (§2) is asserted from documented Godot input-dispatch behavior,
-  not yet spiked live in Redot 26.2** — the godot-specialist validation pass (§5.5) and the
-  Validation Criteria's pre-Accepted spike both target this specifically. Mitigation: a one-scene
-  spike (one focusable menu `Button` + `BoardCursor` wired per §2) before this ADR moves past
-  Proposed, same discipline as ADR-0013's pre-Accepted spike criterion.
+- **Input-consumption-order claim (§2)** — was asserted from documented Godot input-dispatch
+  behavior, not yet spiked live in Redot 26.2. **CLEARED 2026-07-25 (user, windowed session,
+  PASS)** — the one-scene spike (one focusable menu `Button` + `BoardCursor` wired per §2) confirmed
+  the claim, including both dual-focus-specific asymmetric cases (see Validation Criteria).
 - **`Control.FOCUS_CLICK`'s exact traversal-suppression semantics are asserted, not verified** —
   flagged for the same godot-specialist pass. Mitigation: if `FOCUS_CLICK` doesn't behave as
   expected, `MENU_KEYBOARD_NAV = false` can fall back to manually clearing `focus_neighbor_*` on
@@ -448,7 +454,7 @@ N/A — greenfield.
   once per full cycle, in ascending tile-index order, wrapping from last to first.
 - **Precedence**: a scripted sequence (mouse move → key press → mouse move) leaves `active_locus`
   reflecting the last input processed, in dispatch order, with no timestamp comparison in the code.
-- **Engine spike (pre-Accepted)**: one scene with a focusable menu `Button` (using `focus_neighbor_*`
+- **Engine spike**: one scene with a focusable menu `Button` (using `focus_neighbor_*`
   for arrow-key traversal) and `BoardCursor` wired per §2 — confirm arrow keys drive the `Button`'s
   focus traversal when it holds focus, and drive `BoardCursor.step()` when no `Control` holds focus,
   with no double-handling in either case. **Test the dual-focus-specific asymmetric cases explicitly**
@@ -460,6 +466,8 @@ N/A — greenfield.
   intercept the arrow key? These two cases, not the single-focus case, are where 4.6 behavior could
   diverge from training-data assumptions. Also confirm `Control.FOCUS_CLICK` suppresses keyboard/
   gamepad traversal while still allowing mouse-click focus, for the `MENU_KEYBOARD_NAV = false` path.
+  **CLEARED 2026-07-25 (user, windowed session, PASS)** — all cases confirmed, including both
+  asymmetric cases (a) and (b); (b) — mouse-hover-only — correctly does not intercept.
 - **Dual-focus parity (residual sanity check, not fresh research)**: re-confirm
   `grab_click_focus()`/`grab_focus()`, `gui_get_hovered_control()`/`gui_get_focus_owner()`, and the
   `focus`/`hover` `StyleBox` slots exist and behave as `game-hud.md`'s 2026-07-22 `ClassDB` check found.

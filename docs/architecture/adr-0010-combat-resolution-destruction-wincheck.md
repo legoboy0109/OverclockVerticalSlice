@@ -1,7 +1,7 @@
 # ADR-0010: Combat Resolution & Shared Destruction / Win-Check
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-07-24

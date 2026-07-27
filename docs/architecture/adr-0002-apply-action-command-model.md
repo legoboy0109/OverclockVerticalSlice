@@ -1,7 +1,7 @@
 # ADR-0002: Action / apply_action Command Model
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-07-23

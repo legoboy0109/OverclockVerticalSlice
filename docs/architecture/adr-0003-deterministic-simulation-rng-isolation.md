@@ -1,7 +1,7 @@
 # ADR-0003: Deterministic Simulation & RNG Isolation
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-07-23

@@ -1,7 +1,7 @@
 # ADR-0007: Unit & Structure Entity/Stat Schema
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-07-23

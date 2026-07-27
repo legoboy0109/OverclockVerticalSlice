@@ -1,7 +1,7 @@
 # ADR-0009: Reachable-Search / Pathfinding Strategy
 
 ## Status
-Proposed
+Accepted
 
 ## Date
 2026-07-24
@@ -32,7 +32,7 @@ invariant (the same tile legitimately has different entry costs on different-dep
 | **Depends On** | ADR-0001 (`GameState`/`clone()` — search runs against a passed-in state, never the authoritative singleton, for AI lookahead safety), ADR-0002 (`apply_action`/verb-handler shape — `Movement.validate()`/`apply()` are the `MoveAction` handlers dispatched through the verb-enum table), ADR-0003 (determinism: flat-array visited/cost table not `Dictionary`; integer-only cost; fixed-point `SOFT_MOVE_PENALTY`), ADR-0005 (`GridState.neighbors()`/`is_passable()`/`occupant_at()`/`manhattan_distance()` — the exact query surface this search is built on), ADR-0006 (`AP.can_afford()`/`spend()`; this ADR mirrors ADR-0006's static-utility-class shape and its `gameplay_config_storage` pattern for the new `UnitConfig` resource), ADR-0007 (`UnitState.move_cost`/`soft_move_cap`/`tiles_moved_this_turn` fields; `entity_subclass_shape` — resolving an occupant via `GameState.entity_at()` to check `UnitState` vs `StructureState` and `owner`) |
 | **Enables** | ADR-0011 (AI query-façade — `reachable()` is one of the AI's core side-effect-free queries, called from many cloned states per turn), ADR-0015 (Command FSM — renders the reachable set + per-tile path/cost preview this ADR produces) |
 | **Blocks** | Movement System epic/stories (`movement-001`..`014`) cannot start implementation until this ADR is Accepted |
-| **Ordering Note** | Per the Technical Director's 2026-07-23 sign-off condition, this ADR must not be **Accepted** until the QQ-05 perf spike (`reachable()` ms/call on 24×24, interactive + AI-repeat) is run by performance-analyst. Authoring/Proposing now is not blocked — only Accept is. |
+| **Ordering Note** | Per the Technical Director's 2026-07-23 sign-off condition, this ADR must not be **Accepted** until the QQ-05 perf spike (`reachable()` ms/call on 24×24, interactive + AI-repeat) is run by performance-analyst. **QQ-05 CLEARED 2026-07-25 (PASS — see Validation Criteria). ACCEPTED 2026-07-25 as part of the bottom-up 18-ADR Accept batch (all Depends-On ADRs reached Accepted together).** |
 
 ## Context
 
@@ -376,7 +376,11 @@ is the bottleneck; this decision is explicitly reversible without touching the a
 - **CPU**: `reachable()` is `O(frontier size)` per call — bounded by the number of tiles within
   `current_ap`'s reach, not the full board. Called with no cache, many times per AI turn (once per
   candidate unit per cloned state) — the AI's evaluate-commit loop (ADR-0011, OQ-1) is the dominant
-  caller, not the interactive player UI. Concrete budget owed to the QQ-05 spike.
+  caller, not the interactive player UI. **QQ-05 spike (2026-07-25) measured this at ~2.0 ms/call
+  worst-case (near-full-board saturation, 575/576 tiles on 24×24, fresh-per-call) and 25–340 µs for
+  typical in-game frontiers; at ~500 AI calls/turn that is ~1.0 s worst-case / <200 ms realistic-mix —
+  acceptable given turn-based tactics has no per-frame deadline. Fresh-per-call `PackedInt32Array`
+  allocation did not materialize as a measurable cost.**
 - **Memory**: One `PackedInt32Array` of size `width × height` per call (fresh-per-call), plus a small
   `Array[ReachableTile]` for the result. `ReachableTile.new()` is allocated once per **result** tile
   (bounded by `results.size()`), not once per visited tile — a smaller footprint than `visited_depth`
@@ -399,7 +403,10 @@ N/A — new system, no existing code to migrate.
 - An integration test asserting deterministic tie-break: two equal-cost paths to the same destination
   resolve to the identical tile sequence across repeated `move()` calls from the same starting state.
 - QQ-05 perf spike result (ms/call on 24×24, interactive + AI-repeat) recorded before this ADR moves to
-  Accepted.
+  Accepted. **— DONE 2026-07-25 (performance-analyst): PASS — ~2.0 ms/call worst-case (24×24
+  near-full-board saturation), 25–340 µs typical; no algorithm or allocation-strategy change warranted.
+  Bench: `prototypes/qq05-reachable-bench/`. Non-blocking follow-up: re-run against the real
+  `Movement.reachable()` once `src/` exists, as a regression check.**
 
 ## Related Decisions
 

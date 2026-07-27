@@ -1,7 +1,7 @@
 # ADR-0013: Isometric Board Rendering, Picking & Overlays
 
 ## Status
-Proposed
+Accepted
 
 > ⚠️ **HIGH engine risk, per architecture.md's own flag.** QQ-03 is already WebSearch-verified
 > (2026-07-23): Godot's `local_to_map()` has a documented accuracy bug for isometric tile shapes
@@ -10,6 +10,11 @@ Proposed
 > needed before drafting; the godot-specialist validation pass (§5.5 of this ADR's authoring
 > process) still runs to confirm the specific API surface below (`TILE_SHAPE_ISOMETRIC`,
 > `y_sort_enabled`) is correct for Redot 26.2 / Godot 4.6.
+>
+> **Engine spike CLEARED 2026-07-25 (user, windowed Redot session, PASS).** Both checks confirmed
+> live: diamond tiling is seamless across the floor/overlay TileMapLayers, and `y_sort_enabled`
+> draw-order flips correctly as a unit crosses a tall prop's row. **ACCEPTED 2026-07-25** as part of
+> the bottom-up 18-ADR Accept batch.
 
 ## Date
 2026-07-24
@@ -23,7 +28,7 @@ Proposed
 | **Knowledge Risk** | HIGH — flagged by architecture.md as one of two ADRs (0013, 0014) requiring WebSearch verification before Accepted. QQ-03 is verified; residual risk is confined to confirming `TileSet.TILE_SHAPE_ISOMETRIC` and `Node2D.y_sort_enabled` behave as documented in the live 4.6 editor (godot-specialist pass, not a training-data gap — both APIs predate the LLM cutoff and are unaffected by any 4.4–4.6 change in `breaking-changes.md`). |
 | **References Consulted** | `docs/engine-reference/godot/VERSION.md`, `breaking-changes.md`, `deprecated-apis.md`; `docs/architecture/architecture.md` (QQ-03 verification, Board Renderer sketch); `docs/architecture/change-impact-2026-07-23-isometric-projection.md`; `design/art/art-bible.md` §8.4/§8.7/§8.8 |
 | **Post-Cutoff APIs Used** | None. `TileSet.TILE_SHAPE_ISOMETRIC` and `Node2D.y_sort_enabled` are both pre-4.0-cutoff, stable APIs. |
-| **Verification Required** | QQ-03 (done — cited above). Residual: confirm `TILE_SHAPE_ISOMETRIC` iso cell placement and `y_sort_enabled` draw-order behavior in the live Redot 26.2 editor before this ADR moves to Accepted (a spike, not a research task). |
+| **Verification Required** | QQ-03 (done — cited above). Residual spike (`TILE_SHAPE_ISOMETRIC` iso cell placement + `y_sort_enabled` draw-order) **CLEARED 2026-07-25 (PASS)** — see Status. |
 
 ## ADR Dependencies
 
@@ -380,8 +385,9 @@ N/A — greenfield.
   assert their screen-space diamonds coincide exactly (same `TileSet` config, §3).
 - **Depth-sort**: place two occupants at different grid rows and confirm draw order matches
   `y_sort_enabled`'s global-Y comparison, with no custom sort code involved.
-- **Engine spike (pre-Accepted)**: one scene with floor + overlay + a tall prop + a unit, confirming
+- **Engine spike**: one scene with floor + overlay + a tall prop + a unit, confirming
   `TILE_SHAPE_ISOMETRIC` and `y_sort_enabled` render as this ADR assumes in the live Redot 26.2 editor.
+  **CLEARED 2026-07-25 (user, windowed session, PASS — both checks confirmed, see Status).**
 
 ## Related Decisions
 - ADR-0001: State model ownership (`GameState`/`entities()`/`entity_at()` — Board Renderer's read surface)
