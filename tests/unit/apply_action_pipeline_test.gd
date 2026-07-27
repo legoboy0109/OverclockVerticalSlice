@@ -10,15 +10,17 @@
 # _validators/_appliers dispatch tables are class-level statics shared across
 # every test in the whole suite run (they represent code-behavior, not
 # per-instance data, per ADR-0002). Production code registers
-# Action.Verb.END_TURN (GS-003) and Action.Verb.MOVE (Movement, ADR-0009) in
+# Action.Verb.END_TURN (GS-003), Action.Verb.MOVE (Movement, ADR-0009), and
+# Action.Verb.ATTACK (Combat, ADR-0010, Combat Resolution Story 004) in
 # _ensure_dispatch_registered. One test here registers a throwaway handler on a
 # still-free verb (Verb.BUILD — Base & Production has not landed) to exercise
 # pipeline-generic affordability atomicity no concrete verb provides here; it
 # asserts BUILD is absent up front and calls GameState.unregister_verb(Verb.BUILD)
 # in cleanup so nothing leaks into another test under any load order. A separate
-# test uses the (also unregistered) Verb.ATTACK to check the unknown-verb
-# rejection path. (Verb.MOVE was the throwaway originally, but is now a real
-# registered handler.) The regression test for "dispatch via enum, not
+# test uses the (also unregistered) Verb.RESEARCH to check the unknown-verb
+# rejection path — distinct from Verb.BUILD so the two never share a verb.
+# (Verb.MOVE and Verb.ATTACK were throwaways originally, but are now real
+# registered handlers.) The regression test for "dispatch via enum, not
 # get_class()" routes a real EndTurnAction end-to-end rather than a fake handler.
 #
 # Naming follows tests/README.md: [system]_[feature]_test.gd + test_[scenario]_[expected].
@@ -99,11 +101,13 @@ func test_insufficient_ap_action_rejected_with_zero_state_change() -> void:
 # fail loud-but-safe with a clean ActionResult, never crash the caller.
 
 func test_action_with_unregistered_verb_rejected_with_unknown_verb() -> void:
-	# Arrange — Verb.ATTACK is never registered in this story.
+	# Arrange — Verb.RESEARCH is never registered (Research's own verb handler
+	# is a separate, later epic); Verb.ATTACK is no longer usable for this
+	# fixture as of Combat Resolution Story 004, which registers it for real.
 	var state := _make_state(2, 0)
-	assert_bool(GameState._validators.has(Action.Verb.ATTACK)).is_false()
+	assert_bool(GameState._validators.has(Action.Verb.RESEARCH)).is_false()
 	var action := Action.new()
-	action.verb = Action.Verb.ATTACK
+	action.verb = Action.Verb.RESEARCH
 	action.player = 0
 	# Act
 	var result: ActionResult = state.apply_action(action)

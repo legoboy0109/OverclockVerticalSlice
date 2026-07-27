@@ -46,6 +46,15 @@ static var _completed_outpost_counts: Dictionary = {}
 ## player. Set via [method queue_completion]; cleared by [method reset].
 static var _queued_completions: Dictionary = {}
 
+## Test-controllable Defensive-Structure attack AP cost (Combat Resolution
+## Story 005, ADR-0010/ADR-0017). Real [code]BaseProduction[/code] owns
+## [code]DEFENSIVE_ATTACK_COST[/code] as data-driven structure-type config;
+## the stub returns a test-set flat value. Default [code]1[/code] mirrors the
+## GDD's illustrative cost — a test asserting an exact AP deduction should set
+## this explicitly to prove [code]Combat[/code] reads the value rather than
+## hardcoding it.
+static var _defensive_attack_cost: int = 1
+
 
 ## Sets the stubbed completed-outpost count for [param player]. The count is
 ## returned verbatim by [method completed_outpost_count] — including negatives,
@@ -96,9 +105,26 @@ static func advance_build_timers(_state: GameState, player: int) -> Array:
 	return events
 
 
+## Sets the stubbed Defensive-Structure attack AP cost (Combat Resolution
+## Story 005). Pass what the AC expects [method defensive_attack_cost] to
+## report.
+static func set_defensive_attack_cost(cost: int) -> void:
+	_defensive_attack_cost = cost
+
+
+## Forward-declared contract (ADR-0010/ADR-0017, TR-combat-012): the AP cost a
+## Defensive Structure attacker spends per [method Combat.apply], read instead
+## of [member CombatConfig.attack_cost] when the attacker is a
+## [code]StructureState[/code]. Real impl reads the structure-type registry's
+## [code]DEFENSIVE_ATTACK_COST[/code]; the stub returns the test-set flat value.
+static func defensive_attack_cost() -> int:
+	return _defensive_attack_cost
+
+
 ## Clears all stubbed counts and queued completions. Call in each test's
 ## setup (e.g. [code]before_test[/code]) so one test's stubbed state never
 ## leaks into the next (test-isolation rule).
 static func reset() -> void:
 	_completed_outpost_counts.clear()
 	_queued_completions.clear()
+	_defensive_attack_cost = 1

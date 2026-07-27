@@ -47,3 +47,12 @@ extends Event
 ## GameState.run_win_check] to compute the opponent when exactly one HQ is
 ## destroyed ([code]winner = 1 - owner[/code] in the 2-player VS model).
 @export var owner: int = -1
+
+## The destroyed structure's former [code]entity_id[/code] — already removed
+## from [code]GameState.entities_by_id[/code] by the time this event is
+## observed. Added by Combat Resolution Story 005 (the real
+## [method GameState.destroy_entity] producer); additive — pre-Story-005 test
+## doubles that construct this event without setting it get the [code]-1[/code]
+## default, which [method GameState.run_win_check]'s [code]is_hq[/code] filter
+## never reads.
+@export var entity_id: int = -1

@@ -166,6 +166,64 @@ func faction_of(player: int) -> FactionDef:
 	return per_player[player].faction
 
 
+## The shared cross-system destruction hook (ADR-0010, Combat Resolution
+## Story 005) — the single place any killer (Combat's primary hit, its future
+## counter step, an AoE unit, a hazard) removes an entity from live play.
+## Called only from inside a verb handler's [code]apply()[/code] (currently
+## [method Combat.apply]'s primary-death branch), [b]never mid-iteration over
+## [member entities_by_id][/b] — that ordering is what makes the
+## [code]entities_by_id.erase()[/code] below concurrent-modification-safe
+## (control-manifest Core Layer Rule, ADR-0010).
+##
+## Runs, in this exact order, all synchronously within the caller's
+## [code]apply_action[/code] commit:
+## [br](a) Lab-revert: forward-declared, currently a [b]no-op[/b] — see the
+## [code]TODO[/code] below. Skipped until the Research/Base & Production
+## epics land (Out of Scope, Story 005) — no stub invented for it since it
+## has no consumer yet.
+## [br](b) [method GridState.remove] to clear grid occupancy at [param
+## entity_id]'s tile.
+## [br](c) Drop [param entity_id] from [member entities_by_id].
+## [br](d) Append a [UnitDestroyedEvent] (non-structure entity) or a
+## [StructureDestroyedEvent]{[member StructureDestroyedEvent.entity_id],
+## [member StructureDestroyedEvent.is_hq], [member StructureDestroyedEvent.owner]}
+## (a [code]StructureState[/code] entity) to the returned events array.
+##
+## O(1): one [method GridState.remove], one [code]Dictionary.erase[/code], one
+## event append — no scan (control-manifest Performance Guardrail).
+##
+## Usage:
+## [codeblock]
+## # inside Combat.apply(), immediately after the primary damage line:
+## if target.current_hp <= 0:
+##     events.append_array(state.destroy_entity(target.entity_id))
+## [/codeblock]
+func destroy_entity(entity_id: int) -> Array[Event]:
+	# Precondition: [param entity_id] must be a live key in entities_by_id. The
+	# only caller is Combat.apply() (ADR-0010: never called except from inside a
+	# verb handler's apply()), which always passes a just-validated target/
+	# attacker id — so a missing key is a caller bug, deliberately left to throw
+	# on the line below rather than silently no-op'd (a swallowed bad id would
+	# hide a real pipeline error). Not defended against by design.
+	var e: EntityState = entities_by_id[entity_id]
+	var evts: Array[Event] = []
+	# TODO(research-tech epic): Lab-revert hook, ADR-0010 step (a) — call the
+	# forward-declared Research.on_lab_destroyed(self, e) here once a real
+	# StructureState/Research Lab model exists (is_research_lab(),
+	# current_research_target). No-op today; no consumer, no stub invented.
+	grid.remove(e.position.x, e.position.y) # (b)
+	entities_by_id.erase(entity_id)          # (c)
+	if e is StructureState:
+		var evt := StructureDestroyedEvent.new()
+		evt.entity_id = entity_id
+		evt.is_hq = e.is_hq()
+		evt.owner = e.owner
+		evts.append(evt)
+	else:
+		evts.append(UnitDestroyedEvent.new(entity_id))
+	return evts
+
+
 ## Returns a fully independent deep copy of this state — the single most
 ## important operation in the project (ADR-0001 Validation Criteria). One
 ## call, no hand-written per-field copy: every [code]@export[/code]-flagged
@@ -341,16 +399,19 @@ static func unregister_verb(verb: int) -> void:
 
 
 ## Populates the shared dispatch tables exactly once per process (guarded by
-## [member _dispatch_registered], not per-[GameState]-instance state) with
-## this story's only concrete handler pair: [constant Action.Verb.END_TURN].
-## Safe to call every time [method apply_action] runs — the guard makes every
-## call after the first a single boolean check, never a per-call Dictionary
-## rebuild (control-manifest Performance Guardrail).
+## [member _dispatch_registered], not per-[GameState]-instance state):
+## [constant Action.Verb.END_TURN] (this class's own handlers),
+## [constant Action.Verb.MOVE] ([Movement], ADR-0009), and
+## [constant Action.Verb.ATTACK] ([Combat], ADR-0010, Combat Resolution
+## Story 004). Safe to call every time [method apply_action] runs — the guard
+## makes every call after the first a single boolean check, never a per-call
+## Dictionary rebuild (control-manifest Performance Guardrail).
 static func _ensure_dispatch_registered() -> void:
 	if _dispatch_registered:
 		return
 	register_verb(Action.Verb.END_TURN, _validate_end_turn, _apply_end_turn)
 	register_verb(Action.Verb.MOVE, Movement.validate, Movement.apply)
+	register_verb(Action.Verb.ATTACK, Combat.validate, Combat.apply)
 	_dispatch_registered = true
 
 

@@ -29,6 +29,11 @@ UnitTypes="*res://src/core/unit/unit_types.gd"
 ; reads UnitBalance.units.soft_move_penalty_x10 internally.
 UnitBalance="*res://src/core/unit/unit_balance.gd"
 
+; Thin, logic-free config Autoload (ADR-0010), a sibling of Balance/UnitBalance.
+; Loads the CombatConfig damage-formula tuning resource once at boot; Combat's
+; damage()/preview_damage() read CombatBalance.combat.* internally.
+CombatBalance="*res://src/core/combat/combat_balance.gd"
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg")
