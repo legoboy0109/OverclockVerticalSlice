@@ -60,7 +60,7 @@ All 17 requirements are ADR-traced (0 untraced). Full requirement text in
 | 006 | [Defensive Structure Attack](story-006-defensive-structure-attack.md) | Logic | ✅ Complete | ADR-0010, ADR-0017 |
 | 007 | [Structure Destruction & HQ Win-Hook](story-007-structure-destruction-hq-win-hook.md) | Logic | ✅ Complete | ADR-0010 |
 | 008 | [Determinism & Clone Isolation](story-008-determinism-clone-isolation.md) | Logic | ✅ Complete | ADR-0003 |
-| 009 | [Production HUD Read-Surface](story-009-production-hud-read-surface.md) | UI | Ready | ADR-0016 |
+| 009 | [Production HUD Read-Surface](story-009-production-hud-read-surface.md) | UI | ✅ Complete | ADR-0016 |
 | 010 | [Integration — apply_action End-to-End](story-010-integration-apply-action-end-to-end.md) | Integration | Ready | ADR-0002, ADR-0017 |
 
 ## Definition of Done

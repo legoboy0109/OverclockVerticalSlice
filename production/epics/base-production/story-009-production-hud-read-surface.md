@@ -1,12 +1,12 @@
 # Story 009: Production HUD Read-Surface
 
 > **Epic**: Base & Production
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: UI
 > **Estimate**: 3 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -82,7 +82,7 @@
 **Required evidence**:
 - Interaction test at `tests/unit/base-production/production_read_surface_test.gd` — the chosen route (exercises the facade's read accessors; asserts value-snapshot semantics and no mutation path).
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created — `tests/unit/base-production/production_read_surface_test.gd` (19 tests, all passing)
 
 ---
 
@@ -90,3 +90,12 @@
 
 - **Depends on**: Stories 001–005 (the queries to expose: schema/config, `legal_build_tiles`/`effective_build_cost`, timer progress + `production_cap`, `legal_deploy_tiles`, cancel-refund). Uses the shipped `game_state_reader.gd` (`unit_info` pattern).
 - **Unlocks**: The Presentation-layer Command & Action Interface / HUD epics (they consume this read-surface for build/deploy overlays and readouts).
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27
+**Criteria**: 8/8 passing (all COVERED; see traceability). Full suite 494/494, exit 0.
+**Deviations** (all ADVISORY): (1) cross-file allowlist update to `tests/unit/unit-system/unit_read_surface_test.gd` — the `["_init","unit_info"]` structural read-only allowlist was stale-by-design once this story extends the facade; grown to the 7 real getter methods, intent preserved. (2) BP-009 tech-debt: cancel-refund preview base-vs-effective indistinguishable under the Neutral roster (latent, not exploitable until a non-zero build-cost delta lands; owed to the Faction/Research epic). (3) story-readiness perf-budget advisory closed — accessors doc'd O(query), no simulation-hot-path.
+**Test Evidence**: UI (ADVISORY gate) satisfied by automated interaction test `tests/unit/base-production/production_read_surface_test.gd` (19 tests). No separate evidence doc required.
+**Code Review**: Complete — APPROVED (godot-gdscript-specialist APPROVE; qa-tester TESTABLE; 1 advisory fixed in-review, BP-009 logged).
