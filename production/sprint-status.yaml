@@ -54,13 +54,13 @@ stories:
     completed: "2026-07-25"
   - id: "s2-04"
     name: "Vertical Slice scope definition (one playable turn + mandated playtests + PROCEED/PIVOT/KILL criteria)"
-    file: "production/vertical-slice/"
+    file: "production/vertical-slice/scope.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 1
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"
   - id: "s2-05"
     name: "UX specs for VS screens: core HUD, main menu, pause"
     file: "design/ux/hud.md"
