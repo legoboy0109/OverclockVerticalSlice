@@ -1,12 +1,12 @@
 # Story 008: Determinism & Clone Isolation
 
 > **Epic**: Base & Production
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Logic
 > **Estimate**: 3 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -76,7 +76,7 @@
 **Required evidence**:
 - `tests/unit/base-production/determinism_clone_isolation_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created — `tests/unit/base-production/determinism_clone_isolation_test.gd` (15 tests, passing)
 
 ---
 
@@ -84,3 +84,13 @@
 
 - **Depends on**: Story 002 (build), Story 004 (produce), Story 005 (cancel), Story 006 (structure-attack) — the four actions under determinism test. Uses the already-shipped `GameState.clone()` (Foundation, Complete).
 - **Unlocks**: Confidence for the AI epic's clone-based look-ahead over B&P actions (Feature layer).
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27
+**Criteria**: 2/2 passing (AC-1 parity decomposed into 4 per-verb tests; AC-2 isolation into 3; all COVERED). Predicate load-bearing-ness proven by 8 single-field negative controls.
+**Deviations**: None — test-only, no `src/` change. Pins the determinism/purity of the verbs shipped in Stories 002/004/005/006. During code-review, added a `position` negative control so the field-wise predicate is 100% negative-control-covered (was the one advisory gap).
+**Test Evidence**: Logic — `tests/unit/base-production/determinism_clone_isolation_test.gd` (15 tests). Full suite 475/475, exit 0.
+**Code Review**: Complete — APPROVED (godot-gdscript-specialist CLEAN, traced every fixture against production code — parity non-vacuous, isolation proves no leak-back, negative controls isolate single fields, no missed mutable field; qa-tester TESTABLE, no must-fix — confirmed all parity/isolation/negative-control tests genuinely load-bearing; the path-less dummy-enemy type is inert since the predicate never compares `.type`).
+**Tech debt**: None.
