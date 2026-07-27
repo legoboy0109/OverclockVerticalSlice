@@ -30,7 +30,7 @@
 #   Superseded entries:     Grep pattern="status: superseded"
 
 version: 1
-last_updated: "2026-07-24"   # ADR-0012 (faction identity modifier framework — completes 16/16 ADRs): +1 interface (faction_effective_values [fwd-decl to Unit/AP/B&P/Research]), +1 api_decision (faction_modifier_framework), +1 forbidden (faction_owns_base_value); referenced_by updates (ADR-0012) on authoritative_game_state [+PlayerState.faction field], entity_stat_template_storage [pattern reuse], effective_attack [faction combat delta extends it], ai_decision [AI reads effective_X + faction-axis fwd-flags]. (Earlier same day: ADR-0016 (game HUD): +2 interfaces (detail_panel_selection_seam [fwd-decl to ADR-0015], ap_income_breakdown [fwd-decl to ADR-0006]), +1 api_decision (hud_module_shape), +1 forbidden (multi_owner_audio_play); referenced_by updates (ADR-0016 as consumer) on state_change_signal, action_result, turn_start_sequence, board_render_query, focus_management, ap_query_spend, gameplay_config_storage [+HUDConfig, closes ADR-0014's INPUT_LOCK_MS>=AP_TICK_DURATION_MS invariant]. (Same day earlier: ADR-0015 (command & action interface FSM): +1 api_decision (command_fsm_module_shape), +1 forbidden (balance_constant_in_presentation_layer); referenced_by updates (ADR-0015 as concrete consumer) on state_change_signal [+ flash↔tick shared-signal note], reachable_query, combat_targeting_query, ap_query_spend, action_result, verb_handler, board_render_query, board_input, gameplay_config_storage [+cancel_build_hold_ms on InputConfig]. (Same day earlier: ADR-0014 +1 interface (board_input), +1 api_decision (focus_management), +2 forbidden (manual_input_focus_arbitration, screen_axis_board_cursor); referenced_by update on gameplay_config_storage (+InputConfig); ADR-0013 +1 interface (board_render_query) +2 api_decisions (board_render_transform, iso_depth_sort) +1 forbidden (local_to_map_for_iso_picking); ADR-0011 +1 interface +1 api_decision; ADR-0010 +4 interfaces +1 api_decision +1 forbidden; ADR-0009 +1 interface +1 api_decision +1 forbidden. Prior 2026-07-23: ADR-0008 +4 interfaces +1 forbidden; ADR-0007 +2 api_decisions +1 forbidden.)
+last_updated: "2026-07-24"   # ADR-0018 (Research & Tech Mechanics — closes partial TR-research-003/004/005, 200/200 covered, completes 18/18 ADRs): +1 state_ownership (player_tech_unlocks: 3 PlayerState tech-unlock bool flags, sole writer advance_research_timers), +1 interface (research_query: legal_research_targets + has_X_tech), +1 api_decision (research_module_shape), +1 forbidden (stored_tech_status_table); referenced_by updates (ADR-0018) on research_timer_advance [concrete body, was 'the epic'], lab_destruction_revert [concrete body], verb_handler [start/cancel research bodies], ap_query_spend [research spend], faction_effective_values [Research effective_* impl], economy_tech_income_bonus [provides has_economy_tech], authoritative_game_state [+3 tech flags], runtime_load_of_type_templates [current_research_target Resource-ref]. (Earlier same day: ADR-0017 (Base & Production Mechanics — closes partial TR-baseprod-002/003/005/008): +1 interface (base_production_placement: legal_build_tiles/legal_deploy_tiles, consumed by ADR-0011/0015), +1 api_decision (base_production_module_shape), +1 forbidden (stored_terminal_structure_state); referenced_by updates (ADR-0017) on verb_handler [build/produce/cancel validate/apply bodies], build_timer_advance [concrete body, was 'the epic'], turn_flag_reset [Structure side], faction_effective_values [B&P effective_* impl], gameplay_config_storage [+BaseProductionConfig], float_in_state [+cancel_refund_pct fixed-point]. (Earlier same day: ADR-0012 (faction identity modifier framework — completes 16/16 ADRs): +1 interface (faction_effective_values [fwd-decl to Unit/AP/B&P/Research]), +1 api_decision (faction_modifier_framework), +1 forbidden (faction_owns_base_value); referenced_by updates (ADR-0012) on authoritative_game_state [+PlayerState.faction field], entity_stat_template_storage [pattern reuse], effective_attack [faction combat delta extends it], ai_decision [AI reads effective_X + faction-axis fwd-flags]. (Earlier same day: ADR-0016 (game HUD): +2 interfaces (detail_panel_selection_seam [fwd-decl to ADR-0015], ap_income_breakdown [fwd-decl to ADR-0006]), +1 api_decision (hud_module_shape), +1 forbidden (multi_owner_audio_play); referenced_by updates (ADR-0016 as consumer) on state_change_signal, action_result, turn_start_sequence, board_render_query, focus_management, ap_query_spend, gameplay_config_storage [+HUDConfig, closes ADR-0014's INPUT_LOCK_MS>=AP_TICK_DURATION_MS invariant]. (Same day earlier: ADR-0015 (command & action interface FSM): +1 api_decision (command_fsm_module_shape), +1 forbidden (balance_constant_in_presentation_layer); referenced_by updates (ADR-0015 as concrete consumer) on state_change_signal [+ flash↔tick shared-signal note], reachable_query, combat_targeting_query, ap_query_spend, action_result, verb_handler, board_render_query, board_input, gameplay_config_storage [+cancel_build_hold_ms on InputConfig]. (Same day earlier: ADR-0014 +1 interface (board_input), +1 api_decision (focus_management), +2 forbidden (manual_input_focus_arbitration, screen_axis_board_cursor); referenced_by update on gameplay_config_storage (+InputConfig); ADR-0013 +1 interface (board_render_query) +2 api_decisions (board_render_transform, iso_depth_sort) +1 forbidden (local_to_map_for_iso_picking); ADR-0011 +1 interface +1 api_decision; ADR-0010 +4 interfaces +1 api_decision +1 forbidden; ADR-0009 +1 interface +1 api_decision +1 forbidden. Prior 2026-07-23: ADR-0008 +4 interfaces +1 forbidden; ADR-0007 +2 api_decisions +1 forbidden.)
 
 # ─── STATE OWNERSHIP ─────────────────────────────────────────────────────────
 # Who is the authoritative owner of each piece of shared game state.
@@ -48,8 +48,8 @@ state_ownership:
     status: active
     owner_system: game-state-turn-manager
     adr: docs/architecture/adr-0001-state-model-ownership-lifecycle.md
-    interface: "GameState (Resource, not Node). Read API side-effect-free (active_player, current_ap(player), round_number, match_status, entities(), entity_at(tile), grid, faction_of(player)); clone() -> GameState deep copy for lookahead; mutate ONLY via apply_action(action). ADR-0008 adds field starting_player (int, set once by start_match(), immutable after) and method start_turn(player) -> Array[Event] (GameState's own turn-boundary orchestrator, invoked by start_match() and EndTurnAction.apply()). ADR-0010 adds method destroy_entity(entity_id) -> Array[Event] (the sole same-step destruction hook — Grid removal + forward-declared Research.on_lab_destroyed + Destroyed events; called only from inside a verb handler's apply()). ADR-0011 adds field PlayerState.is_ai_controlled (bool, set once at Setup, immutable after Setup->PlayerTurn — same lock as PlayerState.faction; the data-model backing for 'active player, human or AI' that game-state-turn-manager.md's prose assumed but had no field for). ADR-0012 adds field PlayerState.faction (FactionDef ref, set once at the SELECTING->ASSIGNED setup commit, immutable after Setup->PlayerTurn — same Setup-lock; faction_of(player) returns it; survives clone() as a shared path-having preload'd Resource, zero copy cost per ADR-0007)."
-    write_access: apply_action-only   # no system writes GameState fields directly (start_turn/destroy_entity run inside a verb handler's apply, itself under apply_action; is_ai_controlled set once at Setup then locked)
+    interface: "GameState (Resource, not Node). Read API side-effect-free (active_player, current_ap(player), round_number, match_status, entities(), entity_at(tile), grid, faction_of(player)); clone() -> GameState deep copy for lookahead; mutate ONLY via apply_action(action). ADR-0008 adds field starting_player (int, set once by start_match(), immutable after) and method start_turn(player) -> Array[Event] (GameState's own turn-boundary orchestrator, invoked by start_match() and EndTurnAction.apply()). ADR-0010 adds method destroy_entity(entity_id) -> Array[Event] (the sole same-step destruction hook — Grid removal + forward-declared Research.on_lab_destroyed + Destroyed events; called only from inside a verb handler's apply()). ADR-0011 adds field PlayerState.is_ai_controlled (bool, set once at Setup, immutable after Setup->PlayerTurn — same lock as PlayerState.faction; the data-model backing for 'active player, human or AI' that game-state-turn-manager.md's prose assumed but had no field for). ADR-0012 adds field PlayerState.faction (FactionDef ref, set once at the SELECTING->ASSIGNED setup commit, immutable after Setup->PlayerTurn — same Setup-lock; faction_of(player) returns it; survives clone() as a shared path-having preload'd Resource, zero copy cost per ADR-0007). ADR-0018 adds three PlayerState bool fields has_attack_tech/has_defense_tech/has_economy_tech (Setup-init false, sole writer Research.advance_research_timers on tech completion, never reset — see state_ownership: player_tech_unlocks)."
+    write_access: apply_action-only   # no system writes GameState fields directly (start_turn/destroy_entity run inside a verb handler's apply, itself under apply_action; is_ai_controlled set once at Setup then locked; tech flags written only by advance_research_timers under start_turn)
     referenced_by:
       - docs/architecture/adr-0001-state-model-ownership-lifecycle.md
       - docs/architecture/adr-0008-start-of-turn-sequencing.md   # adds starting_player field + start_turn() method
@@ -57,6 +57,7 @@ state_ownership:
       - docs/architecture/adr-0011-ai-opponent-decision-loop.md   # adds PlayerState.is_ai_controlled field (Setup-locked like faction)
       - docs/architecture/adr-0013-isometric-board-rendering.md   # BoardRenderer reads entities()/entity_at() read-only to know what to draw
       - docs/architecture/adr-0012-faction-identity-modifier-framework.md   # adds PlayerState.faction field (Setup-locked) + faction_of(player) accessor; clone-survival relies on ADR-0007's shared-path-having-Resource finding
+      - docs/architecture/adr-0018-research-tech-mechanics.md   # adds 3 PlayerState tech-unlock bool fields (see player_tech_unlocks)
     added: 2026-07-23
     revised: 2026-07-24
 
@@ -105,6 +106,19 @@ state_ownership:
       - docs/architecture/adr-0008-start-of-turn-sequencing.md   # start_turn() step 4 invokes AP.reset_turn() at the correct sequence position
     added: 2026-07-23
     revised: 2026-07-23
+
+  - state: player_tech_unlocks
+    status: active
+    owner_system: research-tech
+    adr: docs/architecture/adr-0018-research-tech-mechanics.md
+    interface: "Three PlayerState bool fields — has_attack_tech / has_defense_tech / has_economy_tech (Setup-init false). Read live via Research.has_attack_tech(state,player)/has_defense_tech/has_economy_tech accessors by Unit System (effective_attack/effective_defense) and by ADR-0007's economy_tech_income_bonus (has_economy_tech). Tri-state tech status is DERIVED, not stored: COMPLETED = flag true; UNDER_RESEARCH = some player Completed Lab has current_research_target == tech; else NOT_STARTED (see forbidden: stored_tech_status_table)."
+    write_access: research-tech-only   # SOLE writer = Research.advance_research_timers() on tech completion (runs inside start_turn step 3); flags are one-way (never reset to false — permanence, survive Lab destruction, research-tech.md Rule 6/8)
+    referenced_by:
+      - docs/architecture/adr-0018-research-tech-mechanics.md
+      - docs/architecture/adr-0008-start-of-turn-sequencing.md   # advance_research_timers sets these flags (registered signature)
+      - docs/architecture/adr-0007-entity-stat-schema.md   # economy_tech_income_bonus reads has_economy_tech
+    added: 2026-07-24
+    revised: ""
 
 # Example:
 #
@@ -168,6 +182,8 @@ interfaces:
       - docs/architecture/adr-0010-combat-resolution-destruction-wincheck.md   # supplies AttackAction validate()/apply()
       - docs/architecture/adr-0011-ai-opponent-decision-loop.md   # AI constructs typed Action subclasses; AITurnDriver commits them through the same dispatch
       - docs/architecture/adr-0015-command-action-interface-fsm.md   # constructs typed Move/Attack/Build/Produce/CancelBuild/EndTurn Actions on commit and dispatches them through apply_action (the sole commit vector; UI never mutates state)
+      - docs/architecture/adr-0017-base-production-mechanics.md   # concretely defines BaseProduction.validate_build/apply_build, validate_produce/apply_produce, validate_cancel/apply_cancel (the Build/Produce/CancelBuild handler bodies dispatched here)
+      - docs/architecture/adr-0018-research-tech-mechanics.md   # concretely defines Research.validate_start_research/apply_start_research, validate_cancel_research/apply_cancel_research (the StartResearch/CancelResearch handler bodies dispatched here)
     added: 2026-07-23
     revised: 2026-07-24
 
@@ -191,6 +207,7 @@ interfaces:
       - docs/architecture/adr-0011-ai-opponent-decision-loop.md   # can_afford/current_ap/income gate every candidate before scoring (no discount)
       - docs/architecture/adr-0015-command-action-interface-fsm.md   # can_afford gates every menu verb (D-2); current_ap drives projected_remaining_ap (D-1); UI NEVER deducts (spend() runs inside each verb handler's apply())
       - docs/architecture/adr-0016-game-hud.md   # HUD reads current_ap (AP counter, opponent-AP muted) + can_afford (Build-button affordability) via GameStateReader; income breakdown uses the forward-declared ap_income_breakdown (separate contract), never a HUD-side sum
+      - docs/architecture/adr-0018-research-tech-mechanics.md   # spend(research_cost) inside Research.apply_start_research(); cancel credits the reused cancel_refund_pct
     added: 2026-07-23
     revised: 2026-07-24
 
@@ -215,12 +232,13 @@ interfaces:
     consumers:
       - ap-economy                 # AP.income() calls this when has_economy_tech is set
     adr: docs/architecture/adr-0006-ap-economy-data-model-spend-contract.md
-    signal_signature: "economy_tech_income_bonus(state: GameState, player: int) -> int — the per-outpost AP value of Research's Economy Tech effect (ECONOMY_TECH_INCOME_BONUS, Research-owned constant). Forward-declared by ADR-0006; implemented by ADR-0007. ECONOMY_TECH_TIER_THRESHOLD (the cap) is AP Economy's own EconomyConfig field, not part of this contract."
+    signal_signature: "economy_tech_income_bonus(state: GameState, player: int) -> int — the per-outpost AP value of Research's Economy Tech effect (ECONOMY_TECH_INCOME_BONUS, Research-owned constant). Forward-declared by ADR-0006; implemented by ADR-0007. Reads Research.has_economy_tech(state, player) (the gate flag owned by ADR-0018, state_ownership: player_tech_unlocks). ECONOMY_TECH_TIER_THRESHOLD (the cap) is AP Economy's own EconomyConfig field, not part of this contract."
     referenced_by:
       - docs/architecture/adr-0006-ap-economy-data-model-spend-contract.md
       - docs/architecture/adr-0007-entity-stat-schema.md   # concrete implementation (has_economy_tech gate + INCOME_BONUS × min(count, TIER_THRESHOLD))
+      - docs/architecture/adr-0018-research-tech-mechanics.md   # provides the has_economy_tech gate flag this reads
     added: 2026-07-23
-    revised: 2026-07-23
+    revised: "2026-07-24"
 
   - contract: state_change_signal
     status: active
@@ -261,28 +279,30 @@ interfaces:
   - contract: build_timer_advance
     status: active
     pattern: direct_call
-    producer: base-production   # forward-declared — concrete implementation owed by the Base & Production epic
+    producer: base-production   # forward-declared by ADR-0008 — concrete body defined by ADR-0017
     consumers:
       - game-state-turn-manager    # start_turn() step 3 calls it
     adr: docs/architecture/adr-0008-start-of-turn-sequencing.md
-    signal_signature: "BaseProduction.advance_build_timers(state: GameState, player: int) -> Array[Event] — decrements build_turns_remaining on the player's Under-Construction structures; transitions any reaching 0 to StructureState.BuildStatus.COMPLETED, appending one StructureCompletedEvent per completion. Forward-declared by ADR-0008; implemented by the Base & Production epic (no dedicated ADR — same pattern as ADR-0006→ADR-0007's completed_outpost_count)."
+    signal_signature: "BaseProduction.advance_build_timers(state: GameState, player: int) -> Array[Event] — decrements build_turns_remaining on the player's Under-Construction structures; transitions any reaching 0 to StructureState.BuildStatus.COMPLETED, appending one StructureCompletedEvent per completion. Forward-declared by ADR-0008; concrete body defined by ADR-0017 (the B&P mechanics ADR — supersedes the earlier 'no dedicated ADR' note; ADR-0008 still owns WHEN it runs, step 3)."
     referenced_by:
       - docs/architecture/adr-0008-start-of-turn-sequencing.md
+      - docs/architecture/adr-0017-base-production-mechanics.md   # defines advance_build_timers body (D1); ADR-0008 sequences it at start-of-turn step 3
     added: 2026-07-23
-    revised: ""
+    revised: "2026-07-24"
 
   - contract: research_timer_advance
     status: active
     pattern: direct_call
-    producer: research-tech   # forward-declared — concrete implementation owed by the Research/Tech epic
+    producer: research-tech   # forward-declared by ADR-0008 — concrete body defined by ADR-0018
     consumers:
       - game-state-turn-manager    # start_turn() step 3 calls it
     adr: docs/architecture/adr-0008-start-of-turn-sequencing.md
-    signal_signature: "Research.advance_research_timers(state: GameState, player: int) -> Array[Event] — decrements research_turns_remaining on the player's Labs with a non-null current_research_target; on reaching 0, sets the owner's PlayerState tech flag (has_attack_tech/has_defense_tech/has_economy_tech), clears the Lab's current_research_target, and appends a TechCompletedEvent. Order-independent vs build_timer_advance within step 3 (research-tech.md joint-completion rule). Forward-declared by ADR-0008; implemented by the Research/Tech epic."
+    signal_signature: "Research.advance_research_timers(state: GameState, player: int) -> Array[Event] — decrements research_turns_remaining on the player's Labs with a non-null current_research_target; on reaching 0, sets the owner's PlayerState tech flag (has_attack_tech/has_defense_tech/has_economy_tech), clears the Lab's current_research_target, and appends a TechCompletedEvent. Order-independent vs build_timer_advance within step 3 (research-tech.md joint-completion rule). Forward-declared by ADR-0008; concrete body defined by ADR-0018 (the Research mechanics ADR — supersedes the earlier 'Research/Tech epic' note; ADR-0008 still owns WHEN it runs, step 3). This is the SOLE writer of the player_tech_unlocks flags."
     referenced_by:
       - docs/architecture/adr-0008-start-of-turn-sequencing.md
+      - docs/architecture/adr-0018-research-tech-mechanics.md   # defines advance_research_timers body (D5); ADR-0008 sequences it at start-of-turn step 3
     added: 2026-07-23
-    revised: ""
+    revised: "2026-07-24"
 
   - contract: turn_flag_reset
     status: active
@@ -291,11 +311,12 @@ interfaces:
     consumers:
       - game-state-turn-manager    # start_turn() step 2 calls both, filtered to the active player's entities
     adr: docs/architecture/adr-0008-start-of-turn-sequencing.md
-    signal_signature: "Unit.reset_turn_flags(unit: UnitState) -> void (sets has_attacked=false, tiles_moved_this_turn=0 — unit-system.md Rule 2a); Structure.reset_turn_flags(structure: StructureState) -> void (sets units_produced_this_turn=0, has_attacked=false — base-production.md; no-op-safe on structure types that don't use these). Forward-declared by ADR-0008; Turn Manager owns WHEN they run (step 2), owning systems own the flag semantics."
+    signal_signature: "Unit.reset_turn_flags(unit: UnitState) -> void (sets has_attacked=false, tiles_moved_this_turn=0 — unit-system.md Rule 2a); Structure.reset_turn_flags(structure: StructureState) -> void (sets units_produced_this_turn=0, has_attacked=false — base-production.md; no-op-safe on structure types that don't use these). Forward-declared by ADR-0008; Turn Manager owns WHEN they run (step 2), owning systems own the flag semantics. Structure side's body defined by ADR-0017."
     referenced_by:
       - docs/architecture/adr-0008-start-of-turn-sequencing.md
+      - docs/architecture/adr-0017-base-production-mechanics.md   # defines the Structure.reset_turn_flags body (D1)
     added: 2026-07-23
-    revised: ""
+    revised: "2026-07-24"
 
   - contract: reachable_query
     status: active
@@ -363,15 +384,16 @@ interfaces:
   - contract: lab_destruction_revert
     status: active
     pattern: direct_call
-    producer: research-tech   # forward-declared by ADR-0010 — concrete implementation owed by the Research epic
+    producer: research-tech   # forward-declared by ADR-0010 — concrete body defined by ADR-0018
     consumers:
       - game-state-turn-manager    # GameState.destroy_entity() calls it, same apply_action
     adr: docs/architecture/adr-0010-combat-resolution-destruction-wincheck.md
-    signal_signature: "Research.on_lab_destroyed(state: GameState, lab: StructureState) -> void — reverts the destroyed Lab's current_research_target to Not Started (no refund; research-tech.md Rule 6 / research-008). Called synchronously by destroy_entity() BEFORE Grid/entities removal, so it may read the Lab's live fields. Forward-declared by ADR-0010; implemented by the Research epic. Terminal tech-unlock flags (has_attack/defense/economy_tech) are permanent and survive Lab destruction (TR-research-003) — this reverts only in-progress research."
+    signal_signature: "Research.on_lab_destroyed(state: GameState, lab: StructureState) -> void — reverts the destroyed Lab's current_research_target to Not Started (no refund; research-tech.md Rule 6 / research-008). Called synchronously by destroy_entity() BEFORE Grid/entities removal, so it may read the Lab's live fields. Forward-declared by ADR-0010; concrete body defined by ADR-0018. Under ADR-0018's DERIVED status model the revert is automatic on Lab erasure (Under-Research status = a live Lab holding the target); the hook is retained per this contract and defensively clears current_research_target. Terminal tech-unlock flags (has_attack/defense/economy_tech) are permanent and survive Lab destruction (TR-research-003) — this reverts only in-progress research, never a completed flag, never a refund."
     referenced_by:
       - docs/architecture/adr-0010-combat-resolution-destruction-wincheck.md
+      - docs/architecture/adr-0018-research-tech-mechanics.md   # defines on_lab_destroyed body (D6); near-no-op under derived status
     added: 2026-07-24
-    revised: ""
+    revised: "2026-07-24"
 
   - contract: ai_decision
     status: active
@@ -459,6 +481,43 @@ interfaces:
     signal_signature: "effective_X(state: GameState, base_owner, player: int) -> int [PURE] = clamp(base_X(base_owner) + Sigma(research_delta, faction_delta), floor_X, inf). Faction delta read via Faction.{unit,structure,tech}_delta(FactionDef, base_owner) (typed Array[Faction*Delta] entry scan; null/absent => 0, orphan-inert). Forward-declared family: Unit.effective_produce_cost/effective_move_cost/effective_soft_move_cap (+ faction term folded into ADR-0010's effective_attack, identity-locked VS); AP.effective_ap_income (into the 4-term formula, econ-tech term + ECONOMY_TECH_TIER_THRESHOLD preserved verbatim); BaseProduction.effective_build_cost/effective_build_time/effective_production_cap (TWO-SIDED: base_cap==0 -> 0 inert, base_cap>=1 -> max(1,base+delta)); Research.effective_research_cost/effective_research_time/faction_allows (NOT tech's FactionTechDelta.denied). Floors: max(1,..) costs, MIN_MOVE_COST (Movement's existing move_cost>=1), MIN_BUILD_TIME/MIN_RESEARCH_TIME/BASE_INCOME_FLOOR (owed one-liners, no-op under Neutral). Under Neutral every effective_X == base_X EXACTLY (TR-faction-011). Implemented by the owning epics (Unit/AP/B&P/Research); same forward-declaration pattern as ADR-0006->0007."
     referenced_by:
       - docs/architecture/adr-0012-faction-identity-modifier-framework.md
+      - docs/architecture/adr-0017-base-production-mechanics.md   # B&P side implemented here: effective_build_cost/effective_build_time/effective_production_cap (two-sided cap) fold at the build/produce read sites
+      - docs/architecture/adr-0018-research-tech-mechanics.md   # Research side implemented here: effective_research_cost/effective_research_time fold at start_research; faction_allows filters legal_research_targets
+    added: 2026-07-24
+    revised: "2026-07-24"
+
+  - contract: base_production_placement
+    status: active
+    pattern: direct_call
+    producer: base-production   # BaseProduction static utility (see api_decisions: base_production_module_shape)
+    consumers:
+      - ai-opponent                # legal_build_tiles/legal_deploy_tiles enumerate candidate build/deploy sites during the evaluate-commit loop
+      - command-action-interface   # PREVIEW_BUILD/PREVIEW_PRODUCE overlays highlight legal_build_tiles/legal_deploy_tiles; menu affordances read them
+    adr: docs/architecture/adr-0017-base-production-mechanics.md
+    signal_signature: "legal_build_tiles(state: GameState, player: int, structure_type: StructureTypeDef) -> Array[Vector2i] — empty+passable tiles at manhattan==1 from a friendly unit OR structure AND manhattan>2 (strict) from every enemy structure; HQ never a candidate; LIVE-recomputed every call (never cached — a destroyed enemy structure frees tiles next call); returned in canonical y*W+x order (ADR-0003). legal_deploy_tiles(state: GameState, producer: StructureState, unit_type: UnitTypeDef) -> Array[Vector2i] — empty+passable tiles at manhattan==1 from the producer; same canonical order. Forward-declared (as signatures only) in ADR-0011/ADR-0015 text; concretely owned by ADR-0017."
+    referenced_by:
+      - docs/architecture/adr-0017-base-production-mechanics.md
+      - docs/architecture/adr-0011-ai-opponent-decision-loop.md   # consumes both to enumerate build/deploy candidates
+      - docs/architecture/adr-0015-command-action-interface-fsm.md   # consumes both for the build/deploy preview overlays + menu
+    added: 2026-07-24
+    revised: ""
+
+  - contract: research_query
+    status: active
+    pattern: direct_call
+    producer: research-tech   # Research static utility (see api_decisions: research_module_shape)
+    consumers:
+      - ai-opponent                # legal_research_targets enumerates researchable techs during the evaluate-commit loop
+      - command-action-interface   # research menu lists legal_research_targets with cost/time, affordability-gated
+      - game-hud                   # tech-status panel derives Not Started/Under Research/Completed; has_X_tech for active-buff markers
+      - unit-system                # effective_attack/effective_defense read has_attack_tech/has_defense_tech
+    adr: docs/architecture/adr-0018-research-tech-mechanics.md
+    signal_signature: "legal_research_targets(state: GameState, lab: StructureState) -> Array[TechDef] — empty for a non-Completed Lab or an already-busy Lab; else the Techs.ALL entries excluding Completed (player flag true), Under-Research at any of the player's Completed Labs (current_research_target == tech, Resource-ref), and faction-disallowed (Faction.faction_allows, ADR-0012); canonical Techs-registry order; LIVE-recomputed. has_attack_tech / has_defense_tech / has_economy_tech (state: GameState, player: int) -> bool — trivial reads of the player_tech_unlocks flags. Tri-state status is DERIVED (see forbidden: stored_tech_status_table). Forward-declared (as a signature) in ADR-0011/0015 text; concretely owned by ADR-0018."
+    referenced_by:
+      - docs/architecture/adr-0018-research-tech-mechanics.md
+      - docs/architecture/adr-0011-ai-opponent-decision-loop.md   # consumes legal_research_targets for candidate enumeration
+      - docs/architecture/adr-0015-command-action-interface-fsm.md   # consumes legal_research_targets for the research menu
+      - docs/architecture/adr-0016-game-hud.md   # derives tech status + active-buff markers
     added: 2026-07-24
     revised: ""
 
@@ -601,6 +660,7 @@ api_decisions:
       - docs/architecture/adr-0014-input-focus-architecture.md   # InputConfig (input_lock_ms, menu_keyboard_nav_enabled) is a new instance; forward-declares a cross-resource invariant (input_lock_ms >= HUDConfig.ap_tick_duration_ms) for ADR-0016 to enforce at load
       - docs/architecture/adr-0015-command-action-interface-fsm.md   # appends cancel_build_hold_ms: int = 500 to ADR-0014's InputConfig (CR-6a hold threshold — the field's mechanism is decided by the ADR that needs it, same pattern as ADR-0008 adding starting_player to ADR-0001's GameState)
       - docs/architecture/adr-0016-game-hud.md   # HUDConfig (9 knobs incl. ap_tick_duration_ms) is a new instance; the loader Autoload CLOSES ADR-0014's forward-declared cross-config invariant (input_lock_ms >= ap_tick_duration_ms) with a RELEASE-SURVIVING guard (push_error + clamp, NOT bare assert — stripped in release exports per ADR-0011), evaluated after both InputConfig + HUDConfig load
+      - docs/architecture/adr-0017-base-production-mechanics.md   # BaseProductionConfig (cancel_refund_pct: int fixed-point %, defensive_attack_cost read cross-system by Combat, max_outpost_count [disabled in VS]) is a new instance of this per-system config-Resource pattern
     added: 2026-07-23
     revised: 2026-07-24
 
@@ -741,6 +801,28 @@ api_decisions:
     added: 2026-07-24
     revised: ""
 
+  - purpose: base_production_module_shape
+    status: active
+    api: "class_name BaseProduction extends RefCounted — a stateless static utility (no instance ever on GameState) exposing pure functions over GameState: the queries legal_build_tiles/legal_deploy_tiles, the verb validate/apply pairs (validate_build/apply_build, validate_produce/apply_produce, validate_cancel/apply_cancel) dispatched by apply_action's verb-enum table (ADR-0002), the advance_build_timers body (sequenced by ADR-0008 step 3), and the effective_build_cost/effective_build_time/effective_production_cap folds (ADR-0012). Structure lifecycle is the 2-value StructureState.BuildStatus{UNDER_CONSTRUCTION, COMPLETED} (ADR-0007) + two terminal erasure exits: cancel_build (refund) and destroy_entity (ADR-0010, no refund). Occupancy is status-agnostic — build() inserts into the single Grid index (ADR-0005) regardless of BuildStatus, so blocking/targeting-while-building is inherited, no carve-out. Non-template constants live in BaseProductionConfig (.tres) via the Balance-style Autoload (gameplay_config_storage)."
+    not: "a BaseProduction Node/Autoload holding build queues or a legal_build_tiles cache as instance state (would be deep-copied on every AI clone() and invites stale-cache bugs against a mutating board) / storing DESTROYED/REMOVED as a persisted BuildStatus enum value (see forbidden: stored_terminal_structure_state) / an intangible-under-construction occupancy carve-out"
+    adr: docs/architecture/adr-0017-base-production-mechanics.md
+    reason: "Mirrors ap_economy_module_shape / movement_search_module_shape / combat_module_shape / ai_module_shape exactly — the B&P rules (placement, produce, cancel, lifecycle transitions) are stateless static functions taking state explicitly, so identical code runs on the authoritative state and any AI clone(). Keeps GameState from re-accreting Core-system logic and keeps config off the clone path. legal_build_tiles uses a friendly-frontier candidate set (bounded by friendly-entity count) filtered by the strict->2 enemy standoff, recomputed live every call (never cached — matches base-production.md 'checked live, not cached'). godot-specialist 2026-07-24: shape + typed returns + sort_custom canonical ordering + integer fixed-point refund + Resource-ref in-membership all idiomatic 4.6, no blocking issues."
+    referenced_by:
+      - docs/architecture/adr-0017-base-production-mechanics.md
+    added: 2026-07-24
+    revised: ""
+
+  - purpose: research_module_shape
+    status: active
+    api: "class_name Research extends RefCounted — a stateless static utility (no instance on GameState) exposing pure functions over GameState: queries legal_research_targets + has_attack_tech/has_defense_tech/has_economy_tech accessors; verb validate/apply pairs (validate_start_research/apply_start_research, validate_cancel_research/apply_cancel_research) dispatched by apply_action (ADR-0002); the advance_research_timers body (ADR-0008 step 3, SOLE writer of player_tech_unlocks flags, order-independent vs advance_build_timers); the on_lab_destroyed body (ADR-0010 destroy_entity hook); and the effective_research_cost/effective_research_time folds (ADR-0012). Tri-state tech status is DERIVED from PlayerState flags + Lab current_research_target (no stored table — see forbidden: stored_tech_status_table). NO new config Resource: research_cost/research_time + effect magnitudes live on TechDef templates (ADR-0007); cancel refund reuses BaseProductionConfig.cancel_refund_pct (ADR-0017); ECONOMY_TECH_TIER_THRESHOLD is AP-Economy-owned."
+    not: "a Research Node/Autoload with instance state / a stored per-(player,tech) status table (see forbidden: stored_tech_status_table) / a data-driven completed_techs Array[TechDef] set on PlayerState (would contradict ADR-0008's registered advance_research_timers 'sets the flag' signature; VS tech tree is fixed at 3) / a dedicated ResearchConfig Resource (research constants are per-tech TechDef data, not flat config)"
+    adr: docs/architecture/adr-0018-research-tech-mechanics.md
+    reason: "Mirrors base_production_module_shape / ap_economy_module_shape / combat_module_shape exactly — the Research rules (tech selection, mutual exclusion, timer/completion, revert) are stateless static functions taking state explicitly, so identical code runs on the authoritative state and any AI clone(). Named bool flags match ADR-0008/0010's already-registered signatures; derived status keeps one source of truth and makes destruction-revert automatic. godot-specialist 2026-07-24: shape + nullable TechDef Resource-ref field with == identity + clean duplicate_deep() clone (null trivial; non-null preload'd TechDef stays SHARED per ADR-0007) + 3 @export bool PlayerState fields + cross-Resource cancel_refund_pct read all idiomatic 4.6, no blocking issues, no minor notes."
+    referenced_by:
+      - docs/architecture/adr-0018-research-tech-mechanics.md
+    added: 2026-07-24
+    revised: ""
+
 # Example:
 #
 # api_decisions:
@@ -808,6 +890,7 @@ forbidden_patterns:
     adr: docs/architecture/adr-0003-deterministic-simulation-rng-isolation.md
     referenced_by:
       - docs/architecture/adr-0009-reachable-search-pathfinding.md   # UnitConfig.soft_move_penalty_x10 fixed-point (20 = 2.0); surcharge via integer ceil-div, per TR-movement-011
+      - docs/architecture/adr-0017-base-production-mechanics.md   # BaseProductionConfig.cancel_refund_pct (int 50) fixed-point for CANCEL_REFUND_RATE; refund = build_cost*pct/100 integer-div (floors)
     added: 2026-07-23
 
   - pattern: nondeterministic_iteration_order
@@ -836,6 +919,8 @@ forbidden_patterns:
     description: "Never runtime-load() a stat-template .tres (UnitTypeDef/StructureTypeDef/TechDef) outside its registry Autoload. Every reference to a template goes through the preload'd registry const (UnitTypes.SCOUT, StructureTypes.ECONOMY_OUTPOST, Techs.ATTACK_TECH). Type identity is tested by Resource-reference equality against those consts."
     why: "load('res://data/units/scout.tres') returns a SECOND Resource instance — identical content, different object identity — so `structure.type == StructureTypes.ECONOMY_OUTPOST` silently evaluates false against it. The entire type-identity mechanism (ADR-0007) and the zero-clone-cost sharing guarantee depend on there being exactly one preload'd instance per template. A stray load() is a plausible-looking silent bug."
     adr: docs/architecture/adr-0007-entity-stat-schema.md
+    referenced_by:
+      - docs/architecture/adr-0018-research-tech-mechanics.md   # Lab.current_research_target holds a Techs.* preload'd const; == identity relies on the single-instance guarantee (post-clone too)
     added: 2026-07-23
 
   - pattern: start_of_turn_step_reordering
@@ -899,6 +984,20 @@ forbidden_patterns:
     description: "Faction Identity is a MODIFIER PROVIDER only — it must never own, read, mutate, or recompute a base value or formula owned by another system (Unit cost/mobility, AP income curve, structure cost/time/cap, tech cost/time, combat stats). Every faction effect resolves as effective_X(state, base_owner, player) = clamp(base_X + delta, floor, inf) AT THE OWNING SYSTEM'S read site (CR-4); the faction supplies only the additive int delta (via typed Array[Faction*Delta] entries). A faction delta is ADDITIVE int, never a multiplicative factor (integer-AP invariant). A faction may only re-cost/re-time/re-scale actions ALREADY priced in AP (CR-3): never a second resource, a 0-AP version of a paid verb, a new verb, or a value outside CR-2's closed 6 domains. The production_cap delta may not cross the produces/doesn't-produce boundary in either direction (two-sided inert, TR-faction-006). Faction identity is a Resource-reference (== Factions.X), never a parallel enum/string discriminator."
     why: "CR-4's 'live modifier resolution, no base mutation' is what keeps Neutral provably inert (effective_X == base_X exactly) and lets a faction be tuned as data without touching system logic (CR-1). A central Faction service that computed effective values itself would have to read/own 5 systems' base values, re-accreting cross-system logic onto faction and breaking the single-owner-per-value discipline the whole corpus rests on. A multiplicative delta breaks integer-AP (Pillar 1 / ADR-0003). Manufacturing or deleting a verb (production_cap crossing 0, a 0-AP paid action, a new verb) breaks Pillar 1's 'no parallel resource / one AP economy'. Enforced by the Neutral regression pin (TR-faction-011), the closed-schema load reject (TR-faction-002), the two-sided cap branch (TR-faction-006), and a per-FactionDef design-review checklist for the CR-3 universals that aren't black-box-testable."
     adr: docs/architecture/adr-0012-faction-identity-modifier-framework.md
+    added: 2026-07-24
+
+  - pattern: stored_terminal_structure_state
+    status: active
+    description: "A structure's persisted lifecycle is the 2-value StructureState.BuildStatus{UNDER_CONSTRUCTION, COMPLETED} (ADR-0007) ONLY. 'Destroyed' and 'Removed' must NOT be stored as extra BuildStatus enum values or kept as lingering rows — both are terminal EXITS that erase the structure from entities_by_id AND remove it from Grid occupancy in the same step: voluntary cancel via BaseProduction.cancel_build (credits the fixed-point refund), combat destruction via GameState.destroy_entity (ADR-0010, no refund). Invariant: a structure exists ⇔ it is in entities_by_id and occupies a Grid tile."
+    why: "Storing DESTROYED/REMOVED as a state forces every consumer (Grid, Combat, completed_outpost_count, HUD, AI enumeration) to add an 'is it actually alive?' filter and creates two representations of 'gone' (a dead row AND absence) that silently drift. The single alive-invariant keeps consumers filter-free and matches the entity_ref_in_spatial_index / single-source-of-entity-objects discipline (ADR-0005). Rejected Alternative 2 in ADR-0017."
+    adr: docs/architecture/adr-0017-base-production-mechanics.md
+    added: 2026-07-24
+
+  - pattern: stored_tech_status_table
+    status: active
+    description: "Do NOT store a separate per-(player, tech) research-status table (e.g. a Dictionary[TechDef, Status] on PlayerState). The tri-state status (Not Started / Under Research / Completed) is DERIVED: COMPLETED = the player's has_<tech>_tech flag (player_tech_unlocks); UNDER_RESEARCH = some Completed Lab of that player has current_research_target == tech (Resource-ref); else NOT_STARTED. The 3 PlayerState bool flags + each Lab's current_research_target are the single source of truth."
+    why: "A stored table duplicates (flags + Lab targets) and gives 'Under Research' two representations that silently drift; it also forces Research.on_lab_destroyed to actively rewrite it. The derived model keeps one source of truth and makes destruction-revert AUTOMATIC (erasing the Lab removes its current_research_target, so the tech falls back to Not Started with no bookkeeping) — which is exactly what makes research-tech.md Rule 6 (progress lost on Lab death) and Rule 8 (completed techs survive) structural. Rejected Alternative 2 in ADR-0018."
+    adr: docs/architecture/adr-0018-research-tech-mechanics.md
     added: 2026-07-24
 
 # Example:

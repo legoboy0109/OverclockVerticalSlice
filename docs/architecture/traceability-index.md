@@ -1,50 +1,51 @@
 # Architecture Traceability Index — OVERCLOCK
 
-- **Last Updated:** 2026-07-24 (re-validation — all 16 ADRs now written; 7 TRs re-pointed to planned ADR-0017/0018)
+- **Last Updated:** 2026-07-25 (all 18 ADRs Accepted — bottom-up batch, all 4 pre-Accept spikes PASS)
 - **Engine:** Redot 26.2 (Godot 4.6-compatible fork)
 - **Source:** `/architecture-review` (full) · stable IDs in `docs/architecture/tr-registry.yaml` (v3)
 
 ## Coverage Summary
 
 - **Total requirements:** 200
-- **Covered** (governing ADR written + specifies the requirement): **193 (96.5%)**
-- **Partial** (governing ADR planned, not yet written — ADR-0017/0018): **7 (3.5%)**
+- **Covered** (governing ADR written + specifies the requirement): **200 (100%)**
+- **Partial** (governing ADR planned, not yet written): **0**
 - **Gaps** (no ADR at all): **0**
 
 > "Covered" means an ADR governing the requirement exists as a file and its own
-> "Requirements Addressed" section specifies it. All 16 written ADRs are `Proposed`, not
-> `Accepted` — so no requirement is yet *implementation-ready* (stories referencing `Proposed`
-> ADRs are auto-blocked per `docs/CLAUDE.md`), and three conflicts (C1/C2/C3, see the review
-> report) must be reconciled before Accept. Counts below use each TR's **primary governing ADR**
-> (the `adr:` field in `tr-registry.yaml`) and total exactly 200.
+> "Requirements Addressed" section specifies it. All 18 ADRs are now `Accepted` (2026-07-25,
+> bottom-up dependency-order batch) — every requirement below is *implementation-ready* (no ADR
+> remains `Proposed`, so no story is auto-blocked per `docs/CLAUDE.md`). The three cross-ADR
+> conflicts (C1/C2/C3) found in the 2026-07-24 review are all verified fixed (see the
+> resolved-conflicts table below and `architecture-review-2026-07-25.md`). Counts below use each
+> TR's **primary governing ADR** (the `adr:` field in `tr-registry.yaml`) and total exactly 200.
 
-## Matrix by ADR (16 written + 2 planned, 200 TRs, 200/200 mapped)
+## Matrix by ADR (18 written, 200 TRs, 200/200 mapped)
 
 | ADR | Title | Layer | Written? | Status | # TRs | Coverage |
 |-----|-------|-------|----------|--------|-------|----------|
-| ADR-0001 | State model ownership & lifecycle | Foundation | ✅ | Proposed | 14 | ✅ Covered |
-| ADR-0002 | Action / apply_action command model | Foundation | ✅ | Proposed | 7 | ✅ Covered |
-| ADR-0003 | Deterministic simulation & RNG isolation | Foundation | ✅ | Proposed | 10 | ✅ Covered |
-| ADR-0004 | Event / signal architecture | Foundation | ✅ | Proposed | 4 | ✅ Covered |
-| ADR-0005 | Grid representation & map format | Foundation | ✅ | Proposed | 11 | ✅ Covered |
-| ADR-0006 | AP economy data model & spend contract | Foundation | ✅ | Proposed | 15 | ✅ Covered ⚠️C1/C2/C3 |
-| ADR-0007 | Unit & Structure entity/stat schema | Foundation | ✅ | Proposed | 17 | ✅ Covered ⚠️C3 |
-| ADR-0008 | Shared start-of-turn sequencing | Foundation | ✅ | Proposed | 6 | ✅ Covered |
-| ADR-0009 | Reachable-search / pathfinding | Core | ✅ | Proposed | 10 | ✅ Covered |
-| ADR-0010 | Combat resolution & destruction/win-check | Core | ✅ | Proposed | 17 | ✅ Covered |
-| ADR-0011 | AI opponent decision loop | Feature | ✅ | Proposed | 18 | ✅ Covered ⚠️C1 |
-| ADR-0012 | Faction identity modifier framework | Feature | ✅ | Proposed | 17 | ✅ Covered |
-| ADR-0013 ⚠️HIGH | Isometric board rendering, picking & overlays | Presentation | ✅ | Proposed | 7 | ✅ Covered |
-| ADR-0014 ⚠️HIGH | Input & focus architecture | Presentation | ✅ | Proposed | 7 | ✅ Covered |
-| ADR-0015 | Command & action interface FSM | Presentation | ✅ | Proposed | 14 | ✅ Covered ⚠️C1 |
-| ADR-0016 | Game HUD (facade, AP-counter FSM, audio) | Presentation | ✅ | Proposed | 19 | ✅ Covered ⚠️C1/C2 |
-| **ADR-0017** | **Base & Production mechanics** | **Core** | ❌ | **planned** | **4** | ⚠️ **Partial** |
-| **ADR-0018** | **Research/Tech mechanics** | **Core** | ❌ | **planned** | **3** | ⚠️ **Partial** |
+| ADR-0001 | State model ownership & lifecycle | Foundation | ✅ | Accepted | 14 | ✅ Covered |
+| ADR-0002 | Action / apply_action command model | Foundation | ✅ | Accepted | 7 | ✅ Covered |
+| ADR-0003 | Deterministic simulation & RNG isolation | Foundation | ✅ | Accepted | 10 | ✅ Covered |
+| ADR-0004 | Event / signal architecture | Foundation | ✅ | Accepted | 4 | ✅ Covered |
+| ADR-0005 | Grid representation & map format | Foundation | ✅ | Accepted | 11 | ✅ Covered |
+| ADR-0006 | AP economy data model & spend contract | Foundation | ✅ | Accepted | 15 | ✅ Covered |
+| ADR-0007 | Unit & Structure entity/stat schema | Foundation | ✅ | Accepted | 17 | ✅ Covered |
+| ADR-0008 | Shared start-of-turn sequencing | Foundation | ✅ | Accepted | 6 | ✅ Covered |
+| ADR-0009 | Reachable-search / pathfinding | Core | ✅ | Accepted | 10 | ✅ Covered |
+| ADR-0010 | Combat resolution & destruction/win-check | Core | ✅ | Accepted | 17 | ✅ Covered |
+| ADR-0011 | AI opponent decision loop | Feature | ✅ | Accepted | 18 | ✅ Covered |
+| ADR-0012 | Faction identity modifier framework | Feature | ✅ | Accepted | 17 | ✅ Covered |
+| ADR-0013 | Isometric board rendering, picking & overlays | Presentation | ✅ | Accepted | 7 | ✅ Covered |
+| ADR-0014 | Input & focus architecture | Presentation | ✅ | Accepted | 7 | ✅ Covered |
+| ADR-0015 | Command & action interface FSM | Presentation | ✅ | Accepted | 14 | ✅ Covered |
+| ADR-0016 | Game HUD (facade, AP-counter FSM, audio) | Presentation | ✅ | Accepted | 19 | ✅ Covered |
+| ADR-0017 | Base & Production mechanics | Core | ✅ | Accepted | 4 | ✅ Covered |
+| ADR-0018 | Research/Tech mechanics | Core | ✅ | Accepted | 3 | ✅ Covered |
 
-*All 16 ADRs authored (all `Proposed`). The two planned ADRs (0017/0018) govern the 7 Base &
-Production / Research mechanic TRs re-pointed off ADR-0010 this run — see the Coverage Gap
-section of `architecture-review-2026-07-24.md`. `⚠️Cn` marks ADRs touched by a cross-ADR
-conflict.*
+*All 18 ADRs Accepted 2026-07-25 (bottom-up dependency-order batch). ADR-0013/0014's pre-Accept
+engine spikes (iso picking, dual-focus) both cleared PASS the same day (user, windowed Redot
+session), alongside QQ-05 (→ADR-0009) and QQ-06 (→ADR-0011) — all four gating spikes are now
+recorded in their respective ADRs' Validation Criteria / Status sections.*
 
 ## Cross-ADR Conflicts — ✅ all resolved 2026-07-24 (same session)
 
@@ -54,7 +55,9 @@ conflict.*
 | C1 | MEDIUM | 0006 ↔ 0011/0015/0016 | `AP.current_ap()` called but never declared on `AP` (it's `GameState.current_ap`) | ✅ Added `AP.current_ap(state, player)` pass-through to ADR-0006; the three consumers now resolve as written. |
 | C2 | LOW | 0006 ↔ 0016 | `AP.ap_income_breakdown()` consumer-declared only (already in architecture.md) | ✅ `AP.ap_income_breakdown(state,player)->{base,outpost,econ_tech}` now declared & implemented in ADR-0006; `income()` is its sum. |
 
-*The ⚠️Cn markers in the ADR matrix above refer to these now-resolved conflicts (kept for audit trail).*
+*These conflicts were found and fixed in the 2026-07-24 session; the 2026-07-25 full review
+re-verified all three fixes hold in ADR-0006. The inline `⚠️Cn` markers have been cleared from the
+ADR matrix above now that the fixes are confirmed; this table is retained for audit trail.*
 
 ## Full Requirement → ADR Matrix
 
@@ -77,21 +80,19 @@ See `docs/architecture/tr-registry.yaml` for the complete, machine-readable mapp
 | AI Opponent | ai-opponent.md | 17 | ADR-0011 (16), ADR-0003 (1) |
 | Faction Identity | faction-identity.md | 15 | ADR-0012 (15) |
 
-## Known Gaps / Partial (governing ADR planned, not yet written)
+## Known Gaps / Partial
 
-Two ADRs remain to fully close Core-layer coverage:
+**None.** 200/200 TRs are Covered by a written governing ADR. The 18-ADR plan is complete for the
+Vertical-Slice scope — no further ADRs are required (the deferred Persistence & Campaign system and
+Full-Vision Vehicle/Mech tier are out of VS scope and will get their own ADRs when designed).
 
-1. **ADR-0017 — Base & Production Mechanics** *(Core)* — build FSM (TR-baseprod-002),
-   structure tile/blocker/targetability rules (003), `legal_build_tiles` (005),
-   `produce`/`legal_deploy_tiles` (008). Signatures already forward-declared in ADR-0011/0015.
-2. **ADR-0018 — Research/Tech Mechanics** *(Core)* — per-player tech-unlock flags
-   (TR-research-003), per-Lab research state + mutual exclusion (004),
-   `legal_research_targets` (005). Signatures already forward-declared in ADR-0011/0015.
+**Remaining path to gate-readiness** (tracked in `architecture-review-2026-07-25.md`, not coverage
+gaps):
 
-Create each with `/architecture-decision`, then re-run `/architecture-review` to confirm the 7
-Partial TRs flip to Covered. Separately, fix conflicts C1/C2/C3 in ADR-0006/0007 (one line each)
-while they are still `Proposed`, then Accept all ADRs bottom-up in dependency order starting with
-ADR-0001.
+1. ✅ DONE — all four pre-Accept spikes (QQ-05 →ADR-0009, QQ-06 →ADR-0011, ADR-0013 iso-picking,
+   ADR-0014 dual-focus) cleared PASS 2026-07-25.
+2. ✅ DONE — ADR-0018 D1 `@export` annotation nit fixed 2026-07-25.
+3. ✅ DONE — all 18 ADRs Accepted bottom-up in dependency order (0001→0018), 2026-07-25.
 
 ## Superseded Requirements
 

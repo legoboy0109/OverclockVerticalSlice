@@ -10,18 +10,19 @@ Engine: Redot 26.2 (Godot 4.6-compatible fork)
 | [AP Economy](ap-economy/EPIC.md) | Foundation | AP Economy | design/gdd/ap-economy.md | 3 stories (3 Complete) | Complete |
 | [Unit System](unit-system/EPIC.md) | Core | Unit System | design/gdd/unit-system.md | 10 stories | Ready |
 | [Movement](movement/EPIC.md) | Core | Movement System | design/gdd/movement-system.md | 3 stories (3 Complete) | Complete |
-| [Combat Resolution](combat-resolution/EPIC.md) | Core | Combat Resolution | design/gdd/combat-resolution.md | Not yet created | Ready |
+| [Combat Resolution](combat-resolution/EPIC.md) | Core | Combat Resolution | design/gdd/combat-resolution.md | 8 stories | Ready |
 | [Base & Production](base-production/EPIC.md) | Core | Base & Production | design/gdd/base-production.md | Not yet created | Ready |
 | [Research / Tech](research-tech/EPIC.md) | Core | Research / Tech | design/gdd/research-tech.md | Not yet created | Ready |
 
 ## Layer Status
 
 - **Foundation** (3 epics): ✅ Complete — all 11 stories done, QA APPROVED (Sprint 1).
-- **Core** (5 epics): Ready — epics defined 2026-07-26. Unit System (10 stories) and
-  Movement (3 stories) have story breakdowns; Combat Resolution, Base & Production,
-  Research/Tech do not yet. VS-critical order: **Unit System → Movement → Combat
-  Resolution** (Base & Production and Research/Tech follow after the vertical slice).
-  Movement's QQ-05 perf-spike gate (Sprint 2 S2-03) cleared 2026-07-25 (PASS).
+- **Core** (5 epics): Ready — epics defined 2026-07-26. Unit System (10 stories),
+  Movement (3 stories), and Combat Resolution (8 stories) have story breakdowns;
+  Base & Production and Research/Tech do not yet. VS-critical order: **Unit System →
+  Movement → Combat Resolution** (Base & Production and Research/Tech follow after
+  the vertical slice). Movement's QQ-05 perf-spike gate (Sprint 2 S2-03) cleared
+  2026-07-25 (PASS).
 - **Feature** (2 systems — AI Opponent, Faction Identity): not yet broken into epics
   (`/create-epics layer:feature`).
 - **Presentation** (2 systems — Command & Action Interface, Game HUD): not yet broken
