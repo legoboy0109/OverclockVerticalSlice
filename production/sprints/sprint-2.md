@@ -66,7 +66,7 @@ sprint that clears the four CONCERNS from the 2026-07-26 Pre-Prod → Production
 - [x] Per-player-index ruling applied; QQ-05/QQ-06 verdicts recorded — S2-02 ruling applied 2026-07-27; QQ-05 (~2.0ms/call) + QQ-06 (~3.7ms p95) both PASS, ADR-0009/0011 Accepted 2026-07-25
 - [x] VS scope doc written with PROCEED/PIVOT/KILL criteria — S2-04 done 2026-07-27: `production/vertical-slice/scope.md` (short-skirmish, Move+Attack+Produce; iso-legibility + swing-back playtests; CD sign-off CONFIRM WITH AMENDMENTS A/B/C applied)
 - [ ] QQ spike code has passing measurement tests where applicable
-- [ ] Design/UX/art artifacts reviewed (`/ux-review`, AD sign-off)
+- [x] Design/UX/art artifacts reviewed (`/ux-review`, AD sign-off) — S2-05 UX specs `/ux-review` APPROVED 2026-07-27; S2-06 AD-ART-BIBLE APPROVE recorded 2026-07-27
 - [ ] Ready to run `/vertical-slice` (build) in Sprint 3
 
 ---

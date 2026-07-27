@@ -74,11 +74,11 @@ stories:
     name: "Record AD-ART-BIBLE sign-off verdict in art bible"
     file: "design/art/art-bible.md"
     priority: should-have
-    status: backlog
+    status: done
     owner: ""
     estimate_days: 0.25
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"
   - id: "s2-07"
     name: "Entity inventory for VS-scope entities"
     file: "design/assets/entity-inventory.md"

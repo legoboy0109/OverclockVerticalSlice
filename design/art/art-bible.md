@@ -5,7 +5,29 @@
 *Source Concept: design/gdd/game-concept.md*
 *Visual Identity Anchor: Neon Retro-Future (game-concept.md §Visual Identity Anchor)*
 
-> **Art Director Sign-Off (AD-ART-BIBLE)**: skipped — Lean mode (not a phase gate). Recommend running the AD-ART-BIBLE gate before asset production begins, or at the Pre-Production gate.
+> **Art Director Sign-Off (AD-ART-BIBLE): ✅ APPROVE** — recorded 2026-07-27 (Sprint 2 · S2-06; art-director gate).
+>
+> **Rationale:** All 9 sections are complete, internally consistent, and every color/mood/shape
+> claim traces to a specific named mechanism rather than description — no contradictions found.
+> The bible directly operationalizes the Pillar 3 isometric-legibility hard gate (§5.2's
+> solid-black-silhouette validation test is the literal pass/fail mechanism for the VS playtest)
+> and resolves both advisory notes carried from the concept-stage anchor (colorblind fallback via
+> Mass Distribution Bias §4.2/§5.2; neutral-object palette bucket via the achromatic Neutral lock).
+> Asset standards (§8) are achievable within platform budget, with the one real cost driver
+> (3× faction-silhouette art, not palette-swaps) explicitly named and given a pre-registered
+> fallback. Approved for asset production on already-specified content.
+>
+> **Non-blocking watch-items** (none block approval or production start):
+> 1. `design/assets/entity-inventory.md` should be derived from this bible (§5/§6/§8) +
+>    `design/registry/entities.yaml` before backlog planning is finalized. → **scheduled as S2-07.**
+> 2. ~~`design/ux/hud.md` (per-screen HUD layout) missing — §7 defines HUD visual *language*, not
+>    layout.~~ → **RESOLVED 2026-07-27 (S2-05): `design/ux/hud.md` authored + `/ux-review` APPROVED.**
+> 3. §4.2 hue-neighborhood watch-item: Boom's cyan sits near the Dark Stage family — run a
+>    same-scene side-by-side prototype test (Boom units on max-elevation terrain) before final
+>    hex lock.
+> 4. §8.9 engine-verification watch-item: confirm per-instance shader uniform behavior in 2D and
+>    that the 4.6 glow-pipeline rework is 3D/WorldEnvironment-only (does not affect the 2D
+>    CanvasItem-shader approach) via a one-unit glow spike before committing the shader pipeline.
 
 > **Map projection decision (2026-07-23):** OVERCLOCK renders its tactical maps in
 > **isometric 2D** (Final Fantasy Tactics lineage), a revision of the concept doc's
