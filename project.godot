@@ -46,6 +46,13 @@ StructureTypes="*res://src/core/structure/structure_types.gd"
 ; defensive_attack_cost) read StructureBalance.base_production.* internally.
 StructureBalance="*res://src/core/base_production/structure_balance.gd"
 
+; Thin config Autoload (ADR-0011 §6), a sibling of Balance/UnitBalance/
+; CombatBalance/StructureBalance. Loads the AIConfig tuning resource once at
+; boot; AI Opponent code reads AIBalance.ai.* internally. Registered last so
+; Balance and StructureTypes (both read by its TR-ai-008 load-time invariant
+; check) are already-constructed Autoloads by the time AIBalance._ready() runs.
+AIBalance="*res://src/gameplay/ai/ai_balance.gd"
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg")

@@ -23,6 +23,7 @@ end: "2026-08-08"
 generated: "2026-07-27"
 updated: "2026-07-27"
 # br-001 done (story-done 2026-07-27) — first VS-build story complete
+# br-002 + ai-001 done (parallel, 2026-07-27); full suite 524/524
 
 stories:
   # --- S3-01 · Board Renderer epic (5 in-slice) ---
@@ -39,11 +40,11 @@ stories:
     name: "Y-sort depth + scene skeleton"
     file: "production/epics/board-renderer/story-002-y-sort-depth-scene-skeleton.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"  # Complete-with-notes: visual AC-2/AC-3 owed (windowed session)
   - id: "br-003"
     name: "Overlay TileMapLayer API (set_overlay/clear_overlay)"
     file: "production/epics/board-renderer/story-003-overlay-tilemaplayer-api.md"
@@ -151,11 +152,11 @@ stories:
     name: "AI config knobs + release-surviving invariant"
     file: "production/epics/ai-opponent/story-001-ai-config-knobs-invariant.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.25
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"  # Complete-with-notes: AC-3 advisory deviation (AIBalance sibling autoload)
   - id: "ai-002"
     name: "Query-facade enumeration order (allowlist)"
     file: "production/epics/ai-opponent/story-002-query-facade-enumeration-order.md"

@@ -1,12 +1,12 @@
 # Story 001: `AIConfig` — 15 Tunable Knobs + Cross-Knob Invariant Enforcement
 
 > **Epic**: AI Opponent (Minimal Vertical Slice)
-> **Status**: Ready
+> **Status**: Complete (with notes — AC-3 advisory deviation)
 > **Layer**: Feature
 > **Type**: Logic
 > **Estimate**: S (2h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -73,11 +73,21 @@
 **Story Type**: Logic
 **Required evidence**: `tests/unit/ai-opponent/ai_config_invariant_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created + passing — `tests/unit/ai-opponent/ai_config_invariant_test.gd` (6 fns, 6/6 PASS)
 
 ---
 
 ## Dependencies
 
-- Depends on: None new (Base & Production's `CANCEL_REFUND_RATE` on `BaseProductionConfig` already exists — confirm readable)
+- Depends on: None new (Base & Production's `CANCEL_REFUND_RATE` on `BaseProductionConfig` already exists — confirmed readable at `BaseProductionConfig.cancel_refund_pct`)
 - Unlocks: Stories 002–005 (all read `AIConfig`)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27 (Complete with notes)
+**Criteria**: 6/6 covered by automated tests — 15 `@export` knobs + `commit_pacing_sec` present at exact GDD defaults (`pass_threshold`=0.15, `lethal_floor_bonus`=3.5, `economy_horizon`=6, `economy_decay`=0.85, `score_tie_epsilon`=1e-6); load-time invariant holds at defaults (ceiling ≈1.76), fails at safe-range maxima (`horizon=10, decay=0.95` → ≈3.81 > 3.5); guard is release-surviving; `REACHABILITY_MULTIPLIER`/`CANCEL_REFUND_RATE` correctly NOT fields.
+**Implementation**: `src/gameplay/ai/ai_config.gd` (pure `Resource`), `data/ai/ai_config.tres`, `src/gameplay/ai/ai_balance.gd` (new `AIBalance` Autoload holding the invariant check), `project.godot` (autoload registration). Invariant guard = `push_error()` + `OS.crash()` (survives release exports; NOT a bare `assert()` which compiles out).
+**Test Evidence**: Logic — `tests/unit/ai-opponent/ai_config_invariant_test.gd` (6 fns, 6/6 PASS; full suite 524/524, no regressions).
+**Deviations (ADVISORY)**: Story AC-3 / the manifest rule say "loaded via the **same** thin Balance-style Autoload... no new loader class," assuming a single shared Balance loader. The codebase actually uses **per-domain sibling autoloads** (`Balance`/`UnitBalance`/`CombatBalance`/`StructureBalance`), so a new `AIBalance` sibling is the architecturally-consistent continuation — not a new *kind* of loader. Deviation recorded in `ai_balance.gd`'s header. → Non-blocking; consider a one-line touch-up to ADR-0011 §6 / this AC's wording to reflect the per-domain reality.
+**Code Review**: not separately run (specialist-authored, fully test-covered); recommend a light pass at sprint close-out.

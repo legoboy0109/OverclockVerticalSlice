@@ -1,12 +1,12 @@
 # Story 002: Y-Sort Depth Ordering & Scene-Tree Skeleton
 
 > **Epic**: Board Renderer
-> **Status**: Ready
+> **Status**: Complete (with notes — visual AC-2/AC-3 owed)
 > **Layer**: Presentation
 > **Type**: Visual/Feel
 > **Estimate**: M (3–4h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -84,7 +84,7 @@
 **Story Type**: Visual/Feel
 **Required evidence**: `production/qa/evidence/board-renderer-y-sort-evidence.md` — screenshot walkthrough + sign-off
 
-**Status**: [ ] Not yet created
+**Status**: [x] Structural test created + passing — `tests/unit/board-renderer/scene_structure_test.gd` (6 fns, covers AC-1/AC-4); visual evidence doc `production/qa/evidence/board-renderer-y-sort-evidence.md` (AC-2/AC-3 OWED — windowed session)
 
 ---
 
@@ -92,3 +92,14 @@
 
 - Depends on: Story 001 (`grid_to_screen` is the sprite placement anchor)
 - Unlocks: Story 003 (overlay z_index sits between floor and occupant — needs the skeleton), Story 004 (`pick_at` needs the Y-sort draw order to define occupant test order), Story 005 (glyphs attach under/near `OccupantLayer`)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27 (Complete with notes)
+**Criteria**: 2/4 auto-verified + PASS (AC-1 scene tree/z-bands/y_sort/iso config; AC-4 no-conflicting-z_index guard). AC-2 (greater-Y occludes) + AC-3 (clean flip) are **OWED — visual**, require a windowed Redot session (Visual/Feel gate is ADVISORY; native `y_sort_enabled` is spike-cleared, so this is confirmation not risk).
+**Implementation**: extended `src/ui/board_renderer/board_renderer.gd` — programmatic scene build in `_ready()`: `FloorTileMapLayer`(z0) → `OverlayTileMapLayer`(z1) → `OccupantLayer`(Node2D, `y_sort_enabled`, z2), iso TileSets, placeholder occupants. Programmatic (not `.tscn`) so Floor/Overlay iso config can't drift.
+**Test Evidence**: Visual/Feel — structural: `tests/unit/board-renderer/scene_structure_test.gd` (6 fns, 6/6 PASS); visual: `production/qa/evidence/board-renderer-y-sort-evidence.md` (AC-2/AC-3 owed, visual sign-off DEFERRED). Full suite 524/524, no regressions.
+**Deviations**: None architectural. **Bug caught + fixed mid-implementation**: initial placeholders were `ColorRect` (a `Control`) which cannot participate in Node2D `y_sort_enabled` → switched to `Polygon2D` (Node2D). Surfaced by the parallel-story full-suite run.
+**Open item (unassigned)**: live `GameState.entities()` → `OccupantLayer` feed replaces the temporary `_build_placeholder_occupants()` — whichever story first wires BoardRenderer to real match state owns it (flagged in class doc + EPIC).
+**Code Review**: not separately run (small scene skeleton; structural tests + specialist authorship); recommend a light pass at sprint close-out.
