@@ -25,19 +25,25 @@ Local (uses the Redot binary at the repo root):
 
 CI runs the same GdUnit4 suite on every push/PR to `main` (see CI note below).
 
-## Installing GdUnit4 (required before tests run)
+## GdUnit4 (vendored)
 
-GdUnit4 is not vendored — install it once:
+GdUnit4 **v6.1.3** is vendored in-repo at `res://addons/gdUnit4/` (enabled in
+`project.godot`), so local runs need no editor/AssetLib step — clone and run.
+CI does not use the vendored copy; the `gdUnit4-action` fetches its own (see CI note).
+
+First run on a fresh clone builds the script class cache:
 
 ```
-1. Open Redot → AssetLib → search "GdUnit4" → Download & Install
-2. Enable the plugin: Project → Project Settings → Plugins → GdUnit4 ✓
-3. Restart the editor
-4. Verify: res://addons/gdunit4/ exists
+./redot --headless --import        # one-time, generates .godot/ (gitignored)
+./redot --headless --script tests/gdunit4_runner.gd
 ```
 
-Until the addon is present, `tests/gdunit4_runner.gd` will error out with a
-clear message (by design) and CI will fail.
+The runner defaults to scanning `tests/unit/` + `tests/integration/`, and passes
+`--ignoreHeadlessMode` (GdUnit4 blocks headless runs by default because UI
+`InputEvent`s don't propagate headless — our suites are pure-logic, so this is
+safe; UI/feel checks live in `tests/evidence/`, not here). Exit code is 0 on
+pass, non-zero on failure, so CI blocks correctly. Override the scan set with
+explicit `-a res://path` args.
 
 ## Test Naming
 
@@ -67,6 +73,16 @@ clear message (by design) and CI will fail.
 
 Tests run automatically on every push to `main` and on every pull request.
 A failed test suite blocks merging.
+
+> **Script-class cache pre-build**: CI checks out a fresh tree with no `.godot/`
+> (gitignored), so `class_name` scripts are not yet registered in the global
+> script class cache. The workflow installs Godot 4.6 and runs a two-pass
+> `--headless --import` **before** the test step to build the cache — otherwise
+> any newly added `class_name` script fails the headless run with "Could not
+> find type X" (Godot #93424 / #75684). This mirrors the one-time local
+> `./redot --headless --import` step above. When adding a new `class_name`
+> script, no manual action is needed for CI; locally, re-run the import (or
+> `./redot --headless --quit --editor`) if the runner reports the type missing.
 
 > **Redot vs Godot in CI**: There is no Redot-specific GitHub Action. CI uses the
 > `gdUnit4-action` with stock **Godot 4.6** as a compatible stand-in — Redot 26.2 is a
