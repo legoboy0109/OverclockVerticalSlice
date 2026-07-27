@@ -52,9 +52,9 @@ All 17 requirements are ADR-traced (0 untraced). Full requirement text in
 
 | # | Story | Type | Status | ADR |
 |---|-------|------|--------|-----|
-| 001 | [Structure Schema, Templates & Config](story-001-structure-schema-templates-config.md) | Logic | Ready | ADR-0017 (D1/D6), ADR-0007 |
-| 002 | [Build Verb, `legal_build_tiles` & Occupancy](story-002-build-verb-legal-build-tiles-occupancy.md) | Logic | Ready | ADR-0017 (D2/D3), ADR-0002/0005/0006/0012 |
-| 003 | [Start-of-Turn Timers, Outpost Count & Flag Reset](story-003-start-of-turn-timers-outpost-count-flag-reset.md) | Logic | Ready | ADR-0008, ADR-0017 (D1), ADR-0006 |
+| 001 | [Structure Schema, Templates & Config](story-001-structure-schema-templates-config.md) | Logic | ✅ Complete | ADR-0017 (D1/D6), ADR-0007 |
+| 002 | [BaseProduction Lands — Build + Timers + Outpost Count + Reset](story-002-build-verb-legal-build-tiles-occupancy.md) | Logic | ✅ Complete | ADR-0017 (D1/D2/D3), ADR-0008, ADR-0002/0005/0006/0012 |
+| ~~003~~ | ~~Start-of-Turn Timers, Outpost Count & Flag Reset~~ — **merged into 002** ([superseded](story-003-start-of-turn-timers-outpost-count-flag-reset.md)) | Logic | Superseded | — |
 | 004 | [Produce Verb & `legal_deploy_tiles`](story-004-produce-legal-deploy-tiles.md) | Logic | Ready | ADR-0017 (D4), ADR-0006/0007/0012 |
 | 005 | [Cancel Build & Fixed-Point Refund](story-005-cancel-build-refund.md) | Logic | Ready | ADR-0017 (D5/D6) |
 | 006 | [Defensive Structure Attack](story-006-defensive-structure-attack.md) | Logic | Ready | ADR-0010, ADR-0017 |

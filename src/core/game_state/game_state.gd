@@ -401,17 +401,20 @@ static func unregister_verb(verb: int) -> void:
 ## Populates the shared dispatch tables exactly once per process (guarded by
 ## [member _dispatch_registered], not per-[GameState]-instance state):
 ## [constant Action.Verb.END_TURN] (this class's own handlers),
-## [constant Action.Verb.MOVE] ([Movement], ADR-0009), and
+## [constant Action.Verb.MOVE] ([Movement], ADR-0009),
 ## [constant Action.Verb.ATTACK] ([Combat], ADR-0010, Combat Resolution
-## Story 004). Safe to call every time [method apply_action] runs — the guard
-## makes every call after the first a single boolean check, never a per-call
-## Dictionary rebuild (control-manifest Performance Guardrail).
+## Story 004), and [constant Action.Verb.BUILD] ([BaseProduction], ADR-0017,
+## Base & Production Story 002). Safe to call every time [method apply_action]
+## runs — the guard makes every call after the first a single boolean check,
+## never a per-call Dictionary rebuild (control-manifest Performance
+## Guardrail).
 static func _ensure_dispatch_registered() -> void:
 	if _dispatch_registered:
 		return
 	register_verb(Action.Verb.END_TURN, _validate_end_turn, _apply_end_turn)
 	register_verb(Action.Verb.MOVE, Movement.validate, Movement.apply)
 	register_verb(Action.Verb.ATTACK, Combat.validate, Combat.apply)
+	register_verb(Action.Verb.BUILD, BaseProduction.validate_build, BaseProduction.apply_build)
 	_dispatch_registered = true
 
 

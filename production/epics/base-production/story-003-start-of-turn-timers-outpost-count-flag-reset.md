@@ -1,12 +1,21 @@
 # Story 003: Start-of-Turn — Build-Timer Advance, `completed_outpost_count`, Flag Reset
 
 > **Epic**: Base & Production
-> **Status**: Ready
+> **Status**: Superseded (merged into Story 002, 2026-07-27)
 > **Layer**: Core
 > **Type**: Logic
 > **Estimate**: 3 hours
 > **Manifest Version**: 2026-07-25
-> **Last Updated**: [set by /dev-story when implementation begins]
+> **Last Updated**: 2026-07-27
+
+> **⚠️ SUPERSEDED — merged into Story 002.** The real `class_name BaseProduction`
+> collides with `base_production_stub.gd` (also `class_name BaseProduction`), whose
+> `completed_outpost_count` (AP income) and `advance_build_timers` (start-of-turn)
+> are load-bearing. The stub cannot survive the real class, so this story's three
+> requirements (`TR-baseprod-006`/`-007`/`-009`) had to land in the same change as
+> the build verb. **See `story-002-build-verb-legal-build-tiles-occupancy.md`** (now
+> the merged "BaseProduction Lands" story). Do NOT implement this file separately —
+> the content below is retained for historical/decomposition reference only.
 
 ## Context
 

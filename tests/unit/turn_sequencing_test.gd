@@ -6,19 +6,31 @@
 # against GameState.start_turn()/start_match()/_apply_end_turn (dispatched via
 # apply_action), using GameStateFactory for gridless state setup and a
 # MapDefinitionFactory-style inline builder for the one test that exercises
-# start_match's grid+HQ construction. Uses the shared BaseProduction/Research
-# stubs' GS-003 extensions (advance_build_timers/advance_research_timers +
-# queue_completion) and the real Unit/UnitState classes (Unit System Story
-# 002/003) plus the Structure/StructureState stubs for the step-2 flag-reset
-# dispatch. No RNG, no time-dependent asserts, no file I/O; each test resets
-# every shared stub for isolation.
+# start_match's grid+HQ construction. Uses the real Base & Production
+# BaseProduction.advance_build_timers (Story 002) against real Under-
+# Construction StructureStates, the Research stub's GS-003 extension
+# (advance_research_timers + queue_completion), and the real Unit/UnitState
+# classes (Unit System Story 002/003) plus the Structure/StructureState stub
+# for the step-2 flag-reset dispatch. No RNG, no time-dependent asserts, no
+# file I/O; each test resets the Research stub for isolation.
+#
+# Migration note (Base & Production Story 002): this suite originally drove
+# BaseProduction.queue_completion()/BaseProduction.reset() against
+# base_production_stub.gd (deleted by that story — its class_name
+# BaseProduction collides with the real class). The real
+# advance_build_timers() completes real Under-Construction structures, so
+# every former queue_completion(player, n) call site below is replaced by
+# _add_under_construction_outpost(state, player), placing one real Economy
+# Outpost (build_status=UNDER_CONSTRUCTION, build_turns_remaining=1) so the
+# real start_turn step-3 advance decrements it to 0 and completes it THAT
+# turn — same "one outpost finishes building this turn" scenario the stub
+# simulated, same +2 tier1 income bonus, same one StructureCompletedEvent.
 #
 # Naming follows tests/README.md: [system]_[feature]_test.gd + test_[scenario]_[expected].
 extends GdUnitTestSuite
 
 
 func before_test() -> void:
-	BaseProduction.reset()
 	Research.reset()
 
 
@@ -32,6 +44,27 @@ class _SignalSpy:
 	func _on_action_applied(result: ActionResult) -> void:
 		call_count += 1
 		last_result = result
+
+
+# Places one real Under-Construction Economy Outpost (build_turns_remaining=1)
+# owned by `player` directly into state.entities_by_id — no grid needed
+# (advance_build_timers/start_turn's step-3 pass never touches the grid).
+# The next advance_build_timers() call for `player` decrements it to 0 and
+# completes it THAT SAME call, appending one StructureCompletedEvent and
+# adding +1 to completed_outpost_count (a +2 tier1 income bonus) — the exact
+# "one outpost finishes building this turn" scenario the deleted stub's
+# queue_completion(player) simulated.
+func _add_under_construction_outpost(state: GameState, player: int) -> void:
+	var structure := StructureState.new()
+	structure.entity_id = state.next_entity_id
+	structure.owner = player
+	structure.position = Vector2i(structure.entity_id, 0) # unique, arbitrary — no grid in play
+	structure.type = StructureTypes.ECONOMY_OUTPOST
+	structure.current_hp = structure.type.hp
+	structure.build_status = StructureState.BuildStatus.UNDER_CONSTRUCTION
+	structure.build_turns_remaining = 1
+	state.entities_by_id[structure.entity_id] = structure
+	state.next_entity_id += 1
 
 
 # Builds a minimal 8x8 all-Plain AUTHORED MapDefinition with two HQs, suitable
@@ -183,10 +216,11 @@ func test_third_end_turn_wraps_round_to_3_on_second_loop_back() -> void:
 # --- AC4: step order 1->2->3->4, step-4 income observes step-3 completion ---
 
 func test_start_turn_step4_income_snapshot_observes_step3_same_turn_completion() -> void:
-	# Arrange — queue a build completion for player 0; base_income=10,
-	# tier1 bonus=2/outpost, so one completed outpost -> income 12.
+	# Arrange — one real Under-Construction outpost (1 turn remaining) for
+	# player 0; base_income=10, tier1 bonus=2/outpost, so it completing THIS
+	# turn's step 3 -> income 12.
 	var state := GameStateFactory.make_state(2, 0)
-	BaseProduction.queue_completion(0)
+	_add_under_construction_outpost(state, 0)
 	# Act — run start_turn directly for player 0 (steps 1-4 in order).
 	var events: Array = state.start_turn(0)
 	# Assert — step 4's snapshot already reflects the step-3 completion.
@@ -212,10 +246,9 @@ func test_income_total_same_regardless_of_which_system_supplies_the_completion()
 	# start_turn to accept an orderable Array[Callable] for step 3 (see
 	# tech-debt).
 	var state_build_first := GameStateFactory.make_state(2, 0)
-	BaseProduction.queue_completion(0) # +2 tier1 outpost bonus -> 12
+	_add_under_construction_outpost(state_build_first, 0) # completes this turn -> +2 tier1 outpost bonus -> 12
 	var events_a: Array = state_build_first.start_turn(0)
 
-	BaseProduction.reset()
 	Research.reset()
 
 	var state_research_first := GameStateFactory.make_state(2, 0)
@@ -239,7 +272,8 @@ func test_step2_flag_reset_and_step3_timers_both_complete_before_step4_when_both
 	unit.owner = 0
 	unit.has_attacked = true
 	state.entities_by_id[unit.entity_id] = unit
-	BaseProduction.queue_completion(0) # +2 (tier1 outpost)
+	state.next_entity_id = 1
+	_add_under_construction_outpost(state, 0) # +2 (tier1 outpost), completes this turn
 	Research.queue_completion(0, 3) # +3 (economy tech term)
 	# Act
 	var events: Array = state.start_turn(0)
@@ -379,7 +413,7 @@ func test_structure_and_tech_completed_events_flow_through_action_applied_signal
 	state.starting_player = 0
 	var spy := _SignalSpy.new()
 	state.action_applied.connect(spy._on_action_applied)
-	BaseProduction.queue_completion(1) # completions apply to the INCOMING player (1)
+	_add_under_construction_outpost(state, 1) # completions apply to the INCOMING player (1)
 	Research.queue_completion(1, 1)
 	var action := EndTurnAction.new()
 	action.player = 0

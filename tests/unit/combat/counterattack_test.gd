@@ -44,22 +44,16 @@
 #     changes are present after a real apply_action call.
 #
 # No RNG, no time-dependent asserts, no file I/O; each test builds its own
-# isolated state. BaseProduction is a process-wide static stub -- reset in
-# before_test/after_test so one test's stubbed defensive_attack_cost never
-# leaks into the next (mirrors destroy_entity_test.gd).
+# isolated state. BaseProduction is now the real Base & Production Story 002
+# class (base_production_stub.gd deleted) -- defensive_attack_cost() reads
+# StructureBalance.base_production.defensive_attack_cost (config default 1,
+# matching every value this suite previously stubbed), so no reset/setter is
+# needed here anymore.
 #
 # Naming follows tests/README.md: [system]_[feature]_test.gd + test_[scenario]_[expected].
 extends GdUnitTestSuite
 
 const GRID_SIZE: int = 8
-
-
-func before_test() -> void:
-	BaseProduction.reset()
-
-
-func after_test() -> void:
-	BaseProduction.reset()
 
 
 # --- Fixture builders --------------------------------------------------------
@@ -420,7 +414,6 @@ func test_structure_attacker_countered_and_killed_routes_through_apply_damage_to
 	# hp) attacks a can_counterattack=true unit defender (high attack) at
 	# distance 1 -- inside the defender's own range-1 profile. The counter is
 	# guaranteed lethal to the structure attacker.
-	BaseProduction.set_defensive_attack_cost(1)
 	var state := _make_state(1)
 	var structure_attacker := _make_defensive_structure_low_hp(1, 0, Vector2i(0, 0))
 	var counter_type := _make_counter_type(10, 20, 1)

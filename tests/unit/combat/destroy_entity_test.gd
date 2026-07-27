@@ -33,22 +33,16 @@
 #     exercise it; left uncovered by design until such a type exists.
 #
 # No RNG, no time-dependent asserts, no file I/O; each test builds its own
-# isolated state. BaseProduction is a process-wide static stub -- reset in
-# before_test/after_test so one test's stubbed defensive_attack_cost never
-# leaks into the next.
+# isolated state. BaseProduction is now the real Base & Production Story 002
+# class (base_production_stub.gd deleted) -- defensive_attack_cost() reads
+# StructureBalance.base_production.defensive_attack_cost (config default 1,
+# matching every value this suite previously stubbed), so no reset/setter is
+# needed here anymore.
 #
 # Naming follows tests/README.md: [system]_[feature]_test.gd + test_[scenario]_[expected].
 extends GdUnitTestSuite
 
 const GRID_SIZE: int = 8
-
-
-func before_test() -> void:
-	BaseProduction.reset()
-
-
-func after_test() -> void:
-	BaseProduction.reset()
 
 
 # --- Fixture builders --------------------------------------------------------
@@ -251,7 +245,6 @@ func test_unit_reduced_to_zero_hp_appends_unit_destroyed_event() -> void:
 func test_defensive_structure_attacker_deals_damage_and_charges_defensive_cost() -> void:
 	# Arrange -- Defensive Structure (atk 4, range 2, DIRECT) vs an enemy unit
 	# (defense 0) 2 tiles away on a clear cardinal line. Damage = max(1, 4-0-0) = 4.
-	BaseProduction.set_defensive_attack_cost(1)
 	var state := _make_state(1) # exactly enough AP for the structure's cost (1), NOT the unit cost (2)
 	var attacker := _make_defensive_structure(1, 0, Vector2i(0, 0))
 	var enemy_type := UnitTypeDef.new()
@@ -282,7 +275,6 @@ func test_defensive_structure_attacker_blocked_by_friendly_on_cardinal_line() ->
 	# Arrange -- same Defensive Structure and enemy unit, but a friendly unit
 	# sits on the cardinal line between them -- DIRECT LoF blocks identically
 	# for a structure attacker.
-	BaseProduction.set_defensive_attack_cost(1)
 	var state := _make_state(1)
 	var attacker := _make_defensive_structure(1, 0, Vector2i(0, 0))
 	var friendly_blocker := _make_unit(3, 0, UnitTypes.SCOUT, Vector2i(1, 0))
@@ -306,7 +298,6 @@ func test_defensive_structure_attacker_blocked_by_friendly_on_cardinal_line() ->
 
 func test_structure_attacker_already_attacked_this_turn_rejected() -> void:
 	# Arrange -- Defensive Structure that has already fired this turn.
-	BaseProduction.set_defensive_attack_cost(1)
 	var state := _make_state(1)
 	var attacker := _make_defensive_structure(1, 0, Vector2i(0, 0))
 	attacker.has_attacked = true

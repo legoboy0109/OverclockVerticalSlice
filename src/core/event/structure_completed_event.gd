@@ -6,29 +6,42 @@
 ## [signal GameState.action_applied] signal like every other [Event] — no new
 ## signal or polling path (control-manifest forbidden pattern).
 ##
-## [b]Ownership note:[/b] this event type arguably belongs to the Base &
-## Production epic (it reports one of that system's state transitions), but
-## is scoped here per ADR-0008/Story 003's explicit decision: start_turn's
-## step-3 contract must emit a concrete completion event for the
-## "completion events flow through [code]action_applied[/code]" acceptance
-## criterion to be testable before Base & Production exists. [b]Flag for
-## reconciliation[/b] when the Base & Production epic lands — that epic's
-## real [code]advance_build_timers[/code] implementation may move/extend
-## this file's fields (e.g. [code]structure_id[/code]/[code]structure_type[/code]
-## once [code]StructureTypeDef[/code] exists, ADR-0007), but should not need
-## to relocate the file, since [Event] subclasses already live in
-## [code]src/core/event/[/code] regardless of owning system.
+## [b]Ownership note:[/b] this event type reports one of Base & Production's
+## state transitions. It was scoped in [code]src/core/event/[/code] early per
+## ADR-0008/GS-003 so start_turn's step-3 contract had a concrete completion
+## event to emit before Base & Production existed. [b]Reconciled by Base &
+## Production Story 002[/b] — the real [code]advance_build_timers[/code] now
+## populates the identifying fields below (the doc's original "flag for
+## reconciliation once [code]StructureTypeDef[/code] exists" — it now does).
+## The file stays in [code]src/core/event/[/code] (Event subclasses live here
+## regardless of owning system).
 ##
-## Deliberately minimal today: no fields beyond what [Event] already
-## provides. This story does not invent a [code]StructureTypeDef[/code]
-## schema (ADR-0007, not yet implemented) — the stub
-## [code]BaseProduction.advance_build_timers[/code] only needs a concrete,
-## instantiable type to append.
+## Payload mirrors [StructurePlacedEvent] so a consumer (HUD action-log
+## TR-hud-014, Board Renderer ADR-0013, save/replay) can identify [b]which[/b]
+## structure completed, for [b]which[/b] player, of [b]which[/b] type.
 ##
 ## Usage:
 ## [codeblock]
-## # inside BaseProduction.advance_build_timers()'s eventual real body:
-## events.append(StructureCompletedEvent.new())
+## # inside BaseProduction.advance_build_timers(), on a structure reaching 0:
+## var evt := StructureCompletedEvent.new()
+## evt.entity_id = structure.entity_id
+## evt.structure_type = structure.type
+## evt.owner = structure.owner
+## evt.tile = structure.position
+## events.append(evt)
 ## [/codeblock]
 class_name StructureCompletedEvent
 extends Event
+
+## The completed structure's entity id (key into [member GameState.entities_by_id]).
+@export var entity_id: int = -1
+
+## The completed structure's immutable stat template (Resource-ref into the
+## [code]StructureTypes[/code] registry).
+@export var structure_type: StructureTypeDef
+
+## The owning player of the completed structure.
+@export var owner: int = -1
+
+## The tile the completed structure occupies.
+@export var tile: Vector2i

@@ -70,16 +70,16 @@ func test_insufficient_ap_action_rejected_with_zero_state_change() -> void:
 	state.per_player[0].current_ap = 2
 	# Precondition — Verb.BUILD must start unregistered (no leak from any prior
 	# test); this test owns its lifecycle and cleans up via unregister_verb.
-	assert_bool(GameState._validators.has(Action.Verb.BUILD)).is_false()
+	assert_bool(GameState._validators.has(Action.Verb.CANCEL_BUILD)).is_false()
 	GameState.register_verb(
-		Action.Verb.BUILD,
+		Action.Verb.CANCEL_BUILD,
 		func(_s: GameState, _a: Action) -> int: return Action.Reason.CANT_AFFORD,
 		func(s: GameState, _a: Action) -> Array:
 			s.per_player[0].current_ap = 0  # would prove atomicity broken if ever called
 			return []
 	)
 	var action := Action.new()
-	action.verb = Action.Verb.BUILD
+	action.verb = Action.Verb.CANCEL_BUILD
 	action.player = 0
 	# Act
 	var result: ActionResult = state.apply_action(action)
@@ -91,8 +91,8 @@ func test_insufficient_ap_action_rejected_with_zero_state_change() -> void:
 	assert_int(state.entities_by_id.size()).is_equal(0)
 	# Cleanup — fully remove the throwaway Verb.BUILD handler so it cannot leak
 	# into any later test in the process (a real Base & Production epic test, etc.).
-	GameState.unregister_verb(Action.Verb.BUILD)
-	assert_bool(GameState._validators.has(Action.Verb.BUILD)).is_false()
+	GameState.unregister_verb(Action.Verb.CANCEL_BUILD)
+	assert_bool(GameState._validators.has(Action.Verb.CANCEL_BUILD)).is_false()
 
 
 # --- Dispatch-safety: unregistered verb / bare Action -> clean UNKNOWN_VERB reject --
