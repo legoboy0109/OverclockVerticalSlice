@@ -16,8 +16,13 @@
 ## forward-declared, previously served by [code]base_production_stub.gd[/code]
 ## — deleted by this story), and [method defensive_attack_cost] (Combat's
 ## cross-system config read, ADR-0010/ADR-0017, unchanged behavior from the
-## stub it replaces). Produce/deploy (Story 004) and cancel (Story 005) are
-## out of scope here.
+## stub it replaces).
+##
+## [b]Scope added (Story 004):[/b] [method legal_deploy_tiles] (ADR-0017 D4,
+## empty/passable/in-bounds manhattan==1 deploy frontier), the [ProduceAction]
+## verb handler ([method validate_produce]/[method apply_produce]), and
+## [method effective_production_cap] (the ADR-0012 two-sided cap fold, == base
+## under Neutral). Cancel (Story 005) is still out of scope here.
 ##
 ## Usage:
 ## [codeblock]
@@ -313,3 +318,175 @@ static func completed_outpost_count(state: GameState, player: int) -> int:
 ## a hardcoded literal. O(1).
 static func defensive_attack_cost() -> int:
 	return StructureBalance.base_production.defensive_attack_cost
+
+
+## Returns every legal deploy tile for a unit produced by [param producer]
+## (ADR-0017 D4, TR-baseprod-008) — a pure, [b]live[/b] query, never cached.
+## The candidate universe is the four cardinal neighbours of the producer at
+## manhattan==1 (scanned N->E->S->W via [method _neighbors_in_fixed_order]),
+## each kept only if in-bounds, passable, and unoccupied — exactly what
+## [method GridState.is_passable] already answers (it folds bounds + non-Impassable
+## terrain + empty-occupant into one O(1) check). The trailing
+## [code]sort_custom(_by_tile_index)[/code] makes the returned order canonical
+## (ADR-0003/ADR-0009 determinism discipline), mirroring
+## [method legal_build_tiles]' ordering.
+##
+## [param unit_type] does not change deploy legality in the VS (every unit needs
+## the same empty adjacent tile to stand on) — accepted for signature alignment
+## with ADR-0011/0015's forward declarations and future terrain rules; unused
+## today.
+##
+## O(4) neighbour scan plus an O(4 log 4) sort — bounded and cheap
+## (control-manifest Performance Guardrail); safe to recompute every preview
+## frame.
+static func legal_deploy_tiles(state: GameState, producer: StructureState, _unit_type: UnitTypeDef) -> Array[Vector2i]:
+	var grid: GridState = state.grid
+	var out: Array[Vector2i] = []
+	for n: Vector2i in _neighbors_in_fixed_order(producer.position):
+		if grid.in_bounds(n.x, n.y) and grid.is_passable(n.x, n.y):
+			out.append(n)
+	out.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return grid.index(a.x, a.y) < grid.index(b.x, b.y))
+	return out
+
+
+## The faction-folded per-turn production cap for [param producer] owned by
+## [param player] (ADR-0012 §3's B&P-owned [code]effective_X[/code] read site,
+## ADR-0017 D4 Risk) — the [b]two-sided[/b] invariant, never a single symmetric
+## clamp: a base cap of [code]0[/code] (a non-producer: Economy Outpost,
+## Defensive Structure, Research Lab) stays [code]0[/code] — no faction delta can
+## turn a non-producer into a producer — while a base cap [code]>= 1[/code]
+## folds as [code]max(1, base + delta)[/code], so a subtractive faction delta can
+## never drop a real producer below a cap of 1.
+##
+## The faction [code]production_cap[/code] delta fold is [b]deferred to the
+## Faction Identity epic[/b] ([code]Faction.structure_delta[/code] is
+## forward-declared only, ADR-0012 §3) — exactly as this file's
+## [method effective_build_cost]/[method effective_build_time] defer their folds.
+## Under the VS's Neutral-only roster [code]delta == 0[/code], so this returns
+## [b]exactly[/b] [param producer].type.production_cap (Neutral no-op,
+## ADR-0012 §5). Non-Neutral delta values are out of this story's scope.
+##
+## O(1). Called by [method validate_produce]'s cap gate (checked before the AP
+## gate, so an at-cap producer is rejected even with AP to spare).
+static func effective_production_cap(_state: GameState, producer: StructureState, _player: int) -> int:
+	var base_cap: int = producer.type.production_cap
+	if base_cap == 0:
+		return 0
+	var delta: int = 0 # Faction production_cap fold deferred to Faction epic (0 under Neutral).
+	return maxi(1, base_cap + delta)
+
+
+## [ProduceAction]'s [code]validate()[/code] handler (ADR-0017 D4, ADR-0002,
+## TR-baseprod-008) — [b]pure and total[/b]: checks every failure condition,
+## never mutates [param state]. Registered into the dispatch table by
+## [method GameState._ensure_dispatch_registered].
+##
+## The acting player is [param state]'s [member GameState.active_player] (already
+## gated by [method GameState.apply_action]'s step 2 before this handler runs);
+## [param action].producer_id names which owned structure spawns the unit.
+##
+## Checks, in order: two producer preconditions then the five ADR-0017 D4 gates —
+## (0a) [param action].producer_id resolves to a live [StructureState]
+## ([constant Action.Reason.NO_SUCH_ENTITY] otherwise); (0b) that structure is
+## owned by the active player ([constant Action.Reason.ILLEGAL_TARGET]
+## otherwise); (1) it is [constant StructureState.BuildStatus.COMPLETED]
+## ([constant Action.Reason.NOT_COMPLETED] otherwise); (2) [param action].unit_type
+## is in the producer's [member StructureTypeDef.producible_types] by
+## [b]Resource-reference membership[/b] — never a string/enum compare
+## ([constant Action.Reason.NOT_PRODUCIBLE] otherwise); (3)
+## [member StructureState.units_produced_this_turn] is below
+## [method effective_production_cap] ([constant Action.Reason.PRODUCTION_CAP_REACHED]
+## otherwise — checked [b]before[/b] AP so the cap gates independently of a full
+## wallet); (4) [method AP.can_afford] the [method Unit.effective_produce_cost]
+## ([constant Action.Reason.CANT_AFFORD] otherwise); (5) [param action].tile is in
+## [method legal_deploy_tiles] ([constant Action.Reason.NOT_LEGAL_DEPLOY_TILE]
+## otherwise — covers occupied/off-board/Impassable/non-adjacent in one gate).
+##
+## Idempotency (ADR-0002): re-running this against current state re-validates
+## every gate fresh — a producer destroyed/reverted or a deploy tile that became
+## occupied between preview and commit is caught here, so [method apply_produce]
+## can lean on it as a commit re-check.
+##
+## O(1) plus one [method legal_deploy_tiles] call (O(4)); control-manifest
+## Performance Guardrail.
+static func validate_produce(state: GameState, action: ProduceAction) -> int:
+	var producer_entity: EntityState = state.entities_by_id.get(action.producer_id, null)
+	if producer_entity == null or not (producer_entity is StructureState):
+		return Action.Reason.NO_SUCH_ENTITY
+	var producer: StructureState = producer_entity
+	var player: int = state.active_player
+	if producer.owner != player:
+		return Action.Reason.ILLEGAL_TARGET
+	if producer.build_status != StructureState.BuildStatus.COMPLETED:
+		return Action.Reason.NOT_COMPLETED
+	if not (action.unit_type in producer.type.producible_types):
+		return Action.Reason.NOT_PRODUCIBLE
+	if producer.units_produced_this_turn >= effective_production_cap(state, producer, player):
+		return Action.Reason.PRODUCTION_CAP_REACHED
+	var cost: int = Unit.effective_produce_cost(state, action.unit_type, player)
+	if not AP.can_afford(state, player, cost):
+		return Action.Reason.CANT_AFFORD
+	if not (action.tile in legal_deploy_tiles(state, producer, action.unit_type)):
+		return Action.Reason.NOT_LEGAL_DEPLOY_TILE
+	return Action.Reason.OK
+
+
+## [ProduceAction]'s [code]apply()[/code] handler (ADR-0017 D4, ADR-0002,
+## TR-baseprod-008) — re-runs [method validate_produce] first (idempotent commit
+## re-validation, ADR-0002: a producer/tile change between preview and commit is
+## rejected here with [b]no mutation at all[/b], rather than trusting the caller's
+## earlier preview-time check). Only after that passes does this mutate,
+## atomically: (1) [method AP.spend] the [method Unit.effective_produce_cost];
+## (2) construct a new [UnitState] ([member UnitState.type] = [param action].unit_type,
+## [member UnitState.owner] = active player, [member EntityState.position] =
+## [param action].tile, [member UnitState.current_hp] = [code]type.hp[/code]) —
+## a unit is [b]Active the instant it exists[/b] (units have no build lifecycle,
+## Unit Rule 2, so there is no under-construction state to set); (3) register it
+## under a freshly allocated [member GameState.next_entity_id]; (4)
+## [method GridState.place] it on the deploy tile; (5) increment the producer's
+## [member StructureState.units_produced_this_turn]; (6) append one
+## [UnitDeployedEvent].
+##
+## Returns [code][][/code] (no event, no mutation) on the defensive
+## re-validation-failure path — the same "atomic, no partial mutation" guarantee
+## [method GameState.apply_action] already provides for a normal first commit;
+## this only matters for a caller invoking [method apply_produce] directly
+## without going through [method GameState.apply_action] (e.g. a test), so the
+## re-validation is not bypassable.
+##
+## O(1) plus the internal [method validate_produce] re-check (control-manifest
+## Performance Guardrail).
+static func apply_produce(state: GameState, action: ProduceAction) -> Array[Event]:
+	if validate_produce(state, action) != Action.Reason.OK:
+		return []
+	var player: int = state.active_player
+	var producer: StructureState = state.entities_by_id[action.producer_id]
+	var cost: int = Unit.effective_produce_cost(state, action.unit_type, player)
+	AP.spend(state, player, cost)
+
+	var unit := UnitState.new()
+	unit.entity_id = state.next_entity_id
+	unit.owner = player
+	unit.position = action.tile
+	unit.type = action.unit_type
+	unit.current_hp = action.unit_type.hp
+
+	state.entities_by_id[unit.entity_id] = unit
+	state.next_entity_id += 1
+	# validate_produce (re-run above) guarantees the tile is in legal_deploy_tiles,
+	# i.e. in-bounds/passable/unoccupied — so place() cannot fail here. Assert it
+	# loudly rather than silently discard the bool: a false return would mean a
+	# legal_deploy_tiles/Grid desync leaving a half-committed unit (AP spent,
+	# entity registered, event emitted) with no grid occupant. (Dev-only tripwire;
+	# assert is stripped in release, matching this codebase's convention.)
+	var placed: bool = state.grid.place(unit.entity_id, action.tile.x, action.tile.y)
+	assert(placed, "BaseProduction.apply_produce: Grid.place failed on a tile validate_produce accepted — legal_deploy_tiles/Grid desync.")
+
+	producer.units_produced_this_turn += 1
+
+	var evt := UnitDeployedEvent.new()
+	evt.entity_id = unit.entity_id
+	evt.unit_type = action.unit_type
+	evt.owner = player
+	evt.tile = action.tile
+	return [evt] as Array[Event]

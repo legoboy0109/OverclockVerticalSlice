@@ -403,8 +403,10 @@ static func unregister_verb(verb: int) -> void:
 ## [constant Action.Verb.END_TURN] (this class's own handlers),
 ## [constant Action.Verb.MOVE] ([Movement], ADR-0009),
 ## [constant Action.Verb.ATTACK] ([Combat], ADR-0010, Combat Resolution
-## Story 004), and [constant Action.Verb.BUILD] ([BaseProduction], ADR-0017,
-## Base & Production Story 002). Safe to call every time [method apply_action]
+## Story 004), [constant Action.Verb.BUILD] ([BaseProduction], ADR-0017,
+## Base & Production Story 002), and [constant Action.Verb.PRODUCE]
+## ([BaseProduction], ADR-0017 D4, Base & Production Story 004). Safe to call
+## every time [method apply_action]
 ## runs — the guard makes every call after the first a single boolean check,
 ## never a per-call Dictionary rebuild (control-manifest Performance
 ## Guardrail).
@@ -415,6 +417,7 @@ static func _ensure_dispatch_registered() -> void:
 	register_verb(Action.Verb.MOVE, Movement.validate, Movement.apply)
 	register_verb(Action.Verb.ATTACK, Combat.validate, Combat.apply)
 	register_verb(Action.Verb.BUILD, BaseProduction.validate_build, BaseProduction.apply_build)
+	register_verb(Action.Verb.PRODUCE, BaseProduction.validate_produce, BaseProduction.apply_produce)
 	_dispatch_registered = true
 
 
