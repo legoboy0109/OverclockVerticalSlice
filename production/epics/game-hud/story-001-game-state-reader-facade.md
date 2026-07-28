@@ -1,12 +1,12 @@
 # Story 001: `GameStateReader` Facade + Event-Driven Read Binding + Dirty-Flag Coalescing
 
 > **Epic**: Game HUD
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: Logic
 > **Estimate**: M (3–4h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-28
 
 ## Context
 
@@ -73,7 +73,7 @@
 **Story Type**: Logic
 **Required evidence**: `tests/unit/game-hud/game_state_reader_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created and passing — 10 tests, all green (2026-07-28)
 
 ---
 
@@ -81,3 +81,12 @@
 
 - Depends on: None (first story — the epic's foundation). The 7 upstream systems (Grid, GameState, AP, Unit, Combat, Base&Production, Research) are all Complete.
 - Unlocks: every other HUD story (all widgets are injected with this facade)
+
+## Completion Notes
+**Completed**: 2026-07-28
+**Criteria**: 4/4 testable passing (AC-1a, AC-2, AC-3, AC-21). AC-1b DEFERRED — blocked-on-infra (frame-stepped render-latency harness does not exist yet; documented skip in the test file).
+**Deviations**:
+- OUT OF SCOPE (valid, not creep): `tests/unit/unit-system/unit_read_surface_test.gd` allowlist extended to admit the 10 new `GameStateReader` methods — required because this story extends the shared facade that test guards; sanctioned by that test's own "the allowlist grows with each read accessor" comment. Non-mutating brokers documented as affordances.
+- Implementation note: new `class_name` scripts (`HudReactiveControl`) written outside the editor required `./redot --headless --import` to register in the global class-name cache before tests resolved them.
+**Test Evidence**: Logic — `tests/unit/game-hud/game_state_reader_test.gd` (10 tests, PASS). Full suite 721/721 green.
+**Code Review**: Complete — APPROVED (independent godot-gdscript read-only pass + coordinator review; ADR-0016 §1/§8 compliant, 6/6 standards).

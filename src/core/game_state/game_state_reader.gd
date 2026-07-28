@@ -9,12 +9,22 @@
 ## Base & Production read-surface: [method legal_build_tiles],
 ## [method legal_deploy_tiles], [method structure_info] (build-timer progress,
 ## remaining production cap, cancel-refund preview, current/max hp), and
-## affordability ([method can_afford_build]/[method can_afford_produce]). The
-## Game HUD epic (ADR-0016) may still supersede this file with the remaining
-## full getter set named in its skeleton — [code]active_player()[/code],
-## [code]round_number()[/code], [code]match_status()[/code], [code]current_ap()[/code],
-## [code]income_breakdown()[/code], [code]entities()[/code], [code]entity_at()[/code],
-## etc. — those remain OUT OF SCOPE here.
+## affordability ([method can_afford_build]/[method can_afford_produce]).
+## **Game HUD Story 001** (TR-hud-001/002/003/020/023) extends this same file
+## with the remaining full getter set named in ADR-0016 §1's skeleton —
+## [method active_player], [method round_number], [method match_status],
+## [method current_ap], [method income_breakdown], [method can_afford],
+## [method entities], [method entity_at] — plus a signal-subscription broker
+## ([method subscribe_action_applied]/[method unsubscribe_action_applied]) so a
+## HUD [Control] can react to [signal GameState.action_applied] without ever
+## holding a live [GameState] reference itself. [method entities]/
+## [method entity_at] hand out live [EntityState] refs (consistent with
+## existing BoardRenderer/Command & Action Interface Presentation usage);
+## consumers treat them as read-only. The read-only guarantee is structural:
+## AC-3 reflects over the facade's own declared method set and finds zero
+## mutation-shaped name — the broker methods register a signal listener and are
+## not state mutators. [method unit_info]/[method structure_info] remain the
+## recommended path when only display values are needed.
 ##
 ## [b]Structural read-only, not convention[/b]: GDScript has no access-modifier
 ## keywords, so "read-only" cannot be enforced by a [code]private[/code] marker.
@@ -210,3 +220,89 @@ func can_afford_build(player: int, structure_type: StructureTypeDef) -> bool:
 func can_afford_produce(player: int, unit_type: UnitTypeDef) -> bool:
 	var cost: int = Unit.effective_produce_cost(_state, unit_type, player)
 	return AP.can_afford(_state, player, cost)
+
+
+## The active player's index into [member GameState.per_player] (TR-hud-009,
+## ADR-0016 §1) — a direct pass-through to [member GameState.active_player].
+## O(1).
+func active_player() -> int:
+	return _state.active_player
+
+
+## The current round number (TR-hud-009, ADR-0016 §1) — a direct pass-through
+## to [member GameState.round_number]. O(1).
+func round_number() -> int:
+	return _state.round_number
+
+
+## The match's terminal status ([enum GameState.MatchStatus], TR-hud-016/017,
+## ADR-0016 §1) — a direct pass-through to [member GameState.match_status].
+## O(1).
+func match_status() -> int:
+	return _state.match_status
+
+
+## [param player]'s AP available to spend this turn (TR-hud-005, ADR-0016 §1) —
+## a direct pass-through to [method AP.current_ap]. Never a locally re-derived
+## value (Pass-Through Invariant). O(1).
+func current_ap(player: int) -> int:
+	return AP.current_ap(_state, player)
+
+
+## [param player]'s AP income decomposed into its three additive terms
+## ([code]{base, outpost, econ_tech}[/code], TR-hud-019, ADR-0016 §1) — a
+## direct pass-through to [method AP.ap_income_breakdown]. A real pass-through,
+## not a stub: [method AP.ap_income_breakdown] is a fully implemented AP Economy
+## query as of this story. Never locally re-split from raw inputs (Pass-Through
+## Invariant — ADR-0016 §1 forbids the HUD receiving raw outpost count/tech flag
+## and splitting locally). O(1) plus the owning query's own O(1) reads.
+func income_breakdown(player: int) -> Dictionary:
+	return AP.ap_income_breakdown(_state, player)
+
+
+## True iff [param player] can currently afford [param amount] AP (TR-hud-015,
+## ADR-0016 §1) — a direct pass-through to [method AP.can_afford]. O(1).
+func can_afford(player: int, amount: int) -> bool:
+	return AP.can_afford(_state, player, amount)
+
+
+## Every entity in the match, in stable [member EntityState.entity_id]-ascending
+## order (TR-hud-020, ADR-0016 §1) — a direct pass-through to
+## [method GameState.entities]. Already a fresh [code]Array[EntityState][/code]
+## allocation per call (see [method GameState.entities]); the returned array
+## holds live [EntityState] refs (see this class's doc-comment scoping note),
+## consistent with existing Presentation-layer usage. O(n log n) — re-sorted
+## every call, not cached.
+func entities() -> Array[EntityState]:
+	return _state.entities()
+
+
+## The [EntityState] occupying [param tile], or [code]null[/code] if the tile
+## is empty/unoccupied (TR-hud-010/011, ADR-0016 §1) — a direct pass-through to
+## [method GameState.entity_at]. Returns a live [EntityState] ref (see this
+## class's doc-comment scoping note). O(1).
+func entity_at(tile: Vector2i) -> EntityState:
+	return _state.entity_at(tile)
+
+
+## Subscribes [param handler] to the wrapped state's
+## [signal GameState.action_applied] (TR-hud-023, ADR-0016 §8) — the sole
+## sanctioned way a HUD [Control] reacts to a commit without ever holding a
+## live [GameState] reference itself. Idempotent: connecting the same
+## [Callable] twice is a no-op (mirrors [CommandInterface]'s
+## [code]is_connected[/code] guard convention). Registers a listener on an
+## existing signal — NOT a state mutator (see this class's doc-comment note).
+func subscribe_action_applied(handler: Callable) -> void:
+	if not _state.action_applied.is_connected(handler):
+		_state.action_applied.connect(handler)
+
+
+## Disconnects [param handler] from the wrapped state's
+## [signal GameState.action_applied] (TR-hud-023, ADR-0016 §8) — call from the
+## subscriber's [method Node._exit_tree] so connections never accumulate across
+## a match restart within one process (mirrors [CommandInterface]'s
+## guarded-disconnect convention). Idempotent: disconnecting a [Callable] that
+## isn't connected is a no-op.
+func unsubscribe_action_applied(handler: Callable) -> void:
+	if _state.action_applied.is_connected(handler):
+		_state.action_applied.disconnect(handler)

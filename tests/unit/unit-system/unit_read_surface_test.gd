@@ -105,18 +105,26 @@ func test_game_state_reader_exposes_only_unit_info_as_script_method() -> void:
 	for m: Dictionary in reader.get_script().get_script_method_list():
 		script_method_names.append(m["name"])
 
-	# Only _init (constructor) + the read accessors -- nothing that writes.
-	# unit_info is this story's accessor; Story 009 added the B&P read-surface
-	# getters (legal_build_tiles/legal_deploy_tiles/structure_info/
-	# can_afford_build/can_afford_produce) to the same facade. All are getters;
-	# the allowlist grows with each read accessor but must never admit a mutator.
+	# Only _init (constructor) + read accessors + non-mutating affordances --
+	# nothing that writes GameState. unit_info is this story's accessor; Story 009
+	# added the B&P read-surface getters (legal_build_tiles/legal_deploy_tiles/
+	# structure_info/can_afford_build/can_afford_produce); Game HUD Story 001
+	# (ADR-0016 §1/§8) added the HUD read getters (active_player/round_number/
+	# match_status/current_ap/income_breakdown/can_afford/entities/entity_at) plus
+	# the signal-subscription broker (subscribe_action_applied/
+	# unsubscribe_action_applied) -- the brokers register a Callable listener on an
+	# existing signal, NOT a mutation path to GameState. The allowlist grows with
+	# each read accessor / non-mutating affordance but must never admit a mutator.
 	assert_array(script_method_names).override_failure_message(
-		"GameStateReader must expose ONLY _init + read accessors; any other " +
-		"script-defined method is a potential mutation path (AC-2 structural " +
-		"read-only). Found: %s" % [script_method_names]
+		"GameStateReader must expose ONLY _init + read accessors + non-mutating " +
+		"affordances; any other script-defined method is a potential mutation " +
+		"path (AC-2 structural read-only). Found: %s" % [script_method_names]
 	).contains_exactly_in_any_order([
 		"_init", "unit_info", "legal_build_tiles", "legal_deploy_tiles",
 		"structure_info", "can_afford_build", "can_afford_produce",
+		"active_player", "round_number", "match_status", "current_ap",
+		"income_breakdown", "can_afford", "entities", "entity_at",
+		"subscribe_action_applied", "unsubscribe_action_applied",
 	])
 
 	# Belt-and-suspenders, human-readable: the specific mutation shapes must be

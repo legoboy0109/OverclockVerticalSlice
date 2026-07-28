@@ -82,6 +82,17 @@ after 003 (006 also needs the Board Renderer node), 008 after 007, 009 last.
 > Board Renderer (ADR-0013)**, whose epic is now **COMPLETE** (br-001..005). Story
 > 006 is **UNBLOCKED**. The same node backs the Game HUD on-board glyph layer.
 
+## Cross-Epic Addenda
+
+- **2026-07-28 — `selection_changed` emit implemented** (discharges ADR-0016 §6 forward-declaration,
+  unblocks Game HUD Story 006). `CommandInterface` now emits `selection_changed(SelectionTarget{entity_id, pinned})`
+  through a de-duplicating `_emit_selection` choke point at every selection point (pinned) plus a new
+  `inspect(state, tile)` peek entry (pinned=false). New type
+  `src/ui/command_action_interface/selection_target.gd`; tests
+  `tests/unit/command-action-interface/selection_changed_test.gd` (9, pass). Additive — no existing
+  CAI behavior changed. See ADR-0015 Addenda. (Not a numbered story — a small cross-epic seam
+  addendum the HUD epic's Story 006 depended on.)
+
 ## Next Step
 
 Run `/story-readiness production/epics/command-action-interface/story-001-command-fsm-core.md`,

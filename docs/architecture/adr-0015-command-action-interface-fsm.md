@@ -436,3 +436,24 @@ N/A — greenfield.
   counter)
 - `design/gdd/command-action-interface.md` — the full design this ADR makes concrete (States table,
   CR-10 four tiers, Pass-Through Invariant, per-dependency contract table)
+
+## Addenda
+
+### 2026-07-28 — `selection_changed` signal implemented (discharges ADR-0016 §6 forward-declaration)
+
+ADR-0016 §6 forward-declared `CommandInterface.selection_changed(target: SelectionTarget)` — the
+one-way, outward-in seam the Game HUD's detail panel (TR-hud-013) subscribes to — and noted "a
+back-reference should be added to ADR-0015's registry entry." That signal is now **implemented** in
+the Command & Action Interface epic (Game HUD Story 006 was blocked on it):
+
+- New type `SelectionTarget` (`src/ui/command_action_interface/selection_target.gd`,
+  `class_name SelectionTarget extends RefCounted`) — `{entity_id: int, pinned: bool}`;
+  `entity_id == -1` means "no target".
+- `CommandInterface` gains `signal selection_changed(target: SelectionTarget)`, emitted through a
+  single de-duplicating choke point `_emit_selection(entity_id, pinned)` at every selection-mutation
+  point (`try_select` / `enter_preview` → pinned; `_reselect_after_commit` → pinned or cleared;
+  `_enter_game_over` → cleared) plus a new `inspect(state, tile)` peek entry point (pinned=false for
+  an occupied tile; falls back to the pinned selection for an empty tile). One-way outward-in — the
+  interface never calls into a HUD node, preserving the HUD's leaf status (TR-hud-020).
+- Tests: `tests/unit/command-action-interface/selection_changed_test.gd` (9, pass). Additive — no
+  existing CAI behavior changed (full suite 730/730 green).

@@ -114,6 +114,21 @@ extends Node
 signal commit_flash_requested(result: ActionResult)
 
 
+## Selection/inspection target change (ADR-0016 §6 / ADR-0015 §6 seam,
+## TR-hud-013): emitted whenever this interface's persistent selection OR
+## transient inspection (peek) target changes. Carries a [SelectionTarget]
+## ([code]{entity_id, pinned}[/code]) — [code]pinned == true[/code] for the
+## persistent [member _selected_id] selection, [code]false[/code] for a transient
+## hover/inspect peek; [code]entity_id == -1[/code] means "no target" (nothing
+## selected and nothing being inspected). This is the ONE-WAY outward-in seam the
+## Game HUD's detail panel (ADR-0016 §6) subscribes to — the HUD re-renders from a
+## read query for [code]target.entity_id[/code] via its own [code]GameStateReader[/code];
+## this interface NEVER calls into a HUD node, so the HUD stays a leaf
+## (TR-hud-013/020). Emissions are de-duplicated (fire only when the
+## (entity_id, pinned) pair actually changes) via [method _emit_selection].
+signal selection_changed(target: SelectionTarget)
+
+
 ## Sentinel "no tile hovered yet" value for [member _active_tile] — distinct
 ## from any real board coordinate a [BoardRenderer]/[code]screen_to_grid[/code]
 ## would ever return (grid coordinates are non-negative per
@@ -129,6 +144,13 @@ var _fsm_state: CommandFSM.State = CommandFSM.State.IDLE
 
 ## The currently selected entity's id, or -1 if none (ADR-0015 §1).
 var _selected_id: int = -1
+
+## De-dup state for [signal selection_changed] (ADR-0016 §6): the last
+## (entity_id, pinned) pair emitted, so a re-assert of the same target is a
+## no-op. [member _last_target_entity_id] starts at -2 (distinct from the -1
+## "no target" sentinel) so the very first emit — even a clear to -1 — fires.
+var _last_target_entity_id: int = -2
+var _last_target_pinned: bool = false
 
 ## Tier-1/Tier-3: [code]Vector2i -> Movement.ReachableTile[/code], the
 ## just-computed reachable frontier for the previewed unit. Populated only
@@ -261,6 +283,39 @@ func fsm_state() -> CommandFSM.State:
 ## Currently selected entity id, or -1 if none.
 func selected_id() -> int:
 	return _selected_id
+
+
+## Emits [signal selection_changed] with a fresh [SelectionTarget] IFF the
+## (entity_id, pinned) pair differs from the last emitted one (ADR-0016 §6
+## de-dup). [param entity_id] == -1 signals "no target". The single choke point
+## every selection/inspection change routes through, so the outward-in HUD seam
+## never sees a redundant re-render request.
+func _emit_selection(entity_id: int, pinned: bool) -> void:
+	if entity_id == _last_target_entity_id and pinned == _last_target_pinned:
+		return
+	_last_target_entity_id = entity_id
+	_last_target_pinned = pinned
+	selection_changed.emit(SelectionTarget.new(entity_id, pinned))
+
+
+## Transient inspection (peek) entry point (ADR-0016 §6 seam, TR-hud-013): the
+## scene's hover glue calls this when the pointer / board-cursor rests on
+## [param tile]. If an entity occupies [param tile], emits a PEEK
+## [signal selection_changed] ([code]pinned == false[/code]) for it; if the tile
+## is empty, falls back to the current persistent selection
+## ([member _selected_id], [code]pinned == true[/code], or a cleared -1 target if
+## nothing is selected) — so un-hovering returns the detail panel to the pinned
+## selection. Read-only: never mutates state, never selects, and is deliberately
+## NOT gated by [method is_input_live] (inspection stays live on the opponent's
+## turn / after GAME_OVER, AC-21). The pinned-vs-peek VISUAL distinction is the
+## HUD's / [code]/ux-design[/code]'s concern; this only reports which entity,
+## with which flag. O(1) plus one [method GameState.entity_at] lookup.
+func inspect(state: GameState, tile: Vector2i) -> void:
+	var occupant: EntityState = state.entity_at(tile)
+	if occupant != null:
+		_emit_selection(occupant.entity_id, false)
+	else:
+		_emit_selection(_selected_id, _selected_id != -1)
 
 
 ## Sets [member _local_player] — which player this instance acts on behalf of
@@ -461,6 +516,7 @@ func try_select(state: GameState, unit: UnitState) -> bool:
 		return false
 	_selected_id = unit.entity_id
 	_fsm_state = CommandFSM.next_state(_fsm_state, CommandFSM.Trigger.SELECT_OWN, state)
+	_emit_selection(_selected_id, true) # pinned selection (ADR-0016 §6).
 	return true
 
 
@@ -487,6 +543,7 @@ func enter_preview(state: GameState, unit: UnitState, target_state: CommandFSM.S
 	var trigger: CommandFSM.Trigger = CommandFSM.Trigger.PICK_MOVE \
 		if target_state == CommandFSM.State.PREVIEW_MOVE else CommandFSM.Trigger.PICK_ATTACK
 	_fsm_state = CommandFSM.next_state(CommandFSM.State.ENTITY_SELECTED, trigger, state)
+	_emit_selection(_selected_id, true) # still the pinned selection; deduped if unchanged.
 	_recompute_tier1_and_2(state, unit)
 
 
@@ -591,6 +648,7 @@ func _reselect_after_commit(state: GameState, action: Action) -> void:
 	else:
 		_selected_id = -1
 		_fsm_state = CommandFSM.State.IDLE
+	_emit_selection(_selected_id, _selected_id != -1) # re-selected actor (pinned) or cleared.
 	_render_overlays() # non-preview now → clears the just-committed preview overlay.
 
 
@@ -615,6 +673,7 @@ func _has_legal_action(state: GameState, entity: EntityState) -> bool:
 func _enter_game_over() -> void:
 	_fsm_state = CommandFSM.State.GAME_OVER
 	_selected_id = -1
+	_emit_selection(-1, false) # terminal — clear the detail-panel target (ADR-0016 §6).
 	_render_overlays()
 
 

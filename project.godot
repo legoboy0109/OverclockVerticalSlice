@@ -53,6 +53,15 @@ StructureBalance="*res://src/core/base_production/structure_balance.gd"
 ; check) are already-constructed Autoloads by the time AIBalance._ready() runs.
 AIBalance="*res://src/gameplay/ai/ai_balance.gd"
 
+; Thin config Autoload (ADR-0016 §4), a sibling of Balance/UnitBalance/
+; CombatBalance/StructureBalance/AIBalance. Loads the HUDConfig tuning resource
+; once at boot; Game HUD widgets read HudBalance.hud.* internally. Also runs a
+; load-time cross-config guard (TR-hud-008): unlike most siblings it clamps
+; ap_tick_duration_ms down to InputConfig.input_lock_ms (push_error + clamp,
+; never a crash — see hud_balance.gd for why this differs from AIBalance's
+; push_error+OS.crash pattern).
+HudBalance="*res://src/ui/game_hud/hud_balance.gd"
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg")

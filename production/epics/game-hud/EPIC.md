@@ -70,8 +70,8 @@ This epic is complete when:
 
 | # | Story | Type | Status | ADR |
 |---|-------|------|--------|-----|
-| 001 | GameStateReader Facade + Event Binding + Dirty-Flag Coalescing | Logic | Ready | ADR-0016, ADR-0004 |
-| 002 | HUDConfig Resource + Cross-Config Loader Guard | Logic | Ready | ADR-0016, ADR-0014 |
+| 001 | GameStateReader Facade + Event Binding + Dirty-Flag Coalescing | Logic | ✅ Complete | ADR-0016, ADR-0004 |
+| 002 | HUDConfig Resource + Cross-Config Loader Guard | Logic | ✅ Complete | ADR-0016, ADR-0014 |
 | 003 | ApCounterFsm — 4-State AP Counter Core (headless) | Logic | Ready | ADR-0016 |
 | 004 | AP Counter Widget + Opponent Muting + Preview Echo + Turn/Round Banner | Integration | Ready | ADR-0016 |
 | 005 | On-Board Glyph Layer — hp Pips/Numeric + Markers | Visual/Feel | Ready | ADR-0013, ADR-0016 |
@@ -85,9 +85,12 @@ This epic is complete when:
 Renderer Story 005** (`grid_to_screen`+`GLYPH_OFFSETS`); 006 needs **CAI `selection_changed`**.
 
 > **⚠ Cross-epic seam flags**:
-> - **Story 006** consumes CAI's `CommandInterface.selection_changed(target)` — forward-declared
->   by ADR-0016 §6 but with no dedicated "emit selection_changed" story in the CAI epic. Verify at
->   `/story-readiness`; may need a small CAI-side addendum before Story 006 can close.
+> - **Story 006** consumes CAI's `CommandInterface.selection_changed(target)` — ✅ **RESOLVED 2026-07-28**:
+>   the forward-declared signal (ADR-0016 §6) is now implemented in the CAI epic as a cross-epic
+>   addendum — `CommandInterface` emits `selection_changed(SelectionTarget{entity_id, pinned})` at all
+>   selection points (pinned) + an `inspect(state, tile)` peek entry, de-duplicated, one-way outward-in.
+>   `SelectionTarget` is `src/ui/command_action_interface/selection_target.gd`; tests in
+>   `tests/unit/command-action-interface/selection_changed_test.gd` (9, pass). Story 006 is UNBLOCKED.
 > - **Story 008** audio ducking (≥2 `AudioStreamPlayer`s) is the one under-spiked engine detail —
 >   check against the live 4.6 audio bus API before starting.
 > - **Story 002** owns the `InputConfig.input_lock_ms >= HUDConfig.ap_tick_duration_ms` config-loader

@@ -80,5 +80,5 @@
 
 ## Dependencies
 
-- Depends on: Story 001 (`GameStateReader`), and cross-epic **CAI's forward-declared `CommandInterface.selection_changed(target)` signal** (ADR-0016 §6, owed back to ADR-0015). **⚠ Verify at `/story-readiness` that this signal has landed on the CAI side — the CAI stories do not have a dedicated "emit selection_changed" story by that name. If absent, this story is blocked pending a small CAI-side addendum (or a stub-and-swap plan).**
+- Depends on: Story 001 (`GameStateReader` ✅ Complete), and cross-epic **CAI's `CommandInterface.selection_changed(target)` signal** (ADR-0016 §6, owed back to ADR-0015). ✅ **RESOLVED 2026-07-28**: the signal is now implemented in the CAI epic (cross-epic addendum). `CommandInterface` emits `selection_changed(SelectionTarget{entity_id, pinned})` — pinned on select/switch/reselect/game-over-clear, peek via `inspect(state, tile)` — de-duplicated and one-way outward-in (CAI never calls into a HUD node). Type: `src/ui/command_action_interface/selection_target.gd`; tests: `tests/unit/command-action-interface/selection_changed_test.gd` (9, pass). This story is no longer blocked.
 - Unlocks: Story 008 (audio `GameOver` cue hooks off the same transition this story renders)

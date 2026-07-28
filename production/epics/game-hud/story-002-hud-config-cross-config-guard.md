@@ -1,12 +1,12 @@
 # Story 002: `HUDConfig` Resource + Cross-Config Loader Guard
 
 > **Epic**: Game HUD
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: Logic
 > **Estimate**: S (2h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-28
 
 ## Context
 
@@ -70,7 +70,7 @@
 **Story Type**: Logic
 **Required evidence**: `tests/unit/game-hud/hud_config_guard_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created and passing — 7 tests, all green (2026-07-28)
 
 ---
 
@@ -78,3 +78,10 @@
 
 - Depends on: `InputConfig` existing (CAI epic — shipped; CAI Story 007 explicitly left this guard to the HUD epic). Can run in parallel with Story 001 (no shared files).
 - Unlocks: Story 003 (reads `ap_tick_duration_ms`) and every story that reads a `HUDConfig` knob (004, 005, 006, 007, 008)
+
+## Completion Notes
+**Completed**: 2026-07-28
+**Criteria**: 4/4 passing (9-knob defaults, violation→clamp, defaults-no-change, invariant-not-in-_init). push_error debug-visibility covered by-construction (no-crash proven behaviorally by the clamp test surviving execution).
+**Deviations**: None blocking. INFO — the "loader Autoload" named in ADR-0016 §4 is realized as `HudBalance` (a `*Balance` sibling of Balance/UnitBalance/CombatBalance/StructureBalance/AIBalance), following `AIBalance`'s precedent for a config loader that also runs a load-time invariant guard. Faithful to the "same Balance-style loader Autoload pattern" the ADR specifies. The guard deliberately uses push_error+CLAMP (NOT AIBalance's push_error+OS.crash) per ADR-0016 §4's explicit mandate.
+**Test Evidence**: Logic — `tests/unit/game-hud/hud_config_guard_test.gd` (7 tests, PASS). Full suite 721/721 green (HudBalance autoload boots cleanly for every run).
+**Code Review**: Complete — APPROVED (independent godot-gdscript read-only pass + coordinator review; ADR-0016 §4 compliant).

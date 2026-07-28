@@ -21,7 +21,7 @@ goal: "Build the playable Vertical Slice (rendered one-close-skirmish loop) at r
 start: "2026-07-28"
 end: "2026-08-08"
 generated: "2026-07-27"
-updated: "2026-07-28"  # cai-008 done (story-done 2026-07-28) — ★ CAI EPIC COMPLETE (8/8 in-slice)
+updated: "2026-07-28"  # hud-001 + hud-002 done (story-done 2026-07-28) — Game HUD epic 2/7 in-slice
 # br-001 done (story-done 2026-07-27) — first VS-build story complete
 # br-002 + ai-001 done (parallel, 2026-07-27); full suite 524/524
 
@@ -208,20 +208,20 @@ stories:
     name: "GameState reader facade"
     file: "production/epics/game-hud/story-001-game-state-reader-facade.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-28"
   - id: "hud-002"
     name: "HUD-config cross-config guard"
     file: "production/epics/game-hud/story-002-hud-config-cross-config-guard.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.25
     blocker: ""
-    completed: ""
+    completed: "2026-07-28"
   - id: "hud-003"
     name: "AP-counter FSM (headless)"
     file: "production/epics/game-hud/story-003-ap-counter-fsm.md"
