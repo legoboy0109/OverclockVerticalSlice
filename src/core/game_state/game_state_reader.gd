@@ -242,6 +242,14 @@ func match_status() -> int:
 	return _state.match_status
 
 
+## The winning player's index, or -1 if the match is not over (TR-hud-016,
+## ADR-0016 §6/§8) — a direct pass-through to [member GameState.winner], set by
+## [method GameState.run_win_check]. The victory/defeat overlay reads this to
+## name the winner (verbatim, never inferred). O(1).
+func winner() -> int:
+	return _state.winner
+
+
 ## [param player]'s AP available to spend this turn (TR-hud-005, ADR-0016 §1) —
 ## a direct pass-through to [method AP.current_ap]. Never a locally re-derived
 ## value (Pass-Through Invariant). O(1).

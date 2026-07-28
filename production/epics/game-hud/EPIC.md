@@ -75,7 +75,7 @@ This epic is complete when:
 | 003 | ApCounterFsm — 4-State AP Counter Core (headless) | Logic | ✅ Complete | ADR-0016 |
 | 004 | AP Counter Widget + Opponent Muting + Preview Echo + Turn/Round Banner | Integration | ✅ Complete | ADR-0016 |
 | 005 | On-Board Glyph Layer — hp Pips/Numeric + Markers | Visual/Feel | ✅ Complete | ADR-0013, ADR-0016 |
-| 006 | Detail Panel + Victory/Defeat GameOver Preemption | Integration | Ready | ADR-0016 |
+| 006 | Detail Panel + Victory/Defeat GameOver Preemption | Integration | ✅ Complete | ADR-0016 |
 | 007 | Action Log + Income Breakdown + Build/End-Turn + Turn-Scoping | Integration | Ready | ADR-0016, ADR-0006 |
 | 008 | HudAudioDispatcher — Single-Owner play() + Priority Order | Integration | Ready | ADR-0016 |
 
