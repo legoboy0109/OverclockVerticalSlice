@@ -89,6 +89,55 @@ class _Candidate extends RefCounted:
 		entity_id = id
 
 
+## Deterministic tie-break comparator (Story 005, AC-1; ADR-0011 §2 verbatim;
+## ADR-0003 Rule 4) — the sole predicate every per-verb helper's running-best
+## fold uses to decide whether a new candidate replaces [param best]. Pure,
+## side-effect-free, reads only [code]AIBalance.ai.score_tie_epsilon[/code]
+## (an [AIConfig] tunable, never a hardcoded literal) — [b]no engine RNG
+## anywhere[/b] (control-manifest Forbidden rule, this layer).
+##
+## Implements exactly:
+## [codeblock]
+## score > best_score + SCORE_TIE_EPSILON        -> true  (strictly better)
+## score < best_score - SCORE_TIE_EPSILON        -> false (strictly worse)
+## else (tied within epsilon):
+##     ap_cost != best_ap_cost -> ap_cost < best_ap_cost   (cheaper wins)
+##     else                    -> entity_id < best_entity_id
+## [/codeblock]
+##
+## [b]Exact ties resolve to the oldest eligible entity[/b] (lowest
+## [code]entity_id[/code], which is assigned by a monotonic creation-order
+## counter per ADR-0001/ADR-0003) — this is [b]intentional[/b] per the GDD's
+## own Edge Cases and ADR-0003 Rule 4, not a latent bug: it is what makes a
+## replayed exact-tie scenario select the identical candidate every run on the
+## same build (TR-ai-011, AC-23's "replayed... same candidate every time").
+##
+## [b]Empty running-best[/b]: an as-yet-unset [_Candidate] defaults to
+## [code]score = -INF[/code] (see [method _Candidate._init]), so the very
+## first real candidate a helper folds in always satisfies
+## [code]score > -INF + SCORE_TIE_EPSILON[/code] (float arithmetic:
+## [code]-INF + finite == -INF[/code]) and therefore always wins — no special-
+## cased "is best still empty?" branch is needed anywhere a helper calls this
+## comparator.
+##
+## [b]Strict `>`/`<`, never `>=`/`<=`[/b]: a candidate whose score differs from
+## [param best_score] by [i]exactly[/i] [code]SCORE_TIE_EPSILON[/code] does
+## [b]not[/b] clear the strictly-better branch — it falls through to the tied
+## branch and is resolved by [code]ap_cost[/code]/[code]entity_id[/code] like
+## any other within-epsilon tie (see
+## [code]ai_tiebreak_determinism_test.gd[/code]'s boundary test for the exact
+## proof of which side of `>` this lands on).
+static func _is_better(score: float, ap_cost: int, entity_id: int, \
+		best_score: float, best_ap_cost: int, best_entity_id: int) -> bool:
+	if score > best_score + AIBalance.ai.score_tie_epsilon:
+		return true
+	if score < best_score - AIBalance.ai.score_tie_epsilon:
+		return false
+	if ap_cost != best_ap_cost:
+		return ap_cost < best_ap_cost
+	return entity_id < best_entity_id
+
+
 ## The AI's single public entry point (ADR-0011 §1, TR-ai-001/003). Pure,
 ## headless, side-effect-free: internally clones [param state]
 ## ([method GameState.clone] — CR-2 step 1), enumerates every legal/affordable
@@ -111,11 +160,10 @@ class _Candidate extends RefCounted:
 ##
 ## Never materializes a full candidate [Array] — walks each verb family once
 ## per entity via a streaming max-scan, replacing the running [_Candidate]
-## only when a helper returns a strictly better one (ADR-0011 §2; the real
-## [code]_is_better[/code] tie-break comparator is Story 005's scope — this
-## story's stub helpers never produce a non-null candidate, so no comparator
-## is exercised yet, but the running-best plumbing is already in its final
-## shape).
+## only when a helper returns a strictly better one under [method _is_better]
+## (ADR-0011 §2, Story 005) — the deterministic
+## [code]score[/code]-then-[code]ap_cost[/code]-then-[code]entity_id[/code]
+## tie-break comparator every per-verb helper folds its candidates through.
 static func choose_action(state: GameState, economy_investments_committed: int) -> Action:
 	var lookahead: GameState = state.clone()
 
@@ -177,10 +225,9 @@ static func _entities_in_enumeration_order(state: GameState) -> Array[EntityStat
 ## Every candidate is affordability-gated via [method AP.can_afford] before
 ## scoring (TR-ai-005) — an unaffordable candidate never reaches
 ## [method _action_score]/the running-best comparison. Replaces [param best]
-## with a strictly higher-scoring candidate (interim `>` comparator — the
-## epsilon/[code]ap_cost[/code]/[code]entity_id[/code] tie-break is Story 005's
-## scope per this story's Implementation Notes; this story only proves the
-## formulas produce the documented worked-example numbers).
+## via [method _is_better] (Story 005's deterministic epsilon/
+## [code]ap_cost[/code]/[code]entity_id[/code] tie-break comparator), never a
+## bare score comparison.
 static func _score_move_and_attack_candidates(lookahead: GameState, entity: EntityState, \
 		_economy_investments_committed: int, best: _Candidate) -> _Candidate:
 	if entity is UnitState and not Unit.can_attack(entity):
@@ -260,7 +307,7 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 			var threat_dist_after: int = lookahead.grid.manhattan_distance(r.tile, threat.entity.position)
 			var value: float = _retreat_value(threat_dist_before, threat_dist_after)
 			var score: float = value / float(tiles_moved)
-			if score > best.score:
+			if _is_better(score, r.min_cost, unit.entity_id, best.score, best.ap_cost, best.entity_id):
 				best = _Candidate.new(_make_move_action(unit, r.tile, tiles_moved), score, r.min_cost, unit.entity_id)
 			continue # Anti-oscillation: no advance/SETUP candidate this call.
 
@@ -268,7 +315,7 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 		var sets_up: bool = _sets_up_attack_next_turn(lookahead, unit, r.tile)
 		var value: float = _positional_value(nearest_enemy_dist_before, dist_after, sets_up)
 		var score: float = value / float(tiles_moved)
-		if score > best.score:
+		if _is_better(score, r.min_cost, unit.entity_id, best.score, best.ap_cost, best.entity_id):
 			best = _Candidate.new(_make_move_action(unit, r.tile, tiles_moved), score, r.min_cost, unit.entity_id)
 
 	return best
@@ -445,7 +492,7 @@ static func _consider_attack(lookahead: GameState, attacker: EntityState, target
 	var base_score: float = value / float(ap_cost)
 	var score: float = _action_score(base_score, is_kill)
 
-	if score > best.score:
+	if _is_better(score, ap_cost, attacker.entity_id, best.score, best.ap_cost, best.entity_id):
 		var action := AttackAction.new()
 		action.player = attacker.owner
 		action.attacker_tile = from_tile
@@ -556,7 +603,7 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 			var multiplier: float = _reachability_multiplier(lookahead, producer.owner, tile, unit_type)
 			var value: float = _production_value(unit_type, multiplier)
 			var score: float = _action_score(value / float(cost), false)
-			if score > best.score:
+			if _is_better(score, cost, producer.entity_id, best.score, best.ap_cost, best.entity_id):
 				var action := ProduceAction.new()
 				action.player = producer.owner
 				action.producer_id = producer.entity_id
@@ -689,12 +736,13 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 		var value: float = _economy_value(lookahead, player, structure_type) if is_economy \
 			else float(structure_type.build_cost)
 		var score: float = _action_score(value / float(cost), false)
-		if score > best.score:
+		var candidate_entity_id: int = _lowest_owned_entity_id(lookahead, player)
+		if _is_better(score, cost, candidate_entity_id, best.score, best.ap_cost, best.entity_id):
 			var action := BuildAction.new()
 			action.player = player
 			action.structure_type = structure_type
 			action.tile = tiles[0]
-			best = _Candidate.new(action, score, cost, _lowest_owned_entity_id(lookahead, player))
+			best = _Candidate.new(action, score, cost, candidate_entity_id)
 
 	return best
 
@@ -842,7 +890,7 @@ static func _score_cancel_build_candidates(lookahead: GameState, entity: EntityS
 
 	var value: float = _cancel_build_value(structure.type.build_cost)
 	var score: float = _action_score(value, false)
-	if score > best.score:
+	if _is_better(score, 0, structure.entity_id, best.score, best.ap_cost, best.entity_id):
 		var action := CancelBuildAction.new()
 		action.player = lookahead.active_player
 		action.structure_id = structure.entity_id

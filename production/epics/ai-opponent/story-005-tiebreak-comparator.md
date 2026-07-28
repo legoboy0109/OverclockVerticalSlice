@@ -1,12 +1,12 @@
 # Story 005: Deterministic Tie-Break Comparator + Cross-Verb `action_score` Comparison (`_is_better`)
 
 > **Epic**: AI Opponent (Minimal Vertical Slice)
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Feature
 > **Type**: Logic
 > **Estimate**: S (2h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -72,7 +72,7 @@
 **Story Type**: Logic
 **Required evidence**: `tests/unit/ai-opponent/ai_tiebreak_determinism_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created + passing — `tests/unit/ai-opponent/ai_tiebreak_determinism_test.gd` (10 fns, 10/10 PASS)
 
 ---
 
@@ -80,3 +80,13 @@
 
 - Depends on: Stories 003/004 (needs real multi-verb scores to compare)
 - Unlocks: Story 006 (the loop calls this comparator every enumeration step)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27
+**Criteria**: `_is_better` implements the exact three-tier logic (AC-1: `score > best+ε` → true; `< best−ε` → false; else `ap_cost` then `entity_id`) and is wired into all six `_score_*` running-best folds (replacing bare `score > best.score`). AC-4 (highest score wins regardless of verb — comparator is verb-agnostic by construction); AC-23 (within-ε tie → lower ap_cost, then lower/oldest entity_id, incl. two lethal both floored to 3.50); AC-18 (five-candidate cross-verb scenario resolves in exact descending order lethal 3.50 → Outpost 1.765 → Production 1.10 → non-lethal 1.00 → AttackTech 0.236, order-independent); determinism (pure, no RNG — ADR-0003 Rule 4); ε boundary (a score exactly +`score_tie_epsilon` is a TIE, not strictly better — the `>` is strict).
+**Implementation**: `src/gameplay/ai/ai.gd` — `_is_better(score, ap_cost, entity_id, best_score, best_ap_cost, best_entity_id)` + wiring into every helper's fold + the empty-best case.
+**Test Evidence**: Logic — `tests/unit/ai-opponent/ai_tiebreak_determinism_test.gd` (10 fns, 10/10 PASS; full suite 611/611, no regressions). *Test authored by the orchestrator after the implementing agent truncated before writing it; implementation + wiring by ai-programmer, verified 601→611 green.*
+**Deviations**: None. ai-002/003/004 scoring + contracts unchanged.
+**Code Review**: not separately run (test-covered against the exact AC-1 spec); recommend a light pass at sprint close-out.

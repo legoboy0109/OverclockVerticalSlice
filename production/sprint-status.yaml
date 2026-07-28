@@ -188,11 +188,11 @@ stories:
     name: "Tiebreak comparator (determinism)"
     file: "production/epics/ai-opponent/story-005-tiebreak-comparator.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.25
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"
   - id: "ai-006"
     name: "AI turn-driver loop (adds is_ai_controlled)"
     file: "production/epics/ai-opponent/story-006-ai-turn-driver-loop.md"
