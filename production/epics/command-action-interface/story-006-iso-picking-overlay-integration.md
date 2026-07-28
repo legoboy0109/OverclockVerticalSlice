@@ -1,12 +1,12 @@
 # Story 006: Isometric Picking & Overlay Integration (Move/Attack/Build Overlays, Glyph Anchors)
 
 > **Epic**: Command & Action Interface
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: Integration
 > **Estimate**: L (4h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-28
 
 ## Context
 
@@ -78,11 +78,22 @@
 **Story Type**: Integration
 **Required evidence**: `tests/integration/command-action-interface/iso_picking_overlay_test.gd` (round-trip/occupant-priority assertions) + `production/qa/evidence/iso-overlay-legibility-evidence.md` (colorblind/greyscale screenshot walkthrough — Visual/Feel advisory portion)
 
-**Status**: [ ] Not yet created
+**Status**: [x] Integration test created & passing — `tests/integration/command-action-interface/iso_picking_overlay_test.gd` (7/7 green). [x] Visual/Feel evidence stub created (`production/qa/evidence/iso-overlay-legibility-evidence.md`) — AC-28/AC-29 sign-off DEFERRED (windowed session + real pattern art).
 
 ---
 
 ## Dependencies
 
-- Depends on: Story 002 (held Tier-1/2 sets to render), Story 003 (real `reachable`/`legal_targets`/`legal_build_tiles` data), **and the Isometric Board Renderer node (ADR-0013) — a separate, not-yet-scoped epic this story consumes but does not implement. If that node has not landed, this story is BLOCKED, not merely at-risk.**
+- Depends on: Story 002 (held Tier-1/2 sets to render), Story 003 (real `reachable`/`legal_targets`/`legal_build_tiles` data), and the Isometric Board Renderer node (ADR-0013) — **all satisfied**: br-001..005 complete, its public API (`pick_at`/`grid_to_screen`/`set_overlay`/`glyph_anchor`) present.
 - Unlocks: Story 009 (CR-9 legibility/colorblind polish builds on these overlay classes)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-28
+**Criteria**: automated (BLOCKING) 4/4 PASS; visual (ADVISORY) AC-28/AC-29 + hp-pip-priority DEFERRED. Full suite 694/694 — 0 failures, 0 orphans, 60/60 suites.
+**Implementation**: `command_interface.gd` consumes the BoardRenderer public API — `_render_overlays()` (called at the end of `_recompute_tier1_and_2`) maps the held tier dicts to `BoardRenderer.set_overlays(...)`: PREVIEW_MOVE → MOVE_IN_CAP/MOVE_OVER_CAP (split by `ReachableTile.is_surcharged`) + AFTER_MOVE_ECHO (D-3), all in one call; PREVIEW_ATTACK → ATTACK_TARGET; non-preview → `clear_overlay`. `route_click(screen_pos, state)` consumes `pick_at` as the one click-routing entry point (occupant-priority selection of an own `UnitState`; returns the `PickResult`). `glyph_anchor(tile, class)` is a pure delegation to `BoardRenderer.glyph_anchor`.
+**Coordinator-approved cross-epic seam**: added `BoardRenderer.set_overlays(class_tiles: Dictionary)` to `src/ui/board_renderer/board_renderer.gd` — the single-class `set_overlay` clears on every call, so it can't render Move's in-cap + over-cap + echo together (AC-29 needs them coexisting). Additive, same `overlay_layer`/`TileSet` write path (alignment preserved); BR suites stayed 38/38 green.
+**Deferrals (logged to `docs/tech-debt-register.md`)**: (1) the live `_unhandled_input` button→`route_click` binding (needs the scene's persistent GameState feed — Story 007; `route_click` is the complete tested routing logic today, only its engine trigger is deferred); (2) AC-28's finer 3-way attack-blocked overlay split (blocked-by-friendly / out-of-range / AREA-dead-zone) + the real hatch/pattern art — a single `ATTACK_TARGET` class is wired; the split + patterns are art/Story-009; (3) a small ADR-0013 §3 footnote that `set_overlays` joins `set_overlay` as a sanctioned overlay write path.
+**Test Evidence**: Integration — `tests/integration/command-action-interface/iso_picking_overlay_test.gd` (7 test functions: occupant priority, pick_at fallback, opponent-turn no-select, in-cap+over-cap-together, AC-30 subset, attack-target, glyph delegation) + Visual/Feel stub `production/qa/evidence/iso-overlay-legibility-evidence.md` (AC-28/29 windowed sign-off DEFERRED).
+**Code Review**: orchestrator implemented/verified (agent truncated mid-refactor — I removed a dead `_on_mouse_button_pressed` stub, wrote the integration test + evidence stub, and fixed a latent cai-005 class collision: `prototypes/adr0014-input-spike` declared `class_name BoardCursor`/`GridStub` colliding with the real ones → added `prototypes/.gdignore` to isolate throwaway prototypes from Godot's global class scan). No `src/core` change.

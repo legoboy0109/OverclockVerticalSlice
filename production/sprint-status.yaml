@@ -21,7 +21,7 @@ goal: "Build the playable Vertical Slice (rendered one-close-skirmish loop) at r
 start: "2026-07-28"
 end: "2026-08-08"
 generated: "2026-07-27"
-updated: "2026-07-27"  # cai-005 done (story-done 2026-07-27) — CAI epic 5/8 done
+updated: "2026-07-28"  # cai-006 done (story-done 2026-07-28) — CAI epic 6/8 done
 # br-001 done (story-done 2026-07-27) — first VS-build story complete
 # br-002 + ai-001 done (parallel, 2026-07-27); full suite 524/524
 
@@ -123,11 +123,11 @@ stories:
     name: "Iso-picking / overlay integration"
     file: "production/epics/command-action-interface/story-006-iso-picking-overlay-integration.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
-    blocker: "br-004"
-    completed: ""
+    blocker: ""  # br-004 satisfied (Board Renderer epic 5/5 complete)
+    completed: "2026-07-28"  # +BoardRenderer.set_overlays seam; route_click/_render_overlays/glyph_anchor; 7 integ tests, full suite 694/694; AC-28/29 visual DEFERRED
   - id: "cai-007"
     name: "Commit-dispatch / input-lock / shared action_applied signal"
     file: "production/epics/command-action-interface/story-007-commit-dispatch-input-lock-shared-signal.md"

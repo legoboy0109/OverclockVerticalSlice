@@ -26,6 +26,19 @@
 ## re-issue (Story 002) is unchanged and is exactly what a rejected
 ## [method commit] call routes into for a unit-bearing preview.
 ##
+## [b]Story 006 adds[/b] overlay rendering ([method _render_overlays],
+## TR-cmdui-016) — called at the end of every [method _recompute_tier1_and_2]
+## so the [BoardRenderer]'s painted overlay always reflects whichever tier
+## dicts are currently held, including re-issues (AC-19/AC-30) and Tier-4
+## reject re-issues — and click routing ([method route_click],
+## TR-cmdui-003/004): [member _renderer]'s [code]pick_at[/code] is consumed as
+## the [i]one[/i] click-routing entry point, resolving occupant-priority
+## selection for an own [UnitState] occupant. Also adds
+## [method glyph_anchor] (TR-cmdui-017), a pure delegation to
+## [method BoardRenderer.glyph_anchor] — the sanctioned
+## [code]grid_to_screen(tile) + GLYPH_OFFSETS[class][/code] anchor convention
+## is never re-derived here.
+##
 ## Deliberately [b]out of scope[/b] (see the story's Out of Scope section):
 ## real [code]pick_at[/code]/[code]screen_to_grid[/code] iso-picking math
 ## (Board Renderer, consumed only), [code]BoardCursor[/code] tile-stepping
@@ -34,6 +47,9 @@
 ## [signal GameState.action_applied] emit wiring (Story 007) — this story
 ## establishes the [method commit]/[signal GameState.action_applied] plumbing
 ## Story 007 hangs the flash off, but does not itself fire any flash/audio.
+## Story 006's [method route_click] likewise stops at [i]selection[/i] —
+## committing a move/attack from a click-in-preview (the action-build +
+## [code]INPUT_LOCK_MS[/code] dispatch) is Story 007's scope, not this one's.
 ##
 ## [b]Testability seam (Logic story, spy-countable):[/b] every query this
 ## class calls sits behind an injectable [Callable] field
@@ -523,6 +539,10 @@ func is_after_move_attackable(tile: Vector2i) -> bool:
 ## [br]- [constant CommandFSM.State.PREVIEW_ATTACK]: Tier-1 attack set via
 ## [method _recompute_tier1] only (Tier-2 is a Move-only concept, ADR-0015 §3).
 ## [br]- any other state: no-op (nothing to recompute outside a preview).
+## Ends by calling [method _render_overlays] (Story 006, TR-cmdui-016) — so
+## every code path that touches Tier-1/2 (entry, board-change re-issue,
+## Tier-4 reject re-issue) leaves the painted overlay in sync with whatever it
+## just (re)computed, never a second independent "paint the overlay" call site.
 func _recompute_tier1_and_2(state: GameState, unit: UnitState) -> void:
 	match _fsm_state:
 		CommandFSM.State.PREVIEW_MOVE:
@@ -532,6 +552,7 @@ func _recompute_tier1_and_2(state: GameState, unit: UnitState) -> void:
 			_recompute_tier1(state, unit)
 		_:
 			pass
+	_render_overlays()
 
 
 ## Tier-1 (ADR-0015 §3, TR-cmdui-006): fires [member _reachable_fn] or
@@ -590,3 +611,131 @@ func _recompute_tier2(state: GameState, unit: UnitState) -> void:
 ## concern, not a fourth tier family here).
 func _is_preview_state(s: CommandFSM.State) -> bool:
 	return s == CommandFSM.State.PREVIEW_MOVE or s == CommandFSM.State.PREVIEW_ATTACK
+
+
+## Story 006 click-routing entry point (TR-cmdui-003/004, ADR-0013 §4):
+## consumes [member _renderer]'s [code]pick_at(screen_pos)[/code] as the
+## [i]one[/i] click-routing entry point — never [code]screen_to_grid[/code] —
+## and, when the pick resolves to an own [UnitState] occupant while
+## [method is_input_live] holds, routes the occupant-priority selection
+## through [method try_select] exactly like any other selection trigger (no
+## bespoke second selection path). Always returns the raw pick result so a
+## caller (or a test) can inspect what tile/occupant the click actually
+## resolved to regardless of whether a selection happened.
+##
+## [b]Deliberately does not build or commit an [Action][/b] — a click landing
+## inside an open preview (e.g. on a reachable tile) is Story 007's
+## action-build + [code]INPUT_LOCK_MS[/code] commit-dispatch scope, not this
+## story's. This method resolves the picked tile/occupant and, at most,
+## changes selection; nothing here ever calls [method commit].
+##
+## No-op selection (but the pick still resolves and is still returned) when
+## any of: input is not live, no occupant was hit
+## ([code]occupant_entity_id == -1[/code]), the occupant is not owned by
+## [member _local_player], or the occupant is not a [UnitState] (a structure
+## occupant has no [method try_select] path — [method try_select]'s own
+## signature is [UnitState]-only, mirroring every other call site in this
+## class). [member _renderer] is assumed non-null by callers that reach this
+## method directly (mirrors [method _unhandled_input]'s own null-guard
+## responsibility sitting at the engine-glue call site, not duplicated here).
+func route_click(screen_pos: Vector2, state: GameState) -> Object:
+	var pick: Object = _renderer.pick_at(screen_pos)
+	if not is_input_live(state):
+		return pick
+	if pick.occupant_entity_id == -1:
+		return pick
+	var entity: EntityState = state.entities_by_id.get(pick.occupant_entity_id)
+	if entity == null or entity.owner != _local_player:
+		return pick
+	if not (entity is UnitState):
+		return pick
+	try_select(state, entity)
+	return pick
+
+
+# NOTE (Story 006 → 007): click routing lives in [method route_click] above —
+# the tested, directly-callable entry point (mirroring [method _on_mouse_moved_to_tile]).
+# [method _unhandled_input] is NOT extended to InputEventMouseButton here: this
+# Node holds no persistent GameState (state is passed per call), so a live
+# button handler has nothing to route against until the scene feeds it a state —
+# that wiring is Story 007's / the scene's job. route_click is the complete
+# TR-cmdui-003/004 routing logic today; only its engine-input trigger is deferred.
+
+
+## Glyph anchoring (TR-cmdui-017, ADR-0013 §5): pure delegation to
+## [method BoardRenderer.glyph_anchor] — the sanctioned
+## [code]grid_to_screen(tile) + GLYPH_OFFSETS[glyph_class][/code] anchor
+## convention is computed exactly once, on [BoardRenderer], and never
+## re-derived here. [param glyph_class] is a plain [code]int[/code] mirroring
+## [method BoardRenderer.glyph_anchor]'s own signature; pass one of
+## [enum BoardRenderer.GlyphClass]'s named values. The hp-pip-never-occluded
+## priority (game-hud.md CR-5/TR-hud-011) is offset-table authoring
+## discipline living entirely in [GlyphOffsets] — not re-enforced by this
+## pass-through. O(1).
+func glyph_anchor(tile: Vector2i, glyph_class: int) -> Vector2:
+	return _renderer.glyph_anchor(tile, glyph_class)
+
+
+## Overlay rendering (TR-cmdui-016, ADR-0013 §3; AC-29/AC-30 wiring): the
+## [i]sole[/i] call site of [method BoardRenderer.set_overlays]/
+## [method BoardRenderer.clear_overlay] in this class — reached only from the
+## end of [method _recompute_tier1_and_2], so a stale overlay from a prior
+## preview/tile-set can never linger past the recompute that should have
+## replaced it. A null [member _renderer] is a defensive no-op (nothing to
+## paint against yet, mirrors [method _unhandled_input]'s own null-guard).
+##
+## Dispatches on [member _fsm_state]:
+## [br]- [constant CommandFSM.State.PREVIEW_MOVE]: splits [member _reachable]
+## by [member Movement.ReachableTile.is_surcharged] into
+## [constant BoardRenderer.OverlayClass.MOVE_IN_CAP] (false) /
+## [constant BoardRenderer.OverlayClass.MOVE_OVER_CAP] (true), and marks every
+## tile [method is_after_move_attackable] returns true for as
+## [constant BoardRenderer.OverlayClass.AFTER_MOVE_ECHO] (the D-3 echo) — all
+## three classes painted in [b]one[/b] [method BoardRenderer.set_overlays]
+## call so they coexist (AC-29 requires in-cap AND over-cap visible
+## together; [method BoardRenderer.set_overlay]'s single-class contract would
+## clear between classes, which is exactly why [method BoardRenderer.set_overlays]
+## exists). AC-30 falls out for free here with no extra logic: whatever
+## [member _reachable] currently holds (a re-issued, possibly-shrunk set when
+## [code]tiles_moved_this_turn > 0[/code], per Story 002's Tier-1 recompute)
+## is exactly what gets painted — never a second, independently-tracked
+## "full-AP" set.
+## [br]- [constant CommandFSM.State.PREVIEW_ATTACK]: every [member _targets]
+## tile as [constant BoardRenderer.OverlayClass.ATTACK_TARGET]. The finer
+## blocked-by-friendly / out-of-range / AREA-dead-zone split named in AC-28
+## is the Visual/advisory portion of this taxonomy (art bible / Story 009) —
+## a single [constant BoardRenderer.OverlayClass.ATTACK_TARGET] class is
+## sufficient for this story's automated wiring.
+## [br]- any other state (IDLE, ENTITY_SELECTED, PREVIEW_PRODUCE,
+## PREVIEW_BUILD, GAME_OVER): [method BoardRenderer.clear_overlay] — no
+## overlay belongs on the board outside an open Move/Attack preview.
+func _render_overlays() -> void:
+	if _renderer == null:
+		return
+	match _fsm_state:
+		CommandFSM.State.PREVIEW_MOVE:
+			var in_cap: Array[Vector2i] = []
+			var over_cap: Array[Vector2i] = []
+			var echo: Array[Vector2i] = []
+			for tile: Vector2i in _reachable:
+				var r: Movement.ReachableTile = _reachable[tile]
+				if r.is_surcharged:
+					over_cap.append(tile)
+				else:
+					in_cap.append(tile)
+				if is_after_move_attackable(tile):
+					echo.append(tile)
+			_renderer.set_overlays({
+				BoardRenderer.OverlayClass.MOVE_IN_CAP: in_cap,
+				BoardRenderer.OverlayClass.MOVE_OVER_CAP: over_cap,
+				BoardRenderer.OverlayClass.AFTER_MOVE_ECHO: echo,
+			})
+		CommandFSM.State.PREVIEW_ATTACK:
+			var targets: Array[Vector2i] = []
+			for tile: Vector2i in _targets:
+				targets.append(tile)
+			_renderer.set_overlays({
+				BoardRenderer.OverlayClass.ATTACK_TARGET: targets,
+			})
+		_:
+			_renderer.clear_overlay()

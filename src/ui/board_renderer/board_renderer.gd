@@ -521,6 +521,26 @@ func set_overlay(tiles: Array[Vector2i], class_id: int) -> void:
 		overlay_layer.set_cell(tile, class_id, Vector2i.ZERO)
 
 
+## Multi-class overlay write (ADR-0013 §3; Command & Action Interface Story 006).
+## Clears the overlay ONCE, then paints every [param class_tiles] entry — an
+## [int] [enum OverlayClass] id keyed to its [code]Array[Vector2i][/code] of
+## tiles — so several classes coexist in a single preview (e.g. a Move preview's
+## [constant OverlayClass.MOVE_IN_CAP] + [constant OverlayClass.MOVE_OVER_CAP] +
+## [constant OverlayClass.AFTER_MOVE_ECHO] rendered together, which the
+## single-class [method set_overlay] cannot express because it clears on every
+## call). Same [member overlay_layer]/[TileSet] write path as [method set_overlay]
+## — screen alignment is guaranteed by construction identically (this stays a
+## sanctioned overlay write path; consumers still never touch
+## [member overlay_layer] or [method grid_to_screen] directly). A later-listed
+## class wins a tile shared with an earlier one (last write per cell); callers
+## partition tiles across classes so overlap does not arise. O(total tiles).
+func set_overlays(class_tiles: Dictionary) -> void:
+	clear_overlay()
+	for class_id: int in class_tiles:
+		for tile: Vector2i in class_tiles[class_id]:
+			overlay_layer.set_cell(tile, class_id, Vector2i.ZERO)
+
+
 ## Empties [member overlay_layer] of every populated cell (ADR-0013 §3,
 ## story-003). A no-op, never an error, when the overlay is already empty —
 ## see the class-level boundary note on [method set_overlay] for why this is
