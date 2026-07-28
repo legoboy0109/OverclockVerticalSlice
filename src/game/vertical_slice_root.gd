@@ -51,12 +51,23 @@ const LOCAL_PLAYER: int = 0
 const AI_PLAYER: int = 1
 
 ## Provisional camera zoom over the placeholder board (final feel = `/ux-design`).
-const CAMERA_ZOOM: Vector2 = Vector2(2.0, 2.0)
+# Camera framing. The board is fit into the viewport minus these HUD-reserved
+# bands (so the top/bottom HUD chrome sits over empty space, not the board), then
+# freely zoomable (wheel) between the fit zoom and CAMERA_ZOOM_MAX, and pannable
+# (middle-drag / cursor edge-follow).
+const CAMERA_HUD_TOP_MARGIN_PX: float = 104.0
+const CAMERA_HUD_BOTTOM_MARGIN_PX: float = 128.0
+const CAMERA_SIDE_MARGIN_PX: float = 24.0
+const CAMERA_FIT_MARGIN: float = 0.95
+const CAMERA_ZOOM_MAX: float = 3.0
+const CAMERA_ZOOM_STEP: float = 1.12
 
 var _state: GameState = null
 var _reader: GameStateReader = null
 var _board: BoardRenderer = null
 var _camera: Camera2D = null
+## The whole-board fit zoom (lower bound for wheel zoom-out); set by _fit_camera_to_board.
+var _camera_fit_zoom: float = 1.0
 var _cmd: CommandInterface = null
 var _hud: GameHud = null
 ## Slice-owned screen-space status/legend overlay (a CanvasLayer + Label). Surfaces
@@ -150,10 +161,79 @@ func _build_board_and_camera() -> void:
 	add_child(_board)
 
 	_camera = Camera2D.new()
-	_camera.position = _board.grid_to_screen(Vector2i(MAP_WIDTH / 2, MAP_HEIGHT / 2))
-	_camera.zoom = CAMERA_ZOOM
 	add_child(_camera)
 	_camera.make_current()
+	_fit_camera_to_board()
+	# Refit when the window is resized so the board stays framed at any size.
+	get_viewport().size_changed.connect(_fit_camera_to_board)
+
+
+## Frames the whole board in the viewport MINUS the HUD-reserved top/bottom bands
+## (so the top chrome and the bottom status/controls sit over empty space, not the
+## board) and records the resulting fit zoom as the zoom-out floor. Idempotent —
+## also runs on window resize.
+func _fit_camera_to_board() -> void:
+	if _board == null or _camera == null:
+		return
+	var corners: Array[Vector2] = [
+		_board.grid_to_screen(Vector2i(0, 0)),
+		_board.grid_to_screen(Vector2i(MAP_WIDTH - 1, 0)),
+		_board.grid_to_screen(Vector2i(0, MAP_HEIGHT - 1)),
+		_board.grid_to_screen(Vector2i(MAP_WIDTH - 1, MAP_HEIGHT - 1)),
+	]
+	var min_p: Vector2 = corners[0]
+	var max_p: Vector2 = corners[0]
+	for p: Vector2 in corners:
+		min_p = min_p.min(p)
+		max_p = max_p.max(p)
+	# Pad by half a tile so the edge diamonds are not clipped.
+	var pad := Vector2(BoardRenderer.TILE_WIDTH_PX, BoardRenderer.TILE_HEIGHT_PX) * 0.5
+	min_p -= pad
+	max_p += pad
+	var board_size: Vector2 = max_p - min_p
+	var board_center: Vector2 = (min_p + max_p) * 0.5
+
+	var vp: Vector2 = get_viewport_rect().size
+	var safe_w: float = maxf(1.0, vp.x - 2.0 * CAMERA_SIDE_MARGIN_PX)
+	var safe_h: float = maxf(1.0, vp.y - CAMERA_HUD_TOP_MARGIN_PX - CAMERA_HUD_BOTTOM_MARGIN_PX)
+	var fit: float = minf(safe_w / board_size.x, safe_h / board_size.y) * CAMERA_FIT_MARGIN
+	_camera_fit_zoom = fit
+	_camera.zoom = Vector2(fit, fit)
+	# Offset so the board centers within the safe band (top/bottom margins differ).
+	var safe_offset := Vector2(0.0, (CAMERA_HUD_TOP_MARGIN_PX - CAMERA_HUD_BOTTOM_MARGIN_PX) * 0.5)
+	_camera.position = board_center - safe_offset / fit
+
+
+## Multiplies the camera zoom by [param factor], clamped between the whole-board fit
+## zoom (can't zoom out into the void) and [constant CAMERA_ZOOM_MAX].
+func _zoom_camera(factor: float) -> void:
+	if _camera == null:
+		return
+	var z: float = clampf(_camera.zoom.x * factor, _camera_fit_zoom, CAMERA_ZOOM_MAX)
+	_camera.zoom = Vector2(z, z)
+
+
+## Pans the camera just enough to keep the board cursor inside the central ~70% of
+## the view — so arrow-key navigation never loses the cursor when zoomed in. A no-op
+## when the whole board fits (fit zoom), since the cursor is always already visible.
+func _keep_cursor_in_view() -> void:
+	if _board == null or _camera == null or _cursor == null:
+		return
+	var cursor_world: Vector2 = _board.grid_to_screen(_cursor.grid_pos)
+	var half_view: Vector2 = get_viewport_rect().size * 0.5 / _camera.zoom
+	var margin: Vector2 = half_view * 0.15
+	var lo: Vector2 = _camera.position - half_view + margin
+	var hi: Vector2 = _camera.position + half_view - margin
+	var pos: Vector2 = _camera.position
+	if cursor_world.x < lo.x:
+		pos.x += cursor_world.x - lo.x
+	elif cursor_world.x > hi.x:
+		pos.x += cursor_world.x - hi.x
+	if cursor_world.y < lo.y:
+		pos.y += cursor_world.y - lo.y
+	elif cursor_world.y > hi.y:
+		pos.y += cursor_world.y - hi.y
+	_camera.position = pos
 
 
 func _build_command_interface() -> void:
@@ -197,9 +277,14 @@ func _build_status_overlay() -> void:
 	_status_layer = CanvasLayer.new()
 	add_child(_status_layer)
 	_status_label = Label.new()
-	# Below the AP counter (16,12) + collapsed income breakdown (16,40); this column
-	# is otherwise clear (action log is bottom-left, controls bottom-right).
-	_status_label.position = Vector2(16, 72)
+	# Bottom-centre, in the camera's reserved bottom band — clear of the board and of
+	# the corner widgets (action log bottom-left, controls bottom-right), and off the
+	# crowded top edge the player flagged as blocking the board.
+	_status_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_status_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_status_label.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_status_label.position = Vector2(0, -8)
 	_status_label.add_theme_font_size_override("font_size", 13)
 	_status_label.add_theme_color_override("font_color", Color(0.92, 0.95, 1.0))
 	_status_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.9))
@@ -323,6 +408,13 @@ func _unhandled_input(event: InputEvent) -> void:
 				request_produce_at_cursor()
 			KEY_TAB:
 				try_end_human_turn()
+	elif event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_zoom_camera(CAMERA_ZOOM_STEP)      # wheel up: zoom in
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			_zoom_camera(1.0 / CAMERA_ZOOM_STEP) # wheel down: zoom out (to the fit floor)
+	elif event is InputEventMouseMotion and (event.button_mask & MOUSE_BUTTON_MASK_MIDDLE) != 0:
+		_camera.position -= event.relative / _camera.zoom # middle-drag: free pan
 
 
 # --- Keyboard board control (works around the blocked click-pick seam) -------
@@ -337,6 +429,7 @@ func move_cursor(direction: Vector2i) -> bool:
 	if not _cursor.step(direction, _state.grid):
 		return false
 	_cmd.inspect(_state, _cursor.grid_pos) # peek → detail panel (unpinned).
+	_keep_cursor_in_view() # pan the camera if the cursor nears the view edge (zoomed in).
 	queue_redraw() # repaint the cursor highlight.
 	return true
 
@@ -507,6 +600,10 @@ func state() -> GameState:
 ## The board renderer.
 func board() -> BoardRenderer:
 	return _board
+
+## The framing camera (test-only read).
+func camera() -> Camera2D:
+	return _camera
 
 ## The assembled HUD.
 func hud() -> GameHud:

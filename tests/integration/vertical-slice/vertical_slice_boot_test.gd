@@ -330,3 +330,29 @@ func test_status_overlay_surfaces_selected_build_type_legend_and_updates_on_cycl
 	var second: StructureTypeDef = root.selected_buildable()
 	assert_bool(second.display_name != first.display_name).is_true()
 	assert_str(root.status_text()).contains(second.display_name) # e.g. "Production Outpost"
+
+
+func test_camera_frames_the_whole_board_within_the_view() -> void:
+	# The fit-to-board camera must show every board tile at boot (regression for the
+	# "board off-screen / window too small" report — old fixed zoom 2.0 clipped it).
+	# Pin a realistic window size — the headless default viewport is 64x64, which
+	# degenerates any framing check.
+	var prev_size: Vector2i = get_window().size
+	get_window().size = Vector2i(1280, 720)
+	var root := _make_root()
+	var cam: Camera2D = root.camera()
+	var board: BoardRenderer = root.board()
+	var half_view: Vector2 = root.get_viewport_rect().size * 0.5 / cam.zoom
+	var view_min: Vector2 = cam.position - half_view
+	var view_max: Vector2 = cam.position + half_view
+
+	# All four corner tiles fall inside the visible world rect.
+	for tile: Vector2i in [Vector2i(0, 0), Vector2i(11, 0), Vector2i(0, 9), Vector2i(11, 9)]:
+		var p: Vector2 = board.grid_to_screen(tile)
+		assert_bool(p.x >= view_min.x and p.x <= view_max.x).is_true()
+		assert_bool(p.y >= view_min.y and p.y <= view_max.y).is_true()
+
+	# And the camera is zoomed to fit (never the old clipped 2.0, never degenerate).
+	assert_float(cam.zoom.x).is_between(0.3, 1.5)
+
+	get_window().size = prev_size
