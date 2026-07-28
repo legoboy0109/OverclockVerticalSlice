@@ -671,3 +671,76 @@ func test_positional_scoring_never_competes_on_a_tile_that_enables_a_combo_attac
 	assert_bool(best.action is MoveAction).is_true()
 	assert_vector((best.action as MoveAction).to).is_equal(Vector2i(1, 0))
 	assert_float(best.score).is_equal_approx(0.5, 0.0001)
+
+
+# --- Regression: AI-turn freeze + build/cancel oscillation (2026-07-28) -------
+# Guards the enumeration-gate fixes behind the windowed AI-turn hang:
+#   (A)  _score_production_candidates skips a producer already at its per-turn cap
+#   (C1) _score_build_and_economy_candidates enumerates ONLY ECONOMY_OUTPOST
+#        (no non-economy fallback that the AI can't value + would cancel-churn)
+#   (C2) _score_cancel_build_candidates is suppressed once an economy investment
+#        is committed this turn (never cancels a just-built structure)
+
+func test_score_production_candidates_skips_producer_at_its_per_turn_cap() -> void:
+	# Arrange — an HQ (production_cap 2) already at cap this turn; producible types
+	# are affordable and legal deploy tiles exist, so ONLY the cap gate can exclude it.
+	var state := _make_state(60)
+	state.per_player[0].faction = Factions.NEUTRAL  # effective_produce_cost reads the owner's faction deltas
+	var hq := _make_structure(1, 0, StructureTypes.HQ, Vector2i(5, 5), StructureState.BuildStatus.COMPLETED)
+	hq.units_produced_this_turn = BaseProduction.effective_production_cap(state, hq, 0)
+	_place(state, hq)
+
+	# Act
+	var best := AI._Candidate.new()
+	best = AI._score_production_candidates(state, hq, 0, best)
+
+	# Assert — no produce candidate. Without this gate, choose_action re-proposes
+	# an at-cap produce that apply_action rejects (PRODUCTION_CAP_REACHED),
+	# freezing AITurnDriver's reject-continue loop.
+	assert_object(best.action).is_null()
+
+
+func test_score_production_candidates_allows_producer_one_below_cap() -> void:
+	# Control — the same HQ one unit below cap DOES yield a produce candidate.
+	var state := _make_state(60)
+	state.per_player[0].faction = Factions.NEUTRAL  # effective_produce_cost reads the owner's faction deltas
+	var hq := _make_structure(1, 0, StructureTypes.HQ, Vector2i(5, 5), StructureState.BuildStatus.COMPLETED)
+	hq.units_produced_this_turn = BaseProduction.effective_production_cap(state, hq, 0) - 1
+	_place(state, hq)
+
+	var best := AI._Candidate.new()
+	best = AI._score_production_candidates(state, hq, 0, best)
+
+	assert_object(best.action).is_not_null()
+	assert_bool(best.action is ProduceAction).is_true()
+
+
+func test_score_build_enumerates_no_non_economy_fallback_at_cap() -> void:
+	# At the economy cadence cap, ECONOMY_OUTPOST is excluded. The other buildable
+	# types (production/defensive/research) must NOT be enumerated as a fallback —
+	# they have no AI valuation and drove the build<->cancel oscillation — so no
+	# build candidate is produced at all here.
+	var state := _make_state(60)
+	var hq := _make_structure(1, 0, StructureTypes.HQ, Vector2i(5, 5), StructureState.BuildStatus.COMPLETED)
+	_place(state, hq)
+
+	var best := AI._Candidate.new()
+	best = AI._score_build_and_economy_candidates(state, hq, AIBalance.ai.max_economy_investments_per_turn, best)
+
+	assert_object(best.action).is_null()
+
+
+func test_score_cancel_build_suppressed_after_economy_investment_this_turn() -> void:
+	# Anti-oscillation — with an economy investment already committed this turn
+	# (committed > 0), an own under-construction structure is NOT offered as a
+	# cancel-build candidate (prevents the build<->cancel loop). The committed == 0
+	# path (a prior-turn structure stays cancellable) is covered by
+	# test_score_cancel_build_candidates_finds_under_construction_structure.
+	var state := _make_state(60)
+	var outpost := _make_structure(1, 0, _make_economy_outpost_type(), Vector2i(5, 5), StructureState.BuildStatus.UNDER_CONSTRUCTION)
+	_place(state, outpost)
+
+	var best := AI._Candidate.new()
+	best = AI._score_cancel_build_candidates(state, outpost, 1, best)
+
+	assert_object(best.action).is_null()
