@@ -21,7 +21,7 @@ goal: "Build the playable Vertical Slice (rendered one-close-skirmish loop) at r
 start: "2026-07-28"
 end: "2026-08-08"
 generated: "2026-07-27"
-updated: "2026-07-28"  # hud-001..006 done + selection_changed seam — Game HUD epic 6/7 in-slice
+updated: "2026-07-28"  # ★ hud-001..007 ALL DONE — Game HUD epic in-slice COMPLETE (7/7; hud-008 audio deferred to Production)
 # br-001 done (story-done 2026-07-27) — first VS-build story complete
 # br-002 + ai-001 done (parallel, 2026-07-27); full suite 524/524
 
@@ -262,11 +262,11 @@ stories:
     name: "Action log + income + produce controls"
     file: "production/epics/game-hud/story-007-action-log-income-build-controls.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-28"
 
   # --- Sprint-level build tasks ---
   - id: "s3-05-seams"

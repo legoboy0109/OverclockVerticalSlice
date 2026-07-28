@@ -3,8 +3,8 @@
 > **Layer**: Presentation
 > **GDD**: design/gdd/game-hud.md
 > **Architecture Module**: Game HUD (Presentation Layer)
-> **Status**: Ready
-> **Stories**: 8 stories (see `## Stories` below) — none implemented yet
+> **Status**: ✅ In-slice Complete (2026-07-28) — 7/7 in-slice stories done (001–007); story 008 (audio dispatch) trimmed to Production per the Sprint 3 plan
+> **Stories**: 8 stories (see `## Stories` below) — 7/7 in-slice Complete; 008 deferred
 
 ## Overview
 
@@ -76,7 +76,7 @@ This epic is complete when:
 | 004 | AP Counter Widget + Opponent Muting + Preview Echo + Turn/Round Banner | Integration | ✅ Complete | ADR-0016 |
 | 005 | On-Board Glyph Layer — hp Pips/Numeric + Markers | Visual/Feel | ✅ Complete | ADR-0013, ADR-0016 |
 | 006 | Detail Panel + Victory/Defeat GameOver Preemption | Integration | ✅ Complete | ADR-0016 |
-| 007 | Action Log + Income Breakdown + Build/End-Turn + Turn-Scoping | Integration | Ready | ADR-0016, ADR-0006 |
+| 007 | Action Log + Income Breakdown + Build/End-Turn + Turn-Scoping | Integration | ✅ Complete | ADR-0016, ADR-0006 |
 | 008 | HudAudioDispatcher — Single-Owner play() + Priority Order | Integration | Ready | ADR-0016 |
 
 **Implementation order**: {001, 002} first (parallel) → then {003→004}, {005}, {006},
