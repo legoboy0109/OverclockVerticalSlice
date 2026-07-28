@@ -123,6 +123,18 @@ var _after_move_attackable: Dictionary = {}
 ## until the first hover/click resolves a tile.
 var _active_tile: Vector2i = _NO_ACTIVE_TILE
 
+## Which input locus last moved the active tile (Story 005, TR-cmdui-020,
+## ADR-0014). [constant Locus.NONE] until the first input resolves a tile.
+enum Locus { NONE, MOUSE, BOARD_CURSOR }
+
+## The input locus that last updated [member _active_tile] — set
+## [b]last-handler-wins[/b] with NO timestamp/frame-delta comparison
+## (TR-cmdui-020): Godot's synchronous single-threaded input dispatch already
+## makes "whichever handler ran last" the correct answer, so a mouse move then a
+## cursor key then a mouse move leaves this reflecting each input in dispatch
+## order. See [method _on_mouse_moved_to_tile] / [method _on_board_locus_moved].
+var _active_locus: Locus = Locus.NONE
+
 ## Injectable Tier-1 move query — defaults to the real
 ## [method Movement.reachable]. Swap for a counting spy in tests via
 ## [method configure_dependencies].
@@ -448,6 +460,30 @@ func _unhandled_input(event: InputEvent) -> void:
 ## tests (no synthesized [InputEvent] required).
 func _on_mouse_moved_to_tile(tile: Vector2i) -> void:
 	_active_tile = tile
+	_active_locus = Locus.MOUSE
+
+
+## Board-cursor locus update (Story 005, TR-cmdui-020): a [BoardCursor] step /
+## jump moved the grid-space cursor — mirror its [member BoardCursor.grid_pos]
+## into [member _active_tile] and claim the active locus. Last-handler-wins with
+## NO timestamp comparison, exactly like [method _on_mouse_moved_to_tile]; the
+## two handlers race only in the sense that Godot runs whichever input event
+## arrived first, and this method simply overwrites — the correct semantics.
+func _on_board_locus_moved(cursor: BoardCursor) -> void:
+	_active_tile = cursor.grid_pos
+	_active_locus = Locus.BOARD_CURSOR
+
+
+## The input locus that last updated the active tile ([enum Locus]) — read by
+## tests/callers to resolve mouse-vs-cursor precedence (Story 005, TR-cmdui-020).
+func active_locus() -> Locus:
+	return _active_locus
+
+
+## The last-updated active tile — whichever locus ([method active_locus]) set it
+## most recently. [constant _NO_ACTIVE_TILE] until the first input resolves.
+func active_tile() -> Vector2i:
+	return _active_tile
 
 
 ## Tier-3 O(1) read: the held Tier-1 [ReachableTile] for [param tile], or

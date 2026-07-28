@@ -21,7 +21,7 @@ goal: "Build the playable Vertical Slice (rendered one-close-skirmish loop) at r
 start: "2026-07-28"
 end: "2026-08-08"
 generated: "2026-07-27"
-updated: "2026-07-27"  # cai-004 done (story-done 2026-07-27) — CAI epic 4/8 done
+updated: "2026-07-27"  # cai-005 done (story-done 2026-07-27) — CAI epic 5/8 done
 # br-001 done (story-done 2026-07-27) — first VS-build story complete
 # br-002 + ai-001 done (parallel, 2026-07-27); full suite 524/524
 
@@ -114,11 +114,11 @@ stories:
     name: "Board-cursor input substrate"
     file: "production/epics/command-action-interface/story-005-board-cursor-input-substrate.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"  # BoardCursor value object + mouse/cursor precedence; 7 tests, full suite 687/687 (live input wiring deferred to 006/009)
   - id: "cai-006"
     name: "Iso-picking / overlay integration"
     file: "production/epics/command-action-interface/story-006-iso-picking-overlay-integration.md"
