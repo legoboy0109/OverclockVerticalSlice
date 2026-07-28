@@ -74,6 +74,12 @@ var _ai_running: bool = false
 ## [method BoardRenderer.pick_at].
 var _cursor: BoardCursor = null
 
+## The player's buildable structure roster (also handed to the HUD so its Build
+## affordability set matches). KEY_B places [member _selected_buildable] at the
+## cursor tile; KEY_C cycles which type is selected.
+var _buildables: Array[StructureTypeDef] = []
+var _selected_buildable: int = 0
+
 
 func _ready() -> void:
 	_build_match()
@@ -155,12 +161,21 @@ func _build_command_interface() -> void:
 
 
 func _build_hud() -> void:
+	_buildables = _buildable_roster()
 	_hud = GameHud.new()
-	# Buildable roster is left empty for the boot skeleton — the Build control's
-	# tile-placement UX rides the (blocked) pick-region seam; the AI still drives
-	# economy/production so the loop shows activity. Populate when Build is wired.
-	_hud.assemble(_reader, HudBalance.hud, _cmd, _board, LOCAL_PLAYER, [])
+	# Hand the roster to the HUD so its Build affordability set matches what KEY_B
+	# actually places (the widget would otherwise fall back to the same default).
+	_hud.assemble(_reader, HudBalance.hud, _cmd, _board, LOCAL_PLAYER, _buildables)
 	add_child(_hud)
+
+
+## The non-HQ structures the player can build (mirrors HudControlsWidget's own
+## default roster so the HUD affordability + the KEY_B build stay in lockstep).
+func _buildable_roster() -> Array[StructureTypeDef]:
+	return [
+		StructureTypes.ECONOMY_OUTPOST, StructureTypes.PRODUCTION_OUTPOST,
+		StructureTypes.DEFENSIVE_STRUCTURE, StructureTypes.RESEARCH_LAB,
+	]
 
 
 func _build_cursor() -> void:
@@ -202,12 +217,14 @@ func _drive_ai_turns() -> void:
 	_ai_running = false
 
 
-## Keyboard board control (ADR-0014): the arrow keys move the grid cursor (peeking
-## the entity under it into the detail panel), [code]ui_accept[/code] (Enter/Space)
-## selects an own unit at the cursor, and Tab ends the human's turn. The cursor
-## keys reuse the built-in [code]ui_*[/code] actions; End-Turn reads KEY_TAB
-## directly. Dedicated, rebindable InputMap actions for all of these are a
-## follow-up (the cai-005 InputMap-wiring tech-debt).
+## Keyboard board control (ADR-0014). Arrow keys move the grid cursor (peeking the
+## entity under it into the detail panel); [code]ui_accept[/code] (Enter/Space)
+## selects an own unit at the cursor; M moves/attacks the selected unit onto the
+## cursor tile; B builds the selected structure and C cycles the buildable type; P
+## produces a unit from the HQ onto the cursor tile; Tab ends the human's turn. The
+## cursor keys reuse the built-in [code]ui_*[/code] actions; the letter/Tab keys
+## are read by keycode. Dedicated, rebindable InputMap actions for all of these
+## are a follow-up (the cai-005 InputMap-wiring tech-debt).
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"ui_up"):
 		move_cursor(Vector2i.UP)
@@ -219,8 +236,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		move_cursor(Vector2i.RIGHT)
 	elif event.is_action_pressed(&"ui_accept"):
 		select_at_cursor()
-	elif event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_TAB:
-		try_end_human_turn()
+	elif event is InputEventKey and event.pressed and not event.echo:
+		match event.keycode:
+			KEY_M:
+				act_at_cursor()
+			KEY_B:
+				request_build_at_cursor()
+			KEY_C:
+				cycle_buildable()
+			KEY_P:
+				request_produce_at_cursor()
+			KEY_TAB:
+				try_end_human_turn()
 
 
 # --- Keyboard board control (works around the blocked click-pick seam) -------
@@ -257,6 +284,113 @@ func select_at_cursor() -> bool:
 ## The cursor's current grid tile (for the test + the [method _draw] highlight).
 func cursor_tile() -> Vector2i:
 	return _cursor.grid_pos if _cursor != null else Vector2i.ZERO
+
+
+## Builds [method selected_buildable] at the cursor tile, routing a [BuildAction]
+## through the [CommandInterface]. A no-op returning false unless it is the human's
+## live turn (HUD gate), the cursor tile is a legal build tile for that type, and
+## the player can afford it — the same conditions [method BaseProduction.validate_build]
+## enforces, pre-checked so this only ever dispatches a build that will commit.
+func request_build_at_cursor() -> bool:
+	if _cursor == null or _buildables.is_empty() or not _cmd.is_input_live(_state):
+		return false # live-gated (same is_input_live check as produce/act).
+	var type: StructureTypeDef = _buildables[_selected_buildable]
+	var tile: Vector2i = _cursor.grid_pos
+	if not _reader.legal_build_tiles(LOCAL_PLAYER, type).has(tile):
+		return false
+	if not _reader.can_afford_build(LOCAL_PLAYER, type):
+		return false
+	var action := BuildAction.new()
+	action.structure_type = type
+	action.tile = tile # action.player is set by CommandInterface.commit.
+	return _cmd.dispatch_commit(action, _state)
+
+
+## Cycles which buildable type [method request_build_at_cursor] will place.
+func cycle_buildable() -> void:
+	if _buildables.is_empty():
+		return
+	_selected_buildable = (_selected_buildable + 1) % _buildables.size()
+
+
+## The structure type a build would currently place, or [code]null[/code] if the
+## roster is empty.
+func selected_buildable() -> StructureTypeDef:
+	return _buildables[_selected_buildable] if not _buildables.is_empty() else null
+
+
+## Produces a unit onto the cursor tile from the first own producer that can
+## actually deploy there this turn — routing a [ProduceAction] for that producer's
+## first producible type. Iterates ALL own producers (not just the HQ), so a built
+## Production Outpost is reachable and an at-cap HQ is skipped. A no-op returning
+## false unless it is the human's live turn and some own producer has remaining
+## capacity, a legal deploy tile at the cursor, and an affordable type — the full
+## set of conditions [method BaseProduction.validate_produce] enforces, pre-checked
+## (incl. the per-turn cap) so a true return means a real commit.
+##
+## [b]Limitation (follow-up)[/b]: only each producer's first producible type is
+## offered — per-producer unit-type selection is a UI follow-up.
+func request_produce_at_cursor() -> bool:
+	if _cursor == null or not _cmd.is_input_live(_state):
+		return false
+	var tile: Vector2i = _cursor.grid_pos
+	for e: EntityState in _reader.entities():
+		if not (e is StructureState) or e.owner != LOCAL_PLAYER:
+			continue
+		var producer: StructureState = e as StructureState
+		if producer.type.producible_types.is_empty():
+			continue
+		# Remaining cap this turn (validate_produce's first gate — legal_deploy_tiles
+		# does not encode it, so pre-check it here to keep the return truthful).
+		if int(_reader.structure_info(producer.entity_id).get("remaining_production_cap", 0)) <= 0:
+			continue
+		var utype: UnitTypeDef = producer.type.producible_types[0]
+		if not _reader.legal_deploy_tiles(producer.entity_id, utype).has(tile):
+			continue
+		if not _reader.can_afford_produce(LOCAL_PLAYER, utype):
+			continue
+		var action := ProduceAction.new()
+		action.producer_id = producer.entity_id
+		action.unit_type = utype
+		action.tile = tile # action.player set by CommandInterface.commit.
+		return _cmd.dispatch_commit(action, _state)
+	return false
+
+
+## Moves or attacks with the currently-SELECTED own unit onto the cursor tile: an
+## [AttackAction] when the cursor holds a legal target, otherwise a [MoveAction]
+## when the cursor is a reachable tile. A no-op returning false when nothing is
+## selected, the selection is not an own unit, it is not the human's live turn, or
+## the cursor is neither a legal target nor reachable. Uses the [Movement]/[Combat]
+## legality queries directly (the same the validators enforce), pre-checked so it
+## only dispatches an action that will commit.
+func act_at_cursor() -> bool:
+	if _cursor == null or not _cmd.is_input_live(_state):
+		return false
+	var entity: EntityState = _state.entities_by_id.get(_cmd.selected_id())
+	if not (entity is UnitState) or entity.owner != LOCAL_PLAYER:
+		return false
+	var unit: UnitState = entity as UnitState
+	var tile: Vector2i = _cursor.grid_pos
+
+	# Attack takes priority when the cursor holds a legal target.
+	for target: Combat.TargetResult in Combat.legal_targets(_state, unit):
+		if target.tile == tile:
+			var atk := AttackAction.new()
+			atk.attacker_tile = unit.position
+			atk.target_tile = tile
+			return _cmd.dispatch_commit(atk, _state)
+
+	# Otherwise move when the cursor is a reachable tile.
+	for reach: Movement.ReachableTile in Movement.reachable(_state, unit):
+		if reach.tile == tile:
+			var mv := MoveAction.new()
+			mv.from = unit.position
+			mv.to = tile
+			mv.tiles_entered = reach.min_cost
+			return _cmd.dispatch_commit(mv, _state)
+
+	return false
 
 
 # --- Placeholder entity rendering (STUB — see class doc) ---------------------

@@ -99,13 +99,14 @@ func test_end_turn_is_a_noop_out_of_the_human_turn() -> void:
 	assert_int(state.active_player).is_equal(1) # unchanged.
 
 
-func _place_unit(state: GameState, id: int, owner: int, tile: Vector2i) -> void:
+func _place_unit(state: GameState, id: int, owner: int, tile: Vector2i, \
+		type: UnitTypeDef = UnitTypes.SCOUT) -> void:
 	var u := UnitState.new()
 	u.entity_id = id
 	u.owner = owner
 	u.position = tile
-	u.type = UnitTypes.SCOUT
-	u.current_hp = UnitTypes.SCOUT.hp
+	u.type = type
+	u.current_hp = type.hp
 	state.entities_by_id[id] = u
 	state.grid.place(id, tile.x, tile.y)
 
@@ -152,3 +153,162 @@ func test_cursor_stops_at_the_board_edge() -> void:
 	assert_vector(root.cursor_tile()).is_equal(Vector2i(0, 5)) # clamped at the west edge.
 	assert_bool(root.move_cursor(Vector2i.LEFT)).is_false()     # can't step past it.
 	assert_vector(root.cursor_tile()).is_equal(Vector2i(0, 5))
+
+
+func _move_cursor_to(root: VerticalSliceRoot, target: Vector2i) -> void:
+	var guard: int = 200
+	while root.cursor_tile() != target and guard > 0:
+		var cur: Vector2i = root.cursor_tile()
+		var dir: Vector2i
+		if cur.x != target.x:
+			dir = Vector2i(signi(target.x - cur.x), 0)
+		else:
+			dir = Vector2i(0, signi(target.y - cur.y))
+		root.move_cursor(dir)
+		guard -= 1
+
+
+# ==============================================================================
+# Build — KEY_B places the selected structure at a legal cursor tile.
+# ==============================================================================
+
+func test_cycle_buildable_changes_the_selected_type() -> void:
+	var root := _make_root()
+	assert_object(root.selected_buildable()).is_equal(StructureTypes.ECONOMY_OUTPOST)
+	root.cycle_buildable()
+	assert_object(root.selected_buildable()).is_equal(StructureTypes.PRODUCTION_OUTPOST)
+
+
+func test_build_places_a_structure_at_a_legal_cursor_tile() -> void:
+	var root := _make_root()
+	var state := root.state()
+	state.per_player[0].current_ap = 20 # ensure the outpost is affordable.
+	var type: StructureTypeDef = root.selected_buildable() # ECONOMY_OUTPOST (index 0).
+
+	var legal: Array[Vector2i] = GameStateReader.new(state).legal_build_tiles(0, type)
+	assert_bool(legal.is_empty()).is_false()          # there is a legal build tile.
+	var target: Vector2i = legal[0]
+	_move_cursor_to(root, target)
+	assert_vector(root.cursor_tile()).is_equal(target)
+
+	var entities_before: int = state.entities().size()
+	var ap_before: int = state.per_player[0].current_ap
+	assert_bool(root.request_build_at_cursor()).is_true()
+
+	assert_int(state.entities().size()).is_equal(entities_before + 1) # a structure was placed ...
+	assert_int(state.per_player[0].current_ap).is_less(ap_before)      # ... and AP was spent ...
+	assert_object(state.entity_at(target)).is_not_null()               # ... on the target tile.
+
+
+func test_build_refused_on_an_illegal_tile() -> void:
+	var root := _make_root()
+	var state := root.state()
+	state.per_player[0].current_ap = 20
+	# The cursor opens on the local HQ tile — occupied, so not a legal build tile.
+	assert_vector(root.cursor_tile()).is_equal(Vector2i(2, 5))
+	var entities_before: int = state.entities().size()
+	assert_bool(root.request_build_at_cursor()).is_false()
+	assert_int(state.entities().size()).is_equal(entities_before) # nothing was built.
+
+
+# ==============================================================================
+# Produce / Move / Attack — the selected-unit + HQ-production gameplay verbs.
+# ==============================================================================
+
+func test_produce_deploys_a_unit_from_the_hq() -> void:
+	var root := _make_root()
+	var state := root.state()
+	state.per_player[0].current_ap = 20
+	var hq: StructureState = state.entities_by_id[0] as StructureState # local HQ, id 0.
+	var utype: UnitTypeDef = hq.type.producible_types[0]
+	var deploy: Array[Vector2i] = GameStateReader.new(state).legal_deploy_tiles(0, utype)
+	assert_bool(deploy.is_empty()).is_false()
+	var target: Vector2i = deploy[0]
+	_move_cursor_to(root, target)
+
+	var before: int = state.entities().size()
+	assert_bool(root.request_produce_at_cursor()).is_true()
+	assert_int(state.entities().size()).is_equal(before + 1)   # a unit was deployed ...
+	assert_bool(state.entity_at(target) is UnitState).is_true() # ... on the target tile.
+
+
+func test_move_relocates_the_selected_unit() -> void:
+	var root := _make_root()
+	var state := root.state()
+	state.per_player[0].current_ap = 20
+	_place_unit(state, 20, 0, Vector2i(4, 5))
+	_move_cursor_to(root, Vector2i(4, 5))
+	assert_bool(root.select_at_cursor()).is_true()
+
+	# Pick a reachable tile other than the unit's own.
+	var dest := Vector2i(-1, -1)
+	for r in Movement.reachable(state, state.entities_by_id[20]):
+		if r.tile != Vector2i(4, 5):
+			dest = r.tile
+			break
+	assert_bool(dest != Vector2i(-1, -1)).is_true()
+
+	_move_cursor_to(root, dest)
+	assert_bool(root.act_at_cursor()).is_true()
+	assert_vector((state.entities_by_id[20] as UnitState).position).is_equal(dest)
+
+
+func test_attack_damages_an_adjacent_enemy() -> void:
+	var root := _make_root()
+	var state := root.state()
+	state.per_player[0].current_ap = 20
+	_place_unit(state, 20, 0, Vector2i(4, 5), UnitTypes.TROOPER) # friendly attacker
+	_place_unit(state, 21, 1, Vector2i(5, 5), UnitTypes.TROOPER) # enemy, adjacent
+	_move_cursor_to(root, Vector2i(4, 5))
+	assert_bool(root.select_at_cursor()).is_true()
+
+	# (5,5) must be a legal target of the selected attacker for the act to attack.
+	var is_target := false
+	for t in Combat.legal_targets(state, state.entities_by_id[20]):
+		if t.tile == Vector2i(5, 5):
+			is_target = true
+	assert_bool(is_target).is_true()
+
+	var hp_before: int = (state.entities_by_id[21] as UnitState).current_hp
+	_move_cursor_to(root, Vector2i(5, 5))
+	assert_bool(root.act_at_cursor()).is_true()
+
+	# The enemy took damage (or was destroyed → removed from the entity set).
+	var enemy: Variant = state.entities_by_id.get(21)
+	var damaged: bool = enemy == null or (enemy as UnitState).current_hp < hp_before
+	assert_bool(damaged).is_true()
+
+
+func _place_structure(state: GameState, id: int, owner: int, tile: Vector2i, \
+		type: StructureTypeDef) -> StructureState:
+	var s := StructureState.new()
+	s.entity_id = id
+	s.owner = owner
+	s.position = tile
+	s.type = type
+	s.current_hp = type.hp
+	s.build_status = StructureState.BuildStatus.COMPLETED
+	state.entities_by_id[id] = s
+	state.grid.place(id, tile.x, tile.y)
+	return s
+
+
+func test_produce_uses_a_second_producer_when_the_hq_is_at_cap() -> void:
+	var root := _make_root()
+	var state := root.state()
+	state.per_player[0].current_ap = 20
+	# Max out the HQ's production this turn, so the producer scan must skip it.
+	var hq: StructureState = state.entities_by_id[0] as StructureState
+	hq.units_produced_this_turn = hq.type.production_cap
+	# The player also owns a completed Production Outpost with capacity.
+	var outpost: StructureState = _place_structure(state, 30, 0, Vector2i(3, 5), StructureTypes.PRODUCTION_OUTPOST)
+	var utype: UnitTypeDef = outpost.type.producible_types[0]
+	var deploy: Array[Vector2i] = GameStateReader.new(state).legal_deploy_tiles(30, utype)
+	assert_bool(deploy.is_empty()).is_false()
+	var target: Vector2i = deploy[0]
+	_move_cursor_to(root, target)
+
+	var before: int = state.entities().size()
+	assert_bool(root.request_produce_at_cursor()).is_true() # produced from the outpost, HQ skipped.
+	assert_int(state.entities().size()).is_equal(before + 1)
+	assert_bool(state.entity_at(target) is UnitState).is_true()
