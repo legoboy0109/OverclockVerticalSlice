@@ -312,3 +312,21 @@ func test_produce_uses_a_second_producer_when_the_hq_is_at_cap() -> void:
 	assert_bool(root.request_produce_at_cursor()).is_true() # produced from the outpost, HQ skipped.
 	assert_int(state.entities().size()).is_equal(before + 1)
 	assert_bool(state.entity_at(target) is UnitState).is_true()
+
+
+func test_status_overlay_surfaces_selected_build_type_legend_and_updates_on_cycle() -> void:
+	var root := _make_root()
+
+	# The overlay surfaces info the committed HUD widgets don't: the currently
+	# selected Build type, its cycle key, the produce readout, and the controls legend.
+	var first: StructureTypeDef = root.selected_buildable()
+	assert_str(root.status_text()).contains(first.display_name) # e.g. "Economy Outpost"
+	assert_str(root.status_text()).contains("[C] cycle")
+	assert_str(root.status_text()).contains("Produce [P]:")
+	assert_str(root.status_text()).contains("[Tab] end turn")
+
+	# Cycling the build type updates the overlay to the next type in one keypress.
+	root.cycle_buildable()
+	var second: StructureTypeDef = root.selected_buildable()
+	assert_bool(second.display_name != first.display_name).is_true()
+	assert_str(root.status_text()).contains(second.display_name) # e.g. "Production Outpost"

@@ -59,6 +59,13 @@ var _board: BoardRenderer = null
 var _camera: Camera2D = null
 var _cmd: CommandInterface = null
 var _hud: GameHud = null
+## Slice-owned screen-space status/legend overlay (a CanvasLayer + Label). Surfaces
+## the currently-selected Build type (+cost/affordability) and the keyboard controls
+## legend — info the committed HUD widgets don't show (HudControlsWidget renders only
+## "Build"/"End Turn"). Provisional scene glue; a proper HUD control is a /ux-design
+## follow-up. Reads public queries only, never mutates state.
+var _status_layer: CanvasLayer = null
+var _status_label: Label = null
 var _ai_driver: AITurnDriver = null
 
 ## True while an AI turn is playing out. Guards against overlapping drives (a
@@ -87,6 +94,7 @@ func _ready() -> void:
 	_build_command_interface()
 	_build_hud()
 	_build_cursor()
+	_build_status_overlay()
 	_ai_driver = AITurnDriver.new()
 	add_child(_ai_driver)
 	# Repaint the placeholder markers on every commit (an AI turn drives many).
@@ -94,6 +102,7 @@ func _ready() -> void:
 	# If the match ever opens on the AI's side, hand off immediately.
 	_drive_ai_turns()
 	queue_redraw()
+	_refresh_status()
 
 
 # --- Build steps -------------------------------------------------------------
@@ -178,6 +187,69 @@ func _buildable_roster() -> Array[StructureTypeDef]:
 	]
 
 
+# --- Status / legend overlay (screen space; provisional scene glue) ----------
+
+## Builds the screen-space status overlay: a [CanvasLayer] (so it renders in screen
+## space over the world-space board, unaffected by the camera) holding one [Label].
+## Text is composed by [method _refresh_status]; the outline keeps it legible over
+## the placeholder markers.
+func _build_status_overlay() -> void:
+	_status_layer = CanvasLayer.new()
+	add_child(_status_layer)
+	_status_label = Label.new()
+	# Below the AP counter (16,12) + collapsed income breakdown (16,40); this column
+	# is otherwise clear (action log is bottom-left, controls bottom-right).
+	_status_label.position = Vector2(16, 72)
+	_status_label.add_theme_font_size_override("font_size", 13)
+	_status_label.add_theme_color_override("font_color", Color(0.92, 0.95, 1.0))
+	_status_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.9))
+	_status_label.add_theme_constant_override("outline_size", 4)
+	_status_layer.add_child(_status_label)
+
+
+## Recomposes the overlay text from public queries: turn indicator, the current
+## Build type (name + effective cost + affordability) with its cycle key, the
+## produce type, and the controls legend. A no-op before the overlay is built.
+func _refresh_status() -> void:
+	if _status_label == null:
+		return
+	var lines := PackedStringArray()
+	lines.append("● AI thinking…" if _ai_running else "● Your turn")
+
+	var build_type: StructureTypeDef = selected_buildable()
+	if build_type != null:
+		var cost: int = BaseProduction.effective_build_cost(_state, build_type, LOCAL_PLAYER)
+		var afford: String = "affordable" if _reader.can_afford_build(LOCAL_PLAYER, build_type) else "too expensive"
+		lines.append("Build [B]: %s — %d AP (%s)    [C] cycle" % [build_type.display_name, cost, afford])
+
+	var produce_type: UnitTypeDef = _first_producible_type()
+	if produce_type != null:
+		var pcost: int = Unit.effective_produce_cost(_state, produce_type, LOCAL_PLAYER)
+		lines.append("Produce [P]: %s — %d AP" % [produce_type.display_name, pcost])
+
+	lines.append("[Arrows] cursor  [Enter] select  [M] move/attack  [B] build  [C] cycle  [P] produce  [Tab] end turn")
+	_status_label.text = "\n".join(lines)
+
+
+## The first producible unit type across the local player's own producers (the type
+## [method request_produce_at_cursor] would deploy) — for the produce readout. Null
+## if the player owns no producer with a producible type.
+func _first_producible_type() -> UnitTypeDef:
+	if _reader == null:
+		return null
+	for e: EntityState in _reader.entities():
+		if e is StructureState and e.owner == LOCAL_PLAYER:
+			var producer: StructureState = e as StructureState
+			if not producer.type.producible_types.is_empty():
+				return producer.type.producible_types[0]
+	return null
+
+
+## The status overlay's current text (test-only read).
+func status_text() -> String:
+	return _status_label.text if _status_label != null else ""
+
+
 func _build_cursor() -> void:
 	_cursor = BoardCursor.new()
 	_cursor.grid_pos = HQ_A # start on the local player's HQ ...
@@ -192,6 +264,7 @@ func _build_cursor() -> void:
 ## than re-entrantly inside [method GameState.apply_action]'s own signal emission.
 func _on_action_applied(_result: ActionResult) -> void:
 	queue_redraw()
+	_refresh_status() # AP/affordability/selection may have changed.
 
 
 ## Runs AI turns to completion until it is a human's turn again (or the match
@@ -211,10 +284,12 @@ func _drive_ai_turns() -> void:
 	if _ai_running:
 		return
 	_ai_running = true
+	_refresh_status() # flip the indicator to "AI thinking…"
 	while _state.match_status == GameState.MatchStatus.IN_PROGRESS \
 			and _state.per_player[_state.active_player].is_ai_controlled:
 		await _ai_driver.run_ai_turn(_state)
 	_ai_running = false
+	_refresh_status() # back to "Your turn"
 
 
 ## Keyboard board control (ADR-0014). Arrow keys move the grid cursor (peeking the
@@ -311,6 +386,7 @@ func cycle_buildable() -> void:
 	if _buildables.is_empty():
 		return
 	_selected_buildable = (_selected_buildable + 1) % _buildables.size()
+	_refresh_status() # reflect the newly-selected Build type on the overlay.
 
 
 ## The structure type a build would currently place, or [code]null[/code] if the
