@@ -1,12 +1,12 @@
 # Story 005: On-Board Glyph Layer — hp Pips/Numeric Branch, Has-Acted/Tech/Build/Research Markers
 
 > **Epic**: Game HUD
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: Visual/Feel
 > **Estimate**: L (4–5h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-28
 
 ## Context
 
@@ -76,7 +76,7 @@
 **Story Type**: Visual/Feel
 **Required evidence**: `tests/unit/game-hud/hp_pip_numeric_branch_test.gd` (Logic sub-slice, blocking) + `production/qa/evidence/on-board-glyph-layer-evidence.md` (Visual/Feel legibility, advisory + sign-off)
 
-**Status**: [ ] Not yet created
+**Status**: [x] Blocking Logic test created and passing — 6 tests, all green (2026-07-28). [ ] Advisory Visual/Feel sign-off OWED (`production/qa/evidence/on-board-glyph-layer-evidence.md`, windowed session; AC-26 also blocked on the Research/Tech epic)
 
 ---
 
@@ -84,3 +84,15 @@
 
 - Depends on: **Board Renderer Story 005** (`grid_to_screen` + `GLYPH_OFFSETS` anchor convention — hard cross-epic gate), Story 001 (`GameStateReader` for hp/status/build-timer/research reads)
 - Unlocks: nothing further within this epic; prerequisite for the mandated board-scale legibility playtest (Visual/Audio D)
+
+## Completion Notes
+**Completed**: 2026-07-28
+**Criteria**: Blocking Logic AC-10 (hp pip/numeric `>=` branch) covered (6 tests). Advisory Visual/Feel AC-11 + shape-distinctness OWED (windowed sign-off). AC-12/AC-26 research half + tech marker STUBBED (see below).
+**Deliverables**: `src/ui/game_hud/on_board_glyph_layer.gd` (OnBoardGlyphLayer extends Node2D — every glyph anchored via `BoardRenderer.glyph_anchor(tile, glyph_class)`, NO HUD-local anchor math; hp pip/numeric branch; has-acted + build-timer markers from GameStateReader verbatim). Pure static `hp_render_mode` + `hp_mode_for`/`active_markers_for` testable model; `_draw` renders it (advisory).
+**Deviations**: None blocking.
+- STUBBED (data not implemented): TECH_MARKER needs a player-tech read the facade doesn't expose; RESEARCH_MARKER + AC-26 need the Research/Tech epic (not built — same stub the AI epic carries). `active_markers_for`/`_markers_from` is the single attach point; `test_tech_and_research_markers_are_stubbed` asserts both absent so future wiring is deliberate.
+- "Has acted" = `unit_info.has_attacked` (the available signal via the facade); a broader movement-exhausted definition can extend later.
+- Review suggestion ADDRESSED: shared the `unit_info`/`structure_info` fetch between the redraw path and the marker accessor (`_markers_from`) — no double-query per entity per redraw.
+- Follow-up OWED (not blocking): the epic's Visual/Audio D board-scale glyph-density/legibility playtest (separate production/qa task).
+**Test Evidence**: Logic (blocking) — `tests/unit/game-hud/hp_pip_numeric_branch_test.gd` (6 tests, PASS). Full suite 758/758 green. Advisory Visual/Feel — `production/qa/evidence/on-board-glyph-layer-evidence.md` (sign-off OWED).
+**Code Review**: APPROVED-WITH-SUGGESTIONS → suggestion addressed (independent godot-gdscript read-only pass + coordinator; ADR-0013 anchoring / hp-branch / Pass-Through / stub contract / lifecycle / static typing all confirmed).
