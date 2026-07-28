@@ -212,6 +212,14 @@ var _input_config: InputConfig = InputConfig.new()
 ## immediate transition).
 var input_locked: bool = false
 
+## The live [GameState] this interface is subscribed to via
+## [method attach_to_state] (Story 007/008), or [code]null[/code] if unattached.
+## Held so the shared-signal handler [method _on_action_applied] can read
+## [member GameState.match_status] for GAME_OVER convergence (TR-cmdui-015,
+## AC-34/AC-35) — the [signal GameState.action_applied] payload carries only the
+## [ActionResult], not the state.
+var _attached_state: GameState = null
+
 ## Accumulated hold time (ms) for the in-progress Cancel-Build gesture — a
 ## bounded sub-condition WITHIN ENTITY_SELECTED (TR-cmdui-002), never a new FSM
 ## state. Reset to 0 on commit or abort.
@@ -277,8 +285,19 @@ func set_input_config(config: InputConfig) -> void:
 ## subscribe to the same signal, so each observes every commit (ADR-0004/ADR-0015
 ## §2's both-instances convergence).
 func attach_to_state(state: GameState) -> void:
+	_attached_state = state
 	if not state.action_applied.is_connected(_on_action_applied):
 		state.action_applied.connect(_on_action_applied)
+
+
+## Disconnects from the shared [signal GameState.action_applied] on tree exit
+## (Story 008, control-manifest lifecycle rule) — safe insurance if a
+## [GameState] is reused across a match restart within one process (per
+## ADR-0001 each match likely constructs a fresh state, in which case this is
+## harmless dead cleanup, never wrong). Idempotent.
+func _exit_tree() -> void:
+	if _attached_state != null and _attached_state.action_applied.is_connected(_on_action_applied):
+		_attached_state.action_applied.disconnect(_on_action_applied)
 
 
 ## Shared-signal handler (Story 007, TR-cmdui-023): fires the commit-flash
@@ -289,9 +308,22 @@ func attach_to_state(state: GameState) -> void:
 ## nothing. This method NEVER calls [code]AudioStreamPlayer.play()[/code] —
 ## Combat triggers its own attack cue off this same event, so exactly one system
 ## plays audio (AC audio-ownership).
+##
+## [b]GAME_OVER convergence (Story 008, TR-cmdui-015, AC-34/AC-35):[/b] after the
+## flash, checks [member _attached_state]'s [member GameState.match_status]; if a
+## commit's win-check has set it to [constant GameState.MatchStatus.GAME_OVER]
+## (Game State's terminal-check runs BEFORE this emit, ADR-0010), this instance
+## enters the absorbing terminal [constant CommandFSM.State.GAME_OVER] — whether
+## or not [b]this[/b] instance's own commit caused it. Because both players'
+## interfaces subscribe to the SAME signal and read the SAME shared
+## [member GameState.match_status], the non-committing (opponent-turn-inert)
+## instance converges on the same signal (AC-35), no polling, no "who won"
+## bookkeeping.
 func _on_action_applied(result: ActionResult) -> void:
 	if result.ok:
 		commit_flash_requested.emit(result)
+	if _attached_state != null and _attached_state.match_status == GameState.MatchStatus.GAME_OVER:
+		_enter_game_over()
 
 
 ## Debounced commit dispatch (Story 007, TR-cmdui-022, AC-27): the input-locked
@@ -449,6 +481,8 @@ func try_select(state: GameState, unit: UnitState) -> bool:
 ## [method _recompute_tier1] (and [method _recompute_tier2] for
 ## [constant CommandFSM.State.PREVIEW_MOVE]).
 func enter_preview(state: GameState, unit: UnitState, target_state: CommandFSM.State) -> void:
+	if _fsm_state == CommandFSM.State.GAME_OVER:
+		return # absorbing terminal — no preview accepted (Story 008, AC-34).
 	_selected_id = unit.entity_id
 	var trigger: CommandFSM.Trigger = CommandFSM.Trigger.PICK_MOVE \
 		if target_state == CommandFSM.State.PREVIEW_MOVE else CommandFSM.Trigger.PICK_ATTACK
@@ -521,7 +555,67 @@ func commit(state: GameState, action: Action) -> ActionResult:
 	if not is_input_live(state):
 		return ActionResult.new(false, Action.Reason.NOT_ACTIVE_PLAYER, [])
 	action.player = _local_player
-	return state.apply_action(action)
+	var result: ActionResult = state.apply_action(action)
+	# Story 008 post-commit convergence (this committing instance). Read directly
+	# from [param state] so this is correct even without an [method attach_to_state]
+	# subscription; the shared handler independently converges non-committing
+	# instances on GAME_OVER.
+	if result.ok:
+		if state.match_status == GameState.MatchStatus.GAME_OVER:
+			_enter_game_over() # AC-34 — terminal overrides any re-selection.
+		else:
+			_reselect_after_commit(state, action)
+	return result
+
+
+## Post-commit re-selection (Story 008, ADR-0015; AC-25/AC-32/AC-33). After a
+## successful, non-terminal commit, lands the interface on the correct entity:
+## [br]- A [BuildAction] has no source actor — it lands on the newly-placed
+## structure at [member BuildAction.tile] (AC-33).
+## [br]- Every other verb re-selects the acting entity ([member _selected_id]).
+## [br]The interface stays in [constant CommandFSM.State.ENTITY_SELECTED] (menu
+## re-filtered against the now-current AP/`has_attacked`/movement — so a
+## move→attack chain flows as one sequence, AC-25) IFF that entity still exists
+## AND retains a legal AP-costed action; otherwise it auto-deselects to
+## [constant CommandFSM.State.IDLE] — a destroyed actor (dies to a counterattack,
+## AC-32) or a fully-spent one collapses cleanly, never a dangling selection.
+func _reselect_after_commit(state: GameState, action: Action) -> void:
+	var actor: EntityState
+	if action is BuildAction:
+		actor = state.entity_at(action.tile)
+	else:
+		actor = state.entities_by_id.get(_selected_id)
+	if actor != null and _has_legal_action(state, actor):
+		_selected_id = actor.entity_id
+		_fsm_state = CommandFSM.State.ENTITY_SELECTED
+	else:
+		_selected_id = -1
+		_fsm_state = CommandFSM.State.IDLE
+	_render_overlays() # non-preview now → clears the just-committed preview overlay.
+
+
+## True iff [param entity] has at least one enabled AP-costed verb in its
+## [method CommandFSM.menu_model] (any verb but the always-available Wait) —
+## the "does a legal action remain?" test that decides ENTITY_SELECTED vs IDLE
+## in [method _reselect_after_commit]. Reached only via [CommandFSM]'s queries
+## (Pass-Through), never a local re-derivation.
+func _has_legal_action(state: GameState, entity: EntityState) -> bool:
+	for entry: CommandFSM.VerbEntry in CommandFSM.menu_model(state, entity):
+		if entry.verb != CommandFSM.Verb.WAIT and entry.enabled:
+			return true
+	return false
+
+
+## Enters the absorbing terminal [constant CommandFSM.State.GAME_OVER] (Story
+## 008, TR-cmdui-015): clears any selection and repaints overlays (a non-preview
+## state clears them). Idempotent — safe to call from both [method commit] and
+## the shared [method _on_action_applied] handler. Once here, [method is_input_live]
+## already returns false (match is over), so every later selection/commit trigger
+## is inert (AC-34), and [method enter_preview] short-circuits on the state.
+func _enter_game_over() -> void:
+	_fsm_state = CommandFSM.State.GAME_OVER
+	_selected_id = -1
+	_render_overlays()
 
 
 ## Tile-change gating (TR-cmdui-005): reads [InputEventMouseMotion] and only

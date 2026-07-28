@@ -3,8 +3,8 @@
 > **Layer**: Presentation
 > **GDD**: design/gdd/command-action-interface.md
 > **Architecture Module**: Command & Action Interface (Presentation Layer)
-> **Status**: Ready
-> **Stories**: 9 stories (see `## Stories` below) — none implemented yet
+> **Status**: ✅ Complete (in-slice) — 2026-07-28
+> **Stories**: 9 stories (see `## Stories` below) — **8/8 in-slice COMPLETE**; story 009 (Dual-Focus menu keyboard nav, UI) trimmed to Production
 
 ## Overview
 
@@ -71,7 +71,7 @@ This epic is complete when:
 | 005 | BoardCursor Input Substrate — Grid-Axis Nav, Precedence | Logic | ✅ Complete | ADR-0014 |
 | 006 | Isometric Picking & Overlay Integration | Integration | ✅ Complete | ADR-0013 |
 | 007 | Commit Dispatch, INPUT_LOCK_MS & Commit-Flash↔AP-Tick Signal | Integration | ✅ Complete | ADR-0014, ADR-0015 |
-| 008 | Post-Commit Re-Selection & GAME_OVER Convergence | Integration | Ready | ADR-0015 |
+| 008 | Post-Commit Re-Selection & GAME_OVER Convergence | Integration | ✅ Complete | ADR-0015 |
 | 009 | Dual-Focus Reachability & Menu Keyboard Nav | UI | Ready | ADR-0014 |
 
 **Implementation order**: 001 → 002 → 003, then {004, 005} in parallel, {006, 007}

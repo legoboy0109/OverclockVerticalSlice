@@ -1,12 +1,12 @@
 # Story 008: Post-Commit Re-Selection, Destroyed-Actor Collapse & GAME_OVER Convergence
 
 > **Epic**: Command & Action Interface
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: Integration
 > **Estimate**: M (3h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-28
 
 ## Context
 
@@ -74,7 +74,7 @@
 **Story Type**: Integration
 **Required evidence**: `tests/integration/command-action-interface/post_commit_gameover_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created & passing — `tests/integration/command-action-interface/post_commit_gameover_test.gd` (5/5 green)
 
 ---
 
@@ -82,3 +82,13 @@
 
 - Depends on: Story 001, Story 003, Story 007 (the `action_applied` subscription plumbing)
 - Unlocks: None (terminal within this epic — Game HUD's victory/defeat overlay is a separate epic that also subscribes to `match_status`)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-28
+**Criteria**: 5/5 ACs PASS. Full suite 704/704 — 0 failures, 0 orphans, 62/62 suites. ★ LAST in-slice CAI story — the Command & Action Interface epic is COMPLETE (8/8; cai-009 trimmed to Production).
+**Implementation** (all Node-side on `command_interface.gd` — cai-001's pure `next_state` deliberately deferred these entity-aware refinements to here; NO `next_state`/`src/core` change): `_attached_state` (set by `attach_to_state`, so the shared handler can read `match_status`); `_on_action_applied` now converges on the absorbing `GAME_OVER` when `_attached_state.match_status == GAME_OVER` (AC-34/AC-35 — both instances observe the ONE shared signal); `commit()` does its own post-commit convergence directly from `state` (works without the subscription too): on a successful, non-terminal commit it calls `_reselect_after_commit` — a `BuildAction` lands on the newly-placed structure at `action.tile` (AC-33), every other verb re-selects `_selected_id`, staying ENTITY_SELECTED (menu re-filtered — AC-25's move→attack) iff the actor survives with a legal action, else auto-deselecting to IDLE (a destroyed actor, AC-32). `_enter_game_over` clears selection + overlays; `enter_preview` short-circuits in GAME_OVER; `_exit_tree` disconnects from `action_applied` (control-manifest lifecycle rule).
+**Deviations**: None. The win-check logic itself is Combat/ADR-0010's (out of scope) — the GAME_OVER ACs drive the observation path this story owns (set `match_status` + emit `action_applied`).
+**Test Evidence**: Integration — `tests/integration/command-action-interface/post_commit_gameover_test.gd` (5 test functions: AC-25 reselect+attack-enabled, AC-32 attacker-dies-to-counter→IDLE via the real Combat counter pipeline, AC-33 build→new-structure, AC-34 GameOver-terminal-and-inert, AC-35 two-instance convergence over one shared GameState).
+**Code Review**: orchestrator implemented + verified directly (subtle multi-instance convergence + reselection edge cases). No `src/core` change; the pure `CommandFSM.next_state` table is untouched (its AC-32/AC-33 refinements are exactly what this Node-side story adds).

@@ -21,7 +21,7 @@ goal: "Build the playable Vertical Slice (rendered one-close-skirmish loop) at r
 start: "2026-07-28"
 end: "2026-08-08"
 generated: "2026-07-27"
-updated: "2026-07-28"  # cai-007 done (story-done 2026-07-28) — CAI epic 7/8 done
+updated: "2026-07-28"  # cai-008 done (story-done 2026-07-28) — ★ CAI EPIC COMPLETE (8/8 in-slice)
 # br-001 done (story-done 2026-07-27) — first VS-build story complete
 # br-002 + ai-001 done (parallel, 2026-07-27); full suite 524/524
 
@@ -133,20 +133,19 @@ stories:
     file: "production/epics/command-action-interface/story-007-commit-dispatch-input-lock-shared-signal.md"
     priority: must-have
     status: done
-    completed: "2026-07-28"  # InputConfig.input_lock_ms + dispatch_commit debounce + action_applied flash subscription; 5 integ tests, full suite 699/699
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-28"  # InputConfig.input_lock_ms + dispatch_commit debounce + action_applied flash subscription; 5 integ tests, full suite 699/699
   - id: "cai-008"
     name: "Post-commit reselection + game-over convergence"
     file: "production/epics/command-action-interface/story-008-post-commit-reselection-gameover-convergence.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-28"  # post-commit reselection + destroyed-actor IDLE + GAME_OVER convergence; 5 integ tests, full suite 704/704. ★ CAI EPIC 8/8 COMPLETE
 
   # --- S3-03 · AI Opponent epic (6 in-slice; 007/008 trimmed) ---
   - id: "ai-001"
