@@ -13,6 +13,13 @@ config/name="OVERCLOCK"
 run/main_scene="res://scenes/vertical_slice.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 
+[display]
+
+; Vertical-slice window. The board (~1408x704 world px) is framed to fit via
+; VerticalSliceRoot's fit-to-view camera; resizing refits. Resizable (default).
+window/size/viewport_width=1600
+window/size/viewport_height=900
+
 [autoload]
 
 ; Thin, logic-free lookup Autoload (ADR-0006), mirroring MatchService's
