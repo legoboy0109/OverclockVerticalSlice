@@ -381,3 +381,99 @@ static func _produce_entry(state: GameState, entity: EntityState) -> VerbEntry:
 	if reason == Reason.NONE:
 		return VerbEntry.new(Verb.PRODUCE, true, Reason.NONE)
 	return VerbEntry.new(Verb.PRODUCE, false, reason)
+
+
+## PURE display derivation D-1 (ADR-0015 §1, TR-cmdui-014, AC-5): the AP
+## [param player] would have left if a previewed action costing
+## [param previewed_cost] committed right now. A literal one-line
+## pass-through — [code]AP.current_ap(state, player) - previewed_cost[/code] —
+## never a re-derivation of the cost itself (Pass-Through Invariant, ADR-0015
+## §4). [b]Independence (AC-5) is structural, not enforced by any guard
+## here[/b]: this function holds no field, cache, or running total across
+## calls — each call reads [method AP.current_ap] fresh and subtracts exactly
+## the one [param previewed_cost] passed in. A caller previewing a move
+## (cost 6) then, independently, an attack (cost 2) against the same
+## [code]current_ap == 9[/code] pool calls this twice —
+## [code]projected_remaining_ap(state, player, 6) == 3[/code] and
+## [code]projected_remaining_ap(state, player, 2) == 7[/code] — never
+## [code]9 - 6 - 2 == 1[/code], because neither call's [param previewed_cost]
+## ever includes the other preview's cost.
+##
+## May return a negative value when [param previewed_cost] exceeds
+## [method AP.current_ap] (AC-24: a disabled-for-insufficient-AP action's
+## internal projection may go negative — the UI never renders that raw
+## negative, it shows "insufficient AP" instead, a rendering concern outside
+## this pure function). O(1).
+static func projected_remaining_ap(state: GameState, player: int, previewed_cost: int) -> int:
+	return AP.current_ap(state, player) - previewed_cost
+
+
+## BuildEntry — one structure type's Build-command preview row (AC-16,
+## ADR-0015 §5 Base & Production bullet).
+##
+## Inner class of [CommandFSM]; not auto-registered as a global
+## [code]class_name[/code] (mirrors [code]VerbEntry[/code]'s established
+## inner-class precedent) — external references use the
+## [code]CommandFSM.BuildEntry[/code] prefix.
+##
+## Unlike [VerbEntry]'s bitmask [member VerbEntry.reason] (which OR's
+## multiple simultaneously-failing conjuncts for Attack/Produce), Build's two
+## gates are exposed as two [b]independent[/b] booleans
+## ([member insufficient_ap]/[member no_legal_tile]) — AC-16 names exactly two
+## exclusion reasons and requires them "distinguishable," never combined into
+## one flag; a caller checks each independently rather than unpacking a mask.
+class BuildEntry extends RefCounted:
+	## The structure type this row previews.
+	var structure_type: StructureTypeDef
+	## [method BaseProduction.effective_build_cost]'s live return — never a
+	## locally-held [code]StructureTypeDef[/code] build-cost field read (Pass-Through
+	## Invariant; the effective cost may faction-fold in a later epic).
+	var build_cost: int
+	## [method BaseProduction.effective_build_time]'s live return.
+	var build_time: int
+	## True iff [method AP.can_afford] returned true for [member build_cost].
+	var affordable: bool
+	## [method BaseProduction.legal_build_tiles]'s live result set for
+	## [param player]/[member structure_type] — placement preview restricts to
+	## exactly this set, never a locally re-derived adjacency/standoff rule.
+	var legal_tiles: Array[Vector2i]
+	## True iff [member affordable] is false — the first of AC-16's two
+	## distinguishable exclusion reasons.
+	var insufficient_ap: bool
+	## True iff [member legal_tiles] is empty — the second of AC-16's two
+	## distinguishable exclusion reasons. Independent of [member insufficient_ap]:
+	## both may be true simultaneously (an unaffordable structure with no
+	## legal tile either).
+	var no_legal_tile: bool
+
+	func _init(type: StructureTypeDef, cost: int, time: int, tiles: Array[Vector2i], afford: bool) -> void:
+		structure_type = type
+		build_cost = cost
+		build_time = time
+		legal_tiles = tiles
+		affordable = afford
+		insufficient_ap = not afford
+		no_legal_tile = tiles.is_empty()
+
+
+## PURE: the AC-16 Build-command preview row for [param structure_type] and
+## [param player] (ADR-0015 §5 Base & Production bullet, TR-cmdui-013). Reaches
+## every value [b]only[/b] via [BaseProduction]/[AP]'s side-effect-free
+## queries — [method BaseProduction.effective_build_cost],
+## [method BaseProduction.effective_build_time],
+## [method BaseProduction.legal_build_tiles], [method AP.can_afford] — never a
+## locally-held balance constant (Pass-Through Invariant, ADR-0015 §4). Build
+## is a player-level command (CR-5) with no source entity, so — unlike
+## [method menu_model] — this takes [param player] directly, never an
+## [EntityState].
+##
+## O(1) plus one [method BaseProduction.legal_build_tiles] call (already
+## budgeted O(friendly_count * 4 * enemy_structure_count), control-manifest
+## Performance Guardrail) — safe to call once per structure type shown in the
+## Build picker.
+static func build_preview(state: GameState, player: int, structure_type: StructureTypeDef) -> BuildEntry:
+	var cost: int = BaseProduction.effective_build_cost(state, structure_type, player)
+	var time: int = BaseProduction.effective_build_time(state, structure_type, player)
+	var tiles: Array[Vector2i] = BaseProduction.legal_build_tiles(state, player, structure_type)
+	var affordable: bool = AP.can_afford(state, player, cost)
+	return BuildEntry.new(structure_type, cost, time, tiles, affordable)

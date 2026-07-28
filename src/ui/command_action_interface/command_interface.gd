@@ -10,16 +10,30 @@
 ## [member _targets]/[member _after_move_attackable]) — none of which belong
 ## in the pure core.
 ##
-## [b]This story (Story 002) ships the four-tier recompute discipline only[/b]
-## — [i]when[/i] each tier's queries fire, and the O(1) hover-read contract.
+## [b]Story 002 shipped[/b] the four-tier recompute discipline — [i]when[/i]
+## each tier's queries fire, and the O(1) hover-read contract.
+##
+## [b]Story 003 adds[/b] the real commit-dispatch entry point
+## ([method commit], TR-cmdui-015) — building a concrete [Action] and routing
+## it through [method GameState.apply_action] exactly like
+## [code]AITurnDriver.run_ai_turn[/code] does (same real, authoritative
+## [param state], never a clone) — and the turn-boundary input-scoping gate
+## ([method is_input_live], AC-21): command input (selection, preview entry,
+## commit) is live only during the local player's own live Action phase;
+## outside that window every trigger this class exposes must be refused
+## before it ever reaches the FSM or [method GameState.apply_action], leaving
+## only read-only inspection. [method _on_commit_result]'s Tier-4 reject
+## re-issue (Story 002) is unchanged and is exactly what a rejected
+## [method commit] call routes into for a unit-bearing preview.
+##
 ## Deliberately [b]out of scope[/b] (see the story's Out of Scope section):
 ## real [code]pick_at[/code]/[code]screen_to_grid[/code] iso-picking math
 ## (Board Renderer, consumed only), [code]BoardCursor[/code] tile-stepping
-## (Story 005), and the full commit dispatch / [code]input_locked[/code]
-## debounce / shared [signal GameState.action_applied] emit wiring
-## (Story 007) — [method _on_commit_result] here is only the Tier-4
-## [code]ActionResult.ok[/code] re-validation-reaction contract, not the
-## dispatcher itself.
+## (Story 005), Cancel-Build's hold gesture (Story 004), and the
+## [code]input_locked[/code] debounce / shared commit-flash↔AP-tick
+## [signal GameState.action_applied] emit wiring (Story 007) — this story
+## establishes the [method commit]/[signal GameState.action_applied] plumbing
+## Story 007 hangs the flash off, but does not itself fire any flash/audio.
 ##
 ## [b]Testability seam (Logic story, spy-countable):[/b] every query this
 ## class calls sits behind an injectable [Callable] field
@@ -133,6 +147,15 @@ var _attack_cost_fn: Callable = Combat.attack_cost_for
 ## without depending on the Board Renderer's own class.
 var _renderer: Object = null
 
+## Which player THIS [CommandInterface] instance acts on behalf of (ADR-0015
+## §5 Turn Manager bullet, TR-cmdui-015, AC-21) — the "local player" every
+## [method is_input_live] check gates against. Set once via
+## [method set_local_player] (production: at scene-setup time, mirroring how
+## a real match assigns one [CommandInterface] per local human seat); defaults
+## to [code]0[/code] so an un-configured instance in a single-instance test
+## still gates sensibly against player 0.
+var _local_player: int = 0
+
 
 ## Dependency-injection seam (project standard: DI over singletons,
 ## `.claude/docs/technical-preferences.md`). Call once, before driving any
@@ -160,6 +183,54 @@ func fsm_state() -> CommandFSM.State:
 ## Currently selected entity id, or -1 if none.
 func selected_id() -> int:
 	return _selected_id
+
+
+## Sets [member _local_player] — which player this instance acts on behalf of
+## (ADR-0015 §5, AC-21). Called once at setup, mirroring
+## [method configure_dependencies]'s DI-seam convention.
+func set_local_player(player: int) -> void:
+	_local_player = player
+
+
+## Turn-boundary input-scoping gate (ADR-0015 §5 Turn Manager bullet,
+## TR-cmdui-015, AC-21): true iff command input is live for
+## [member _local_player] right now — the match has not ended
+## ([member GameState.match_status] is not [constant GameState.MatchStatus.GAME_OVER])
+## AND it is [member _local_player]'s own turn
+## ([member GameState.active_player] == [member _local_player]). Every
+## selection/preview-entry/commit trigger this class exposes must check this
+## FIRST and refuse (no [constant CommandFSM.State.ENTITY_SELECTED] transition,
+## no [method GameState.apply_action] call) when it is false — leaving only
+## read-only inspection (AC-21's "inspection shows but no menu opens and
+## nothing commits"). Never gates the pure Tier-3 O(1) read accessors
+## ([method get_reachable_tile]/[method get_target]/
+## [method is_after_move_attackable]) — those answer "what does the currently
+## held preview data say," not "is it legal to act," and read-only inspection
+## must keep working even when input is not live. O(1).
+func is_input_live(state: GameState) -> bool:
+	if state.match_status == GameState.MatchStatus.GAME_OVER:
+		return false
+	return state.active_player == _local_player
+
+
+## AC-21 selection entry point: attempts to select [param unit] into
+## [constant CommandFSM.State.ENTITY_SELECTED] via [method CommandFSM.next_state],
+## but ONLY when [method is_input_live] is true. When input is not live
+## (opponent's turn, or the match is over), this is a hard no-op — returns
+## [code]false[/code], never touches [member _fsm_state]/[member _selected_id],
+## and never calls into [CommandFSM] at all — the FSM transition function is
+## never even invoked, so there is structurally no path to
+## [constant CommandFSM.State.ENTITY_SELECTED] from a non-live trigger. A
+## caller building a real board's click handler uses this (or an equivalent
+## own-turn check) before every selection attempt; hover/inspection reads
+## (e.g. a read-only info panel) are expected to bypass this gate entirely and
+## read [param state] directly, which this method does not prevent.
+func try_select(state: GameState, unit: UnitState) -> bool:
+	if not is_input_live(state):
+		return false
+	_selected_id = unit.entity_id
+	_fsm_state = CommandFSM.next_state(_fsm_state, CommandFSM.Trigger.SELECT_OWN, state)
+	return true
 
 
 ## Drives [param unit]'s selection into a preview state and fires that
@@ -213,6 +284,45 @@ func _on_commit_result(result: ActionResult, state: GameState, unit: UnitState) 
 	if result.ok:
 		return
 	_recompute_tier1_and_2(state, unit)
+
+
+## The commit-dispatch entry point (ADR-0015 §5 Turn Manager/Movement/Combat/
+## Base & Production bullets, TR-cmdui-011..015, AC-4): routes [param action]
+## through the sole mutation vector, [method GameState.apply_action], exactly
+## like [code]AITurnDriver.run_ai_turn[/code]'s
+## [code]state.apply_action(action)[/code] call — the SAME real, authoritative
+## [param state], never a clone. This layer deducts [b]no[/b] AP and mutates
+## nothing itself: whichever owning system's [code]apply()[/code] runs inside
+## [method GameState.apply_action] (Movement/Combat/BaseProduction) is the
+## sole spender (Pass-Through Invariant, ADR-0015 §4) — [method commit] is a
+## one-line pass-through, not a second commit path.
+##
+## [b]Gated by [method is_input_live][/b] (AC-21): if input is not live for
+## [member _local_player], this returns a synthesized rejected [ActionResult]
+## ([constant Action.Reason.NOT_ACTIVE_PLAYER]) [b]without ever calling
+## [method GameState.apply_action][/b] — so an opponent-turn/post-GameOver
+## commit attempt provably never reaches the real mutation vector, mirroring
+## [method try_select]'s hard no-op.
+##
+## Callers use the returned [ActionResult] to drive the Tier-4 reaction
+## themselves: pass it to [method _on_commit_result] for a unit-bearing
+## preview (Move/Attack/Produce) to get the existing swallow-and-re-issue
+## reject behavior; a Build commit (no source unit, no Tier-1/2 set to
+## re-issue) reads [member ActionResult.ok] directly — there is nothing
+## Tier-1/2-shaped to refresh for Build (Move/Attack Tier-1 sets are
+## unit-specific; Build's [CommandFSM.BuildEntry] preview is a pure per-call
+## query with no held cache to invalidate).
+##
+## [param action].player is set to [member _local_player] here (the one place
+## this class writes onto an [Action] before submission) so every caller
+## builds an [Action] without having to remember to stamp the acting player
+## itself — mirrors [code]AITurnDriver[/code]'s call sites, which likewise set
+## [code]action.player[/code] once before [code]apply_action[/code].
+func commit(state: GameState, action: Action) -> ActionResult:
+	if not is_input_live(state):
+		return ActionResult.new(false, Action.Reason.NOT_ACTIVE_PLAYER, [])
+	action.player = _local_player
+	return state.apply_action(action)
 
 
 ## Tile-change gating (TR-cmdui-005): reads [InputEventMouseMotion] and only

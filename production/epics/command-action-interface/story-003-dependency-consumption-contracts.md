@@ -1,12 +1,12 @@
 # Story 003: Dependency Consumption Contracts — Movement, Combat, Base & Production, AP, Turn Manager
 
 > **Epic**: Command & Action Interface
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: Integration
 > **Estimate**: L (4h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -82,7 +82,7 @@
 **Story Type**: Integration
 **Required evidence**: `tests/integration/command-action-interface/dependency_consumption_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created & passing — 13 integration test functions (13/13 green)
 
 ---
 
@@ -90,3 +90,14 @@
 
 - Depends on: Story 001, Story 002
 - Unlocks: Story 004 (Cancel-Build needs `BaseProduction.cancel_build` wired), Story 007 (post-commit chaining needs the full commit path), Story 008 (GAME_OVER needs `apply_action`/win-check routing live)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27
+**Criteria**: 7/7 ACs covered. Full suite 672/672 — 0 failures, 0 orphans, 57/57 suites.
+**Implementation**: `command_fsm.gd` gained `projected_remaining_ap` (D-1, AC-5) + `BuildEntry`/`build_preview` (AC-16, query-sourced, two distinguishable exclusion booleans). `command_interface.gd` gained `commit()` (routes a built Action through `GameState.apply_action` mirroring `ai_turn_driver` — deducts no AP itself; reject → `_on_commit_result`), plus `try_select()` / `is_input_live()` / `set_local_player()` / `_local_player` (AC-21 turn-scoping: refuses selection/commit when not the local player's live turn, synthesizing a `NOT_ACTIVE_PLAYER` reject without ever calling `apply_action`).
+**Deviations**: None out-of-scope — changes confined to the 2 CAI files + the integration test. `NOT_ACTIVE_PLAYER` is a **pre-existing** `Action.Reason` (reused, not added to core). Pass-Through-clean (a `.build_cost` doc-comment lint false-positive was corrected).
+**Partial-AC deferral (logged to `docs/tech-debt-register.md`)**: AC-21's "resolution phase → inspection only / input resumes only in own **Action phase**" clause is gated only by `active_player` + `GAME_OVER`, NOT a turn-phase check — because GameState has no queryable interactive turn-phase model yet (flagged at `game_state.gd:481-486`; `apply_action` itself gates the same way). Vacuously satisfied today (no interactive resolution window). Add an Action-phase conjunct to `is_input_live` when the phase model lands.
+**Test Evidence**: Integration — `tests/integration/command-action-interface/dependency_consumption_test.gd` (13 test functions; real Movement/Combat/AP/BaseProduction + real `apply_action`; AC-21 has opponent-turn + control-success + GameOver cases).
+**Code Review**: orchestrator focused review — integration test comprehensive across all 7 ACs (incl. control + edge cases); no out-of-scope core changes verified via `git diff src/core`; Pass-Through lint green. APPROVED.
