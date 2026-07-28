@@ -65,7 +65,7 @@ This epic is complete when:
 | # | Story | Type | Status | ADR |
 |---|-------|------|--------|-----|
 | 001 | CommandFSM Core — States, Transitions, Menu Model, Pass-Through Enforcement | Logic | ✅ Complete | ADR-0015 |
-| 002 | Four-Tier Recompute Discipline (Tier 1–4) | Logic | Ready | ADR-0015 |
+| 002 | Four-Tier Recompute Discipline (Tier 1–4) | Logic | ✅ Complete | ADR-0015 |
 | 003 | Dependency Consumption Contracts — Move/Combat/B&P/AP/Turn | Integration | Ready | ADR-0015 |
 | 004 | Cancel-Build Destructive Gesture (Hold-to-Confirm) | Logic | Ready | ADR-0015 |
 | 005 | BoardCursor Input Substrate — Grid-Axis Nav, Precedence | Logic | Ready | ADR-0014 |

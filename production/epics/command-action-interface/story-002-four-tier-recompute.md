@@ -1,12 +1,12 @@
 # Story 002: Four-Tier Recompute Discipline (Tier 1–4)
 
 > **Epic**: Command & Action Interface
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: Logic
 > **Estimate**: L (4h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -78,7 +78,7 @@
 **Story Type**: Logic
 **Required evidence**: `tests/unit/command-action-interface/recompute_tiers_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created & passing — 17 test functions (17/17 green)
 
 ---
 
@@ -86,3 +86,14 @@
 
 - Depends on: Story 001 (the FSM states this discipline attaches to)
 - Unlocks: Story 003 (dependency wiring uses these tiers to decide when queries fire), Story 006 (iso picking's tile-change gating is the same mechanism)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27
+**Criteria**: 5/5 passing (0 deferred). Full suite 659/659 — 0 failures, 0 orphans, 56/56 suites.
+**Deviations**: None. All changes confined to the story's stated files (`src/ui/command_action_interface/command_interface.gd` + `tests/unit/command-action-interface/recompute_tiers_test.gd` + `.uid`); no out-of-scope production touch.
+**Implementation**: `CommandInterface extends Node` drives the cai-001 `CommandFSM`; holds Tier-1/2/3 dicts + `_active_tile`; four injectable DI seams (`_reachable_fn`/`_legal_targets_fn`/`_legal_targets_from_fn`/`_attack_cost_fn`) + `_renderer` via `configure_dependencies` make it unit-testable. Tier-1 once/entry + re-issue on `notify_action_applied` (AC-19); Tier-2 batched Move-only D-3 marker = `has_target AND (min_cost + attack_cost_for ≤ current_ap)` (AC-11); Tier-3 O(1) dict reads; Tier-4 `_on_commit_result` reject→re-issue, never touches AP (AC-20); `_unhandled_input` tile-change-gated (TR-cmdui-005).
+**Test Evidence**: Logic — `tests/unit/command-action-interface/recompute_tiers_test.gd` (17 test functions; real call-count spies via `_CallSpy`, tile-gating via a `_SpyInterface` subclass).
+**Code Review**: qa-tester coverage gate (GAPS → 5 tests added: `_unhandled_input` gating + null-renderer, dict-clear-on-reissue regression, PREVIEW_ATTACK data-level, out-of-frontier null reads) + orchestrator gdscript correctness review (CLEAN). APPROVED.
+**Implementation note**: agent truncated mid-run; orchestrator completed it — fixed the AC-11 fixture (an enemy blocker on the row-0 path forced an over-AP detour that dropped the 8-cost tile from the frontier → moved the enemy off-path) and the Node orphan leak (`auto_free` on all fixtures).

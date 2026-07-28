@@ -21,7 +21,7 @@ goal: "Build the playable Vertical Slice (rendered one-close-skirmish loop) at r
 start: "2026-07-28"
 end: "2026-08-08"
 generated: "2026-07-27"
-updated: "2026-07-27"  # cai-001 done (story-done 2026-07-27) — CAI epic 1/8
+updated: "2026-07-27"  # cai-002 done (story-done 2026-07-27) — CAI epic 2/8 done
 # br-001 done (story-done 2026-07-27) — first VS-build story complete
 # br-002 + ai-001 done (parallel, 2026-07-27); full suite 524/524
 
@@ -87,11 +87,11 @@ stories:
     name: "Four-tier recompute (cost preview)"
     file: "production/epics/command-action-interface/story-002-four-tier-recompute.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"  # CommandInterface Node + 4-tier discipline; 17 tests, full suite 659/659
   - id: "cai-003"
     name: "Dependency-consumption contracts (projected_remaining_ap)"
     file: "production/epics/command-action-interface/story-003-dependency-consumption-contracts.md"
