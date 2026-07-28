@@ -40,14 +40,18 @@
 ## state.apply_action(EndTurnAction.new-with-player(state.active_player))
 ## [/codeblock]
 ##
-## [b]Termination (TR-ai-009):[/b] guaranteed by exactly two exits —
+## [b]Termination (TR-ai-009):[/b] guaranteed by three exits —
 ## [code]action == null[/code] (no candidate cleared
-## [code]AIBalance.ai.pass_threshold[/code]) or [member GameState.match_status]
-## flipping to [constant GameState.MatchStatus.GAME_OVER]. A rejected commit
-## never counts as progress and never blocks termination, since
+## [code]AIBalance.ai.pass_threshold[/code]), [member GameState.match_status]
+## flipping to [constant GameState.MatchStatus.GAME_OVER], or the
+## [constant MAX_CONSECUTIVE_REJECTS] backstop. In the healthy case a rejected
+## commit never counts as progress and never blocks termination, since
 ## [method AI.choose_action] is re-run against the SAME (unmutated-by-the-
 ## rejection) real [param state] next iteration, and the underlying board is
-## always finite.
+## always finite. But because that same determinism means a mis-proposed action
+## is re-proposed [i]and re-rejected[/i] identically with no [code]await[/code]
+## on the reject path, the consecutive-reject backstop converts that would-be
+## infinite freeze into a graceful defensive turn-end (see the const below).
 ##
 ## [b]Bootstrap call site (explicitly out of this story's scope, ADR-0011 §3):[/b]
 ## invoked by whatever observes [member GameState.active_player] becoming a
@@ -57,6 +61,19 @@
 ## That wiring is a match-bootstrap detail reconciled later, not invented here.
 class_name AITurnDriver
 extends Node
+
+
+## Structural termination backstop (TR-ai-009): a rejected commit mutates
+## nothing, so a deterministic [method AI.choose_action] re-proposes the same
+## action next iteration, and the reject path has no [code]await[/code] — an
+## unbounded reject-[code]continue[/code] would spin synchronously forever and
+## freeze the game thread. AC-24's stale-candidate recovery needs only a single
+## retry (the next clone reflects the mutation), so this bounds consecutive
+## rejections and ends the turn defensively once exceeded. NOT an [AIConfig]
+## balance knob — a safety invariant, kept as a [code]const[/code] so it never
+## enlarges the tuning surface. Well above any legitimate reject-then-recover
+## streak; correct enumeration should never approach it.
+const MAX_CONSECUTIVE_REJECTS := 8
 
 
 ## Runs one full AI turn against [param state]: the evaluate→commit loop
@@ -72,6 +89,7 @@ extends Node
 ## (ADR-0011 §1), and neither does this driver.
 func run_ai_turn(state: GameState) -> void:
 	var economy_investments := 0
+	var consecutive_rejects := 0
 
 	while true:
 		var action: Action = AI.choose_action(state, economy_investments)
@@ -80,7 +98,16 @@ func run_ai_turn(state: GameState) -> void:
 
 		var result: ActionResult = state.apply_action(action)
 		if not result.ok:
+			# Bound the reject-continue so a mis-proposed (always-rejected) action
+			# cannot freeze the turn (see MAX_CONSECUTIVE_REJECTS). A rejection
+			# spends no AP and makes no progress; past the bound, end defensively.
+			consecutive_rejects += 1
+			if consecutive_rejects >= MAX_CONSECUTIVE_REJECTS:
+				push_warning("AITurnDriver: %d consecutive rejected commits (last verb=%d reason=%d) — ending AI turn defensively" \
+						% [consecutive_rejects, action.verb, result.reason])
+				break
 			continue
+		consecutive_rejects = 0
 
 		if _is_economy_or_research(action):
 			economy_investments += 1

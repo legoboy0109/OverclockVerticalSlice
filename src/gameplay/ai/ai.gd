@@ -608,6 +608,15 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 		return best
 	if producer.type.producible_types.is_empty():
 		return best
+	# Per-turn production-cap gate — mirrors BaseProduction.validate_produce's
+	# PRODUCTION_CAP_REACHED gate (base_production.gd). A producer already at its
+	# effective cap this turn contributes no ProduceAction candidate. Without this,
+	# choose_action re-proposes an at-cap produce every call, apply_action rejects
+	# it (PRODUCTION_CAP_REACHED), and the driver's reject-continue loop spins
+	# forever with no await — the AI-turn freeze (headless tests missed it because
+	# rejections emit no action_applied, so the commit-count bound never trips).
+	if producer.units_produced_this_turn >= BaseProduction.effective_production_cap(lookahead, producer, producer.owner):
+		return best
 
 	var deploy_tiles: Array[Vector2i] = BaseProduction.legal_deploy_tiles(lookahead, producer, null)
 	if deploy_tiles.is_empty():
@@ -739,8 +748,15 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 	var cap_reached: bool = economy_investments_committed >= AIBalance.ai.max_economy_investments_per_turn
 
 	for structure_type: StructureTypeDef in _BUILDABLE_STRUCTURE_TYPES:
-		var is_economy: bool = structure_type == StructureTypes.ECONOMY_OUTPOST
-		if is_economy and cap_reached:
+		# Only ECONOMY_OUTPOST has a real AI valuation (_economy_value). The other
+		# buildable types have no strategic model yet; enumerating them on the
+		# placeholder value==build_cost basis made the AI build structures it could
+		# not value and immediately cancel-build them for the refund — a
+		# build<->cancel oscillation that consumed the whole turn. Excluded until
+		# real valuations exist, mirroring the stubbed research enumeration.
+		if structure_type != StructureTypes.ECONOMY_OUTPOST:
+			continue
+		if cap_reached:
 			continue
 
 		var cost: int = BaseProduction.effective_build_cost(lookahead, structure_type, player)
@@ -751,8 +767,7 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 		if tiles.is_empty():
 			continue
 
-		var value: float = _economy_value(lookahead, player, structure_type) if is_economy \
-			else float(structure_type.build_cost)
+		var value: float = _economy_value(lookahead, player, structure_type)
 		var score: float = _action_score(value / float(cost), false)
 		var candidate_entity_id: int = _lowest_owned_entity_id(lookahead, player)
 		if _is_better(score, cost, candidate_entity_id, best.score, best.ap_cost, best.entity_id):
@@ -897,13 +912,22 @@ static func _economy_tech_marginal_value(economy_tech_income_bonus: int, project
 ## here, mirroring [method BaseProduction.apply_cancel]'s own AP-credit-only
 ## contract).
 static func _score_cancel_build_candidates(lookahead: GameState, entity: EntityState, \
-		_economy_investments_committed: int, best: _Candidate) -> _Candidate:
+		economy_investments_committed: int, best: _Candidate) -> _Candidate:
 	if not (entity is StructureState):
 		return best
 	var structure: StructureState = entity
 	if structure.owner != lookahead.active_player:
 		return best
 	if structure.build_status != StructureState.BuildStatus.UNDER_CONSTRUCTION:
+		return best
+	# Anti-oscillation (mirrors the retreat gate, AC-31): once the AI has committed
+	# any economy investment this turn it stops enumerating cancel-build, so it
+	# never cancels a structure it just built. Cancel-build is scored on an
+	# absolute-AP refund basis (_cancel_build_value), which otherwise makes
+	# cancelling a just-built structure look profitable and drives a build<->cancel
+	# oscillation. A structure under construction from a prior turn stays
+	# cancellable on a turn where the AI has not itself built (committed == 0).
+	if economy_investments_committed > 0:
 		return best
 
 	var value: float = _cancel_build_value(structure.type.build_cost)

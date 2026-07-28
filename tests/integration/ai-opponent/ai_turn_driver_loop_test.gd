@@ -334,3 +334,33 @@ func test_driver_terminates_within_bound_on_multi_candidate_board_no_crash() -> 
 	assert_int(state.active_player).is_not_equal(1)
 
 	driver.queue_free()
+
+
+# --- Regression: windowed AI-turn freeze (produce-cap reject loop) 2026-07-28 -
+# A board where the AI HQ reaches its production cap while it still ranks a
+# produce highest used to FREEZE run_ai_turn: AI.choose_action re-proposed an
+# at-cap ProduceAction every iteration, apply_action rejected it
+# (PRODUCTION_CAP_REACHED), and the reject-continue path (no await) spun forever.
+# The commit-count spy never caught it because a rejection emits no
+# action_applied. run_ai_turn must now terminate (active_player advances off the
+# AI). The bound here is deliberately loose — the tight commit bound is a
+# separate concern (the move-oscillation follow-up), not this freeze guard.
+func test_run_ai_turn_terminates_on_at_cap_board_that_previously_froze() -> void:
+	var state := _make_state(40, 1)   # AI = player 1; enough AP to exceed the HQ cap
+	_place(state, _make_hq(100, 1, Vector2i(6, 4), StructureTypes.HQ.hp))
+	_place(state, _make_hq(101, 0, Vector2i(1, 4), StructureTypes.HQ.hp))
+	_place(state, _make_unit(1, 1, UnitTypes.TROOPER, Vector2i(5, 4)))
+	_place(state, _make_unit(2, 0, UnitTypes.SCOUT, Vector2i(3, 4)))
+	_place(state, _make_unit(3, 0, UnitTypes.TROOPER, Vector2i(4, 3)))
+	var spy := _connect_spy(state)
+	var driver := AITurnDriver.new()
+	add_child(driver)
+
+	# Act — must terminate (no hang). GdUnit4's per-test timeout is the ultimate
+	# backstop; the active_player assertion proves genuine bounded termination.
+	await driver.run_ai_turn(state)
+
+	assert_int(state.active_player).is_not_equal(1)
+	assert_int(spy.call_count).is_less(200)
+
+	driver.queue_free()
