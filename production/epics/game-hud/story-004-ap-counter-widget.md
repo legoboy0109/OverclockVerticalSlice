@@ -1,12 +1,12 @@
 # Story 004: AP Counter Widget — Rendering, Opponent Muting, Preview Echo, Fill/Tick Wiring
 
 > **Epic**: Game HUD
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: Integration
 > **Estimate**: L (4h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-28
 
 ## Context
 
@@ -79,7 +79,7 @@
 **Story Type**: Integration
 **Required evidence**: `tests/integration/game-hud/ap_counter_widget_test.gd` (blocking — AC-6/7/9a/19/28 value assertions) + advisory `production/qa/evidence/ap-counter-widget-evidence.md` (Visual/Feel motion quality)
 
-**Status**: [ ] Not yet created
+**Status**: [x] Blocking Integration test created and passing — 10 tests, all green (2026-07-28). [ ] Advisory Visual/Feel sign-off OWED (`production/qa/evidence/ap-counter-widget-evidence.md`, needs a windowed session)
 
 ---
 
@@ -87,3 +87,13 @@
 
 - Depends on: Story 001 (`GameStateReader`), Story 003 (`ApCounterFsm`), Story 002 (`HUDConfig`), and cross-epic **CAI Story 007** (shared commit-flash↔AP-tick signal) + **CAI Story 003** (`projected_remaining_ap`)
 - Unlocks: Story 007 (income breakdown popover anchors off this counter)
+
+## Completion Notes
+**Completed**: 2026-07-28
+**Criteria**: Blocking Integration ACs 6/7/9a/19/28 all covered (10 tests). Advisory Visual/Feel AC-3b/5b/9b OWED (windowed sign-off).
+**Deliverables**: `src/ui/game_hud/ap_counter_widget.gd` (ApCounterWidget — committed/echo/fill/tick, opponent muting, testable display-model getters); `src/ui/game_hud/turn_banner_widget.gd` (TurnBannerWidget — turn/round indicator + YOUR/ENEMY banner + hold self-clear). Both extend HudReactiveControl; Pass-Through (no local AP derivation — projections handed in from CAI's projected_remaining_ap verbatim).
+**Deviations**: None blocking.
+- INFO: preview echo driven by explicit `open_preview`/`close_preview` entry points (scene glue wires CAI preview→widget, mirroring route_click/inspect; CAI exposes no preview signal). Scene-side wiring = integration glue, not this story.
+- Code review WARNINGs FIXED (not deferred): (1) `_refresh_committed` now detects turn transitions explicitly (active_player/round) and routes through TURN_TRANSITION before a gated start-of-turn fill — a mid-turn AP increase (Cancel-Build refund credit) no longer misfires FILL_FLOURISH; (2) `show_opponent_fill_flourish` now honored (opponent fill gated). Both covered by 4 added tests.
+**Test Evidence**: Integration — `tests/integration/game-hud/ap_counter_widget_test.gd` (10 tests, PASS). Full suite 752/752 green. Advisory Visual/Feel — `production/qa/evidence/ap-counter-widget-evidence.md` (sign-off OWED).
+**Code Review**: APPROVED (independent godot-gdscript read-only pass + coordinator; 2 WARNINGs fixed + regression-tested; Pass-Through/opponent-echo-unreachability/timer-safety/static-typing/layer-direction all confirmed).

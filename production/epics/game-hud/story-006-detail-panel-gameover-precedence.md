@@ -1,12 +1,12 @@
 # Story 006: Detail Panel (Selection/Inspection Seam) + Victory/Defeat One-Frame Preemption
 
 > **Epic**: Game HUD
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: Integration
 > **Estimate**: L (4h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-28
 
 ## Context
 
@@ -74,7 +74,7 @@
 **Story Type**: Integration
 **Required evidence**: `tests/integration/game-hud/detail_panel_gameover_precedence_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created and passing — 7 tests, all green (2026-07-28)
 
 ---
 
@@ -82,3 +82,13 @@
 
 - Depends on: Story 001 (`GameStateReader` ✅ Complete), and cross-epic **CAI's `CommandInterface.selection_changed(target)` signal** (ADR-0016 §6, owed back to ADR-0015). ✅ **RESOLVED 2026-07-28**: the signal is now implemented in the CAI epic (cross-epic addendum). `CommandInterface` emits `selection_changed(SelectionTarget{entity_id, pinned})` — pinned on select/switch/reselect/game-over-clear, peek via `inspect(state, tile)` — de-duplicated and one-way outward-in (CAI never calls into a HUD node). Type: `src/ui/command_action_interface/selection_target.gd`; tests: `tests/unit/command-action-interface/selection_changed_test.gd` (9, pass). This story is no longer blocked.
 - Unlocks: Story 008 (audio `GameOver` cue hooks off the same transition this story renders)
+
+## Completion Notes
+**Completed**: 2026-07-28
+**Criteria**: AC-13 (panel follows selection_changed: pinned/peek/empty/destroy-clear), AC-17 (victory/defeat overlay names winner + one-frame turn-banner preemption + AP-counter snap-to-final cross-ref), leaf-claim (outward-in subscribe only) — all covered (7 Integration tests). AC-22 (MAX_ROUNDS/TIEBREAK presentation) = backlog stub, NOT verified (MAX_ROUNDS off in VS; CR-9 not fully green per the story's DoD language).
+**Deliverables**: `src/ui/game_hud/detail_panel_widget.gd` (DetailPanelWidget — subscribes outward-in to CommandInterface.selection_changed, pinned/peek edge, destroy-clear via _entity_exists on action_applied, _exit_tree disconnects both seams via super()); `src/ui/game_hud/game_over_overlay.gd` (GameOverOverlay — live match_status/winner reads, VICTORY/DEFEAT, one-frame preemption falls out of shared action_applied since TurnBannerWidget self-clears on GAME_OVER).
+**Deviations**: None blocking.
+- OUT OF SCOPE (valid, necessary): added `GameStateReader.winner()` pass-through (the overlay names the winner verbatim) + updated the `unit_read_surface_test.gd` allowlist to admit it.
+- INFO (epic-wide, not this story): no production scene yet instantiates/wires the HUD widgets (bind/attach_interface/configure/add_child) — HUD-scene assembly is deferred integration glue (vertical-slice build), not in the in-slice story set. All widgets are built + unit/integration-tested in isolation.
+**Test Evidence**: Integration — `tests/integration/game-hud/detail_panel_gameover_precedence_test.gd` (7 tests, PASS). Full suite 765/765 green.
+**Code Review**: APPROVED (independent godot-gdscript read-only pass + coordinator; leaf-claim/exit_tree/destroy-clear/one-frame-preemption/Pass-Through/typing all confirmed clean).

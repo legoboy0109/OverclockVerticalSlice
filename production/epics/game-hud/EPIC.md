@@ -3,8 +3,8 @@
 > **Layer**: Presentation
 > **GDD**: design/gdd/game-hud.md
 > **Architecture Module**: Game HUD (Presentation Layer)
-> **Status**: Ready
-> **Stories**: 8 stories (see `## Stories` below) — none implemented yet
+> **Status**: ✅ Complete (2026-07-28) — 8/8 stories done (001–008). Story 008 (audio dispatch) was pulled forward from Production and completed, closing the full epic.
+> **Stories**: 8 stories (see `## Stories` below) — 8/8 Complete
 
 ## Overview
 
@@ -73,11 +73,11 @@ This epic is complete when:
 | 001 | GameStateReader Facade + Event Binding + Dirty-Flag Coalescing | Logic | ✅ Complete | ADR-0016, ADR-0004 |
 | 002 | HUDConfig Resource + Cross-Config Loader Guard | Logic | ✅ Complete | ADR-0016, ADR-0014 |
 | 003 | ApCounterFsm — 4-State AP Counter Core (headless) | Logic | ✅ Complete | ADR-0016 |
-| 004 | AP Counter Widget + Opponent Muting + Preview Echo + Turn/Round Banner | Integration | Ready | ADR-0016 |
-| 005 | On-Board Glyph Layer — hp Pips/Numeric + Markers | Visual/Feel | Ready | ADR-0013, ADR-0016 |
-| 006 | Detail Panel + Victory/Defeat GameOver Preemption | Integration | Ready | ADR-0016 |
-| 007 | Action Log + Income Breakdown + Build/End-Turn + Turn-Scoping | Integration | Ready | ADR-0016, ADR-0006 |
-| 008 | HudAudioDispatcher — Single-Owner play() + Priority Order | Integration | Ready | ADR-0016 |
+| 004 | AP Counter Widget + Opponent Muting + Preview Echo + Turn/Round Banner | Integration | ✅ Complete | ADR-0016 |
+| 005 | On-Board Glyph Layer — hp Pips/Numeric + Markers | Visual/Feel | ✅ Complete | ADR-0013, ADR-0016 |
+| 006 | Detail Panel + Victory/Defeat GameOver Preemption | Integration | ✅ Complete | ADR-0016 |
+| 007 | Action Log + Income Breakdown + Build/End-Turn + Turn-Scoping | Integration | ✅ Complete | ADR-0016, ADR-0006 |
+| 008 | HudAudioDispatcher — Single-Owner play() + Priority Order | Integration | ✅ Complete | ADR-0016 |
 
 **Implementation order**: {001, 002} first (parallel) → then {003→004}, {005}, {006},
 {007} in parallel once their cross-epic gates clear → 008 last. Gates: 003/004 need
@@ -91,13 +91,27 @@ Renderer Story 005** (`grid_to_screen`+`GLYPH_OFFSETS`); 006 needs **CAI `select
 >   selection points (pinned) + an `inspect(state, tile)` peek entry, de-duplicated, one-way outward-in.
 >   `SelectionTarget` is `src/ui/command_action_interface/selection_target.gd`; tests in
 >   `tests/unit/command-action-interface/selection_changed_test.gd` (9, pass). Story 006 is UNBLOCKED.
-> - **Story 008** audio ducking (≥2 `AudioStreamPlayer`s) is the one under-spiked engine detail —
->   check against the live 4.6 audio bus API before starting.
+> - **Story 008** audio ducking (≥2 `AudioStreamPlayer`s) — ✅ **RESOLVED 2026-07-28**: implemented
+>   with two internally-managed `AudioStreamPlayer` channels (HIGH: stinger/GameOver, LOW:
+>   completion/fill/tick) per ADR-0016 §7 and the pinned `docs/engine-reference/godot/modules/audio.md`
+>   concurrent-sound pattern (`volume_db` duck / `stop()` hard-cut / `play()`, all stable ≤4.3 — no
+>   post-cutoff API). Audio stream assets + final mix level remain deferred (OQ-6, audio-director).
 > - **Story 002** owns the `InputConfig.input_lock_ms >= HUDConfig.ap_tick_duration_ms` config-loader
 >   guard that CAI Story 007 explicitly deferred to this epic.
 
 ## Next Step
 
-Run `/story-readiness production/epics/game-hud/story-001-game-state-reader-facade.md`,
-then `/dev-story` to begin. Work through stories in dependency order — each story's
-`Depends on:` field states its prerequisite (including cross-epic gates).
+✅ **Epic complete (8/8, 2026-07-28).** All stories implemented, reviewed, and
+closed. Remaining follow-ups are outside the epic's story set:
+- **Advisory Visual/Feel + UI sign-offs** owed on Stories 004/005/007 (windowed
+  Redot session) — evidence stubs staged in `production/qa/evidence/`.
+- **Audio assets + final mix** (Story 008 mechanism shipped; streams/tone owed to
+  audio-director, OQ-6).
+- **HUD-scene assembly** — ✅ **assembly layer done (2026-07-28)**: the `GameHud`
+  node (`src/ui/game_hud/game_hud.gd`) wires all 8 widgets into a `CanvasLayer` +
+  the world-space glyph layer + audio dispatcher through one
+  `assemble(reader, config, cmd, board, local_player, buildables)` entry
+  (`tests/integration/game-hud/game_hud_assembly_test.gd`, 9 tests). What remains
+  is the **runnable root scene** (real `start_match` + `BoardRenderer` + turn loop
+  as the main scene) — the larger vertical-slice step, which reaches the still-open
+  art (s3-06) + occupant-pick-region (s3-05) seams.

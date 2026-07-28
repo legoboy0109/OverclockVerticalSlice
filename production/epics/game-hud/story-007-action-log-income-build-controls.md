@@ -1,12 +1,12 @@
 # Story 007: Action Log Ring Buffer + Income Breakdown + Build Button + End Turn + Turn-Scoped Inert Controls
 
 > **Epic**: Game HUD
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: Integration
 > **Estimate**: L (4–5h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-28
 
 ## Context
 
@@ -78,7 +78,7 @@
 **Story Type**: Integration
 **Required evidence**: `tests/unit/game-hud/action_log_income_breakdown_test.gd` (Logic) + `tests/integration/game-hud/build_endturn_turn_scoping_test.gd` (Integration, blocking) + advisory `production/qa/evidence/hud-chrome-layout-evidence.md` (UI layout)
 
-**Status**: [ ] Not yet created
+**Status**: [x] Logic (5) + Integration (5) tests created and passing — all green (2026-07-28). [ ] Advisory UI layout / dual-focus sign-off OWED (`production/qa/evidence/hud-chrome-layout-evidence.md`, windowed session)
 
 ---
 
@@ -86,3 +86,14 @@
 
 - Depends on: Story 001 (`GameStateReader`), Story 002 (`HUDConfig.action_log_length`), and cross-epic **CAI's `PREVIEW_BUILD` state** (ADR-0015, shipped) for the Build-button pressed cue. Independent of Stories 003–006 (no shared files).
 - Unlocks: None (feeds Story 008 only via the `action_applied` events it renders — no code dependency)
+
+## Completion Notes
+**Completed**: 2026-07-28
+**Criteria**: Blocking — AC-14 (log one-entry-per-event, append order, newest-on-top), AC-15 (ring-drop at action_log_length), AC-8 (income base/outpost/econ_tech verbatim, 0-outpost literal 0), AC-16 (Build affordable-vs-dimmed, activation opens selection either state), AC-18/27 (Build/End-Turn inert on opponent-turn/EndTurn-transient/GameOver: FOCUS_NONE + request-gate no-op) — all covered (5 Logic + 5 Integration tests). Advisory — AC-24 always-present chrome + dual-focus StyleBoxes + keyboard traversal order OWED (windowed sign-off).
+**Deliverables**: `src/ui/game_hud/action_log_widget.gd` (ActionLogWidget — append-newest-on-top Array[Event] ring buffer, silent, deterministic per result.events order); `src/ui/game_hud/income_breakdown_widget.gd` (IncomeBreakdownWidget — income_breakdown(player) base/outpost/econ_tech verbatim, toggle popover); `src/ui/game_hud/hud_controls_widget.gd` (HudControlsWidget — controls_live/build_affordable/build_pressed_cue/controls_focus_mode + gated request_build/request_end_turn no-op when inert; duck-typed _cmd for PREVIEW_BUILD cue).
+**Deviations**: None blocking.
+- The actual Build/End-Turn Button chrome + dual-focus StyleBoxes are advisory UI (ADR-0014 dual-focus spike cleared); the widget models the testable state + activation gate. Keyboard-focus traversal order (OQ-5) owed to /ux-design (a reasonable FOCUS_ALL/FOCUS_NONE default implemented).
+- PREVIEW_BUILD pressed cue via a duck-typed `_cmd.fsm_state()` seam (CAI has no public path to drive _fsm_state to PREVIEW_BUILD; stub-testable, mirrors the glyph layer's anchor-source seam).
+- Review WARNING ADDRESSED: `_entries`/`entries()`/`entries_newest_first()` typed `Array[Event]` (was bare Array).
+**Test Evidence**: Logic — `tests/unit/game-hud/action_log_income_breakdown_test.gd` (5, PASS). Integration (blocking) — `tests/integration/game-hud/build_endturn_turn_scoping_test.gd` (5, PASS). Full suite 775/775 green. Advisory UI — `production/qa/evidence/hud-chrome-layout-evidence.md` (sign-off OWED).
+**Code Review**: APPROVED-WITH-SUGGESTIONS → suggestion addressed (independent godot-gdscript read-only pass + coordinator; ring-buffer/Pass-Through/turn-scoping/dual-focus/lifecycle/typing all confirmed).

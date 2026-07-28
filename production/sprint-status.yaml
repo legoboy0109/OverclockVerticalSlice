@@ -21,7 +21,7 @@ goal: "Build the playable Vertical Slice (rendered one-close-skirmish loop) at r
 start: "2026-07-28"
 end: "2026-08-08"
 generated: "2026-07-27"
-updated: "2026-07-28"  # hud-001/002/003 done + selection_changed seam — Game HUD epic 3/7 in-slice
+updated: "2026-07-28"  # ★ GAME HUD EPIC FULLY COMPLETE (8/8) — hud-008 audio dispatch pulled forward from Production + done 2026-07-28 (788/788 suite green)
 # br-001 done (story-done 2026-07-27) — first VS-build story complete
 # br-002 + ai-001 done (parallel, 2026-07-27); full suite 524/524
 
@@ -235,38 +235,38 @@ stories:
     name: "AP-counter widget"
     file: "production/epics/game-hud/story-004-ap-counter-widget.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
-    blocker: "cai-007"
-    completed: ""
+    blocker: ""
+    completed: "2026-07-28"
   - id: "hud-005"
     name: "On-board glyph layer (hp pips / has-acted)"
     file: "production/epics/game-hud/story-005-on-board-glyph-layer.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
-    blocker: "br-005"
-    completed: ""
+    blocker: ""
+    completed: "2026-07-28"
   - id: "hud-006"
     name: "Detail panel + game-over precedence"
     file: "production/epics/game-hud/story-006-detail-panel-gameover-precedence.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
-    blocker: "s3-05-seams"
-    completed: ""
+    blocker: ""
+    completed: "2026-07-28"
   - id: "hud-007"
     name: "Action log + income + produce controls"
     file: "production/epics/game-hud/story-007-action-log-income-build-controls.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-28"
 
   # --- Sprint-level build tasks ---
   - id: "s3-05-seams"
