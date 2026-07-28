@@ -94,9 +94,14 @@ var _cursor: BoardCursor = null
 
 ## The player's buildable structure roster (also handed to the HUD so its Build
 ## affordability set matches). KEY_B places [member _selected_buildable] at the
-## cursor tile; KEY_C cycles which type is selected.
+## cursor tile; KEY_C cycles which type is selected. (Produce has the symmetric
+## [member _selected_produce_type] / KEY_V pair.)
 var _buildables: Array[StructureTypeDef] = []
 var _selected_buildable: int = 0
+## The unit type KEY_P will produce; cycled by KEY_V. Tracked by reference (not an
+## index) so it survives roster changes when a Production Outpost is built. Lazily
+## resolved by [method selected_produce_type].
+var _selected_produce_type: UnitTypeDef = null
 
 
 func _ready() -> void:
@@ -307,27 +312,52 @@ func _refresh_status() -> void:
 		var afford: String = "affordable" if _reader.can_afford_build(LOCAL_PLAYER, build_type) else "too expensive"
 		lines.append("Build [B]: %s — %d AP (%s)    [C] cycle" % [build_type.display_name, cost, afford])
 
-	var produce_type: UnitTypeDef = _first_producible_type()
+	var produce_type: UnitTypeDef = selected_produce_type()
 	if produce_type != null:
 		var pcost: int = Unit.effective_produce_cost(_state, produce_type, LOCAL_PLAYER)
-		lines.append("Produce [P]: %s — %d AP" % [produce_type.display_name, pcost])
+		var pafford: String = "affordable" if _reader.can_afford_produce(LOCAL_PLAYER, produce_type) else "too expensive"
+		lines.append("Produce [P]: %s — %d AP (%s)    [V] cycle" % [produce_type.display_name, pcost, pafford])
 
-	lines.append("[Arrows] cursor  [Enter] select  [M] move/attack  [B] build  [C] cycle  [P] produce  [Tab] end turn")
+	lines.append("[Arrows] cursor  [Enter] select  [M] move/attack  [B]/[C] build/cycle  [P]/[V] produce/cycle  [Tab] end turn")
 	_status_label.text = "\n".join(lines)
 
 
-## The first producible unit type across the local player's own producers (the type
-## [method request_produce_at_cursor] would deploy) — for the produce readout. Null
-## if the player owns no producer with a producible type.
-func _first_producible_type() -> UnitTypeDef:
+## The producible unit-type roster: the union (deduped, stable order) of every own
+## producer's [code]producible_types[/code]. Computed on demand so it grows the turn
+## a Production Outpost is built. Empty if the player owns no producer.
+func _produce_roster() -> Array[UnitTypeDef]:
+	var roster: Array[UnitTypeDef] = []
 	if _reader == null:
-		return null
+		return roster
 	for e: EntityState in _reader.entities():
 		if e is StructureState and e.owner == LOCAL_PLAYER:
-			var producer: StructureState = e as StructureState
-			if not producer.type.producible_types.is_empty():
-				return producer.type.producible_types[0]
-	return null
+			for ut: UnitTypeDef in (e as StructureState).type.producible_types:
+				if not roster.has(ut):
+					roster.append(ut)
+	return roster
+
+
+## The unit type [method request_produce_at_cursor] will deploy. Lazily initialised
+## to the roster's first entry; re-clamped to it if the previously-selected type
+## leaves the roster (never stale). Null when no producer is owned.
+func selected_produce_type() -> UnitTypeDef:
+	var roster: Array[UnitTypeDef] = _produce_roster()
+	if roster.is_empty():
+		return null
+	if _selected_produce_type == null or not roster.has(_selected_produce_type):
+		_selected_produce_type = roster[0]
+	return _selected_produce_type
+
+
+## Cycles which unit type [method request_produce_at_cursor] will deploy (the [V]
+## key), mirroring [method cycle_buildable]. A no-op when no producer is owned.
+func cycle_produce_type() -> void:
+	var roster: Array[UnitTypeDef] = _produce_roster()
+	if roster.is_empty():
+		return
+	var current: UnitTypeDef = selected_produce_type() # ensures a valid selection first.
+	_selected_produce_type = roster[(roster.find(current) + 1) % roster.size()]
+	_refresh_status() # reflect the newly-selected produce type on the overlay.
 
 
 ## The status overlay's current text (test-only read).
@@ -381,10 +411,11 @@ func _drive_ai_turns() -> void:
 ## entity under it into the detail panel); [code]ui_accept[/code] (Enter/Space)
 ## selects an own unit at the cursor; M moves/attacks the selected unit onto the
 ## cursor tile; B builds the selected structure and C cycles the buildable type; P
-## produces a unit from the HQ onto the cursor tile; Tab ends the human's turn. The
-## cursor keys reuse the built-in [code]ui_*[/code] actions; the letter/Tab keys
-## are read by keycode. Dedicated, rebindable InputMap actions for all of these
-## are a follow-up (the cai-005 InputMap-wiring tech-debt).
+## produces the selected unit type at the cursor and V cycles that type; Tab ends
+## the human's turn. Mouse wheel zooms and middle-drag pans the camera. The cursor
+## keys reuse the built-in [code]ui_*[/code] actions; the letter/Tab keys are read
+## by keycode. Dedicated, rebindable InputMap actions for all of these are a
+## follow-up (the cai-005 InputMap-wiring tech-debt).
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"ui_up"):
 		move_cursor(Vector2i.UP)
@@ -406,6 +437,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				cycle_buildable()
 			KEY_P:
 				request_produce_at_cursor()
+			KEY_V:
+				cycle_produce_type()
 			KEY_TAB:
 				try_end_human_turn()
 	elif event is InputEventMouseButton and event.pressed:
@@ -488,32 +521,32 @@ func selected_buildable() -> StructureTypeDef:
 	return _buildables[_selected_buildable] if not _buildables.is_empty() else null
 
 
-## Produces a unit onto the cursor tile from the first own producer that can
-## actually deploy there this turn — routing a [ProduceAction] for that producer's
-## first producible type. Iterates ALL own producers (not just the HQ), so a built
-## Production Outpost is reachable and an at-cap HQ is skipped. A no-op returning
-## false unless it is the human's live turn and some own producer has remaining
-## capacity, a legal deploy tile at the cursor, and an affordable type — the full
-## set of conditions [method BaseProduction.validate_produce] enforces, pre-checked
-## (incl. the per-turn cap) so a true return means a real commit.
-##
-## [b]Limitation (follow-up)[/b]: only each producer's first producible type is
-## offered — per-producer unit-type selection is a UI follow-up.
+## Produces the currently-SELECTED unit type ([method selected_produce_type],
+## cycled by KEY_V) onto the cursor tile, from the first own producer that both
+## offers that type AND can actually deploy there this turn. Iterates ALL own
+## producers (not just the HQ), so a built Production Outpost is reachable and an
+## at-cap HQ is skipped. A no-op returning false unless it is the human's live turn
+## and some own producer offering the selected type has remaining capacity, a legal
+## deploy tile at the cursor, and can afford it — the full set of conditions
+## [method BaseProduction.validate_produce] enforces, pre-checked (incl. the per-turn
+## cap) so a true return means a real commit.
 func request_produce_at_cursor() -> bool:
 	if _cursor == null or not _cmd.is_input_live(_state):
+		return false
+	var utype: UnitTypeDef = selected_produce_type()
+	if utype == null:
 		return false
 	var tile: Vector2i = _cursor.grid_pos
 	for e: EntityState in _reader.entities():
 		if not (e is StructureState) or e.owner != LOCAL_PLAYER:
 			continue
 		var producer: StructureState = e as StructureState
-		if producer.type.producible_types.is_empty():
-			continue
+		if not producer.type.producible_types.has(utype):
+			continue # this producer cannot make the selected type.
 		# Remaining cap this turn (validate_produce's first gate — legal_deploy_tiles
 		# does not encode it, so pre-check it here to keep the return truthful).
 		if int(_reader.structure_info(producer.entity_id).get("remaining_production_cap", 0)) <= 0:
 			continue
-		var utype: UnitTypeDef = producer.type.producible_types[0]
 		if not _reader.legal_deploy_tiles(producer.entity_id, utype).has(tile):
 			continue
 		if not _reader.can_afford_produce(LOCAL_PLAYER, utype):

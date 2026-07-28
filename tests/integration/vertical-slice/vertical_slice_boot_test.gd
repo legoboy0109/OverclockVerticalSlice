@@ -300,9 +300,14 @@ func test_produce_uses_a_second_producer_when_the_hq_is_at_cap() -> void:
 	# Max out the HQ's production this turn, so the producer scan must skip it.
 	var hq: StructureState = state.entities_by_id[0] as StructureState
 	hq.units_produced_this_turn = hq.type.production_cap
-	# The player also owns a completed Production Outpost with capacity.
+	# The player also owns a completed Production Outpost with capacity. Select a
+	# type the OUTPOST makes (the HQ makes only Scout and is maxed): the roster is
+	# [Scout(HQ), Trooper, Heavy, Sniper(outpost)], so cycle off Scout onto an
+	# outpost type.
 	var outpost: StructureState = _place_structure(state, 30, 0, Vector2i(3, 5), StructureTypes.PRODUCTION_OUTPOST)
-	var utype: UnitTypeDef = outpost.type.producible_types[0]
+	root.cycle_produce_type()
+	var utype: UnitTypeDef = root.selected_produce_type()
+	assert_bool(outpost.type.producible_types.has(utype)).is_true()
 	var deploy: Array[Vector2i] = GameStateReader.new(state).legal_deploy_tiles(30, utype)
 	assert_bool(deploy.is_empty()).is_false()
 	var target: Vector2i = deploy[0]
@@ -312,6 +317,32 @@ func test_produce_uses_a_second_producer_when_the_hq_is_at_cap() -> void:
 	assert_bool(root.request_produce_at_cursor()).is_true() # produced from the outpost, HQ skipped.
 	assert_int(state.entities().size()).is_equal(before + 1)
 	assert_bool(state.entity_at(target) is UnitState).is_true()
+
+
+func test_produce_unit_type_selection_cycles_and_deploys_the_selected_type() -> void:
+	var root := _make_root()
+	var state := root.state()
+	state.per_player[0].current_ap = 20
+	# Own a Production Outpost (produces multiple types) so the roster has >1 entry
+	# (the HQ alone only makes one).
+	_place_structure(state, 30, 0, Vector2i(3, 5), StructureTypes.PRODUCTION_OUTPOST)
+
+	# Selection defaults to the roster's first type; V cycles it to a different one.
+	var first: UnitTypeDef = root.selected_produce_type()
+	root.cycle_produce_type()
+	var chosen: UnitTypeDef = root.selected_produce_type()
+	assert_bool(chosen != first).is_true()
+	assert_str(root.status_text()).contains(chosen.display_name) # overlay reflects it
+
+	# Produce deploys the SELECTED type at the cursor (from a producer offering it).
+	var deploy: Array[Vector2i] = GameStateReader.new(state).legal_deploy_tiles(30, chosen)
+	assert_bool(deploy.is_empty()).is_false()
+	var target: Vector2i = deploy[0]
+	_move_cursor_to(root, target)
+	assert_bool(root.request_produce_at_cursor()).is_true()
+	var produced: EntityState = state.entity_at(target)
+	assert_bool(produced is UnitState).is_true()
+	assert_str((produced as UnitState).type.display_name).is_equal(chosen.display_name)
 
 
 func test_status_overlay_surfaces_selected_build_type_legend_and_updates_on_cycle() -> void:
