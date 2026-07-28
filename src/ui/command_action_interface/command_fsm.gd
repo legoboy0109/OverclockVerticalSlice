@@ -92,11 +92,12 @@ class VerbEntry extends RefCounted:
 		reason = r
 
 
-## The verbs [method menu_model] can emit an entry for. Deliberately excludes
-## Cancel Build (Story 004's scope — see this file's class doc comment) and
-## Build (CR-5: Build is a player-level command, never part of a selected
-## entity's own menu).
-enum Verb { MOVE, ATTACK, PRODUCE, WAIT }
+## The verbs [method menu_model] can emit an entry for. [constant Verb.CANCEL_BUILD]
+## (Story 004) is the destructive-gesture verb for an under-construction owned
+## structure — see [method _cancel_build_entry]. Deliberately excludes Build
+## (CR-5: Build is a player-level command, never part of a selected entity's
+## own menu).
+enum Verb { MOVE, ATTACK, PRODUCE, WAIT, CANCEL_BUILD }
 
 ## Disablement reason flags (powers of two — see [member VerbEntry.reason]'s
 ## doc comment for why this is a bitmask, not a single code). Each flag names
@@ -113,6 +114,7 @@ enum Reason {
 	NOT_COMPLETED = 32,         ## Producer/attacker structure is still UNDER_CONSTRUCTION.
 	PRODUCTION_CAP_REACHED = 64, ## BaseProduction.effective_production_cap() exhausted this turn.
 	NO_DEPLOY_SPACE = 128,      ## BaseProduction.legal_deploy_tiles() is empty.
+	NOT_UNDER_CONSTRUCTION = 256, ## Cancel Build: entity is not an owned, UNDER_CONSTRUCTION StructureState.
 }
 
 
@@ -225,15 +227,14 @@ static func next_state(current: State, trigger: Trigger, _state: GameState) -> S
 ## (the structural enforcement of the Pass-Through Invariant, ADR-0015 §4).
 ##
 ## Returns exactly one [VerbEntry] per [enum Verb] value, always in
-## [code]Verb[/code] declaration order (Move, Attack, Produce, Wait) —
-## [b]Wait is always present and always enabled[/b] (CR-4: "Wait (always —
-## ends this entity's involvement without spending)"), satisfying AC-10's
-## "Wait clickable" even for a fully-spent entity. [b]Cancel Build is
-## deliberately never emitted here[/b] (Story 004's scope, see this file's
-## class doc comment) — an under-construction structure selected in this
-## story surfaces only its AP-verb-disabled-with-reason + Wait-enabled rows,
-## same as any other entity with no legal AP-costed action (AC-10).
-## Cancel Build: Story 004 extension point.
+## [code]Verb[/code] declaration order (Move, Attack, Produce, Wait, Cancel
+## Build) — [b]Wait is always present and always enabled[/b] (CR-4: "Wait
+## (always — ends this entity's involvement without spending)"), satisfying
+## AC-10's "Wait clickable" even for a fully-spent entity. [b]Cancel Build[/b]
+## ([constant Verb.CANCEL_BUILD], Story 004) is enabled only for an owned,
+## [constant StructureState.BuildStatus.UNDER_CONSTRUCTION] structure — see
+## [method _cancel_build_entry] — disabled with [constant Reason.NOT_UNDER_CONSTRUCTION]
+## for every unit and every Completed/non-owned structure.
 ##
 ## - [b]Move[/b] ([constant Verb.MOVE]): only meaningful for a [UnitState]
 ##   [param entity] (structures never move). Enabled iff
@@ -294,6 +295,7 @@ static func menu_model(state: GameState, entity: EntityState) -> Array[VerbEntry
 	menu.append(_attack_entry(state, entity))
 	menu.append(_produce_entry(state, entity))
 	menu.append(VerbEntry.new(Verb.WAIT, true, Reason.NONE))
+	menu.append(_cancel_build_entry(state, entity))
 	return menu
 
 
@@ -381,6 +383,46 @@ static func _produce_entry(state: GameState, entity: EntityState) -> VerbEntry:
 	if reason == Reason.NONE:
 		return VerbEntry.new(Verb.PRODUCE, true, Reason.NONE)
 	return VerbEntry.new(Verb.PRODUCE, false, reason)
+
+
+## Builds the Cancel Build [VerbEntry] (Story 004, ADR-0015 §2) — see
+## [method menu_model]'s doc comment for the full rule. Enabled iff
+## [param entity] is a [StructureState] AND
+## [member StructureState.build_status] is
+## [constant StructureState.BuildStatus.UNDER_CONSTRUCTION] AND
+## [member EntityState.owner] equals [member GameState.active_player] — a
+## unit, a Completed structure, or an opponent's under-construction structure
+## are all disabled with [constant Reason.NOT_UNDER_CONSTRUCTION] (a single
+## reason, never a bitmask, since this verb has exactly one gating condition —
+## unlike Attack/Produce's multi-conjunct rule).
+static func _cancel_build_entry(state: GameState, entity: EntityState) -> VerbEntry:
+	if not (entity is StructureState):
+		return VerbEntry.new(Verb.CANCEL_BUILD, false, Reason.NOT_UNDER_CONSTRUCTION)
+	var structure: StructureState = entity
+	if structure.build_status != StructureState.BuildStatus.UNDER_CONSTRUCTION:
+		return VerbEntry.new(Verb.CANCEL_BUILD, false, Reason.NOT_UNDER_CONSTRUCTION)
+	if structure.owner != state.active_player:
+		return VerbEntry.new(Verb.CANCEL_BUILD, false, Reason.NOT_UNDER_CONSTRUCTION)
+	return VerbEntry.new(Verb.CANCEL_BUILD, true, Reason.NONE)
+
+
+## PURE: the AP refund preview for cancelling [param structure] under
+## [param state] (Story 004, ADR-0015 §2) — reaches the value [b]only[/b] via
+## [method BaseProduction.cancel_refund] composed with
+## [method BaseProduction.effective_build_cost] (Pass-Through Invariant,
+## ADR-0015 §4): never a locally-held refund-rate constant and never a direct
+## read of the structure type's own build-cost field. Under the VS's
+## Neutral-only faction roster this equals the AP that will actually be
+## credited on commit; the base-vs-effective divergence for a non-Neutral
+## faction is deferred (mirrors the corpus's established BP-009 tech-debt
+## pattern — [method BaseProduction.apply_cancel] itself still refunds off the
+## structure's base cost, not the effective one).
+##
+## O(1) — two owning-system query calls, no scan of its own (control-manifest
+## Performance Guardrail).
+static func cancel_build_preview(state: GameState, structure: StructureState) -> int:
+	var cost: int = BaseProduction.effective_build_cost(state, structure.type, structure.owner)
+	return BaseProduction.cancel_refund(cost)
 
 
 ## PURE display derivation D-1 (ADR-0015 §1, TR-cmdui-014, AC-5): the AP

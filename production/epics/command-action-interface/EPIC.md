@@ -67,7 +67,7 @@ This epic is complete when:
 | 001 | CommandFSM Core — States, Transitions, Menu Model, Pass-Through Enforcement | Logic | ✅ Complete | ADR-0015 |
 | 002 | Four-Tier Recompute Discipline (Tier 1–4) | Logic | ✅ Complete | ADR-0015 |
 | 003 | Dependency Consumption Contracts — Move/Combat/B&P/AP/Turn | Integration | ✅ Complete | ADR-0015 |
-| 004 | Cancel-Build Destructive Gesture (Hold-to-Confirm) | Logic | Ready | ADR-0015 |
+| 004 | Cancel-Build Destructive Gesture (Hold-to-Confirm) | Logic | ✅ Complete | ADR-0015 |
 | 005 | BoardCursor Input Substrate — Grid-Axis Nav, Precedence | Logic | Ready | ADR-0014 |
 | 006 | Isometric Picking & Overlay Integration | Integration | Ready | ADR-0013 |
 | 007 | Commit Dispatch, INPUT_LOCK_MS & Commit-Flash↔AP-Tick Signal | Integration | Ready | ADR-0014, ADR-0015 |

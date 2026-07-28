@@ -358,10 +358,10 @@ func test_menu_model_attack_already_attacked_disabled_regardless_of_ap_or_range(
 
 # ==============================================================================
 # AC-9: empty reachable()/legal_targets() -> disabled with specific reason,
-# not hidden (menu_model always returns a full 4-row set) or erroring.
+# not hidden (menu_model always returns a full 5-row set) or erroring.
 # ==============================================================================
 
-func test_menu_model_always_returns_all_four_verb_rows_never_hides_a_verb() -> void:
+func test_menu_model_always_returns_all_five_verb_rows_never_hides_a_verb() -> void:
 	var state := _make_state(0)
 	var type := _make_unit_type(1, 8, 1)
 	var unit := _place_unit(state, 1, 0, Vector2i(0, 0), type)
@@ -369,12 +369,15 @@ func test_menu_model_always_returns_all_four_verb_rows_never_hides_a_verb() -> v
 
 	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, unit)
 
-	assert_int(menu.size()).is_equal(4)
+	# Five fixed rows (Cancel Build added by Story 004) — indexing by Verb value
+	# stays valid. A unit's Cancel-Build row is disabled (NOT_UNDER_CONSTRUCTION),
+	# not hidden.
+	assert_int(menu.size()).is_equal(5)
 	var verbs: Array[int] = []
 	for entry: CommandFSM.VerbEntry in menu:
 		verbs.append(entry.verb)
 	assert_array(verbs).contains([CommandFSM.Verb.MOVE, CommandFSM.Verb.ATTACK, \
-		CommandFSM.Verb.PRODUCE, CommandFSM.Verb.WAIT])
+		CommandFSM.Verb.PRODUCE, CommandFSM.Verb.WAIT, CommandFSM.Verb.CANCEL_BUILD])
 
 
 func test_menu_model_empty_legal_targets_attack_disabled_no_targets_not_erroring() -> void:
@@ -468,11 +471,12 @@ func test_menu_model_under_construction_structure_still_selects_wait_enabled_ap_
 
 	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, producer)
 
-	assert_int(menu.size()).is_equal(4)
+	assert_int(menu.size()).is_equal(5)
 	var move_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.MOVE)
 	var attack_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.ATTACK)
 	var produce_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.PRODUCE)
 	var wait_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.WAIT)
+	var cancel_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.CANCEL_BUILD)
 
 	assert_bool(move_entry.enabled).is_false()
 	assert_bool(attack_entry.enabled).is_false()
@@ -480,6 +484,8 @@ func test_menu_model_under_construction_structure_still_selects_wait_enabled_ap_
 	assert_bool(produce_entry.enabled).is_false()
 	assert_int(produce_entry.reason).is_equal(CommandFSM.Reason.NOT_COMPLETED)
 	assert_bool(wait_entry.enabled).is_true()
+	# Story 004: an under-construction owned structure DOES offer Cancel Build.
+	assert_bool(cancel_entry.enabled).is_true()
 
 
 func test_menu_model_non_producer_structure_produce_disabled_not_a_producer() -> void:

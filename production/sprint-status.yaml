@@ -21,7 +21,7 @@ goal: "Build the playable Vertical Slice (rendered one-close-skirmish loop) at r
 start: "2026-07-28"
 end: "2026-08-08"
 generated: "2026-07-27"
-updated: "2026-07-27"  # cai-003 done (story-done 2026-07-27) — CAI epic 3/8 done
+updated: "2026-07-27"  # cai-004 done (story-done 2026-07-27) — CAI epic 4/8 done
 # br-001 done (story-done 2026-07-27) — first VS-build story complete
 # br-002 + ai-001 done (parallel, 2026-07-27); full suite 524/524
 
@@ -105,11 +105,11 @@ stories:
     name: "Cancel-build gesture"
     file: "production/epics/command-action-interface/story-004-cancel-build-gesture.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.25
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"  # InputConfig + CANCEL_BUILD verb + testable hold accumulator; 8 tests, full suite 680/680
   - id: "cai-005"
     name: "Board-cursor input substrate"
     file: "production/epics/command-action-interface/story-005-board-cursor-input-substrate.md"

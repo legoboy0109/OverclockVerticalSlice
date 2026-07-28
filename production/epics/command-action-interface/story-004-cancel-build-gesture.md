@@ -1,12 +1,12 @@
 # Story 004: Cancel-Build Destructive Gesture (Hold-to-Confirm)
 
 > **Epic**: Command & Action Interface
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: Logic
 > **Estimate**: M (3h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -74,7 +74,7 @@
 **Story Type**: Logic
 **Required evidence**: `tests/unit/command-action-interface/cancel_build_gesture_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created & passing — 8 test functions (8/8 green)
 
 ---
 
@@ -82,3 +82,14 @@
 
 - Depends on: Story 001 (ENTITY_SELECTED state), Story 003 (`BaseProduction.cancel_build` commit wired)
 - Unlocks: None (leaf within the epic)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27
+**Criteria**: 5/5 ACs covered. Full suite 680/680 — 0 failures, 0 orphans, 58/58 suites.
+**Implementation**: NEW `src/ui/input_config.gd` (`InputConfig` Resource, `cancel_build_hold_ms: int = 500` — unpinned feel placeholder owed to /ux-design; cai-005 extends this same Resource). `command_fsm.gd`: `Verb += CANCEL_BUILD`, `Reason += NOT_UNDER_CONSTRUCTION`, `_cancel_build_entry` (enabled iff under-construction StructureState owned by active player — a Completed structure/unit/enemy is never offered it), `cancel_build_preview` (refund via `BaseProduction.cancel_refund(effective_build_cost)` — Pass-Through-clean, no `.build_cost` read); `menu_model` now returns a fixed **5** rows (Cancel-Build appended 5th — `menu[Verb.X]` indexing preserved). `command_interface.gd`: testable `tick_cancel_hold(delta_ms, is_pressed, state, structure) -> CancelHoldResult{CONTINUE,COMMITTED,ABORTED}` accumulator (commits `CancelBuildAction` via the cai-003 `commit()` at ≥ `cancel_build_hold_ms`; release-before-threshold aborts + resets) + thin `_process`/`begin_cancel_hold` glue (active only during a live hold, not steady-state). **No new `CommandFSM.State`** — the hold is a sub-condition of ENTITY_SELECTED (TR-cmdui-002 verified: State enum stays 7).
+**Deviations**: None out-of-scope (no `src/core` change). Updated cai-001's `menu_model` "four rows" test → "five rows" (+ a Cancel-Build assertion on the under-construction case).
+**Deferrals (logged to `docs/tech-debt-register.md`)**: (1) `cancel_build_preview` uses `effective_build_cost` while `apply_cancel` refunds off the raw base cost — identical under the VS Neutral roster (AC-18 exact), divergent only non-Neutral (BP-009 pattern). (2) The `cancel_build` InputMap action is not bound in `project.godot` (the gesture is unpinned/`/ux-design`; the unit test drives `tick_cancel_hold` directly and needs no binding).
+**Test Evidence**: Logic — `tests/unit/command-action-interface/cancel_build_gesture_test.gd` (8 test functions; hold driven with synthetic delta_ms/is_pressed, real `apply_action` commit).
+**Code Review**: orchestrator implemented + reviewed (finished after agent truncation): Pass-Through lint green, no core change (`git diff src/core` empty), menu indexing preserved, no new FSM state. APPROVED.

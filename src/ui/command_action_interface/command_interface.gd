@@ -156,6 +156,28 @@ var _renderer: Object = null
 ## still gates sensibly against player 0.
 var _local_player: int = 0
 
+## Result of one [method tick_cancel_hold] tick (Story 004, ADR-0015 §2).
+enum CancelHoldResult { CONTINUE, COMMITTED, ABORTED }
+
+## Feel/timing knobs for input gestures (ADR-0014 [InputConfig] Resource).
+## Injected via [method set_input_config]; defaults to a fresh [InputConfig] so
+## an un-configured instance still carries the placeholder cancel-build hold ms.
+var _input_config: InputConfig = InputConfig.new()
+
+## Accumulated hold time (ms) for the in-progress Cancel-Build gesture — a
+## bounded sub-condition WITHIN ENTITY_SELECTED (TR-cmdui-002), never a new FSM
+## state. Reset to 0 on commit or abort.
+var _cancel_hold_elapsed_ms: float = 0.0
+
+## The structure a live Cancel-Build hold targets, or [code]null[/code] when no
+## hold is in progress (also [method _process]'s enable-gate). Set by
+## [method begin_cancel_hold], cleared on a terminal tick.
+var _cancel_hold_structure: StructureState = null
+
+## The live [GameState] captured for the duration of a Cancel-Build hold so
+## [method _process] can forward it to [method tick_cancel_hold].
+var _cancel_hold_state: GameState = null
+
 
 ## Dependency-injection seam (project standard: DI over singletons,
 ## `.claude/docs/technical-preferences.md`). Call once, before driving any
@@ -190,6 +212,78 @@ func selected_id() -> int:
 ## [method configure_dependencies]'s DI-seam convention.
 func set_local_player(player: int) -> void:
 	_local_player = player
+
+
+## Injects the [InputConfig] feel/timing Resource (DI seam, mirrors
+## [method configure_dependencies]). Defaults to a fresh [InputConfig].
+func set_input_config(config: InputConfig) -> void:
+	_input_config = config
+
+
+## Begins a Cancel-Build hold for [param structure] (the selected
+## under-construction owned structure). Enables [method _process] ONLY for the
+## bounded hold window (ADR-0015 §2 — the per-frame poll is not a steady-state
+## cost). The real input handler invokes this when the destructive affordance is
+## first pressed.
+func begin_cancel_hold(state: GameState, structure: StructureState) -> void:
+	_cancel_hold_elapsed_ms = 0.0
+	_cancel_hold_state = state
+	_cancel_hold_structure = structure
+	set_process(true)
+
+
+## Testable core of the hold-to-confirm gesture (Story 004, TR-cmdui-002,
+## AC-18): one accumulator tick. While [param is_pressed], adds [param delta_ms]
+## to the running hold total; at >= [member InputConfig.cancel_build_hold_ms] it
+## commits a [CancelBuildAction] for [param structure] through [method commit]
+## (this layer deducts no AP — [method BaseProduction.apply_cancel] credits the
+## refund), resets the accumulator, and returns [constant CancelHoldResult.COMMITTED].
+## A release ([param is_pressed] false) after any accumulation but before the
+## threshold returns [constant CancelHoldResult.ABORTED] with the accumulator
+## reset and zero state change — so a bare single click or a rapid double-click
+## (neither sustains a hold) can never trigger the refund-destroy (CR-6a's
+## input-shape constraint). Otherwise [constant CancelHoldResult.CONTINUE].
+## Never adds a [enum CommandFSM.State] — the hold is a sub-condition of
+## ENTITY_SELECTED. Directly unit-testable with synthetic delta/pressed values
+## (no real [method _process]/[Input]).
+func tick_cancel_hold(delta_ms: float, is_pressed: bool, state: GameState, \
+		structure: StructureState) -> CancelHoldResult:
+	if not is_pressed:
+		if _cancel_hold_elapsed_ms > 0.0:
+			_cancel_hold_elapsed_ms = 0.0
+			return CancelHoldResult.ABORTED
+		return CancelHoldResult.CONTINUE
+	_cancel_hold_elapsed_ms += delta_ms
+	if _cancel_hold_elapsed_ms >= float(_input_config.cancel_build_hold_ms):
+		_cancel_hold_elapsed_ms = 0.0
+		var action := CancelBuildAction.new()
+		action.player = _local_player
+		action.structure_id = structure.entity_id
+		commit(state, action)
+		return CancelHoldResult.COMMITTED
+	return CancelHoldResult.CONTINUE
+
+
+## Engine glue (ADR-0015 §2): runs ONLY while a Cancel-Build hold is live
+## ([member _cancel_hold_structure] non-null — [method begin_cancel_hold] enabled
+## it, a terminal tick disables it) — polls the [code]cancel_build[/code] input
+## action and forwards to the testable [method tick_cancel_hold]. Not a
+## steady-state per-frame cost.
+func _process(delta: float) -> void:
+	if _cancel_hold_structure == null:
+		return
+	var result: CancelHoldResult = tick_cancel_hold(delta * 1000.0, \
+		Input.is_action_pressed(&"cancel_build"), _cancel_hold_state, _cancel_hold_structure)
+	if result != CancelHoldResult.CONTINUE:
+		_cancel_hold_structure = null
+		_cancel_hold_state = null
+		set_process(false)
+
+
+## Disable per-frame processing by default — Cancel-Build's [method _process] is
+## enabled only for a bounded hold window (ADR-0015 §2), never steady-state.
+func _ready() -> void:
+	set_process(false)
 
 
 ## Turn-boundary input-scoping gate (ADR-0015 §5 Turn Manager bullet,
