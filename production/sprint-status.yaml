@@ -21,7 +21,7 @@ goal: "Build the playable Vertical Slice (rendered one-close-skirmish loop) at r
 start: "2026-07-28"
 end: "2026-08-08"
 generated: "2026-07-27"
-updated: "2026-07-27"
+updated: "2026-07-27"  # cai-001 done (story-done 2026-07-27) — CAI epic 1/8
 # br-001 done (story-done 2026-07-27) — first VS-build story complete
 # br-002 + ai-001 done (parallel, 2026-07-27); full suite 524/524
 
@@ -78,11 +78,11 @@ stories:
     name: "Command FSM core"
     file: "production/epics/command-action-interface/story-001-command-fsm-core.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"  # +public Combat.attack_cost_for seam; 26 tests, full suite 642/642
   - id: "cai-002"
     name: "Four-tier recompute (cost preview)"
     file: "production/epics/command-action-interface/story-002-four-tier-recompute.md"

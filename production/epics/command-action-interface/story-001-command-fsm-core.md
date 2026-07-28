@@ -1,12 +1,12 @@
 # Story 001: CommandFSM Core — States, Transitions, Menu Model, Pass-Through Enforcement
 
 > **Epic**: Command & Action Interface
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: Logic
 > **Estimate**: M (3–4h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -83,7 +83,7 @@
 **Story Type**: Logic
 **Required evidence**: `tests/unit/command-action-interface/command_fsm_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created & passing — 26 test functions (26/26 green)
 
 ---
 
@@ -91,3 +91,15 @@
 
 - Depends on: None (first story — the epic's foundation)
 - Unlocks: Story 002 (recompute tiers test against this FSM), Story 003 (dependency wiring calls `menu_model`), Story 008 (GAME_OVER convergence)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27
+**Criteria**: 8/8 passing (0 deferred). Full suite 642/642, CAI suite 26/26 — 0 failures, 0 orphans, 55/55 suites.
+**Deviations**:
+- OUT-OF-SCOPE (coordinator-approved, behavior-preserving): promoted `Combat._attack_cost_for` → public `Combat.attack_cost_for(attacker)` in `src/core/combat/combat.gd` so the Pass-Through-constrained FSM can price a unit attack via a query rather than reading `CombatConfig.attack_cost` by name. **New cross-epic seam: CAI → `Combat.attack_cost_for`.**
+- ADVISORY (logged to `docs/tech-debt-register.md`): stale `_attack_cost_for` doc refs at `ai.gd:578` + `base_production.gd:322` (now public); AI attack-cost dispatch dedup opportunity.
+**Test Evidence**: Logic — `tests/unit/command-action-interface/command_fsm_test.gd` (26 test functions).
+**Code Review**: Complete — godot-gdscript-specialist (MINOR ISSUES → doc nit fixed) + qa-tester (GAPS → 3 tests added: structure-attacker cost path ×2, Produce happy-path, structure Move `OUT_OF_RANGE` reason). Consolidated **APPROVED**.
+**Implementation note**: `next_state` implements the entity-agnostic base "To state" table only; the per-commit `→ IDLE` refinements (actor destroyed / no legal action remaining / new-structure landing) are AC-32/AC-33 (Integration) = Story 008, per the coordinator-approved scoping. New `class_name` file required a `./redot --headless --import` to register in the global class cache (known tooling gotcha, already in the tech-debt register).

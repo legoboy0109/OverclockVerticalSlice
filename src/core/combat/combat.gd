@@ -85,16 +85,27 @@ static func _effective_attack_for(state: GameState, attacker: EntityState) -> in
 	return Unit.effective_attack(state, attacker) if attacker is UnitState else attacker.type.attack
 
 
-## The AP cost [param attacker] spends to attack (ADR-0010, TR-combat-012):
-## Combat's flat [member CombatConfig.attack_cost] for a [code]UnitState[/code]
-## attacker; the forward-declared, Base-&-Production-owned
-## [code]BaseProduction.defensive_attack_cost()[/code] for a
+## The AP cost [param attacker] spends to attack (ADR-0010, TR-combat-012,
+## ADR-0015 §5/TR-cmdui-012): Combat's flat [member CombatConfig.attack_cost]
+## for a [code]UnitState[/code] attacker; the forward-declared, Base-&-
+## Production-owned [code]BaseProduction.defensive_attack_cost()[/code] for a
 ## [code]StructureState[/code] (Defensive Structure) attacker. Isolated in one
 ## place — called by BOTH [method validate]'s affordability check and
 ## [method apply]'s spend — so the two can never drift (a future third cost
 ## case is edited once, not in two must-agree call sites). Mirrors the
-## [method _effective_attack_for] isolation pattern in this same file. O(1).
-static func _attack_cost_for(attacker: EntityState) -> int:
+## [method _effective_attack_for] isolation pattern in this same file.
+##
+## [b]Public[/b] (promoted from a private helper, Command & Action Interface
+## Story 001/ADR-0015): also the sole side-effect-free query the Presentation
+## layer's [code]CommandFSM.menu_model[/code] uses to price an Attack
+## [code]VerbEntry[/code]'s [code]AP.can_afford[/code] check for a
+## [code]UnitState[/code] attacker — mirrors
+## [code]BaseProduction.defensive_attack_cost()[/code]'s existing public
+## cross-system-query precedent, and is the structural reason
+## [code]CommandFSM[/code] never reaches into [code]CombatBalance[/code]/
+## [code]CombatConfig[/code] directly (Pass-Through Invariant, ADR-0015 §4).
+## O(1).
+static func attack_cost_for(attacker: EntityState) -> int:
 	return BaseProduction.defensive_attack_cost() if attacker is StructureState else CombatBalance.combat.attack_cost
 
 
@@ -433,7 +444,7 @@ static func validate(state: GameState, action: AttackAction) -> int:
 			return Action.Reason.ILLEGAL_TARGET   # Defensive Structure already fired this turn
 	else:
 		return Action.Reason.ILLEGAL_TARGET       # unknown entity kind — defensive
-	var cost: int = _attack_cost_for(attacker)
+	var cost: int = attack_cost_for(attacker)
 	if not AP.can_afford(state, attacker.owner, cost):
 		return Action.Reason.CANT_AFFORD
 	var found := false
@@ -493,7 +504,7 @@ static func validate(state: GameState, action: AttackAction) -> int:
 static func apply(state: GameState, action: AttackAction) -> Array[Event]:
 	var attacker: EntityState = state.entity_at(action.attacker_tile)
 	var target: EntityState = state.entity_at(action.target_tile)
-	var cost: int = _attack_cost_for(attacker)
+	var cost: int = attack_cost_for(attacker)
 	AP.spend(state, attacker.owner, cost)
 	attacker.has_attacked = true
 	var events: Array[Event] = []

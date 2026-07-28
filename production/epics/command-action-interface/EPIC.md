@@ -64,7 +64,7 @@ This epic is complete when:
 
 | # | Story | Type | Status | ADR |
 |---|-------|------|--------|-----|
-| 001 | CommandFSM Core — States, Transitions, Menu Model, Pass-Through Enforcement | Logic | Ready | ADR-0015 |
+| 001 | CommandFSM Core — States, Transitions, Menu Model, Pass-Through Enforcement | Logic | ✅ Complete | ADR-0015 |
 | 002 | Four-Tier Recompute Discipline (Tier 1–4) | Logic | Ready | ADR-0015 |
 | 003 | Dependency Consumption Contracts — Move/Combat/B&P/AP/Turn | Integration | Ready | ADR-0015 |
 | 004 | Cancel-Build Destructive Gesture (Hold-to-Confirm) | Logic | Ready | ADR-0015 |
@@ -77,11 +77,10 @@ This epic is complete when:
 **Implementation order**: 001 → 002 → 003, then {004, 005} in parallel, {006, 007}
 after 003 (006 also needs the Board Renderer node), 008 after 007, 009 last.
 
-> **⚠ Cross-epic prerequisite (Story 006)**: consumes `BoardRenderer.pick_at`/
-> `grid_to_screen`/`set_overlay` from the **Isometric Board Renderer (ADR-0013)**,
-> which has no epic or implementation yet. Story 006 is BLOCKED until a Board
-> Renderer epic is scoped and its node lands. The same node backs the Game HUD
-> on-board glyph layer — a VS-critical dependency that needs an owner.
+> **✓ Cross-epic prerequisite (Story 006) — SATISFIED (2026-07-27)**: consumes
+> `BoardRenderer.pick_at`/`grid_to_screen`/`set_overlay` from the **Isometric
+> Board Renderer (ADR-0013)**, whose epic is now **COMPLETE** (br-001..005). Story
+> 006 is **UNBLOCKED**. The same node backs the Game HUD on-board glyph layer.
 
 ## Next Step
 
