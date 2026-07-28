@@ -21,7 +21,7 @@ goal: "Build the playable Vertical Slice (rendered one-close-skirmish loop) at r
 start: "2026-07-28"
 end: "2026-08-08"
 generated: "2026-07-27"
-updated: "2026-07-28"  # ★ hud-001..007 ALL DONE — Game HUD epic in-slice COMPLETE (7/7; hud-008 audio deferred to Production)
+updated: "2026-07-28"  # ★ GAME HUD EPIC FULLY COMPLETE (8/8) — hud-008 audio dispatch pulled forward from Production + done 2026-07-28 (788/788 suite green)
 # br-001 done (story-done 2026-07-27) — first VS-build story complete
 # br-002 + ai-001 done (parallel, 2026-07-27); full suite 524/524
 

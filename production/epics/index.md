@@ -15,7 +15,7 @@ Engine: Redot 26.2 (Godot 4.6-compatible fork)
 | [Research / Tech](research-tech/EPIC.md) | Core | Research / Tech | design/gdd/research-tech.md | Not yet created | Ready |
 | [Board Renderer](board-renderer/EPIC.md) | Presentation | Board Renderer (iso projection/picking/overlays) | ADR-0013 (TR-grid-008) | 5 stories (5 Complete) | Complete |
 | [Command & Action Interface](command-action-interface/EPIC.md) | Presentation | Command & Action Interface | design/gdd/command-action-interface.md | 9 stories | Ready |
-| [Game HUD](game-hud/EPIC.md) | Presentation | Game HUD | design/gdd/game-hud.md | 8 stories (7/7 in-slice Complete; 008 audio deferred to Production) | ✅ In-slice Complete |
+| [Game HUD](game-hud/EPIC.md) | Presentation | Game HUD | design/gdd/game-hud.md | 8 stories (8/8 Complete — 008 audio pulled forward from Production 2026-07-28) | ✅ Complete |
 | [AI Opponent](ai-opponent/EPIC.md) | Feature | AI Opponent (minimal VS) | design/gdd/ai-opponent.md | 8 stories (6 Complete; 007/008 deferred to Production) | Complete (VS) |
 
 ## Layer Status
@@ -32,8 +32,8 @@ Engine: Redot 26.2 (Godot 4.6-compatible fork)
   is the root** — it builds the `BoardRenderer` node that CAI's picking/overlays (Story 006)
   and the HUD glyph layer consume; sequence it first. ADR-0013/0014 iso-picking & dual-focus
   spikes both cleared PASS 2026-07-25, retiring their HIGH engine risk. **Board Renderer
-  (5/5 ✅) and Game HUD (7/7 in-slice ✅, 2026-07-28) are Complete; CAI is 8/9 (only 009
-  menu-nav Ready).** The cross-epic `CommandInterface.selection_changed` seam the HUD detail
+  (5/5 ✅) and Game HUD (8/8 ✅, 2026-07-28 — audio dispatch pulled forward from Production)
+  are Complete; CAI is 8/9 (only 009 menu-nav Ready).** The cross-epic `CommandInterface.selection_changed` seam the HUD detail
   panel needs was implemented as a CAI addendum (2026-07-28). Remaining Presentation work is
   the HUD-scene assembly (wire all widgets + CAI seams into a live CanvasLayer) — vertical-slice
   build glue, not an in-slice story.

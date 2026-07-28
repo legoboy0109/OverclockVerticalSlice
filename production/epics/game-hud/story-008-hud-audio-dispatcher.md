@@ -1,12 +1,12 @@
 # Story 008: `HudAudioDispatcher` — Single-Owner `play()` + Total Priority Order + Ducking
 
 > **Epic**: Game HUD
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: Integration
 > **Estimate**: M (3–4h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-28
 
 ## Context
 
@@ -82,3 +82,36 @@
 
 - Depends on: Story 002 (`HUDConfig.hud_audio_duck_ms`), and cross-epic **CAI Story 007** (shared `action_applied` signal for the AP-tick trigger) + Base & Production's `StructureCompletedEvent`/Research's `TechCompletedEvent` (shipped, ride `action_applied`). Conceptually needs Stories 004/006/007's trigger points defined (no shared files).
 - Unlocks: None (last story in the epic)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-28
+**Criteria**: 5/5 passing, all COVERED (no deferred criteria).
+**Deviations**: None blocking. Advisory (by design, per this story's Out of Scope):
+- Audio stream **assets** are not wired — with no `AudioStream` assigned, the
+  chokepoint records the play + sets channel volume but skips the engine
+  `play()` (a null-stream `play()` would error). The mechanism is the
+  deliverable; assets land with the audio bible (OQ-6).
+- The duck attenuation **level** (`HudAudioDispatcher.DUCK_VOLUME_DB = -12.0`) is
+  a documented placeholder mix value pending audio-director sign-off (OQ-6); the
+  duck **duration** is the real data-driven `HUDConfig.hud_audio_duck_ms` knob.
+**Test Evidence**: Integration — `tests/integration/game-hud/hud_audio_dispatcher_test.gd`
+(13 tests, PASS). Full suite 788/788, 0 failures, 0 orphans, 72/72 suites.
+**Code Review**: Complete — independent `godot-gdscript-specialist`
+(APPROVE-WITH-SUGGESTIONS) + coordinator; all suggestions addressed (stale doc
+reference removed, `Array[int]` typing applied, lint trade-off documented, two
+coverage tests added: three-way LOW-channel collision + duck-restore).
+
+**Implementation**:
+- NEW `src/ui/game_hud/hud_audio_dispatcher.gd` (`HudAudioDispatcher` extends
+  `Node`) — sole HUD `play()` chokepoint. `enum Cue{GAME_OVER, TURN_STINGER,
+  COMPLETION, AP_FILL, AP_TICK}` (enum value = collision rank). Pure static
+  `resolve_plan(requested)` → `{primary, ducked, suppressed}` (dedup + priority +
+  GameOver-hard-cut-vs-duck). Subscribes `action_applied` via the `GameStateReader`
+  broker; `_gather_cues` reads GameOver/completions from `result.events` and
+  detects the turn boundary via `active_player`/`round` change (mirrors
+  `ApCounterWidget`); two internally-managed `AudioStreamPlayer` channels (HIGH:
+  stinger/GameOver, LOW: completion/fill/tick) per ADR-0016 §7. Guarded
+  subscribe/`_exit_tree` unsubscribe; no orphans.
+- NEW `tests/integration/game-hud/hud_audio_dispatcher_test.gd` (13 tests).
