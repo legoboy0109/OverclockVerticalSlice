@@ -773,3 +773,30 @@ func test_positional_advance_only_proposes_distance_closing_moves() -> void:
 	assert_bool(best.action is MoveAction).is_true()
 	var dest: Vector2i = (best.action as MoveAction).to
 	assert_int(state.grid.manhattan_distance(dest, Vector2i(0, 0))).is_less(8)
+
+
+func test_positional_advance_leaps_to_furthest_reachable_tile_not_one_tile_step() -> void:
+	# The AI advances to its closest reachable (non-combo) tile in ONE move, not one
+	# tile per commit. All straight advances tie at POSITIONAL_VALUE_PER_TILE_CLOSED,
+	# so the fix keeps the furthest-advancing tile rather than letting the global
+	# ap_cost tie-break pick the 1-tile step.
+	var state := _make_state(60)
+	state.per_player[0].faction = Factions.NEUTRAL
+	var t := _make_trooper_reach_type()  # move_cost 2, soft_move_cap 8, attack_range 1
+	var unit := _make_unit(1, 0, t, Vector2i(8, 0))
+	var enemy := _make_unit(2, 1, t, Vector2i(0, 0))  # nearest enemy at distance 8
+	_place(state, unit)
+	_place(state, enemy)
+
+	# Act — the positional helper alone (combos are the caller's separate branch).
+	var best := AI._Candidate.new()
+	best = AI._score_positional_and_retreat_candidates(state, unit, best)
+
+	# Assert — the chosen bare advance lands on the closest reachable non-combo tile
+	# (distance 2 from the enemy; distance-1 tiles enable a combo and are excluded),
+	# i.e. a multi-tile leap — NOT the 1-tile step to distance 7 the old tie-break
+	# would have picked.
+	assert_object(best.action).is_not_null()
+	assert_bool(best.action is MoveAction).is_true()
+	var leap_dest: Vector2i = (best.action as MoveAction).to
+	assert_int(state.grid.manhattan_distance(leap_dest, Vector2i(0, 0))).is_equal(2)
