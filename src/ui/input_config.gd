@@ -1,5 +1,5 @@
 ## InputConfig — designer-tunable input-timing values for the Command & Action
-## Interface (ADR-0015 §2, Story 004).
+## Interface (ADR-0014 / ADR-0015 §2, Story 004/007).
 ##
 ## Presentation-layer config [Resource] per ADR-0015 §2: the single home for
 ## input-timing thresholds this interface layer owns, mirroring the project's
@@ -22,3 +22,14 @@ extends Resource
 ## [b]Unpinned feel value[/b] — 500 is a placeholder pending a `/ux-design`
 ## playtest pass, not a balanced/final number.
 @export var cancel_build_hold_ms: int = 500
+
+## The commit-input debounce window (in milliseconds) — after a commit
+## dispatches, new commit dispatch is inert for this long (ADR-0014,
+## TR-cmdui-022, Story 007). A [b]UX debounce only[/b], NOT the single-commit
+## correctness mechanism (that is structurally guaranteed by synchronous input
+## dispatch + the FSM's immediate transition); it only gates new [b]commit[/b]
+## dispatch — hover, board-cursor movement, and menu focus traversal stay live
+## during the window. The cross-system invariant
+## [code]input_lock_ms >= AP_TICK_DURATION_MS[/code] is enforced by the Game HUD
+## epic's config loader once [code]HUDConfig[/code] exists (not here).
+@export var input_lock_ms: int = 120

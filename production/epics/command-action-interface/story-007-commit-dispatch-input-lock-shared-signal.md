@@ -1,12 +1,12 @@
 # Story 007: Commit Dispatch, INPUT_LOCK_MS Debounce & Commit-Flash↔AP-Tick Shared Signal
 
 > **Epic**: Command & Action Interface
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: Integration
 > **Estimate**: M (3h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-28
 
 ## Context
 
@@ -75,7 +75,7 @@
 **Story Type**: Integration
 **Required evidence**: `tests/integration/command-action-interface/commit_dispatch_lock_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created & passing — `tests/integration/command-action-interface/commit_dispatch_lock_test.gd` (5/5 green)
 
 ---
 
@@ -83,3 +83,14 @@
 
 - Depends on: Story 003 (real `apply_action` commit path must exist)
 - Unlocks: Game HUD epic's AP-tick story (external — this story's shared `action_applied` subscription is the seam Game HUD consumes; sequence this story **before** any Game HUD story that renders the tick)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-28
+**Criteria**: 5/5 ACs PASS. Full suite 699/699 — 0 failures, 0 orphans, 61/61 suites.
+**Implementation**: `input_config.gd` gained `@export var input_lock_ms: int = 120` (extends the cai-004 `InputConfig` — the story's "already on ADR-0014's InputConfig" was the plan; cai-004 created the Resource, this adds the field, not a new Resource). `command_interface.gd`: `input_locked` flag + `dispatch_commit(action, state) -> bool` (the debounced user-commit entry — inert while `input_locked`, so two rapid dispatches fire exactly one commit; routes through the cai-003 `commit()`/`apply_action` path, then `_release_lock_after_window()` releases via `await get_tree().create_timer(input_lock_ms/1000).timeout` — a UX debounce ONLY, layered on the already-correct single-commit guarantee). `attach_to_state(state)` subscribes to the shared `GameState.action_applied`; `_on_action_applied(result)` emits the new `commit_flash_requested(result)` signal synchronously on `result.ok` — the same frame `apply_action` emits (TR-cmdui-023), so flash + the Game HUD's AP-tick (which subscribes to the SAME signal) start together by construction. CommandInterface plays NO audio (Combat owns the cue off the same event).
+**Deviations**: None out-of-scope (no `src/core` change; `GameState.action_applied` already existed and is emitted by `apply_action`). The lock gates only new commit dispatch — hover/cursor/menu-focus stay live (verified).
+**Dependency owed (logged to `docs/tech-debt-register.md`)**: the cross-system invariant `input_lock_ms >= AP_TICK_DURATION_MS` is enforced by the config loader once `HUDConfig` exists — the Game HUD epic's job (not stubbed here, per the story). This story only guarantees `input_lock_ms` defaults to 120.
+**Test Evidence**: Integration — `tests/integration/command-action-interface/commit_dispatch_lock_test.gd` (5 test functions: AC-27 double-dispatch one-commit + lock timing, lock-scope hover-stays-live, AC-023 same-frame flash, rejected-commit-no-flash, audio-ownership source check). Node add_child()'d so the release timer's `get_tree()` resolves; `input_lock_ms` set small for fast async release.
+**Code Review**: orchestrator implemented + verified (async-heavy — implemented directly rather than delegating). Fixed a self-inflicted audio-lint false-positive (the check now strips comment lines so doc mentions of the forbidden call don't trip it). No `src/core` change.

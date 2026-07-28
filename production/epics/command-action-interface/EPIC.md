@@ -70,7 +70,7 @@ This epic is complete when:
 | 004 | Cancel-Build Destructive Gesture (Hold-to-Confirm) | Logic | ✅ Complete | ADR-0015 |
 | 005 | BoardCursor Input Substrate — Grid-Axis Nav, Precedence | Logic | ✅ Complete | ADR-0014 |
 | 006 | Isometric Picking & Overlay Integration | Integration | ✅ Complete | ADR-0013 |
-| 007 | Commit Dispatch, INPUT_LOCK_MS & Commit-Flash↔AP-Tick Signal | Integration | Ready | ADR-0014, ADR-0015 |
+| 007 | Commit Dispatch, INPUT_LOCK_MS & Commit-Flash↔AP-Tick Signal | Integration | ✅ Complete | ADR-0014, ADR-0015 |
 | 008 | Post-Commit Re-Selection & GAME_OVER Convergence | Integration | Ready | ADR-0015 |
 | 009 | Dual-Focus Reachability & Menu Keyboard Nav | UI | Ready | ADR-0014 |
 

@@ -103,6 +103,17 @@ class_name CommandInterface
 extends Node
 
 
+## Commit-flash request (Story 007, TR-cmdui-023): emitted synchronously when a
+## commit resolves with [code]result.ok == true[/code], from this interface's
+## subscription to the shared [signal GameState.action_applied]. The visual
+## flash layer (Story 009 / art) connects to this and animates the tile/target
+## confirm-flash; THIS system fires no flash animation or audio of its own — the
+## AP-counter tick-down (Game HUD, a separate epic) subscribes to the SAME
+## [signal GameState.action_applied] independently, so flash and tick start on
+## the same frame by construction (never one polling/reacting to the other).
+signal commit_flash_requested(result: ActionResult)
+
+
 ## Sentinel "no tile hovered yet" value for [member _active_tile] — distinct
 ## from any real board coordinate a [BoardRenderer]/[code]screen_to_grid[/code]
 ## would ever return (grid coordinates are non-negative per
@@ -192,6 +203,15 @@ enum CancelHoldResult { CONTINUE, COMMITTED, ABORTED }
 ## an un-configured instance still carries the placeholder cancel-build hold ms.
 var _input_config: InputConfig = InputConfig.new()
 
+## Commit-input debounce flag (Story 007, TR-cmdui-022). True from the instant a
+## commit dispatches via [method dispatch_commit] until the
+## [member InputConfig.input_lock_ms] window elapses; a new dispatch while true
+## is inert (AC-27). A UX debounce ONLY — it gates nothing but new commit
+## dispatch (hover/cursor/menu-focus stay live), and is NOT the single-commit
+## correctness mechanism (that is structural: synchronous dispatch + the FSM's
+## immediate transition).
+var input_locked: bool = false
+
 ## Accumulated hold time (ms) for the in-progress Cancel-Build gesture — a
 ## bounded sub-condition WITHIN ENTITY_SELECTED (TR-cmdui-002), never a new FSM
 ## state. Reset to 0 on commit or abort.
@@ -246,6 +266,63 @@ func set_local_player(player: int) -> void:
 ## [method configure_dependencies]). Defaults to a fresh [InputConfig].
 func set_input_config(config: InputConfig) -> void:
 	_input_config = config
+
+
+## Subscribes this interface to [param state]'s shared
+## [signal GameState.action_applied] (Story 007, TR-cmdui-023) — the ONE seam the
+## commit-flash (here) and the AP-counter tick (Game HUD epic) both hang off, so
+## they start on the same frame by construction. Idempotent: connecting twice is
+## a no-op. Call once when the interface is attached to a live match (the scene's
+## setup), mirroring [method set_local_player]. Both players' interface instances
+## subscribe to the same signal, so each observes every commit (ADR-0004/ADR-0015
+## §2's both-instances convergence).
+func attach_to_state(state: GameState) -> void:
+	if not state.action_applied.is_connected(_on_action_applied):
+		state.action_applied.connect(_on_action_applied)
+
+
+## Shared-signal handler (Story 007, TR-cmdui-023): fires the commit-flash
+## request synchronously on a successful commit — the SAME frame
+## [signal GameState.action_applied] is emitted from inside
+## [method GameState.apply_action] (that signal fires exactly once per commit,
+## synchronously). A rejected commit ([code]result.ok == false[/code]) flashes
+## nothing. This method NEVER calls [code]AudioStreamPlayer.play()[/code] —
+## Combat triggers its own attack cue off this same event, so exactly one system
+## plays audio (AC audio-ownership).
+func _on_action_applied(result: ActionResult) -> void:
+	if result.ok:
+		commit_flash_requested.emit(result)
+
+
+## Debounced commit dispatch (Story 007, TR-cmdui-022, AC-27): the input-locked
+## entry point for a user-driven commit. Inert (returns [code]false[/code], no
+## [method GameState.apply_action] call) when [member input_locked] is already
+## true — so two rapid inputs (a double-click) fire exactly one commit. Otherwise
+## sets [member input_locked], routes the action through [method commit] (the
+## real [method GameState.apply_action] path, whose emit drives the flash), then
+## schedules the lock release after [member InputConfig.input_lock_ms]. Returns
+## whether this call actually dispatched. The lock is a UX debounce layered ON
+## TOP of the already-correct single-commit guarantee (do NOT treat it as the
+## safety mechanism). Requires this Node be in the scene tree (the release timer
+## uses [method Node.get_tree]) — it is a scene-driven Node.
+func dispatch_commit(action: Action, state: GameState) -> bool:
+	if input_locked:
+		return false
+	input_locked = true
+	commit(state, action)
+	_release_lock_after_window()
+	return true
+
+
+## Releases [member input_locked] after [member InputConfig.input_lock_ms] via a
+## SceneTree timer (ADR-0014's [code]await create_timer().timeout[/code] idiom,
+## 4.6-confirmed). Called fire-and-forget from [method dispatch_commit]: it runs
+## synchronously up to the [code]await[/code] (creating the timer), then yields —
+## so [method dispatch_commit] stays synchronous and the release lands later on
+## its own, with no manual reset anywhere.
+func _release_lock_after_window() -> void:
+	await get_tree().create_timer(_input_config.input_lock_ms / 1000.0).timeout
+	input_locked = false
 
 
 ## Begins a Cancel-Build hold for [param structure] (the selected
