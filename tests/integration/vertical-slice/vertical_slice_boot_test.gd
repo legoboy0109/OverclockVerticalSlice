@@ -97,3 +97,58 @@ func test_end_turn_is_a_noop_out_of_the_human_turn() -> void:
 	state.active_player = 1
 	assert_bool(root.try_end_human_turn()).is_false()
 	assert_int(state.active_player).is_equal(1) # unchanged.
+
+
+func _place_unit(state: GameState, id: int, owner: int, tile: Vector2i) -> void:
+	var u := UnitState.new()
+	u.entity_id = id
+	u.owner = owner
+	u.position = tile
+	u.type = UnitTypes.SCOUT
+	u.current_hp = UnitTypes.SCOUT.hp
+	state.entities_by_id[id] = u
+	state.grid.place(id, tile.x, tile.y)
+
+
+# ==============================================================================
+# Keyboard board cursor — moves, peeks the entity under it, selects own units
+# (the work-around for the blocked click-pick seam).
+# ==============================================================================
+
+func test_cursor_starts_on_local_hq_and_peeks_it() -> void:
+	var root := _make_root()
+	# The cursor opens on the local player's HQ and peeks it into the detail panel.
+	assert_vector(root.cursor_tile()).is_equal(Vector2i(2, 5))
+	assert_int(root.hud().detail_panel().shown_entity_id()).is_equal(0) # HQ entity id 0.
+
+
+func test_cursor_moves_and_clears_peek_over_empty_tiles() -> void:
+	var root := _make_root()
+	assert_bool(root.move_cursor(Vector2i.RIGHT)).is_true()
+	assert_vector(root.cursor_tile()).is_equal(Vector2i(3, 5))     # moved off the HQ ...
+	assert_bool(root.hud().detail_panel().is_showing()).is_false()  # ... onto an empty tile.
+
+
+func test_cursor_selects_own_unit_but_not_structures_or_enemies() -> void:
+	var root := _make_root()
+	var state := root.state()
+	_place_unit(state, 10, 0, Vector2i(4, 5)) # friendly
+	_place_unit(state, 11, 1, Vector2i(6, 5)) # enemy
+
+	root.move_cursor(Vector2i.RIGHT) # (3,5)
+	root.move_cursor(Vector2i.RIGHT) # (4,5) — the friendly unit
+	assert_bool(root.select_at_cursor()).is_true()
+	assert_int(root.command_interface().selected_id()).is_equal(10)
+
+	root.move_cursor(Vector2i.RIGHT) # (5,5)
+	root.move_cursor(Vector2i.RIGHT) # (6,5) — the enemy unit
+	assert_bool(root.select_at_cursor()).is_false() # opponent unit — refused.
+
+
+func test_cursor_stops_at_the_board_edge() -> void:
+	var root := _make_root()
+	for _i: int in 5:
+		root.move_cursor(Vector2i.LEFT)
+	assert_vector(root.cursor_tile()).is_equal(Vector2i(0, 5)) # clamped at the west edge.
+	assert_bool(root.move_cursor(Vector2i.LEFT)).is_false()     # can't step past it.
+	assert_vector(root.cursor_tile()).is_equal(Vector2i(0, 5))

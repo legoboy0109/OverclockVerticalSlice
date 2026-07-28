@@ -27,10 +27,12 @@
 ##   [code]GameState.entities()[/code] → board feed is unowned). Entities are drawn
 ##   here as minimal owner-coloured placeholder markers ([method _draw]) purely so
 ##   the board is not empty; replace with the real entity renderer when it lands.
-## [br]• [b]Click-to-select[/b]: picking a unit needs the occupant-pick-region
-##   authoring seam (an unassigned build task) — until it exists, the only human
-##   interaction wired here is End-Turn. Board overlays/selection via click are
-##   deferred to that seam.
+## [br]• [b]Click-to-select[/b] (mouse): picking a unit BY CLICK needs the
+##   occupant-pick-region authoring seam (an unassigned build task) — deferred.
+##   Keyboard selection is wired around it: the arrow-key grid cursor
+##   ([member _cursor]) resolves the entity from its own tile (peek →
+##   [method select_at_cursor]), so only mouse-click selection + click-driven
+##   board overlays remain on that blocked seam.
 ## [br]• [b]Art[/b]: placeholder tinted diamonds until the art/TileSet pass.
 ## [br]• Camera framing/zoom is provisional (final feel = `/ux-design`).
 class_name VerticalSliceRoot
@@ -64,12 +66,21 @@ var _ai_driver: AITurnDriver = null
 ## await the paced turn to completion.
 var _ai_running: bool = false
 
+## Grid-space keyboard/gamepad navigation cursor (ADR-0014, cai-005 [BoardCursor]).
+## Moved with the arrow keys; the entity under it is peeked into the detail panel,
+## and an own unit under it can be selected. This is the keyboard [b]work-around
+## for the blocked click-pick seam[/b] — it resolves the entity from the cursor's
+## OWN tile via [method GameState.entity_at], never the board's
+## [method BoardRenderer.pick_at].
+var _cursor: BoardCursor = null
+
 
 func _ready() -> void:
 	_build_match()
 	_build_board_and_camera()
 	_build_command_interface()
 	_build_hud()
+	_build_cursor()
 	_ai_driver = AITurnDriver.new()
 	add_child(_ai_driver)
 	# Repaint the placeholder markers on every commit (an AI turn drives many).
@@ -152,6 +163,12 @@ func _build_hud() -> void:
 	add_child(_hud)
 
 
+func _build_cursor() -> void:
+	_cursor = BoardCursor.new()
+	_cursor.grid_pos = HQ_A # start on the local player's HQ ...
+	_cmd.inspect(_state, _cursor.grid_pos) # ... and peek it into the detail panel.
+
+
 # --- Turn loop ---------------------------------------------------------------
 
 ## Every commit repaints the placeholder entity markers. It deliberately does
@@ -185,12 +202,61 @@ func _drive_ai_turns() -> void:
 	_ai_running = false
 
 
-## Human End-Turn on [code]ui_accept[/code] (Enter/Space). Delegates to
-## [method try_end_human_turn], which gates on the human's live turn and hands off
-## to the AI.
+## Keyboard board control (ADR-0014): the arrow keys move the grid cursor (peeking
+## the entity under it into the detail panel), [code]ui_accept[/code] (Enter/Space)
+## selects an own unit at the cursor, and Tab ends the human's turn. The cursor
+## keys reuse the built-in [code]ui_*[/code] actions; End-Turn reads KEY_TAB
+## directly. Dedicated, rebindable InputMap actions for all of these are a
+## follow-up (the cai-005 InputMap-wiring tech-debt).
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed(&"ui_accept"):
+	if event.is_action_pressed(&"ui_up"):
+		move_cursor(Vector2i.UP)
+	elif event.is_action_pressed(&"ui_down"):
+		move_cursor(Vector2i.DOWN)
+	elif event.is_action_pressed(&"ui_left"):
+		move_cursor(Vector2i.LEFT)
+	elif event.is_action_pressed(&"ui_right"):
+		move_cursor(Vector2i.RIGHT)
+	elif event.is_action_pressed(&"ui_accept"):
+		select_at_cursor()
+	elif event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_TAB:
 		try_end_human_turn()
+
+
+# --- Keyboard board control (works around the blocked click-pick seam) -------
+
+## Moves the grid cursor one tile along [param direction] (a grid-axis [Vector2i])
+## and peeks the entity now under it into the detail panel (unpinned). A no-op at
+## a board edge ([method BoardCursor.step] returns false). Returns whether the
+## cursor moved.
+func move_cursor(direction: Vector2i) -> bool:
+	if _cursor == null or _state.grid == null:
+		return false
+	if not _cursor.step(direction, _state.grid):
+		return false
+	_cmd.inspect(_state, _cursor.grid_pos) # peek → detail panel (unpinned).
+	queue_redraw() # repaint the cursor highlight.
+	return true
+
+
+## Selects the own unit at the cursor tile — a pinned selection that drives the
+## detail panel and the [CommandInterface] FSM into ENTITY_SELECTED. A no-op
+## returning false when the tile is empty, holds a structure, or holds an
+## opponent's unit. Resolves the occupant from the cursor's OWN tile
+## ([method GameState.entity_at]), never the board's [method BoardRenderer.pick_at]
+## — the keyboard path around the blocked pick-region seam.
+func select_at_cursor() -> bool:
+	if _cursor == null:
+		return false
+	var entity: EntityState = _state.entity_at(_cursor.grid_pos)
+	if entity is UnitState and entity.owner == LOCAL_PLAYER:
+		return _cmd.try_select(_state, entity as UnitState)
+	return false
+
+
+## The cursor's current grid tile (for the test + the [method _draw] highlight).
+func cursor_tile() -> Vector2i:
+	return _cursor.grid_pos if _cursor != null else Vector2i.ZERO
 
 
 # --- Placeholder entity rendering (STUB — see class doc) ---------------------
@@ -211,6 +277,15 @@ func _draw() -> void:
 			center + Vector2(0, r), center + Vector2(-r, 0),
 		])
 		draw_colored_polygon(diamond, col)
+
+	# The keyboard cursor — a hollow diamond outline at the cursor tile.
+	if _cursor != null:
+		var c: Vector2 = _board.grid_to_screen(_cursor.grid_pos)
+		var cr: float = 14.0
+		draw_polyline(PackedVector2Array([
+			c + Vector2(0, -cr), c + Vector2(cr, 0), c + Vector2(0, cr),
+			c + Vector2(-cr, 0), c + Vector2(0, -cr),
+		]), Color(1.0, 1.0, 0.4), 2.0)
 
 
 # --- Accessors (for the boot/integration test) -------------------------------
