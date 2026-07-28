@@ -1,12 +1,12 @@
 # Story 004: Verb Scoring — `economy_value`, `research_value` (Stubbed), Positional/Retreat/Cancel-Build, Cadence Cap
 
 > **Epic**: AI Opponent (Minimal Vertical Slice)
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Feature
 > **Type**: Logic
 > **Estimate**: L (4h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-27
 
 ## Context
 
@@ -82,7 +82,7 @@
 **Story Type**: Logic
 **Required evidence**: `tests/unit/ai-opponent/ai_economy_positional_scoring_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created + passing — `tests/unit/ai-opponent/ai_economy_positional_scoring_test.gd` (24 fns, 24/24 PASS)
 
 ---
 
@@ -90,3 +90,13 @@
 
 - Depends on: Stories 002/003. **Research-dependent enumeration is stubbed** (Research/Tech epic not implemented — flag raised for re-enable).
 - Unlocks: Story 005 (comparator needs the full verb set scored)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27
+**Criteria**: all worked examples pass exact/documented values — AC-15 (economy_value ≈7.06 / action_score ≈1.765); AC-16 (tier-1 outpost strictly > tier-2); AC-20 (Heavy move_cost 3 & Scout move_cost 1, straight advances, both score exactly `POSITIONAL_VALUE_PER_TILE_CLOSED` 0.16 — tiles-normalized, move_cost does not gate; proven both by the direct formula and end-to-end); AC-32 (setup move > non-setup via +SETUP_ADVANCE_BONUS); AC-31 (wounded ≤RETREAT_HP_FRACTION + threatened → retreat candidate ONLY, zero advance — anti-oscillation); AC-22 (cancel_build = CANCEL_REFUND_RATE × build_cost, action_score = value, no AP division); AC-30 (cadence cap EXCLUDES economy/research candidates once `economy_investments_committed >= max_economy_investments_per_turn`, not down-scored).
+**Implementation**: extended `src/gameplay/ai/ai.gd` — `_score_build_and_economy_candidates` (`_economy_value` geometric-decay sum + cadence gate), positional/retreat two-term model (`_score_positional_and_retreat_candidates`, `_positional_value`, `_retreat_value`, wounded-exclusion-before-advance), `_score_cancel_build_candidates` (`_cancel_build_value`). `economy_investments_committed` consumed as the caller-passed param (Story 006 increments it).
+**Test Evidence**: Logic — `tests/unit/ai-opponent/ai_economy_positional_scoring_test.gd` (24 fns, 24/24 PASS; full suite 601/601, no regressions).
+**Deviations / notes**: (1) ★ A **type regression** (positional `MoveAction` candidates assigned to ai-003's `AttackAction`-typed field) was introduced mid-implementation and **caught by the combined full-suite run**, then fixed by widening `_Candidate.action` to the base `Action` type. (2) `research_value` MATH is implemented but `_score_research_candidates` enumeration returns `[]` — **deferred re-enable point** pending the Research/Tech epic (`Research.legal_research_targets`).
+**Code Review**: not separately run (specialist-authored, exact-value test-covered); recommend a light pass at sprint close-out.

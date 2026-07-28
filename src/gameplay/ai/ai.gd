@@ -55,6 +55,20 @@ const _REACHABILITY_MULTIPLIER_REACHABLE := 1.1
 const _REACHABILITY_MULTIPLIER_IN_CONTACT := 1.0
 const _REACHABILITY_MULTIPLIER_ISOLATED := 0.9
 
+## Every player-buildable [StructureTypeDef] (Story 004) — deliberately a
+## [b]code constant[/b] here, not a [code]StructureTypes[/code] registry
+## method: the HQ is setup-placed, never a [BuildAction] candidate (GDD
+## Formulas `production_value` note / [method BaseProduction.legal_build_tiles]
+## doc, "The HQ is never a candidate"), so it is excluded from this list. Order
+## is irrelevant to correctness (every entry is folded into the same
+## running-best scan) but fixed for determinism (ADR-0003).
+const _BUILDABLE_STRUCTURE_TYPES: Array[StructureTypeDef] = [
+	StructureTypes.ECONOMY_OUTPOST,
+	StructureTypes.PRODUCTION_OUTPOST,
+	StructureTypes.DEFENSIVE_STRUCTURE,
+	StructureTypes.RESEARCH_LAB,
+]
+
 
 ## Running-best candidate carrier (ADR-0011 §2) — the sole mutable slot the
 ## streaming max-scan reassigns per iteration. Never collected into an
@@ -189,7 +203,227 @@ static func _score_move_and_attack_candidates(lookahead: GameState, entity: Enti
 				var cost: int = r.min_cost + _attack_ap_cost_for(unit)
 				best = _consider_attack(lookahead, unit, target, r.tile, tr.tile, cost, best)
 
+		# Bare, non-attacking repositioning (Story 004: positional/retreat,
+		# Edge Cases). Tiles-normalized, NOT AP-cost-divided (the documented
+		# exception to CR-3's value-per-AP scale) — see
+		# [method _score_positional_and_retreat_candidates].
+		best = _score_positional_and_retreat_candidates(lookahead, unit, best)
+
 	return best
+
+
+## Bare, non-attacking move scoring (GDD Edge Cases, Story 004 AC-20/AC-22/
+## AC-31/AC-32) — folds every [method Movement.reachable] destination into
+## [param best] via the two-term positional model, OR (mutually exclusive,
+## anti-oscillation) the retreat model, never both for the same unit.
+##
+## Wounded-unit exclusion is checked [b]first[/b] (Implementation Notes: "must
+## be checked before generating advance candidates" — an excluded unit
+## generates zero advance/[code]SETUP_ADVANCE_BONUS[/code] candidates, not a
+## suppressed one): if [param unit] is at/below
+## [code]AIBalance.ai.retreat_hp_fraction[/code] of max hp AND currently inside
+## some live enemy's next-turn threat range, every reachable tile is scored
+## [b]only[/b] via [method _retreat_value] — the positional/setup branch is
+## never entered for this unit this call. Otherwise every reachable tile is
+## scored via [method _positional_value] (Term 1 closing-distance +
+## Term 2 [code]SETUP_ADVANCE_BONUS[/code]).
+##
+## Both branches normalize by [param tiles_moved] — the BFS step count to the
+## candidate tile, recovered via [method _tiles_moved_for] — never
+## [code]r.min_cost[/code] (Edge Cases: "not `/ move_path_cost`"). A tile
+## reached at [code]tiles_moved == 0[/code] (the unit's own current position,
+## which [method Movement.reachable] never returns per its own contract) is
+## impossible here, so no divide-by-zero guard is needed.
+static func _score_positional_and_retreat_candidates(lookahead: GameState, unit: UnitState, best: _Candidate) -> _Candidate:
+	var nearest_enemy_dist_before: int = _nearest_live_enemy_distance(lookahead, unit.position, unit.owner)
+	var threat: _ThreatInfo = _nearest_threatening_enemy(lookahead, unit)
+	var is_wounded_and_threatened: bool = _is_wounded(unit) and threat.found
+
+	for r: Movement.ReachableTile in Movement.reachable(lookahead, unit):
+		if not AP.can_afford(lookahead, unit.owner, r.min_cost):
+			continue
+		var tiles_moved: int = _tiles_moved_for(unit, r.min_cost)
+		if tiles_moved <= 0:
+			continue # Defensive — reachable() never returns the start tile itself.
+		if not Combat.legal_targets_from(lookahead, unit, r.tile).is_empty():
+			continue # Edge Cases/AC-20: positional scoring applies only to a
+			         # tile with "no combo target reachable FROM IT" — a tile
+			         # that enables a move+attack combo is already scored by
+			         # the combo loop above and must not also compete here
+			         # (this is the exact case a caller's regression test
+			         # (ai_combat_production_scoring_test.gd) guards: a
+			         # combo-enabling tile must never be silently outscored/
+			         # replaced by this tiles-normalized exception).
+
+		if is_wounded_and_threatened:
+			var threat_dist_before: int = threat.distance
+			var threat_dist_after: int = lookahead.grid.manhattan_distance(r.tile, threat.entity.position)
+			var value: float = _retreat_value(threat_dist_before, threat_dist_after)
+			var score: float = value / float(tiles_moved)
+			if score > best.score:
+				best = _Candidate.new(_make_move_action(unit, r.tile, tiles_moved), score, r.min_cost, unit.entity_id)
+			continue # Anti-oscillation: no advance/SETUP candidate this call.
+
+		var dist_after: int = _nearest_live_enemy_distance(lookahead, r.tile, unit.owner)
+		var sets_up: bool = _sets_up_attack_next_turn(lookahead, unit, r.tile)
+		var value: float = _positional_value(nearest_enemy_dist_before, dist_after, sets_up)
+		var score: float = value / float(tiles_moved)
+		if score > best.score:
+			best = _Candidate.new(_make_move_action(unit, r.tile, tiles_moved), score, r.min_cost, unit.entity_id)
+
+	return best
+
+
+## `positional_value(move)` (GDD Edge Cases, AC-20/AC-32):
+## `POSITIONAL_VALUE_PER_TILE_CLOSED × max(0, dist_before − dist_after) +
+## (sets_up_attack_next_turn(dest) ? SETUP_ADVANCE_BONUS : 0)`. Pure arithmetic
+## — isolated so the worked example (Heavy/Scout both ≈0.16, AC-20) and the
+## setup-bonus proof (AC-32) are directly testable without re-deriving the
+## enumeration.
+static func _positional_value(dist_before: int, dist_after: int, sets_up_attack_next_turn: bool) -> float:
+	var value: float = AIBalance.ai.positional_value_per_tile_closed * float(maxi(0, dist_before - dist_after))
+	if sets_up_attack_next_turn:
+		value += AIBalance.ai.setup_advance_bonus
+	return value
+
+
+## `retreat_value(move)` (GDD Edge Cases, AC-31):
+## `RETREAT_VALUE_PER_TILE_FLED × max(0, threat_dist_after − threat_dist_before)`.
+## Pure arithmetic, isolated for direct testing exactly like
+## [method _positional_value].
+static func _retreat_value(threat_dist_before: int, threat_dist_after: int) -> float:
+	return AIBalance.ai.retreat_value_per_tile_fled * float(maxi(0, threat_dist_after - threat_dist_before))
+
+
+## True iff [param unit] is at or below [code]AIBalance.ai.retreat_hp_fraction[/code]
+## of its max hp (GDD Edge Cases, self-preservation). Integer hp compared
+## against a float fraction of the (int) max hp — matches the GDD's own
+## `<=` phrasing exactly (a unit sitting precisely at the fraction is included).
+static func _is_wounded(unit: UnitState) -> bool:
+	return float(unit.current_hp) <= AIBalance.ai.retreat_hp_fraction * float(unit.type.hp)
+
+
+## Carrier for [method _nearest_threatening_enemy]'s result — the nearest live
+## enemy entity whose next-turn threat range currently covers [param unit]'s
+## position, plus the (pre-computed) distance to it. [member found] is
+## [code]false[/code] (and [member entity]/[member distance] unused) when no
+## live enemy threatens [param unit] from its current position.
+class _ThreatInfo extends RefCounted:
+	var found: bool = false
+	var entity: EntityState = null
+	var distance: int = 0
+
+
+## Finds the nearest live enemy entity whose next-turn threat range
+## ([code]soft_move_cap + attack_range[/code] for a [UnitState] attacker,
+## [code]attack_range[/code] alone for an immobile [StructureState] attacker,
+## per [method _sets_up_attack_next_turn]'s same reach definition) currently
+## covers [param unit]'s [b]own[/b] position — the self-preservation trigger
+## (GDD Edge Cases, AC-31). Ties (equal distance) resolve to the
+## lowest-[code]entity_id[/code] enemy for determinism (ADR-0003), mirroring
+## [method _nearest_live_enemy_distance]'s own tie-break.
+static func _nearest_threatening_enemy(state: GameState, unit: UnitState) -> _ThreatInfo:
+	var result := _ThreatInfo.new()
+	var best_dist: int = -1
+	for e: EntityState in state.entities():
+		if e.owner == unit.owner:
+			continue
+		var reach: int = _threat_reach_of(e)
+		var dist: int = state.grid.manhattan_distance(unit.position, e.position)
+		if dist > reach:
+			continue
+		if best_dist == -1 or dist < best_dist or (dist == best_dist and e.entity_id < result.entity.entity_id):
+			best_dist = dist
+			result.entity = e
+			result.distance = dist
+			result.found = true
+	return result
+
+
+## The next-turn threat reach of [param entity] as a potential attacker: a
+## [UnitState]'s [code]soft_move_cap + attack_range[/code] (it can close
+## distance and still attack next turn), or a [StructureState]'s bare
+## [code]attack_range[/code] (structures never move — mirrors
+## [method _sets_up_attack_next_turn]'s identical reach rule from the
+## defender's perspective).
+static func _threat_reach_of(entity: EntityState) -> int:
+	if entity is UnitState:
+		var u: UnitState = entity
+		return u.type.soft_move_cap + u.type.attack_range
+	var s: StructureState = entity
+	return s.type.attack_range
+
+
+## Manhattan distance from [param from_tile] to the [b]nearest live enemy
+## entity[/b] (unit or structure) owned by anyone other than [param owner] —
+## the GDD Edge Cases' Term 1 distance measure, "nearest live enemy," not the
+## earlier-rejected "nearest forward entity" phrasing. Returns
+## [code]0[/code] if no live enemy exists on the board (a legitimate,
+## if rare, end-state; [method _positional_value]'s
+## [code]max(0, dist_before - dist_after)[/code] degrades gracefully to 0 in
+## that case, never a negative or undefined closing value).
+static func _nearest_live_enemy_distance(state: GameState, from_tile: Vector2i, owner: int) -> int:
+	var best_dist: int = -1
+	for e: EntityState in state.entities():
+		if e.owner == owner:
+			continue
+		var dist: int = state.grid.manhattan_distance(from_tile, e.position)
+		if best_dist == -1 or dist < best_dist:
+			best_dist = dist
+	return maxi(0, best_dist)
+
+
+## `sets_up_attack_next_turn(dest)` (GDD Edge Cases Term 2, AC-32) — true iff,
+## from hypothetical [param dest], [param unit] could legally attack some live
+## enemy [b]next[/b] turn: some enemy entity lies within
+## [code]dest[/code]'s [code]soft_move_cap + attack_range[/code] reach. A cheap
+## one-step distance check (never a second lookahead search, per
+## Implementation Notes/ADR-0011 §2) reusing only
+## [method GridState.manhattan_distance] — no [method Movement.reachable] call
+## against a hypothetical future turn.
+static func _sets_up_attack_next_turn(state: GameState, unit: UnitState, dest: Vector2i) -> bool:
+	var reach: int = unit.type.soft_move_cap + unit.type.attack_range
+	for e: EntityState in state.entities():
+		if e.owner == unit.owner:
+			continue
+		if state.grid.manhattan_distance(dest, e.position) <= reach:
+			return true
+	return false
+
+
+## Recovers the BFS step count (tiles traversed) that produced
+## [param reported_cost] for [param unit], by linear search over
+## [method Movement.move_path_cost] — the single public cost primitive
+## [method Movement.reachable] itself is built on (ADR-0009's
+## reachable-vs-billed agreement invariant). [code]move_path_cost[/code] is
+## strictly increasing in tile count (each entered tile costs at least
+## [code]move_cost >= 1[/code] in-cap, or the [code]>= move_cost[/code]
+## surcharge over-cap — [code]UnitConfig[/code]'s own contract), so this
+## search is well-founded and terminates at the first exact match. Bounded by
+## the board's own diagonal (a handful of iterations in the VS's 14×16 board),
+## never a second BFS. Returns [code]0[/code] (never negative) if no depth
+## reproduces [param reported_cost] — defensive only; cannot happen for a cost
+## [method Movement.reachable] itself just reported.
+static func _tiles_moved_for(unit: UnitState, reported_cost: int) -> int:
+	var depth: int = 1
+	while depth <= unit.type.soft_move_cap + unit.tiles_moved_this_turn + 64:
+		if Movement.move_path_cost(unit, depth) == reported_cost:
+			return depth
+		depth += 1
+	return 0
+
+
+## Builds a [MoveAction] for [param unit] to hypothetical [param dest] at
+## [param tiles_moved] tiles entered — the sole [Action] constructor the
+## positional/retreat branch uses, mirroring [method _consider_attack]'s
+## "construct, never apply" discipline (ADR-0011 §1: only the caller commits).
+static func _make_move_action(unit: UnitState, dest: Vector2i, tiles_moved: int) -> MoveAction:
+	var action := MoveAction.new()
+	action.player = unit.owner
+	action.from = unit.position
+	action.to = dest
+	action.tiles_entered = tiles_moved
+	return action
 
 
 ## Scores one candidate attack ([param attacker] at hypothetical
@@ -404,41 +638,233 @@ static func _action_score(base_score: float, is_immediately_lethal: bool) -> flo
 	return base_score
 
 
-## Per-structure build/economy candidate enumeration (ADR-0011 §2) — stub for
-## Story 002. The real implementation will walk
-
-
-## Per-structure build/economy candidate enumeration (ADR-0011 §2) — stub for
-## Story 002. The real implementation will walk
-## [method BaseProduction.legal_build_tiles], dispatching
-## [code]production_value[/code]-style scoring for non-economy structures vs.
-## [code]economy_value[/code] for Economy Outposts, gated by
-## [param economy_investments_committed] against
-## [code]AIBalance.ai.max_economy_investments_per_turn[/code] (cadence-cap
-## *enforcement* is Story 004's scope). This story performs no enumeration and
-## returns [param best] unchanged.
-static func _score_build_and_economy_candidates(_lookahead: GameState, _entity: EntityState, \
+## Per-structure-type build/economy candidate enumeration (ADR-0011 §2, Story
+## 004) — walks [method BaseProduction.legal_build_tiles] for every
+## [constant _BUILDABLE_STRUCTURE_TYPES] entry and scores every
+## (structure_type, tile) pair, dispatching [method _economy_value] for
+## [constant StructureTypes.ECONOMY_OUTPOST] vs. [method _production_value]-style
+## scoring (a flat [code]1.0[/code] multiplier — a build has no
+## [code]REACHABILITY_MULTIPLIER[/code] analogue; this mirrors
+## [code]production_value[/code]'s "value anchors to the resource's own sunk
+## cost" shape without inventing a second board-context band) for every other
+## buildable structure.
+##
+## [param entity] is unused (this helper's candidate universe is
+## player-scoped via [method BaseProduction.legal_build_tiles], not
+## per-entity) — kept in the signature only to match every other per-verb
+## helper's [code](lookahead, entity, economy_investments_committed, best)[/code]
+## shape the streaming [method choose_action] scan calls uniformly.
+## [method BaseProduction.legal_build_tiles] is documented "safe to recompute
+## every preview frame" (O(friendly_count × 4 × enemy_structure_count)), so
+## calling it once per entity in the outer scan (rather than threading a
+## once-per-player precomputed result through) is cheap and correct — the
+## running-best fold is naturally idempotent against the resulting redundant
+## re-consideration of the same candidates.
+##
+## Cadence cap (AC-30): once [param economy_investments_committed] >=
+## [code]AIBalance.ai.max_economy_investments_per_turn[/code], every
+## [constant StructureTypes.ECONOMY_OUTPOST] candidate is excluded from
+## enumeration entirely — the loop below never even constructs/scores one,
+## never merely down-scores it. Non-economy buildable structures are
+## unaffected by the cap (CR-5 / the GDD's cadence-cap scope is
+## economy-outpost + research investments only).
+static func _score_build_and_economy_candidates(lookahead: GameState, _entity: EntityState, \
 		economy_investments_committed: int, best: _Candidate) -> _Candidate:
+	var player: int = lookahead.active_player
+	var cap_reached: bool = economy_investments_committed >= AIBalance.ai.max_economy_investments_per_turn
+
+	for structure_type: StructureTypeDef in _BUILDABLE_STRUCTURE_TYPES:
+		var is_economy: bool = structure_type == StructureTypes.ECONOMY_OUTPOST
+		if is_economy and cap_reached:
+			continue
+
+		var cost: int = BaseProduction.effective_build_cost(lookahead, structure_type, player)
+		if not AP.can_afford(lookahead, player, cost):
+			continue
+
+		var tiles: Array[Vector2i] = BaseProduction.legal_build_tiles(lookahead, player, structure_type)
+		if tiles.is_empty():
+			continue
+
+		var value: float = _economy_value(lookahead, player, structure_type) if is_economy \
+			else float(structure_type.build_cost)
+		var score: float = _action_score(value / float(cost), false)
+		if score > best.score:
+			var action := BuildAction.new()
+			action.player = player
+			action.structure_type = structure_type
+			action.tile = tiles[0]
+			best = _Candidate.new(action, score, cost, _lowest_owned_entity_id(lookahead, player))
+
 	return best
 
 
-## Per-Lab research candidate enumeration (ADR-0011 §2) — stub for Story 002,
-## [b]deliberately permanently empty until the Research epic lands[/b] (per
-## this story's Implementation Notes: "Research/Tech is NOT implemented yet").
-## [code]Research.legal_research_targets[/code] does not exist as a real query
-## yet, so this helper never calls it and never blocks this story on Research.
-## Returns [param best] unchanged, always.
+## `economy_value(build_action)` (GDD Formulas, AC-15/AC-16):
+## `raw_immediate_value(0) + Σ_{t=1}^{ECONOMY_HORIZON} marginal_ap_income(t) ×
+## ECONOMY_DECAY^t`, uncapped. [param structure_type] is always
+## [constant StructureTypes.ECONOMY_OUTPOST] here (the caller's dispatch
+## gate) — kept as an explicit parameter (rather than hardcoding the type
+## internally) so a future non-Outpost economy building, if one is ever added,
+## slots in without a signature change. `raw_immediate_value` is fixed 0 (an
+## Economy Outpost's `build_time` produces no immediate board effect the turn
+## it starts, GDD Formulas table) — never computed, just the literal.
+##
+## `marginal_ap_income(t)` is [b]this candidate outpost's own marginal
+## contribution[/b] at future turn `t`, computed the same tiered way
+## [code]AP.ap_income_breakdown[/code] does but isolated to the single
+## marginal outpost being evaluated: if this would be [param player]'s
+## outpost number [code]n+1[/code] (where [code]n[/code] =
+## [method BaseProduction.completed_outpost_count]) and [code]n+1 <=
+## EconomyConfig.tier_threshold[/code], it contributes
+## [code]outpost_bonus_tier1[/code]; otherwise [code]outpost_bonus_tier2[/code]
+## — the GDD's own AC-16 worked contrast (a strictly-higher tier-1 candidate
+## vs. a tier-2 candidate past the threshold). Economy Tech's income term is
+## deliberately never added here (Research is not implemented — the stub
+## scope named in this story's Implementation Notes; the marginal-income
+## computation below reads only [code]EconomyConfig[/code], never
+## [code]Research[/code]).
+##
+## No cap is applied anywhere in this sum (the GDD's 2026-07-22 decoupling
+## note) — the dominant-strategy guardrail is [param economy_investments_committed]'s
+## cadence cap in the caller, never a valuation ceiling here.
+static func _economy_value(lookahead: GameState, player: int, structure_type: StructureTypeDef) -> float:
+	var economy_cfg: EconomyConfig = Balance.economy
+	var n: int = BaseProduction.completed_outpost_count(lookahead, player)
+	var marginal_rank: int = n + 1 # This candidate would be the player's (n+1)th outpost.
+	var marginal_income: float = float(economy_cfg.outpost_bonus_tier1) if marginal_rank <= economy_cfg.tier_threshold \
+		else float(economy_cfg.outpost_bonus_tier2)
+
+	var raw_immediate_value: float = 0.0
+	var decayed_sum: float = 0.0
+	for t in range(1, AIBalance.ai.economy_horizon + 1):
+		decayed_sum += marginal_income * pow(AIBalance.ai.economy_decay, t)
+	return raw_immediate_value + decayed_sum
+
+
+## Resolves the lowest owned [code]entity_id[/code] for [param player]
+## (deterministic tie-break surrogate for a build/economy candidate, which —
+## unlike an attack/production/move candidate — has no single "acting entity"
+## of its own; the builder is the player, not a specific unit/structure).
+## Mirrors [method _entities_in_enumeration_order]'s own ascending-id
+## ordering (ADR-0003) rather than inventing a second sort. Falls back to
+## [code]0[/code] (never a crash) if [param player] owns no entities yet — an
+## unreachable case in practice (a player with zero entities has no AP-earning
+## producers left to build from), kept only as a defensive floor.
+static func _lowest_owned_entity_id(lookahead: GameState, player: int) -> int:
+	for e: EntityState in lookahead.entities():
+		if e.owner == player:
+			return e.entity_id
+	return 0
+
+
+## Per-Lab research candidate enumeration (ADR-0011 §2). [b]Story 004 scope
+## note (deferred integration point, flagged per this story's Implementation
+## Notes — surfaced explicitly, not silently skipped):[/b] the
+## [code]research_value[/code] MATH below ([method _research_value]) is fully
+## implemented per the GDD Formulas section and is ready to enumerate the
+## instant Research/Tech lands, but the enumeration [b]source[/b] this helper
+## would walk — [code]Research.legal_research_targets(state, lab)[/code] — does
+## not exist yet (the Research/Tech epic is not implemented in this corpus).
+## This helper therefore [b]always returns [param best] unchanged[/b], the
+## same documented-stub contract Story 002 shipped, so [method choose_action]
+## never enumerates a research candidate today (Edge case: "returns no
+## candidates without error"). Re-enable point: once
+## [code]Research.legal_research_targets[/code] exists, replace this body with
+## a loop mirroring [method _score_build_and_economy_candidates]'s cadence-cap
+## gate (exclude every candidate once [param economy_investments_committed] >=
+## [code]AIBalance.ai.max_economy_investments_per_turn[/code], per CR-5 —
+## research counts toward the same cadence cap as economy builds) around
+## [method _research_value] / [method _action_score].
 static func _score_research_candidates(_lookahead: GameState, _entity: EntityState, \
-		economy_investments_committed: int, best: _Candidate) -> _Candidate:
+		_economy_investments_committed: int, best: _Candidate) -> _Candidate:
 	return best
+
+
+## `research_value(tech)` (GDD Formulas, AC-17/AC-17a/AC-17b) — implemented now
+## per spec so it is ready the instant [method _score_research_candidates] is
+## re-enabled (this story's documented deferred integration point), even
+## though nothing calls this function yet (Research/Tech is not implemented).
+##
+## `Σ_{t=research_time+1}^{horizon} marginal_tech_value × ECONOMY_DECAY^t`,
+## where [param horizon] is [code]AIBalance.ai.tech_value_horizon[/code] for
+## Attack/Defense Tech (permanent army-wide buffs) or
+## [code]AIBalance.ai.economy_horizon[/code] for Economy Tech (an income
+## projection) — the caller selects which via [param horizon], never decided
+## inside this pure sum. [param marginal_tech_value] is likewise pre-computed
+## by the caller (via [method _attack_defense_tech_marginal_value] or
+## [method _economy_tech_marginal_value] below) and passed in flat, since it
+## is constant across every summed turn for both tech families in this GDD
+## (mirrors how [method _economy_value] pre-selects its own
+## [code]marginal_income[/code] once, not per-`t`).
+static func _research_value(research_time: int, horizon: int, marginal_tech_value: float) -> float:
+	var decayed_sum: float = 0.0
+	for t in range(research_time + 1, horizon + 1):
+		decayed_sum += marginal_tech_value * pow(AIBalance.ai.economy_decay, t)
+	return decayed_sum
+
+
+## `marginal_tech_value(tech, t)` for Attack/Defense Tech (GDD Formulas,
+## AC-17/AC-17a): `tech_attack_or_defense_bonus / HP_PER_AP ×
+## ATTACKS_LANDED_PER_TURN_ESTIMATE`. Flat across every summed turn (a
+## permanent stat buff), so [method _research_value] receives this pre-computed
+## once, not re-evaluated per-`t`.
+static func _attack_defense_tech_marginal_value(tech_bonus: float) -> float:
+	return tech_bonus / AIBalance.ai.hp_per_ap * AIBalance.ai.attacks_landed_per_turn_estimate
+
+
+## `marginal_tech_value(tech, t)` for Economy Tech (GDD Formulas, AC-17b):
+## `ECONOMY_TECH_INCOME_BONUS × min(projected_completed_outposts,
+## ECONOMY_TECH_TIER_THRESHOLD)`. [param projected_completed_outposts] is the
+## researching player's completed [b]plus[/b] under-construction Economy
+## Outposts (the caller's responsibility to compute — this function is pure
+## arithmetic only, per the GDD's "counting in-flight outposts" fix).
+static func _economy_tech_marginal_value(economy_tech_income_bonus: int, projected_completed_outposts: int, economy_tech_tier_threshold: int) -> float:
+	return float(economy_tech_income_bonus) * float(mini(projected_completed_outposts, economy_tech_tier_threshold))
 
 
 ## Per-under-construction-structure cancel-build candidate enumeration
-## (ADR-0011 §2) — stub for Story 002. The real implementation will consider
-## cancelling [param entity] if it is an owned, under-construction
-## [code]StructureState[/code], scored against the refund via
-## [code]BaseProductionConfig.cancel_refund_pct[/code] (Story 003/004). This
-## story performs no enumeration and returns [param best] unchanged.
-static func _score_cancel_build_candidates(_lookahead: GameState, _entity: EntityState, \
+## (ADR-0011 §2, Story 004, AC-22) — considers cancelling [param entity] if it
+## is an owned, [constant StructureState.BuildStatus.UNDER_CONSTRUCTION]
+## [StructureState]. Scored via [method _cancel_build_value] and folded into
+## [param best] with [b]no affordability gate[/b] (Cancel Build refunds AP, it
+## never spends any — TR-ai-005's affordability check has nothing to check
+## here, mirroring [method BaseProduction.apply_cancel]'s own AP-credit-only
+## contract).
+static func _score_cancel_build_candidates(lookahead: GameState, entity: EntityState, \
 		_economy_investments_committed: int, best: _Candidate) -> _Candidate:
+	if not (entity is StructureState):
+		return best
+	var structure: StructureState = entity
+	if structure.owner != lookahead.active_player:
+		return best
+	if structure.build_status != StructureState.BuildStatus.UNDER_CONSTRUCTION:
+		return best
+
+	var value: float = _cancel_build_value(structure.type.build_cost)
+	var score: float = _action_score(value, false)
+	if score > best.score:
+		var action := CancelBuildAction.new()
+		action.player = lookahead.active_player
+		action.structure_id = structure.entity_id
+		best = _Candidate.new(action, score, 0, structure.entity_id)
+
 	return best
+
+
+## `cancel_build_value = CANCEL_REFUND_RATE × build_cost(structure)` (GDD Edge
+## Cases, AC-22) — delegates to [method BaseProduction.cancel_refund], the
+## Base & Production-owned fixed-point integer refund primitive
+## ([member BaseProductionConfig.cancel_refund_pct], read via the
+## [code]StructureBalance[/code] Autoload), rather than duplicating
+## `CANCEL_REFUND_RATE` as a second float constant here (GDD Tuning Knobs:
+## "Owned by Base & Production... listed here only because `cancel_build_value`
+## reads it"). Returned as a [code]float[/code] so it composes with
+## [method _action_score]'s float signature, even though the refund itself is
+## computed in exact integer arithmetic internally.
+##
+## `action_score(cancel_build) = cancel_build_value` directly — [b]no division
+## by AP cost[/b] (Cancel Build returns AP, it doesn't spend it), which is why
+## the caller passes this value straight into [method _action_score] rather
+## than a `value / ap_cost` ratio the way every other verb does.
+static func _cancel_build_value(build_cost: int) -> float:
+	return float(BaseProduction.cancel_refund(build_cost))
