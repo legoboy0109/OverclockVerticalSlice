@@ -312,6 +312,18 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 			continue # Anti-oscillation: no advance/SETUP candidate this call.
 
 		var dist_after: int = _nearest_live_enemy_distance(lookahead, r.tile, unit.owner)
+		# Anti-oscillation: enumerate a bare advance ONLY if it strictly closes
+		# distance to the nearest enemy. A non-closing tile (lateral/backward) would
+		# otherwise score positive purely on SETUP_ADVANCE_BONUS — any tile within
+		# reach of a nearby target "sets up" — and since choose_action returns the
+		# top candidate with no pass-threshold gate, the AI would commit it and then
+		# commit the reverse move next iteration, ping-ponging until AP drained.
+		# Requiring strict closure makes bare advances distance-monotonic, so they
+		# cannot cycle. (Retreat, handled above, is already monotonic in threat
+		# distance; a pure non-advancing "setup" play is deferred to the broader
+		# positional-scoring rework.)
+		if dist_after >= nearest_enemy_dist_before:
+			continue
 		var sets_up: bool = _sets_up_attack_next_turn(lookahead, unit, r.tile)
 		var value: float = _positional_value(nearest_enemy_dist_before, dist_after, sets_up)
 		var score: float = value / float(tiles_moved)

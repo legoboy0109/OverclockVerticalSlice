@@ -744,3 +744,32 @@ func test_score_cancel_build_suppressed_after_economy_investment_this_turn() -> 
 	best = AI._score_cancel_build_candidates(state, outpost, 1, best)
 
 	assert_object(best.action).is_null()
+
+
+func test_positional_advance_only_proposes_distance_closing_moves() -> void:
+	# Anti-oscillation regression: a reachable tile that "sets up" a next-turn
+	# attack but does NOT close distance to the nearest enemy must never be
+	# proposed as a bare advance. Pre-fix such a tile scored positive on
+	# SETUP_ADVANCE_BONUS alone (every tile within a target's reach "sets up"), and
+	# — since choose_action returns the top candidate with no pass-threshold gate —
+	# the AI committed it and then committed the reverse move, ping-ponging until
+	# AP drained. The chosen bare move must strictly close distance.
+	var state := _make_state(60)
+	state.per_player[0].faction = Factions.NEUTRAL
+	var t := _make_trooper_reach_type()  # attack_range 1, soft_move_cap 8 -> reach 9
+	var unit := _make_unit(1, 0, t, Vector2i(8, 0))
+	var enemy := _make_unit(2, 1, t, Vector2i(0, 0))  # nearest enemy at distance 8
+	_place(state, unit)
+	_place(state, enemy)
+
+	# Act
+	var best := AI._Candidate.new()
+	best = AI._score_positional_and_retreat_candidates(state, unit, best)
+
+	# Assert — a bare advance was proposed and it strictly closes distance; the
+	# non-closing setup tiles (e.g. (9,0)/(8,1), both within setup reach 9 but not
+	# closer to the enemy) are never chosen.
+	assert_object(best.action).is_not_null()
+	assert_bool(best.action is MoveAction).is_true()
+	var dest: Vector2i = (best.action as MoveAction).to
+	assert_int(state.grid.manhattan_distance(dest, Vector2i(0, 0))).is_less(8)
