@@ -37,7 +37,8 @@
 #   Each entry: name, status, source, referenced_by[], attributes{}, added, revised
 
 version: 1
-last_updated: ""
+last_updated: 2026-07-23   # unit-system.md Rule 1 + new Rule 3a declare defense/targeting_mode/min_range/can_counterattack in-schema (was "revision pending"); formalized in ADR-0007
+# prior: 2026-07-22   # is_surcharged + legal_targets_from_tile added (Command & Action Interface #9 reciprocal contracts, consistency-check)
 
 # ─── ENTITIES ────────────────────────────────────────────────────────────────
 # Named game-world objects: enemies, NPCs, characters, factions, bosses.
@@ -48,7 +49,191 @@ last_updated: ""
 # Attribute fields: any key stats that could appear in another GDD
 #   (health, damage, drops, faction, etc.)
 
-entities: []
+entities:
+  - name: scout
+    status: active
+    source: design/gdd/unit-system.md
+    referenced_by:
+      - design/gdd/unit-system.md
+      - design/gdd/movement-system.md   # references move_cost
+      - design/gdd/combat-resolution.md   # reads attack/attack_range/defense/targeting_mode/can_counterattack
+      - design/gdd/base-production.md   # HQ produces Scout (produce_cost); Scout is the HQ's only producible_type
+    hp: 3
+    attack: 2
+    attack_range: 1   # = MAX range for both targeting profiles (combat-resolution.md); Scout is melee (1)
+    move_cost: 1
+    soft_move_cap: 4   # PROVISIONAL (2026-07-20) — tiles before move cost escalates ×SOFT_MOVE_PENALTY; escalation formula owned by movement-system.md
+    produce_cost: 2
+    defense: 0              # NEW 2026-07-21 (combat-resolution.md) — flat damage mitigation; Unit-owned; default 0, no VS unit overrides; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
+    targeting_mode: DIRECT  # NEW 2026-07-21 (combat-resolution.md) — DIRECT (cardinal line) | AREA (indirect ring); Unit-owned; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
+    min_range: 1            # NEW 2026-07-21 (combat-resolution.md) — min range for AREA dead zone; 1 for DIRECT units; attack_range = max range; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
+    can_counterattack: false # NEW 2026-07-21 (combat-resolution.md) — per-unit-type retaliation flag; default false all VS units; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
+    added: 2026-07-19
+    revised: 2026-07-21
+    # Cheap, fast, fragile melee harasser. Costs owned here; attack_cost (2 AP) owned by combat.
+
+  - name: trooper
+    status: active
+    source: design/gdd/unit-system.md
+    referenced_by:
+      - design/gdd/unit-system.md
+      - design/gdd/movement-system.md   # references move_cost
+      - design/gdd/combat-resolution.md   # reads attack/attack_range/defense/targeting_mode/can_counterattack
+      - design/gdd/base-production.md   # Production Outpost produces Trooper (produce_cost / producible_types)
+    hp: 6
+    attack: 3
+    attack_range: 2   # = MAX range for both targeting profiles (combat-resolution.md)
+    move_cost: 2
+    soft_move_cap: 3   # PROVISIONAL (2026-07-20) — see movement-system.md for escalation formula
+    produce_cost: 4
+    defense: 0              # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; default 0; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
+    targeting_mode: DIRECT  # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
+    min_range: 1            # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
+    can_counterattack: false # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; default false; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
+    added: 2026-07-19
+    revised: 2026-07-21
+    # Efficiency-band backbone; range 2 (cardinal, first blocker). Owns range-2 hp/AP after Heavy cost→7.
+
+  - name: heavy
+    status: active
+    source: design/gdd/unit-system.md
+    referenced_by:
+      - design/gdd/unit-system.md
+      - design/gdd/movement-system.md   # references move_cost
+      - design/gdd/combat-resolution.md   # reads attack/attack_range/defense/targeting_mode/can_counterattack
+      - design/gdd/base-production.md   # Production Outpost produces Heavy (produce_cost / producible_types)
+    hp: 10
+    attack: 5
+    attack_range: 2   # = MAX range for both targeting profiles (combat-resolution.md)
+    move_cost: 3
+    soft_move_cap: 2   # PROVISIONAL (2026-07-20) — slow anvil, lowest reach; see movement-system.md for escalation formula
+    produce_cost: 7   # was 6 — raised 2026-07-20 (unit-system design-review) so Trooper owns the range-2 efficiency band (Heavy 10/7=1.43 hp/AP < Trooper 1.5)
+    defense: 0              # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; default 0; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
+    targeting_mode: DIRECT  # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
+    min_range: 1            # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
+    can_counterattack: false # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; default false; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
+    added: 2026-07-19
+    revised: 2026-07-21
+    # Durable anvil; slow; range 2. produce_cost 6→7 per unit-system design-review (Trooper-dominance fix).
+
+  - name: sniper
+    status: active
+    source: design/gdd/unit-system.md
+    referenced_by:
+      - design/gdd/unit-system.md
+      - design/gdd/movement-system.md   # references move_cost
+      - design/gdd/combat-resolution.md   # reads attack/attack_range/defense/targeting_mode/can_counterattack
+      - design/gdd/base-production.md   # Production Outpost produces Sniper (produce_cost / producible_types)
+    hp: 3
+    attack: 6
+    attack_range: 3   # = MAX range for both targeting profiles (combat-resolution.md)
+    move_cost: 2
+    soft_move_cap: 3   # PROVISIONAL (2026-07-20) — see movement-system.md for escalation formula
+    produce_cost: 5
+    defense: 0              # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; default 0; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
+    targeting_mode: DIRECT  # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; Sniper is DIRECT cardinal-line (NOT AREA) in VS; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
+    min_range: 1            # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
+    can_counterattack: false # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; default false; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
+    added: 2026-07-19
+    revised: 2026-07-21
+    # Glass cannon; longest range (3); UNVALIDATED starting stats (ranged + kiting not in prototype). cost 5 kept (odd — strands 1 AP; spike decision).
+
+  - name: hq
+    status: active
+    source: design/gdd/base-production.md
+    referenced_by:
+      - design/gdd/base-production.md
+      - design/gdd/combat-resolution.md      # targets/damages the HQ; HQ hp 0 → win-check
+      - design/gdd/game-state-turn-manager.md # win_condition = enemy HQ destroyed
+      - design/gdd/game-hud.md                # hp 40 cited as the PIP_MAX_HP threshold example (structures >10 hp render numeric, not pips) (2026-07-22)
+    hp: 40
+    defense: 2                 # structure populates Combat's shared defense field (Unit- AND structure-owned)
+    production_cap: 2          # units/turn (Scout only)
+    producible_types: [scout]  # HQ makes only the basic unit; Production Outpost unlocks the rest
+    can_counterattack: false
+    placed_at_setup: true      # never built or rebuilt during play; one per player
+    added: 2026-07-21
+    revised: ""
+    # The win target — destroying the enemy HQ ends the match (see win_condition). Highest hp on the
+    # board (turn-3 rush is mathematically impossible: 10 Sniper hits / 20 AP min to destroy). def 2;
+    # structures are COVER-IMMUNE (combat-resolution.md Rule 6), so the HQ mitigates only via def 2 on
+    # ANY tile — the def+COVER_DR stacking trap can never apply to it (no "keep HQ off Cover" needed).
+
+  - name: economy_outpost
+    status: active
+    source: design/gdd/base-production.md
+    referenced_by:
+      - design/gdd/base-production.md
+      - design/gdd/ap-economy.md              # the ONLY structure counted by completed_outpost_count → ap_income
+      - design/gdd/combat-resolution.md        # targetable/damageable structure
+    hp: 8
+    build_cost: 4              # FLAT cost (4) — NO research discount. (Economy Tech retuned 2026-07-21 from a build-cost discount to an ap_income bonus per completed Economy Outpost; it no longer touches this cost.) was proposed 5; set to 4 to offset the 1 dead build_time turn (payback_turn 3, matches prototype)
+    build_time: 1             # owner-turns under construction before completing
+    defense: 0
+    added: 2026-07-21
+    revised: ""
+    # The boom investment. The ONLY structure feeding completed_outpost_count (Production/Defensive
+    # excluded). Under-construction = destroyable, no AP refund if destroyed. Soft target (dies to 4
+    # Scout hits) — rewards raiding an unscreened boom.
+
+  - name: production_outpost
+    status: active
+    source: design/gdd/base-production.md
+    referenced_by:
+      - design/gdd/base-production.md
+      - design/gdd/combat-resolution.md        # targetable/damageable structure
+      - design/gdd/game-hud.md                  # hp 14 cited as the PIP_MAX_HP upper-bound reference (keep PIP_MAX_HP ≤ 14) (2026-07-22)
+    hp: 14
+    build_cost: 9             # power-unlock pricing (= 1 Heavy); the closeout-drag brake strength
+    build_time: 2             # owner-turns; 2-turn exposed rebuild window is the brake
+    production_cap: 4          # units/turn
+    producible_types: [trooper, heavy, sniper]  # required gate to the non-Scout roster
+    defense: 0
+    added: 2026-07-21
+    revised: ""
+    # Required investment to access Trooper/Heavy/Sniper (HQ makes only Scouts). Cheaper to destroy
+    # (3 Heavy hits / 6 AP) than to build (9 AP) — keeps "defend it or lose your roster" real. Does
+    # NOT boost income. Heart of the closeout-drag answer.
+
+  - name: defensive_structure
+    status: active
+    source: design/gdd/base-production.md
+    referenced_by:
+      - design/gdd/base-production.md
+      - design/gdd/combat-resolution.md        # attacks via Combat DIRECT; can_counterattack; targetable
+    hp: 10
+    build_cost: 6
+    build_time: 1
+    attack: 4                 # effective_attack term when it fires (NOT research-buffed in VS)
+    attack_range: 2           # matches Trooper reach; DIRECT profile
+    defense: 1                # structure populates Combat's shared defense field
+    can_counterattack: true   # FIRST VS entity with counters ON — free retaliation when attacked in range
+    immobile: true            # never moves; fires on owner's turn at DEFENSIVE_ATTACK_COST=1
+    added: 2026-07-21
+    revised: ""
+    # Stationary turret/bunker: trades mobility for a discounted attack (DEFENSIVE_ATTACK_COST=1 < unit
+    # attack_cost 2) and free counters. Shields economy structures. Does not produce or boost income.
+
+  - name: research_lab
+    status: active
+    source: design/gdd/research-tech.md
+    referenced_by:
+      - design/gdd/research-tech.md
+      - design/gdd/base-production.md   # 5th structure type — added to B&P roster 2026-07-21 (Core Rule 2b + stat table), built via B&P's generic mechanics
+      - design/gdd/combat-resolution.md # targetable/damageable structure
+    hp: 12
+    build_cost: 8
+    build_time: 2
+    production_cap: 0          # not a producer; does not feed completed_outpost_count
+    defense: 0
+    can_counterattack: false
+    added: 2026-07-21
+    revised: ""
+    # 5th and final VS structure type. Uses Base & Production's generic build/placement/cancel/destroy
+    # lifecycle unchanged (Research owns the Lab stats + tech data; B&P owns the state machine). A
+    # Completed Lab researches ONE tech at a time; multiple Labs parallelize different techs. Destroyed
+    # mid-research = tech progress lost, no refund. hp 12 = defensible enough that the no-refund punish
+    # isn't a free Scout raid (playtest-tunable, range 8-16).
 
 # Example (remove when first real entry is added):
 #
@@ -106,7 +291,148 @@ items: []
 #   output_range[min, max], added
 # Optional: expression (the actual formula), notes
 
-formulas: []
+formulas:
+  - name: manhattan_distance
+    status: active
+    source: design/gdd/grid-terrain.md
+    referenced_by:
+      - design/gdd/grid-terrain.md
+      - design/gdd/game-state-turn-manager.md   # references it as a grid query it uses
+      - design/gdd/movement-system.md           # range / reachable-tile search
+      - design/gdd/combat-resolution.md          # adjacency (==1), cardinal-line walk, AREA ring [min_range, max_range]
+      - design/gdd/base-production.md            # placement adjacency (==1), deploy adjacency, >2-from-enemy-structure standoff
+    variables:
+      - x1
+      - y1
+      - x2
+      - y2
+    output_range: [0, 46]   # safe engine-range (24x24) over-approximation: (24-1)+(24-1)
+    expression: "abs(x1 - x2) + abs(y1 - y2)"
+    notes: "Grid distance on the orthogonal (4-directional) board. Used by Movement
+      (range / reachable-tile search) and Combat (adjacency == 1). Output max scales
+      with grid size; 46 is the 24x24 engine-range ceiling, not the VS ceiling.
+      VS-pinned 14x16 board ceiling = 28 (13+15); [0,46] retained as the
+      engine-range (24x24) over-approximation."
+    added: 2026-07-19
+    revised: ""
+
+  - name: ap_income
+    status: active
+    source: design/gdd/ap-economy.md
+    referenced_by:
+      - design/gdd/ap-economy.md
+      - design/gdd/game-state-turn-manager.md   # calls it at start-of-turn reset
+      - design/gdd/base-production.md            # PROVIDES completed_outpost_count (Economy Outposts only) + owns outpost build_cost/build_time
+      - design/gdd/research-tech.md            # Economy Tech ADDS ECONOMY_TECH_INCOME_BONUS × min(n, ECONOMY_TECH_TIER_THRESHOLD) for a researched player (retune 2026-07-21, capped 2026-07-22)
+      - design/gdd/command-action-interface.md   # consumes income/current_ap (10–32) for projected_remaining_ap + affordability display (2026-07-22)
+      - design/gdd/game-hud.md   # displays the ap_income decomposition (base + tiered outpost + Economy-Tech) as the on-demand income breakdown (2026-07-22)
+    variables:
+      - BASE_INCOME
+      - OUTPOST_BONUS_TIER1
+      - OUTPOST_BONUS_TIER2
+      - TIER_THRESHOLD
+      - completed_outpost_count
+      - ECONOMY_TECH_INCOME_BONUS   # Research-owned; optional term, gated on has_economy_tech(player)
+      - ECONOMY_TECH_TIER_THRESHOLD   # AP-Economy-owned; caps the Economy Tech term (added 2026-07-22 re-review)
+    output_range: [10, 32]   # floor 10 (0 outposts); ~26 without Economy Tech; ~32 with Economy Tech capped at n>=6
+    expression: "BASE_INCOME + OUTPOST_BONUS_TIER1*min(n, TIER_THRESHOLD) + OUTPOST_BONUS_TIER2*max(0, n - TIER_THRESHOLD) + (has_economy_tech(player) ? ECONOMY_TECH_INCOME_BONUS*min(n, ECONOMY_TECH_TIER_THRESHOLD) : 0), where n = max(0, completed_outpost_count(player))"
+    # was: "BASE_INCOME + 2*min(n, TIER_THRESHOLD) + 1*max(0, n - TIER_THRESHOLD)" before 2026-07-19
+    #      (design-review revision wired literals to named knobs OUTPOST_BONUS_TIER1/TIER2 and clamped n at 0)
+    # 2026-07-21: Economy Tech term "+ (has_economy_tech ? ECONOMY_TECH_INCOME_BONUS*n : 0)" ADDED by the
+    #      Research/Tech #8 design-review retune (Economy Tech was a build-cost discount, now a per-outpost
+    #      income bonus). Raised ceiling 26→38.
+    # 2026-07-22: AP Economy re-review found the uncapped term structurally cancelled OUTPOST_BONUS_TIER2's
+    #      diminishing-returns brake past n=4 (combined marginal reverted to +2/outpost, the pre-tiering
+    #      rate). Fixed by capping the term at ECONOMY_TECH_TIER_THRESHOLD (6, AP-Economy-owned) —
+    #      min(n, ECONOMY_TECH_TIER_THRESHOLD) replaces the bare n. Ceiling 38→32. Re-review resolved.
+    notes: "n = max(0, completed_outpost_count(player)) — CLAMPED at 0 so a negative count can never
+      produce sub-floor/negative income (upholds the never-negative invariant). completed_outpost_count
+      (contract precision resolved by base-production.md 2026-07-21): alive, owned, status=completed,
+      ECONOMY OUTPOSTS ONLY — HQ, Production Outposts, Defensive Structures, and under-construction all
+      excluded. Tiered
+      diminishing via named knobs: OUTPOST_BONUS_TIER1=2 (outposts 1-4), OUTPOST_BONUS_TIER2=1 (5+).
+      ECONOMY TECH (research-tech.md, retune 2026-07-21, capped 2026-07-22): a researched player adds
+      ECONOMY_TECH_INCOME_BONUS (1) AP per completed Economy Outpost, up to ECONOMY_TECH_TIER_THRESHOLD
+      (6) outposts — lifting each of the first 6 outposts from +2/+1 to +3/+2, then contributing nothing
+      further. Practical ceiling ~26→~32 (was ~38 uncapped). Past n=6 the combined marginal reverts to
+      +1/outpost, matching the no-tech rate — the diminishing-returns brake is restored.
+      FROZEN as a start-of-turn snapshot (not recomputed mid-turn). BASE_INCOME=10, TIER_THRESHOLD=4.
+      Consumed by Base & Production, Game HUD, Command & Action Interface when authored."
+    added: 2026-07-19
+    revised: 2026-07-22
+
+  - name: effective_attack
+    status: active
+    source: design/gdd/unit-system.md
+    referenced_by:
+      - design/gdd/unit-system.md
+      - design/gdd/combat-resolution.md   # consumes effective_attack as the attacker term in damage_formula
+      - design/gdd/research-tech.md        # Attack Tech sets the flag this formula reads; RESEARCH_ATK_BONUS owned there
+    variables:
+      - base_attack
+      - owner_has_attack_tech   # split from single owner_has_researched flag 2026-07-21 (one of TWO independent tech flags)
+      - RESEARCH_ATK_BONUS
+    output_range: [2, 7]   # un-researched Scout (2) to researched Sniper (6+1)
+    expression: "base_attack + (owner_has_attack_tech ? RESEARCH_ATK_BONUS : 0)"
+    notes: "Attack value Combat uses. base_attack from unit stat table (2/3/5/6). RESEARCH_ATK_BONUS
+      (+1) owned by Research GDD (research-tech.md). Computed live from owner tech flag (research buffs all
+      units instantly). Damage formula itself (cover, counters, min 1) is owned by Combat (see
+      damage_formula), not here. HANDOFF LANDED 2026-07-21: the single owner_has_researched flag was
+      SPLIT into two independent flags (owner_has_attack_tech + owner_has_defense_tech) in unit-system.md,
+      and the mirror formula effective_defense was added there — Unit System now In Revision pending
+      re-review of both."
+    added: 2026-07-19
+    revised: 2026-07-21
+
+  - name: effective_defense
+    status: active
+    source: design/gdd/unit-system.md   # OWNED by Unit System (mirror of effective_attack); adopted there 2026-07-21
+    referenced_by:
+      - design/gdd/unit-system.md          # formula added here 2026-07-21 (handoff landed)
+      - design/gdd/research-tech.md        # Defense Tech sets the flag; DEFENSE_TECH_BONUS owned there
+      - design/gdd/combat-resolution.md   # feeds the defense(defender) term of damage_formula (no Combat change — term already generic)
+    variables:
+      - base_defense           # Unit-owned, 0 all VS units
+      - owner_has_defense_tech
+      - DEFENSE_TECH_BONUS
+    output_range: [0, 1]   # 0 un-researched; 1 with Defense Tech (VS)
+    expression: "base_defense + (owner_has_defense_tech ? DEFENSE_TECH_BONUS : 0)"
+    notes: "The defender-side mirror of effective_attack, introduced by research-tech.md (Defense Tech)
+      and ADOPTED into unit-system.md 2026-07-21 (Unit System owns base_defense + the effective_* pattern).
+      base_defense is 0 for all VS units. Feeds Combat's EXISTING defense(defender) term — no Combat
+      formula change. DEFENSE_TECH_BONUS (+1) is provisional/playtest-gated (Cover floor-lock legibility
+      risk). Unit System In Revision pending re-review of this new formula."
+    added: 2026-07-21
+    revised: ""
+
+  - name: damage_formula
+    status: active
+    source: design/gdd/combat-resolution.md
+    referenced_by:
+      - design/gdd/combat-resolution.md
+      - design/gdd/base-production.md   # structures are defenders (HQ def 2, Def Structure def 1); Defensive Structure is also an attacker via this formula
+      - design/gdd/research-tech.md      # Defense Tech populates the defense(defender) term via effective_defense (no formula change)
+      - design/gdd/command-action-interface.md   # displays preview_damage output (post-cover/post-defense) in the pre-commit damage preview (2026-07-22)
+    variables:
+      - effective_attack   # attacker's effective_attack (Unit-owned formula), range 2-7
+      - cover_reduction    # COVER_DR if defender on Cover tile, else 0
+      - defense            # defender's Unit-owned defense stat (default 0 all VS units)
+      - MIN_DAMAGE         # floor, fixed 1
+    output_range: [1, 7]   # floor MIN_DAMAGE=1; ceiling = researched Sniper effective_attack 7 (subtractors only reduce)
+    expression: "max(MIN_DAMAGE, effective_attack(attacker) - cover_reduction(defender) - defense(defender))"
+    notes: "The single combat damage formula. cover_reduction = COVER_DR (=1) if the defender is a UNIT
+      on an is_cover tile (Grid owns the flag, Combat owns COVER_DR magnitude), else 0. STRUCTURES ARE
+      COVER-IMMUNE (combat-resolution.md Rule 6, 2026-07-21): a structure defender (HQ/outpost/Defensive
+      Structure) always gets cover_reduction=0 regardless of tile — its mitigation is exactly its defense.
+      This closes the defense+COVER_DR floor-lock trap for structures (HQ def 2 can never stack to 3).
+      defense is Unit-owned for units (0 all VS units — infrastructure) and Base-&-Production-owned for
+      structures (HQ 2, Defensive Structure 1). MIN_DAMAGE=1 floor: a landed hit always removes >=1 hp,
+      nothing is unkillable. NO RNG (Pillar 2 / anti-pillar). Counterattacks use this same formula with
+      roles swapped, gated by the can_counterattack flag (false all VS units; TRUE on Defensive Structure)
+      + a range-gate. Consumed by Base & Production (structure/HQ damage), Command & Action Interface
+      (pre-commit damage preview), Game HUD when authored."
+    added: 2026-07-21
+    revised: ""
 
 # Example:
 #
@@ -139,7 +465,337 @@ formulas: []
 #
 # Required fields: name, status, source, referenced_by, value, unit, added
 
-constants: []
+constants:
+  - name: grid_terrain_types
+    status: active
+    source: design/gdd/grid-terrain.md
+    referenced_by:
+      - design/gdd/grid-terrain.md
+      - design/gdd/movement-system.md   # Impassable blocks traversal
+      - design/gdd/combat-resolution.md # Cover→COVER_DR reduction; Impassable blocks DIRECT line-of-fire
+      - design/gdd/base-production.md    # structures placed only on non-Impassable, unoccupied tiles; may sit on Cover
+    value: "[Plain, Cover, Impassable]"
+    unit: enum
+    added: 2026-07-19
+    revised: 2026-07-21
+    # Cover grants a defensive damage reduction to UNIT defenders only (structures are cover-immune —
+    # combat-resolution.md Rule 6); magnitude (COVER_DR=1) now owned by combat-resolution.md.
+    # Impassable tiles are never passable or occupiable, and block DIRECT line of fire (Combat).
+
+  - name: grid_adjacency_mode
+    status: active
+    source: design/gdd/grid-terrain.md
+    referenced_by:
+      - design/gdd/grid-terrain.md
+      - design/gdd/movement-system.md   # movement is 4-directional per this
+      - design/gdd/combat-resolution.md # DIRECT fire uses the 4 cardinal directions
+      - design/gdd/base-production.md    # placement/deploy adjacency is manhattan==1 (orthogonal)
+    value: 4-directional-orthogonal
+    unit: adjacency
+    added: 2026-07-19
+    revised: 2026-07-21
+    # No diagonals. Movement and Combat both assume orthogonal adjacency (manhattan_distance == 1).
+    # Combat DIRECT targeting fires along one of the 4 cardinal directions.
+
+  - name: grid_size_range
+    status: active
+    source: design/gdd/grid-terrain.md
+    referenced_by:
+      - design/gdd/grid-terrain.md
+      - design/gdd/ap-economy.md   # VS board pinned to 14x16 to defuse the map-size dominant-strategy composition (2026-07-22)
+    value: "8-24 engine range; VS pinned to 14x16"
+    unit: tiles_per_axis
+    added: 2026-07-19
+    revised: 2026-07-22
+    # 8-24 per axis is the ENGINE-supported range (kept for the future map editor / map variety, an Alpha goal).
+    # was: "8-24" (open per-map range) before 2026-07-22.
+    # 2026-07-22 DECISION: the Vertical Slice ships a SINGLE PINNED board size, GRID_WIDTH=14 / GRID_HEIGHT=16,
+    # chosen to resolve the Economy-Tech + boom + large-map dominant-strategy composition (economy is
+    # turn-bound, rush is tile-bound → large boards let boom outrun rush). A fixed mid-small board keeps
+    # rush's punish window landing while boom is still mid-tier. Corner-to-corner Manhattan distance = 28.
+    # Building-count cap (MAX_OUTPOST_COUNT) left deliberately disabled — tile scarcity on the fixed board
+    # is the interim income ceiling; a hard cap is re-evaluated after playtest. Prototype baseline was 8x8.
+
+  - name: win_condition
+    status: active
+    source: design/gdd/game-state-turn-manager.md
+    referenced_by:
+      - design/gdd/game-state-turn-manager.md
+      - design/gdd/combat-resolution.md   # Combat deals the HQ-destroying damage that triggers the win-check
+      - design/gdd/base-production.md      # defines the HQ entity (hp 40) whose destruction triggers the win
+      - design/gdd/game-hud.md             # drives the victory/defeat presentation on GameOver(winner) (2026-07-22)
+    value: "opponent HQ destroyed (hp reaches 0)"
+    unit: rule
+    added: 2026-07-19
+    revised: 2026-07-21
+    # Combat destroys the HQ; Base & Production defines the HQ entity; both must agree with this.
+    # Optional MAX_ROUNDS + tiebreak (see game-state-turn-manager Tuning Knobs) is a secondary path.
+    # Simultaneous double-HQ destruction is out of VS scope (single-target combat); Turn Manager
+    # owns the reserved "non-active player wins" tiebreak for any future AoE.
+
+  - name: ap_reset_policy
+    status: active
+    source: design/gdd/game-state-turn-manager.md
+    referenced_by:
+      - design/gdd/game-state-turn-manager.md
+      - design/gdd/ap-economy.md   # AP Economy owns the amounts and honors this timing rule
+      - design/gdd/game-hud.md     # renders the policy: start-of-turn fill flourish to income + reflects end-of-turn discard (2026-07-22)
+    value: "reset to income at start-of-turn; unspent AP discarded at end-of-turn (no banking)"
+    unit: rule
+    added: 2026-07-19
+    revised: ""
+    # Pillar 1 timing rule. Turn manager owns the timing; AP Economy owns the income/spend AMOUNTS.
+    # AP Economy GDD must honor "no banking" — unspent AP is lost each turn.
+
+  - name: BASE_INCOME
+    status: active
+    source: design/gdd/ap-economy.md
+    referenced_by:
+      - design/gdd/ap-economy.md
+      - design/gdd/game-hud.md   # shown as the "BASE_INCOME (10)" line of the on-demand income breakdown (2026-07-22)
+    value: 10
+    unit: AP_per_turn
+    added: 2026-07-19
+    revised: ""
+    # Flat per-turn AP every player receives regardless of board state. Input to ap_income formula.
+
+  - name: outpost_income_tiers
+    status: active
+    source: design/gdd/ap-economy.md
+    referenced_by:
+      - design/gdd/ap-economy.md
+      - design/gdd/base-production.md   # owns the Economy Outpost build_cost/build_time; only Economy Outposts earn this bonus
+    value: "+2 AP per outpost for outposts 1-4; +1 AP per outpost for 5+ (TIER_THRESHOLD=4)"
+    unit: rule
+    added: 2026-07-19
+    revised: 2026-07-21
+    # Tiered diminishing returns on outpost income (snowball brake). Only COMPLETED ECONOMY Outposts count
+    # (Production/Defensive Structures do NOT earn income — base-production.md). Economy Outpost build COST
+    # (now 4 AP, was illustratively 5) and build TIME (1 turn) are owned by Base & Production, not here.
+
+  - name: SOFT_MOVE_PENALTY
+    status: active
+    source: design/gdd/unit-system.md
+    referenced_by:
+      - design/gdd/unit-system.md
+      - design/gdd/movement-system.md   # Movement owes the surcharge summation that reads this
+    value: 2.0   # PROVISIONAL (2026-07-20) — spike-gated; tuning range 1.5-3.0
+    unit: multiplier
+    added: 2026-07-20
+    revised: ""
+    # Unit-owned GLOBAL constant (not per-type), mirroring per-unit soft_move_cap. Each tile a unit
+    # moves past its soft_move_cap (CUMULATIVE this turn) costs ceil(move_cost * SOFT_MOVE_PENALTY) AP
+    # — a FLAT single-step surcharge (two-level step, NOT a multi-tier curve). ceil keeps AP integer
+    # (Movement/AP invariant). Purpose: brake on deep single-turn over-extension/rushes — NOT a
+    # per-step kiting tax (kiting sits under the caps). Surcharge summation formula owned by
+    # movement-system.md and ADDED there 2026-07-20 (the `move_path_cost` split + depth-dependent
+    # reachability); Movement is now In Revision pending an independent /design-review of that formula.
+
+  - name: attack_cost
+    status: active
+    source: design/gdd/combat-resolution.md
+    referenced_by:
+      - design/gdd/combat-resolution.md
+      - design/gdd/ap-economy.md   # quoted illustratively (non-authoritative) in ap-economy spend examples
+      - design/gdd/base-production.md   # DEFENSIVE_ATTACK_COST (1) is deliberately set below this unit attack_cost (2)
+      - design/gdd/command-action-interface.md   # displays attack_cost in pre-commit cost preview / affordability (worked examples AC-6, AC-26) (2026-07-22)
+    value: 2
+    unit: AP_per_attack
+    added: 2026-07-21
+    revised: ""
+    # Flat AP to make one attack, ALL unit types (Combat-owned). Once per unit per turn (gated by
+    # Unit's can_attack()/has_attacked). Deliberately NOT per-unit — unit identity lives in
+    # attack/range/hp, and Unit's per-AP audit assumes a constant 2-AP attack denominator. Counters
+    # are FREE (no attack_cost). Spent via AP Economy spend().
+
+  - name: COVER_DR
+    status: active
+    source: design/gdd/combat-resolution.md
+    referenced_by:
+      - design/gdd/combat-resolution.md
+      - design/gdd/grid-terrain.md   # Grid owns the is_cover FLAG; Combat owns this magnitude
+    value: 1
+    unit: damage_reduction
+    added: 2026-07-21
+    revised: ""
+    # Flat damage subtracted when a UNIT defender stands on a Cover tile. STRUCTURES ARE COVER-IMMUNE
+    # (combat-resolution.md Rule 6) — COVER_DR never applies to a structure defender. Fulfills
+    # grid_terrain_types' forward-reference ("magnitude owned by combat GDD"). Input to damage_formula.
+    # VS range 0-2; at 2, Scout AND Trooper floor-lock into Cover — keep 1 as the safe default. Cover binary in VS.
+
+  - name: MIN_DAMAGE
+    status: active
+    source: design/gdd/combat-resolution.md
+    referenced_by:
+      - design/gdd/combat-resolution.md
+    value: 1
+    unit: hp
+    added: 2026-07-21
+    revised: ""
+    # Damage floor — a landed attack always removes >=1 hp, so nothing on the board is ever unkillable
+    # (guards the cover+defense stacking case). Fixed at 1; lowering to 0 reintroduces the degenerate
+    # unkillable-feeling case the floor exists to prevent. Input to damage_formula.
+
+  - name: DEFENSIVE_ATTACK_COST
+    status: active
+    source: design/gdd/base-production.md
+    referenced_by:
+      - design/gdd/base-production.md
+      - design/gdd/command-action-interface.md   # prices the Defensive Structure's Attack verb (1, not 2) in the pre-commit preview (AC-26) (2026-07-22)
+    value: 1
+    unit: AP_per_attack
+    added: 2026-07-21
+    revised: ""
+    # AP for a Defensive Structure to fire (Base & Production-owned). DELIBERATELY < unit attack_cost (2)
+    # — the turret's reward for immobility. Counters are free (no AP). Fires via Combat's DIRECT profile.
+
+  - name: CANCEL_REFUND_RATE
+    status: active
+    source: design/gdd/base-production.md
+    referenced_by:
+      - design/gdd/base-production.md
+      - design/gdd/research-tech.md   # reused for cancel_research refund: floor(research_cost × 0.5) → Attack/Defense 5, Economy 3
+      - design/gdd/command-action-interface.md   # displays the cancel refund floor(build_cost × 0.5) before the Cancel Build commit (CR-9, AC-17) (2026-07-22)
+    value: 0.5
+    unit: fraction
+    added: 2026-07-21
+    revised: ""
+    # Fraction of build_cost refunded on VOLUNTARY cancel of an under-construction structure:
+    # floor(build_cost × 0.5) → Economy Outpost 2, Production Outpost 4, Defensive Structure 3. Combat
+    # DESTRUCTION refunds nothing (0). floor keeps AP integer + rounds owner-unfriendly. VS range 0.3-0.6.
+
+  - name: MAX_OUTPOST_COUNT
+    status: active
+    source: design/gdd/base-production.md
+    referenced_by:
+      - design/gdd/base-production.md
+    value: 10
+    unit: count
+    added: 2026-07-21
+    revised: ""
+    # DISABLED in the Vertical Slice (documented lever, not enforced). Hard ceiling on total outposts if
+    # ever enabled — the nameable cap AP Economy asked for so income has a ceiling. Closeout-drag is
+    # instead braked by structure cost/time/quality (Core Rule 12). Enable as a Production-Outpost
+    # sub-cap first if multiple Production Outposts defeat the brake in playtest. VS range 8-14.
+
+  - name: RESEARCH_ATK_BONUS
+    status: active
+    source: design/gdd/research-tech.md
+    referenced_by:
+      - design/gdd/research-tech.md
+      - design/gdd/unit-system.md   # effective_attack adds this when owner_has_attack_tech
+    value: 1
+    unit: attack
+    added: 2026-07-21   # formalized as its own constant 2026-07-21; previously referenced illustratively (+1) inside effective_attack
+    revised: ""
+    # Flat attack added to ALL a researched player's units by Attack Tech (permanent, per-player). Input
+    # to Unit System's effective_attack. VS range 1-2; at 2, shots-to-kill cliffs appear (rebalances the
+    # roster) — keep 1. Attack Tech: research_cost 10 AP / research_time 3 turns (Research-internal).
+
+  - name: DEFENSE_TECH_BONUS
+    status: active
+    source: design/gdd/research-tech.md
+    referenced_by:
+      - design/gdd/research-tech.md
+      - design/gdd/unit-system.md   # effective_defense adds this when owner_has_defense_tech (formula owed to Unit GDD)
+    value: 1
+    unit: defense
+    added: 2026-07-21
+    revised: ""
+    # Flat defense added to ALL a researched player's units by Defense Tech (permanent, per-player). FIRST
+    # source of nonzero unit defense in the game. Input to effective_defense. PROVISIONAL / playtest-gated:
+    # +1 with COVER_DR 1 = 2 mitigation floor-locks low-attack enemies to 1 damage on Cover (legibility
+    # risk — Combat's defense-stacking constraint). Floor-lock PERSISTS IN THE MIRROR MATCH: a researched
+    # Scout (atk 3) vs a researched Cover defender still = max(1,3-2)=1 — Scout is a structural 1-damage
+    # matchup no attacker tech escapes (research-tech.md design-review 2026-07-21). PRE-COMMITTED FALLBACK:
+    # non-stacking mitigation = max(defense, cover) instead of defense+cover (a Combat-formula change held
+    # in reserve). VS range 0-1; do NOT exceed 1. Defense Tech: research_cost 10 AP / research_time 4 turns.
+
+  - name: ECONOMY_TECH_DISCOUNT
+    status: deprecated   # 2026-07-21 — Economy Tech RETUNED (research-tech.md design-review) from a build-cost discount to an ap_income bonus. SUPERSEDED by ECONOMY_TECH_INCOME_BONUS. Kept per registry no-delete rule.
+    source: design/gdd/research-tech.md
+    referenced_by:
+      - design/gdd/research-tech.md
+    value: 1
+    unit: AP
+    added: 2026-07-21
+    revised: 2026-07-21
+    # DEPRECATED 2026-07-21. Was: flat AP reduction to a researched player's future Economy Outpost
+    # build_cost (4→3) via Economy Tech. Replaced by ECONOMY_TECH_INCOME_BONUS (a per-completed-outpost
+    # income bonus) so Economy Tech scales like Attack/Defense Tech instead of being a bounded rebate.
+    # Economy Outpost build_cost is now a flat 4 with no research discount (base-production.md Core Rule 2).
+
+  - name: ECONOMY_TECH_INCOME_BONUS
+    status: active
+    source: design/gdd/research-tech.md
+    referenced_by:
+      - design/gdd/research-tech.md
+      - design/gdd/ap-economy.md   # added to ap_income: + ECONOMY_TECH_INCOME_BONUS × min(completed_outpost_count, ECONOMY_TECH_TIER_THRESHOLD) for a researched player
+      - design/gdd/game-hud.md   # income-breakdown DISPLAYS this term (pass-through, never restates the literal) — added 2026-07-22 design-review so a future retune surfaces the HUD
+    value: 1
+    unit: AP_per_turn_per_outpost
+    added: 2026-07-21
+    revised: 2026-07-22
+    # Extra income per completed Economy Outpost per turn while Economy Tech is held (permanent, per-player),
+    # UP TO ECONOMY_TECH_TIER_THRESHOLD (6) outposts — see that constant.
+    # RETUNE 2026-07-21 (research-tech.md design-review) replacing ECONOMY_TECH_DISCOUNT's build-cost rebate
+    # with a boom-scaling income effect, so Economy Tech is a genuine PEER to Attack/Defense Tech rather
+    # than a bounded ~2-4 AP lifetime rebate. Added to ap_income; raised its practical ceiling ~26→~38 at
+    # n≈12 uncapped — AP Economy's 2026-07-22 re-review found this cancelled its own diminishing-returns
+    # brake past n=4 and fixed it with ECONOMY_TECH_TIER_THRESHOLD, capping the ceiling back to ~32.
+    # VS range 1 (2 → hard snowball even with the cap). Economy Tech: research_cost 7 AP / research_time 3 turns.
+
+  - name: ECONOMY_TECH_TIER_THRESHOLD
+    status: active
+    source: design/gdd/ap-economy.md
+    referenced_by:
+      - design/gdd/ap-economy.md
+      - design/gdd/research-tech.md   # economy_tech_income_bonus reads this cap
+      - design/gdd/game-hud.md   # income-breakdown DISPLAYS the capped Economy-Tech term (pass-through, never restates the literal) — added 2026-07-22 design-review
+    value: 6
+    unit: outpost_count
+    added: 2026-07-22
+    revised: ""
+    # AP-Economy-owned brake on Research's ECONOMY_TECH_INCOME_BONUS term, added in AP Economy's
+    # 2026-07-22 re-review (Research/Tech #8's retune of Economy Tech). Before this cap, the term was
+    # unbounded (ECONOMY_TECH_INCOME_BONUS × n with no ceiling), which structurally cancelled
+    # OUTPOST_BONUS_TIER2's diminishing-returns brake for any researched player past n=4 (combined
+    # marginal value reverted to +2/outpost, the pre-tiering rate) — a real defect, not just an
+    # "amplified snowball." Capping at 6 outposts restores diminishing past both TIER_THRESHOLD (4) and
+    # this threshold: past n=6 the combined marginal is back to +1/outpost. VS range 4-8; mirrors
+    # TIER_THRESHOLD's role but tuned separately since Research wanted stronger boom-scaling than the
+    # base curve provides.
+
+  - name: is_surcharged
+    status: active
+    source: design/gdd/movement-system.md
+    referenced_by:
+      - design/gdd/movement-system.md
+      - design/gdd/command-action-interface.md   # renders the in-cap vs over-cap overlay split (CR-9) directly from this flag; holds no copy of the surcharge logic itself
+    value: "per-tile bool on reachable()'s return — true when that tile's min_cost includes >=1 over-cap (soft_move_cap) step"
+    unit: query_field
+    added: 2026-07-22
+    revised: ""
+    # Reciprocal contract opened by Command & Action Interface's design-review (OQ-2), landed same-day
+    # in movement-system.md. Computed by the same Dijkstra search that produces min_cost — no new
+    # traversal. Makes the CR-9 in-cap/over-cap overlay split a contract, not a UI inference from
+    # min_cost (which can't cleanly separate a mixed in-cap/over-cap path). Final field name/shape
+    # reconciled at /create-architecture.
+
+  - name: legal_targets_from_tile
+    status: active
+    source: design/gdd/combat-resolution.md
+    referenced_by:
+      - design/gdd/combat-resolution.md
+      - design/gdd/command-action-interface.md   # backs D-3's honest after-move attack preview (CR-10 Tier 2)
+    value: "legal_targets(unit, from_tile) -> set<target> — side-effect-free hypothetical-tile overload of legal_targets(unit); evaluates range/LoF/targeting-profile as if unit stood on from_tile, without moving it"
+    unit: query_overload
+    added: 2026-07-22
+    revised: ""
+    # Reciprocal contract opened by Command & Action Interface's design-review (OQ-1), landed same-day
+    # in combat-resolution.md. Fired as a batch across the entire reachable() frontier once per
+    # PREVIEW_MOVE entry (command-action-interface.md CR-10 Tier 2) — cost is reachable-sized, perf
+    # budget owed to /architecture-decision. Optional future extension: preview_damage(atk, tgt, from_tile).
 
 # Example:
 #

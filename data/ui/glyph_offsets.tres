@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="GlyphOffsets" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/ui/board_renderer/glyph_offsets.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+hp_pip = Vector2(0, 0)
+has_acted = Vector2(24, -56)
+tech_marker = Vector2(-24, -56)
+structure_hp = Vector2(0, -72)
+build_timer_badge = Vector2(0, -88)
+research_marker = Vector2(32, -72)
+ap_cost_badge = Vector2(-32, -20)
+damage_number = Vector2(0, -100)
+cover_glyph = Vector2(-32, -8)
+turns_numeral = Vector2(32, -8)
+target_bracket = Vector2(0, -32)
+d3_echo = Vector2(0, -16)

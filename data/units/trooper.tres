@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Trooper"
+hp = 6
+attack = 3
+attack_range = 2
+move_cost = 2
+soft_move_cap = 3
+produce_cost = 4

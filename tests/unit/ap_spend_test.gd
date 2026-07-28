@@ -1,0 +1,265 @@
+# Story 002: AP Spend Contract — can_afford & spend.
+#
+# Covers the acceptance criteria in
+# production/epics/ap-economy/story-002-ap-spend-contract.md against
+# AP.current_ap()/AP.can_afford()/AP.spend(), using GameStateFactory for state
+# setup. No RNG, no time-dependent asserts, no file I/O; each test builds its
+# own isolated state (no shared mutable fixtures).
+#
+# Naming follows tests/README.md: [system]_[feature]_test.gd + test_[scenario]_[expected].
+extends GdUnitTestSuite
+
+
+# --- spend(): basic deduction ------------------------------------------------
+
+func test_spend_3_from_5_returns_true_and_leaves_2() -> void:
+	# Arrange
+	var state := GameStateFactory.make_state(1, 0)
+	state.per_player[0].current_ap = 5
+	# Act
+	var result := AP.spend(state, 0, 3)
+	# Assert
+	assert_bool(result).is_true()
+	assert_int(state.per_player[0].current_ap).is_equal(2)
+
+
+func test_spend_6_from_5_returns_false_and_leaves_unchanged() -> void:
+	# Arrange
+	var state := GameStateFactory.make_state(1, 0)
+	state.per_player[0].current_ap = 5
+	# Act
+	var result := AP.spend(state, 0, 6)
+	# Assert
+	assert_bool(result).is_false()
+	assert_int(state.per_player[0].current_ap).is_equal(5)
+
+
+# --- spend(): zero and negative edge cases ----------------------------------
+
+func test_spend_0_returns_true_and_is_a_noop() -> void:
+	# Arrange
+	var state := GameStateFactory.make_state(1, 0)
+	state.per_player[0].current_ap = 5
+	# Act
+	var result := AP.spend(state, 0, 0)
+	# Assert
+	assert_bool(result).is_true()
+	assert_int(state.per_player[0].current_ap).is_equal(5)
+
+
+func test_spend_negative_1_returns_false_and_leaves_unchanged() -> void:
+	# Arrange
+	var state := GameStateFactory.make_state(1, 0)
+	state.per_player[0].current_ap = 5
+	# Act
+	var result := AP.spend(state, 0, -1)
+	# Assert
+	assert_bool(result).is_false()
+	assert_int(state.per_player[0].current_ap).is_equal(5)
+
+
+# --- spend(): exact-balance edge case (no off-by-one) -----------------------
+
+func test_spend_5_from_5_returns_true_leaves_zero_and_then_cannot_afford_1() -> void:
+	# Arrange — spend to exactly zero; assert no off-by-one leaves current_ap
+	# at 1 or -1.
+	var state := GameStateFactory.make_state(1, 0)
+	state.per_player[0].current_ap = 5
+	# Act
+	var result := AP.spend(state, 0, 5)
+	# Assert
+	assert_bool(result).is_true()
+	assert_int(state.per_player[0].current_ap).is_equal(0)
+	assert_bool(AP.can_afford(state, 0, 1)).is_false()
+
+
+# --- spend(): per-player pool isolation + active-player gate (Rule 7) -------
+
+func test_spend_by_active_player_a_does_not_affect_inactive_player_b_pool() -> void:
+	# Arrange — Player A (0) active with 5 AP, Player B (1) inactive with 10 AP.
+	var state := GameStateFactory.make_state(2, 0)
+	state.per_player[0].current_ap = 5
+	state.per_player[1].current_ap = 10
+	# Act
+	var result := AP.spend(state, 0, 3)
+	# Assert
+	assert_bool(result).is_true()
+	assert_int(state.per_player[0].current_ap).is_equal(2)
+	assert_int(state.per_player[1].current_ap).is_equal(10)
+
+
+func test_spend_by_inactive_player_b_returns_false_and_changes_no_pool() -> void:
+	# Arrange — Player A (0) active, Player B (1) inactive with 10 AP.
+	var state := GameStateFactory.make_state(2, 0)
+	state.per_player[0].current_ap = 5
+	state.per_player[1].current_ap = 10
+	# Act — B (not active) attempts to spend.
+	var result := AP.spend(state, 1, 1)
+	# Assert — rejected, Rule 7 active-player gate; neither pool changes.
+	assert_bool(result).is_false()
+	assert_int(state.per_player[0].current_ap).is_equal(5)
+	assert_int(state.per_player[1].current_ap).is_equal(10)
+
+
+# --- credit(): additive refund path (Story 005 — cancel-build refund) -------
+
+func test_credit_2_to_5_returns_true_and_leaves_7() -> void:
+	# Arrange — the active player's pool at 5.
+	var state := GameStateFactory.make_state(1, 0)
+	state.per_player[0].current_ap = 5
+	# Act
+	var result := AP.credit(state, 0, 2)
+	# Assert — additive, not overwrite.
+	assert_bool(result).is_true()
+	assert_int(state.per_player[0].current_ap).is_equal(7)
+
+
+func test_credit_0_returns_true_and_is_a_noop() -> void:
+	# Arrange — a 0-cost structure refunds nothing but the cancel still succeeds.
+	var state := GameStateFactory.make_state(1, 0)
+	state.per_player[0].current_ap = 5
+	# Act
+	var result := AP.credit(state, 0, 0)
+	# Assert
+	assert_bool(result).is_true()
+	assert_int(state.per_player[0].current_ap).is_equal(5)
+
+
+func test_credit_negative_1_returns_false_and_leaves_unchanged() -> void:
+	# Arrange
+	var state := GameStateFactory.make_state(1, 0)
+	state.per_player[0].current_ap = 5
+	# Act
+	var result := AP.credit(state, 0, -1)
+	# Assert — a negative credit is rejected (no covert spend via credit).
+	assert_bool(result).is_false()
+	assert_int(state.per_player[0].current_ap).is_equal(5)
+
+
+func test_credit_by_inactive_player_returns_false_and_changes_no_pool() -> void:
+	# Arrange — Player 0 active, Player 1 inactive. credit is active-player-gated
+	# like spend (Rule 7) — this directly exercises that gate (the cancel-build
+	# call site can't reach it because validate_cancel rejects non-owners first,
+	# so this is the gate's only direct coverage).
+	var state := GameStateFactory.make_state(2, 0)
+	state.per_player[0].current_ap = 5
+	state.per_player[1].current_ap = 10
+	# Act — inactive player 1 attempts to be credited.
+	var result := AP.credit(state, 1, 3)
+	# Assert — rejected; neither pool changes.
+	assert_bool(result).is_false()
+	assert_int(state.per_player[0].current_ap).is_equal(5)
+	assert_int(state.per_player[1].current_ap).is_equal(10)
+
+
+func test_credit_can_raise_current_ap_above_frozen_income_snapshot() -> void:
+	# Arrange — income frozen at 10, pool already at 10 (fully un-spent). A refund
+	# is a mid-turn credit with NO upper cap: the refunded AP is spendable again
+	# this same turn, so current_ap may legitimately exceed income_this_turn
+	# (ADR-0006: the snapshot is a floor-setting event, not a live ceiling).
+	var state := GameStateFactory.make_state(1, 0)
+	state.per_player[0].income_this_turn = 10
+	state.per_player[0].current_ap = 10
+	# Act
+	var result := AP.credit(state, 0, 4)
+	# Assert — 14 > the frozen 10; no clamp to the snapshot.
+	assert_bool(result).is_true()
+	assert_int(state.per_player[0].current_ap).is_equal(14)
+
+
+# --- can_afford(): pure query, no mutation -----------------------------------
+
+func test_can_afford_3_from_5_returns_true_and_does_not_mutate() -> void:
+	# Arrange
+	var state := GameStateFactory.make_state(1, 0)
+	state.per_player[0].current_ap = 5
+	# Act
+	var result := AP.can_afford(state, 0, 3)
+	# Assert
+	assert_bool(result).is_true()
+	assert_int(state.per_player[0].current_ap).is_equal(5)
+
+
+func test_can_afford_negative_1_returns_false() -> void:
+	# Arrange
+	var state := GameStateFactory.make_state(1, 0)
+	state.per_player[0].current_ap = 5
+	# Act / Assert
+	assert_bool(AP.can_afford(state, 0, -1)).is_false()
+
+
+func test_can_afford_0_returns_true_the_non_negative_boundary() -> void:
+	# Arrange — amount == 0 is the boundary between the negative-rejection and
+	# non-negative-acceptance branches of `amount >= 0`; a 0-cost query is
+	# affordable at any pool level, including 0.
+	var state := GameStateFactory.make_state(1, 0)
+	state.per_player[0].current_ap = 0
+	# Act / Assert — 0 is affordable even at an empty pool; pure, no mutation.
+	assert_bool(AP.can_afford(state, 0, 0)).is_true()
+	assert_int(state.per_player[0].current_ap).is_equal(0)
+
+
+func test_can_afford_at_zero_ap_returns_false_for_any_positive_amount() -> void:
+	# Arrange
+	var state := GameStateFactory.make_state(1, 0)
+	state.per_player[0].current_ap = 0
+	# Act / Assert
+	assert_bool(AP.can_afford(state, 0, 1)).is_false()
+	assert_bool(AP.can_afford(state, 0, 5)).is_false()
+	assert_int(state.per_player[0].current_ap).is_equal(0)
+
+
+# --- can_afford(): deliberately ungated on active-player --------------------
+
+func test_can_afford_for_inactive_player_still_returns_correct_answer() -> void:
+	# Arrange — Player 0 active, Player 1 inactive. can_afford must remain
+	# callable for the inactive player (AI-eval / HUD use case) and answer
+	# correctly for THEIR pool, not the active player's.
+	var state := GameStateFactory.make_state(2, 0)
+	state.per_player[0].current_ap = 5
+	state.per_player[1].current_ap = 2
+	# Act / Assert — inactive player 1 can afford 2 but not 3.
+	assert_bool(AP.can_afford(state, 1, 2)).is_true()
+	assert_bool(AP.can_afford(state, 1, 3)).is_false()
+	# Pools remain untouched — pure query.
+	assert_int(state.per_player[0].current_ap).is_equal(5)
+	assert_int(state.per_player[1].current_ap).is_equal(2)
+
+
+# --- current_ap(): thin read facade -----------------------------------------
+
+func test_current_ap_returns_the_players_current_ap_field() -> void:
+	# Arrange
+	var state := GameStateFactory.make_state(2, 0)
+	state.per_player[0].current_ap = 7
+	state.per_player[1].current_ap = 3
+	# Act / Assert — resolves the passed player's own field, not player 0's.
+	assert_int(AP.current_ap(state, 0)).is_equal(7)
+	assert_int(AP.current_ap(state, 1)).is_equal(3)
+
+
+# --- Invariant: 0 <= current_ap <= income_this_turn across a spend sequence -
+
+func test_invariant_current_ap_stays_within_bounds_across_valid_spend_sequence() -> void:
+	# Arrange — income_this_turn frozen at 10 (Story 003 concern to set it;
+	# here we simulate the frozen snapshot directly per this story's scope).
+	var state := GameStateFactory.make_state(1, 0)
+	state.per_player[0].income_this_turn = 10
+	state.per_player[0].current_ap = 10
+
+	# Act / Assert — each valid spend keeps 0 <= current_ap <= income_this_turn.
+	assert_bool(AP.spend(state, 0, 4)).is_true()
+	assert_int(state.per_player[0].current_ap).is_equal(6)
+	assert_bool(state.per_player[0].current_ap >= 0).is_true()
+	assert_bool(state.per_player[0].current_ap <= state.per_player[0].income_this_turn).is_true()
+
+	assert_bool(AP.spend(state, 0, 6)).is_true()
+	assert_int(state.per_player[0].current_ap).is_equal(0)
+	assert_bool(state.per_player[0].current_ap >= 0).is_true()
+	assert_bool(state.per_player[0].current_ap <= state.per_player[0].income_this_turn).is_true()
+
+	# A further spend attempt is rejected — invariant still holds, unchanged.
+	assert_bool(AP.spend(state, 0, 1)).is_false()
+	assert_int(state.per_player[0].current_ap).is_equal(0)
+	assert_bool(state.per_player[0].current_ap >= 0).is_true()
+	assert_bool(state.per_player[0].current_ap <= state.per_player[0].income_this_turn).is_true()

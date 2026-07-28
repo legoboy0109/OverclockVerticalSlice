@@ -5,20 +5,25 @@ Each agent owns a specific domain, enforcing separation of concerns and quality.
 
 ## Technology Stack
 
-- **Engine**: [CHOOSE: Godot 4 / Unity / Unreal Engine 5]
-- **Language**: [CHOOSE: GDScript / C# / C++ / Blueprint]
+- **Engine**: Redot 26.2 (Godot 4.x-compatible fork)
+- **Language**: GDScript (C# may be added later for performance-critical systems)
 - **Version Control**: Git with trunk-based development
-- **Build System**: [SPECIFY after choosing engine]
-- **Asset Pipeline**: [SPECIFY after choosing engine]
+- **Build System**: Redot Export Templates (same pipeline as Godot)
+- **Asset Pipeline**: Redot/Godot Import System + custom resource pipeline
 
-> **Note**: Engine-specialist agents exist for Godot, Unity, and Unreal with
-> dedicated sub-specialists. Use the set matching your engine.
+> **Note**: Redot is a hard-fork of Godot 4 and is backward-compatible with
+> Godot 4.x projects and APIs, so the **Godot** engine-specialist agent set
+> (`godot-specialist` and sub-specialists) is the correct one for this project.
+> The engine binary is exposed at the repo root as `./redot`.
 
 ## Project Structure
 
 @.claude/docs/directory-structure.md
 
 ## Engine Version Reference
+
+> Redot is Godot-4-compatible, so the Godot engine reference is authoritative
+> for this project (no Redot-specific reference is maintained).
 
 @docs/engine-reference/godot/VERSION.md
 

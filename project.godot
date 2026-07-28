@@ -1,0 +1,83 @@
+; Engine configuration file — OVERCLOCK
+; Minimal bootstrap project that initializes the Redot/Godot 4.6 project so the
+; GdUnit4 test harness can run headlessly (local + CI). Rendering/input/autoload
+; settings are added during Pre-Production as the vertical slice is built.
+;
+; Engine: Redot 26.2 (Godot 4.6-compatible). See docs/engine-reference/godot/VERSION.md.
+
+config_version=5
+
+[application]
+
+config/name="OVERCLOCK"
+config/features=PackedStringArray("4.6", "Forward Plus")
+
+[autoload]
+
+; Thin, logic-free lookup Autoload (ADR-0006), mirroring MatchService's
+; read-only lookup idiom (ADR-0001). Loads EconomyConfig once at boot;
+; AP's static functions read Balance.economy internally.
+Balance="*res://src/core/economy/balance.gd"
+
+; Thin, logic-free registry Autoload (ADR-0007), mirroring Balance's idiom.
+; Preloads the 4 VS UnitTypeDef presets once at boot; any system reads
+; UnitTypes.SCOUT/TROOPER/HEAVY/SNIPER as a bare global reference.
+UnitTypes="*res://src/core/unit/unit_types.gd"
+
+; Thin, logic-free config Autoload (ADR-0009), a sibling of Balance. Loads the
+; UnitConfig movement-tuning resource once at boot; UnitConfig.surcharge_for()
+; reads UnitBalance.units.soft_move_penalty_x10 internally.
+UnitBalance="*res://src/core/unit/unit_balance.gd"
+
+; Thin, logic-free config Autoload (ADR-0010), a sibling of Balance/UnitBalance.
+; Loads the CombatConfig damage-formula tuning resource once at boot; Combat's
+; damage()/preview_damage() read CombatBalance.combat.* internally.
+CombatBalance="*res://src/core/combat/combat_balance.gd"
+
+; Thin, logic-free registry Autoload (ADR-0007), mirroring UnitTypes' idiom.
+; Preloads the 5 VS StructureTypeDef presets (HQ, Economy/Production Outpost,
+; Defensive Structure, Research Lab) once at boot; any system reads
+; StructureTypes.HQ/ECONOMY_OUTPOST/... as a bare global reference.
+StructureTypes="*res://src/core/structure/structure_types.gd"
+
+; Thin, logic-free config Autoload (ADR-0017 D6), a sibling of Balance/
+; UnitBalance/CombatBalance. Loads the BaseProductionConfig tuning resource
+; once at boot; Base & Production (and cross-system readers like Combat's
+; defensive_attack_cost) read StructureBalance.base_production.* internally.
+StructureBalance="*res://src/core/base_production/structure_balance.gd"
+
+; Thin config Autoload (ADR-0011 §6), a sibling of Balance/UnitBalance/
+; CombatBalance/StructureBalance. Loads the AIConfig tuning resource once at
+; boot; AI Opponent code reads AIBalance.ai.* internally. Registered last so
+; Balance and StructureTypes (both read by its TR-ai-008 load-time invariant
+; check) are already-constructed Autoloads by the time AIBalance._ready() runs.
+AIBalance="*res://src/gameplay/ai/ai_balance.gd"
+
+; Thin config Autoload (ADR-0016 §4), a sibling of Balance/UnitBalance/
+; CombatBalance/StructureBalance/AIBalance. Loads the HUDConfig tuning resource
+; once at boot; Game HUD widgets read HudBalance.hud.* internally. Also runs a
+; load-time cross-config guard (TR-hud-008): unlike most siblings it clamps
+; ap_tick_duration_ms down to InputConfig.input_lock_ms (push_error + clamp,
+; never a crash — see hud_balance.gd for why this differs from AIBalance's
+; push_error+OS.crash pattern).
+HudBalance="*res://src/ui/game_hud/hud_balance.gd"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg")
+
+[input]
+
+; ADR-0014 pre-Accepted spike: board_cursor_cycle is a DEDICATED action,
+; distinct from ui_focus_next (Tab), so a future menu re-authoring wiring Tab
+; for Control traversal can never accidentally shadow cycle-jump (ADR-0014 §2).
+; Keyboard fallback bound here ([ and ]); shoulder-button primary binding is
+; still open per the ADR's own Risks section — not assigned by this spike.
+; ui_up/ui_down/ui_left/ui_right are NOT redefined here — they use Godot's
+; built-in engine defaults (arrow keys + D-pad), unmodified.
+board_cursor_cycle={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":91,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":93,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}

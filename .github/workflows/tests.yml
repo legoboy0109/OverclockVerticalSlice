@@ -1,0 +1,61 @@
+name: Automated Tests
+
+# Redot 26.2 is a Godot-4.6 hard-fork. There is no Redot-specific GitHub Action,
+# so CI runs the GdUnit4 suite against stock Godot 4.6 as a compatible stand-in.
+# Headless GdUnit4 tests run identically on both. Local runs use ./redot
+# (see tests/README.md). If Redot-specific behavior ever diverges under test,
+# move this job to a self-hosted runner invoking the ./redot binary directly.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Run GdUnit4 Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      # Fresh CI checkouts have no .godot/ (gitignored), so class_name scripts
+      # are not yet registered in the global script class cache — a headless
+      # test run would fail with "Could not find type X" for any newly added
+      # class_name script (Godot #93424 / #75684). Install Godot 4.6 and run an
+      # import pass to build the cache BEFORE the test runner. Two passes: the
+      # first registers classes, the second resolves any base-class-before-
+      # subclass ordering dependency. Import exit codes are tolerated (|| true)
+      # because --import can return non-zero even when the cache is written
+      # correctly (#93424) — the GdUnit4 test step below is the real gate, and
+      # it reuses the .godot/ cache this step produces.
+      - name: Set up Godot 4.6 (for project import / class cache)
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.6.0
+          use-dotnet: false
+
+      - name: Build script-class cache (register class_name scripts)
+        run: |
+          godot --headless --import || true
+          godot --headless --import || true
+
+      - name: Run GdUnit4 Tests
+        uses: MikeSchulze/gdUnit4-action@v1
+        with:
+          godot-version: '4.6'
+          paths: |
+            tests/unit
+            tests/integration
+          report-name: test-results
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: reports/

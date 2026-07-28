@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Sniper"
+hp = 3
+attack = 6
+attack_range = 3
+move_cost = 2
+soft_move_cap = 3
+produce_cost = 5

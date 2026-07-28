@@ -5,44 +5,53 @@
 
 ## Engine & Language
 
-- **Engine**: [TO BE CONFIGURED — run /setup-engine]
-- **Language**: [TO BE CONFIGURED]
-- **Rendering**: [TO BE CONFIGURED]
-- **Physics**: [TO BE CONFIGURED]
+- **Engine**: Redot 26.2 (Godot 4.x-compatible fork) — binary at `./redot`
+- **Language**: GDScript (primary). C# may be added incrementally for
+  performance-critical systems (deep AI search, large-map pathfinding) if
+  profiling shows GDScript is a bottleneck — Redot supports mixing both.
+- **Rendering**: Forward+ (default renderer; 2D isometric has no need for Mobile/Compatibility's reduced feature set)
+- **Physics**: Godot Physics 2D (standard for grid-based tactics; Jolt targets 3D and is not relevant here)
 
 ## Input & Platform
 
 <!-- Written by /setup-engine. Read by /ux-design, /ux-review, /test-setup, /team-ui, and /dev-story -->
 <!-- to scope interaction specs, test helpers, and implementation to the correct input methods. -->
 
-- **Target Platforms**: [TO BE CONFIGURED — e.g., PC, Console, Mobile, Web]
-- **Input Methods**: [TO BE CONFIGURED — e.g., Keyboard/Mouse, Gamepad, Touch, Mixed]
-- **Primary Input**: [TO BE CONFIGURED — the dominant input for this game]
-- **Gamepad Support**: [TO BE CONFIGURED — Full / Partial / None]
-- **Touch Support**: [TO BE CONFIGURED — Full / Partial / None]
-- **Platform Notes**: [TO BE CONFIGURED — any platform-specific UX constraints]
+- **Target Platforms**: PC (Steam / Epic)
+- **Input Methods**: Keyboard/Mouse (primary), Gamepad (secondary)
+- **Primary Input**: Keyboard/Mouse
+- **Gamepad Support**: Partial
+- **Touch Support**: None
+- **Platform Notes**: Mouse-driven grid tactics. No hover-only interactions — every core action must be reachable by click (and, where practical, a keyboard shortcut) so a gamepad/cursor port stays feasible. Keep the board readable at 1080p and 1440p.
 
 ## Naming Conventions
 
-- **Classes**: [TO BE CONFIGURED]
-- **Variables**: [TO BE CONFIGURED]
-- **Signals/Events**: [TO BE CONFIGURED]
-- **Files**: [TO BE CONFIGURED]
-- **Scenes/Prefabs**: [TO BE CONFIGURED]
-- **Constants**: [TO BE CONFIGURED]
+- **Classes**: PascalCase (e.g., `UnitController`)
+- **Variables/functions**: snake_case (e.g., `move_speed`, `end_turn()`)
+- **Signals/Events**: snake_case, past tense (e.g., `turn_ended`, `unit_moved`)
+- **Files**: snake_case matching class (e.g., `unit_controller.gd`)
+- **Scenes**: PascalCase matching root node (e.g., `UnitController.tscn`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_ACTION_POINTS`)
+
+> Use static typing in GDScript (`var hp: int = 10`) — it catches bugs and is
+> meaningfully faster in the tight loops a turn-based AI hits.
 
 ## Performance Budgets
 
-- **Target Framerate**: [TO BE CONFIGURED]
-- **Frame Budget**: [TO BE CONFIGURED]
-- **Draw Calls**: [TO BE CONFIGURED]
-- **Memory Ceiling**: [TO BE CONFIGURED]
+- **Target Framerate**: 60 FPS
+- **Frame Budget**: 16.6 ms/frame
+- **Draw Calls**: < 500 (generous for 2D isometric; TileMap batching should keep this low)
+- **Memory Ceiling**: [TO BE CONFIGURED — set when target hardware is known; 2D tactics is light]
+
+> Defaults for a 2D isometric tactics game; re-tune against real target hardware
+> once the prototype exists. Turn-based means no hard real-time constraint —
+> 60 FPS is for smooth camera/UI feel, not simulation deadlines.
 
 ## Testing
 
-- **Framework**: [TO BE CONFIGURED]
+- **Framework**: GDUnit4 (addon) — run via `./redot --headless --script tests/gdunit4_runner.gd`
 - **Minimum Coverage**: [TO BE CONFIGURED]
-- **Required Tests**: Balance formulas, gameplay systems, networking (if applicable)
+- **Required Tests**: Balance formulas, turn/combat resolution, AI decision logic, gameplay systems
 
 ## Forbidden Patterns
 
@@ -65,12 +74,16 @@
 <!-- Read by /code-review, /architecture-decision, /architecture-review, and team skills -->
 <!-- to know which specialist to spawn for engine-specific validation. -->
 
-- **Primary**: [TO BE CONFIGURED — run /setup-engine]
-- **Language/Code Specialist**: [TO BE CONFIGURED]
-- **Shader Specialist**: [TO BE CONFIGURED]
-- **UI Specialist**: [TO BE CONFIGURED]
-- **Additional Specialists**: [TO BE CONFIGURED]
-- **Routing Notes**: [TO BE CONFIGURED]
+- **Primary**: godot-specialist (Redot is Godot-4-compatible — the Godot agent set applies)
+- **Language/Code Specialist**: godot-gdscript-specialist (all .gd files)
+- **Shader Specialist**: godot-shader-specialist (.gdshader files, VisualShader resources)
+- **UI Specialist**: godot-specialist (no dedicated UI specialist — primary covers all UI)
+- **Additional Specialists**: godot-gdextension-specialist (GDExtension / native C++ bindings only)
+- **Routing Notes**: Invoke primary for architecture decisions, ADR validation, and cross-cutting code review. Invoke GDScript specialist for code quality, signal architecture, static typing enforcement, and GDScript idioms. Invoke shader specialist for material design and shader code. Invoke GDExtension specialist only when native extensions are involved. When C# is added later, route .cs files to godot-csharp-specialist.
+
+> **Redot note**: These `godot-*` agents target Godot 4 APIs, which Redot is
+> compatible with. For anything Redot-specific or post-Godot-4.3, agents must
+> cross-reference `docs/engine-reference/godot/VERSION.md` and verify via WebSearch.
 
 ### File Extension Routing
 
@@ -79,9 +92,9 @@
 
 | File Extension / Type | Specialist to Spawn |
 |-----------------------|---------------------|
-| Game code (primary language) | [TO BE CONFIGURED] |
-| Shader / material files | [TO BE CONFIGURED] |
-| UI / screen files | [TO BE CONFIGURED] |
-| Scene / prefab / level files | [TO BE CONFIGURED] |
-| Native extension / plugin files | [TO BE CONFIGURED] |
+| Game code (.gd files) | godot-gdscript-specialist |
+| Shader / material files (.gdshader, VisualShader) | godot-shader-specialist |
+| UI / screen files (Control nodes, CanvasLayer) | godot-specialist |
+| Scene / prefab / level files (.tscn, .tres) | godot-specialist |
+| Native extension / plugin files (.gdextension, C++) | godot-gdextension-specialist |
 | General architecture review | Primary |
