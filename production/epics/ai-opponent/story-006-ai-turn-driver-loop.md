@@ -1,12 +1,24 @@
 # Story 006: `AITurnDriver` — Evaluate→Commit Loop, Termination, Rejection Handling, Per-Commit Streaming
 
 > **Epic**: AI Opponent (Minimal Vertical Slice)
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Feature
 > **Type**: Integration
 > **Estimate**: L (4h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-27
+>
+> ✅ **RESOLVED 2026-07-27.** A first run of the driver HUNG (AC-9 non-termination). Root cause
+> (found by instrumenting the loop): **not** a Build/Cancel oscillation (that is correctly bounded
+> by the cadence cap) — the real defect was in ai-003's **move+attack combo commit model**. The
+> combo scored an attack *from a moved-to tile* and committed an `AttackAction` whose
+> `attacker_tile` is a tile the unit is NOT on yet → `apply_action` returns `NO_SUCH_ENTITY` →
+> the driver's `if not result.ok: continue` re-loops on the identical uncommittable action
+> forever. **Fix:** a combo now commits the **MOVE to the firing tile** (the attack lands the next
+> driver iteration once the unit is actually there — AC-26's re-clone); the combined-cost score is
+> retained so the AI still prefers the best setup approach. Every enumerated candidate is now
+> committable, so the loop terminates naturally. `PlayerState.is_ai_controlled` already existed
+> since Sprint 1 (`cedcec4`) — no new field / ADR-0001 note needed.
 
 ## Context
 
@@ -85,7 +97,7 @@
 **Story Type**: Integration
 **Required evidence**: `tests/integration/ai-opponent/ai_turn_driver_loop_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created + passing — `tests/integration/ai-opponent/ai_turn_driver_loop_test.gd` (5 fns, 5/5 PASS)
 
 ---
 
@@ -93,3 +105,14 @@
 
 - Depends on: Stories 001–005 (`AI.choose_action` must be fully functional)
 - Unlocks: Story 007 (diff harness/fuzz drive full turns through this loop), Story 008 (perf test measures this loop)
+
+---
+
+## Completion Notes
+**Completed**: 2026-07-27
+**Criteria**: AC-1/2 (AI acts only in its own Action phase, gated on `is_ai_controlled`); AC-3 (the exact clone→enumerate→commit→pace loop against REAL state); AC-9 (bounded termination — now genuinely terminates; a test asserts an upper commit bound so a hang fails fast); AC-24/AC-10 (commit-rejection contract proven pragmatically at the driver boundary per the coordinator ruling — a real `NO_SUCH_ENTITY` reject spends zero AP + no crash); AC-25 (zero owned entities → zero commits, immediate end); AC-35 (the AI's own GAME_OVER-setting commit stops the loop immediately — spy call-count proves no further apply_action); AC-13 (`action_applied` fires once per commit via a signal spy, near-zero `commit_pacing_sec` for test speed).
+**Implementation**: `src/gameplay/ai/ai_turn_driver.gd` — `class_name AITurnDriver extends Node`, `run_ai_turn(state)` (turn-scoped `economy_investments` local; `await`-paced; the ONE file with `await`, `ai.gd` has none). `PlayerState.is_ai_controlled` pre-existed (Sprint 1).
+**★ Also fixed (root cause of the AC-9 hang):** ai-003's move+attack combo committed an uncommittable `AttackAction` from a not-yet-occupied firing tile → `NO_SUCH_ENTITY` → infinite driver re-loop. Changed `AI._consider_attack` so a combo commits the MOVE to the firing tile (attack lands next iteration); updated the two affected ai-003/ai-004 tests to the corrected model. This corrects two already-committed stories (ai-003, ai-004) — committed together with ai-006.
+**Test Evidence**: Integration — `tests/integration/ai-opponent/ai_turn_driver_loop_test.gd` (5 fns, 5/5 PASS; full suite 616/616, no regressions).
+**Deviations / notes**: (1) AC-24 mid-iteration interleave is impossible single-threaded → proven pragmatically at the driver boundary (ADR-sanctioned). (2) The AI makes ~30 small commits on a 50-AP multi-unit board (bounded, terminates) — a credible-not-masterful **AI-efficiency** observation, flagged for future tuning, not a correctness issue. (3) Debugging this cost many agent iterations (see retrospective process notes).
+**Code Review**: not separately run (test-covered incl. the integration loop); recommend a light pass at sprint close-out.

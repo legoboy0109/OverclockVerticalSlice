@@ -493,10 +493,28 @@ static func _consider_attack(lookahead: GameState, attacker: EntityState, target
 	var score: float = _action_score(base_score, is_kill)
 
 	if _is_better(score, ap_cost, attacker.entity_id, best.score, best.ap_cost, best.entity_id):
-		var action := AttackAction.new()
-		action.player = attacker.owner
-		action.attacker_tile = from_tile
-		action.target_tile = target_tile
+		var action: Action
+		if from_tile == attacker.position:
+			# Stationary attack — the unit is already on the firing tile, so a
+			# single AttackAction commits cleanly.
+			var atk := AttackAction.new()
+			atk.player = attacker.owner
+			atk.attacker_tile = from_tile
+			atk.target_tile = target_tile
+			action = atk
+		else:
+			# Move+attack combo (from_tile is a reachable tile the unit is NOT on
+			# yet). A single Action cannot both move AND attack, and an
+			# AttackAction whose attacker_tile is the not-yet-occupied firing tile
+			# is uncommittable against the real state (apply_action → NO_SUCH_ENTITY,
+			# which the driver would re-loop on forever). So commit the MOVE to the
+			# firing tile now; the attack lands next driver iteration once the unit
+			# is actually there (the loop re-clones after every commit, AC-26). The
+			# combo's combined-cost score is retained so the AI still prefers the
+			# approach that sets up the best attack.
+			var move_cost: int = ap_cost - _attack_ap_cost_for(attacker)
+			action = _make_move_action(attacker as UnitState, from_tile, \
+					_tiles_moved_for(attacker as UnitState, move_cost))
 		return _Candidate.new(action, score, ap_cost, attacker.entity_id)
 	return best
 

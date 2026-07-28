@@ -16,7 +16,7 @@ Engine: Redot 26.2 (Godot 4.6-compatible fork)
 | [Board Renderer](board-renderer/EPIC.md) | Presentation | Board Renderer (iso projection/picking/overlays) | ADR-0013 (TR-grid-008) | 5 stories (5 Complete) | Complete |
 | [Command & Action Interface](command-action-interface/EPIC.md) | Presentation | Command & Action Interface | design/gdd/command-action-interface.md | 9 stories | Ready |
 | [Game HUD](game-hud/EPIC.md) | Presentation | Game HUD | design/gdd/game-hud.md | 8 stories | Ready |
-| [AI Opponent](ai-opponent/EPIC.md) | Feature | AI Opponent (minimal VS) | design/gdd/ai-opponent.md | 8 stories | Ready |
+| [AI Opponent](ai-opponent/EPIC.md) | Feature | AI Opponent (minimal VS) | design/gdd/ai-opponent.md | 8 stories (6 Complete; 007/008 deferred to Production) | Complete (VS) |
 
 ## Layer Status
 

@@ -3,8 +3,8 @@
 > **Layer**: Feature
 > **GDD**: design/gdd/ai-opponent.md
 > **Architecture Module**: AI Opponent (Feature Layer)
-> **Status**: Ready
-> **Stories**: 8 stories (see `## Stories` below) — none implemented yet
+> **Status**: Complete (VS in-slice) — 2026-07-27
+> **Stories**: 8 stories — **6/6 VS-in-slice Complete** (001–006); **007 (diff-harness/fuzz corpus) + 008 (perf-budget assertion) TRIMMED to Production** (not in the VS, per `production/vertical-slice/scope.md` §4). The 6 in-slice stories deliver a full headless, deterministic, credible-not-masterful AI that takes complete turns via `AITurnDriver`. 74 tests, all green.
 
 ## Overview
 

@@ -658,7 +658,16 @@ func test_positional_scoring_never_competes_on_a_tile_that_enables_a_combo_attac
 	var best := AI._Candidate.new()
 	best = AI._score_move_and_attack_candidates(state, attacker, 0, best)
 
-	# Assert — the combo (AttackAction) wins, not a positional MoveAction to
-	# the same (1,0) tile.
+	# Assert — the combo path scores this tile at its combined-cost 0.5, and the
+	# positional branch is correctly SKIPPED on it (the legal_targets_from guard),
+	# so the combo's 0.5 wins rather than the positional 0.56. Both the combo and
+	# the positional branch commit a MoveAction to the firing tile (1,0) — the
+	# combo commits the MOVE (the attack lands next driver iteration) — so the
+	# SCORE (0.5, not 0.56), not the action type, is what proves the positional
+	# branch didn't compete on this combo-enabling tile. [Corrected 2026-07-27:
+	# combo commits a MoveAction, not an AttackAction — see
+	# ai_combat_production_scoring_test.gd's matching correction.]
 	assert_object(best.action).is_not_null()
-	assert_bool(best.action is AttackAction).is_true()
+	assert_bool(best.action is MoveAction).is_true()
+	assert_vector((best.action as MoveAction).to).is_equal(Vector2i(1, 0))
+	assert_float(best.score).is_equal_approx(0.5, 0.0001)

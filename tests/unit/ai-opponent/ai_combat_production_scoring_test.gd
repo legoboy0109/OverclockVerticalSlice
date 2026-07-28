@@ -418,13 +418,20 @@ func test_score_move_and_attack_candidates_finds_the_combo_end_to_end() -> void:
 	# Act
 	best = AI._score_move_and_attack_candidates(state, attacker, 0, best)
 
-	# Assert — a real AttackAction was found and folded in, scored via the
-	# move+attack combo path (no zero-move target exists in this geometry).
+	# Assert — the move+attack combo was found and scored via legal_targets_from
+	# at the combined cost (AC-21). A single Action can't move AND attack, so the
+	# COMMITTED action for a combo is the MOVE to the firing tile (1,0); the attack
+	# itself lands the next driver iteration once the unit is actually there (the
+	# loop re-clones after every commit). The combo's combined-cost SCORE (0.5 at
+	# ap_cost 4) is retained so the AI still prefers the approach that sets up the
+	# best attack. [Corrected 2026-07-27: was asserting an AttackAction at the
+	# firing tile, which is uncommittable against the real un-moved state
+	# (apply_action → NO_SUCH_ENTITY) and caused the driver to re-loop forever.]
 	assert_object(best.action).is_not_null()
-	assert_bool(best.action is AttackAction).is_true()
-	var attack_action: AttackAction = best.action
-	assert_vector(attack_action.attacker_tile).is_equal(Vector2i(1, 0))
-	assert_vector(attack_action.target_tile).is_equal(Vector2i(2, 0))
+	assert_bool(best.action is MoveAction).is_true()
+	var move_action: MoveAction = best.action
+	assert_vector(move_action.from).is_equal(Vector2i(0, 0))
+	assert_vector(move_action.to).is_equal(Vector2i(1, 0))
 	assert_int(best.ap_cost).is_equal(4)
 	assert_float(best.score).is_equal_approx(0.5, 0.0001)
 

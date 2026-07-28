@@ -197,11 +197,11 @@ stories:
     name: "AI turn-driver loop (adds is_ai_controlled)"
     file: "production/epics/ai-opponent/story-006-ai-turn-driver-loop.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-27"  # AC-9 hang fixed: combo now commits MOVE-to-firing-tile (was uncommittable AttackAction). ★ AI epic 6/6 COMPLETE
 
   # --- S3-04 · Game HUD epic (7 in-slice; 008 trimmed) ---
   - id: "hud-001"
