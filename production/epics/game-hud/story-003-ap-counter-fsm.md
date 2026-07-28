@@ -1,12 +1,12 @@
 # Story 003: `ApCounterFsm` — 4-State AP Counter Animation Core (Headless)
 
 > **Epic**: Game HUD
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: Logic
 > **Estimate**: M (4h)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: (set by /dev-story when implementation begins)
+> **Last Updated**: 2026-07-28
 
 ## Context
 
@@ -79,7 +79,7 @@
 **Story Type**: Logic
 **Required evidence**: `tests/unit/game-hud/ap_counter_fsm_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] Created and passing — 12 tests, all green (2026-07-28)
 
 ---
 
@@ -87,3 +87,10 @@
 
 - Depends on: Story 002 (`HUDConfig.ap_tick_duration_ms`/`ap_fill_flourish_ms`), and cross-epic **CAI Story 007** (the shared `action_applied` signal both the commit-flash and AP-tick subscribe to)
 - Unlocks: Story 004 (the widget wraps this FSM), Story 007 (opponent-muting reads this FSM's reachable-state restriction)
+
+## Completion Notes
+**Completed**: 2026-07-28
+**Criteria**: 7/7 covered — AC-3a (fill), AC-4 (no committed-value animation on preview events), AC-5a (commit→tick + documented serialization invariant), AC-25 (no leftover echo), TR-hud-006 (echo force-clear before fill), TR-hud-007 (GameOver snap-to-final) + opponent PREVIEW_ECHO-unreachable restriction, and the exhaustive next_state table.
+**Deviations**: None blocking. INFO — `next_state` takes an `is_opponent` param and adds `snaps_to_final` + `is_reachable_for_opponent` companions beyond ADR-0016 §2's illustrative 2-arg skeleton. Justified: the ADR §2 code block is a skeleton (`: ...`), its prose mandates the opponent-AP restriction be *structural* (mirroring §1's GameStateReader pattern), the story's own AC block requires it, and `is_reachable_for_opponent` is named as the mechanism Story 007 consumes. No ADR-conformance issue (independent godot-gdscript review confirmed).
+**Test Evidence**: Logic — `tests/unit/game-hud/ap_counter_fsm_test.gd` (12 tests, PASS). Full suite 742/742 green.
+**Code Review**: Complete — APPROVED (independent godot-gdscript read-only pass + coordinator review; ADR-0016 §2/§3 compliant, pure/total/statically-typed).

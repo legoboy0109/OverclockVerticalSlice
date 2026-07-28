@@ -72,7 +72,7 @@ This epic is complete when:
 |---|-------|------|--------|-----|
 | 001 | GameStateReader Facade + Event Binding + Dirty-Flag Coalescing | Logic | ✅ Complete | ADR-0016, ADR-0004 |
 | 002 | HUDConfig Resource + Cross-Config Loader Guard | Logic | ✅ Complete | ADR-0016, ADR-0014 |
-| 003 | ApCounterFsm — 4-State AP Counter Core (headless) | Logic | Ready | ADR-0016 |
+| 003 | ApCounterFsm — 4-State AP Counter Core (headless) | Logic | ✅ Complete | ADR-0016 |
 | 004 | AP Counter Widget + Opponent Muting + Preview Echo + Turn/Round Banner | Integration | Ready | ADR-0016 |
 | 005 | On-Board Glyph Layer — hp Pips/Numeric + Markers | Visual/Feel | Ready | ADR-0013, ADR-0016 |
 | 006 | Detail Panel + Victory/Defeat GameOver Preemption | Integration | Ready | ADR-0016 |
