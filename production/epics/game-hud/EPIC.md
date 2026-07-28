@@ -107,6 +107,11 @@ closed. Remaining follow-ups are outside the epic's story set:
   Redot session) — evidence stubs staged in `production/qa/evidence/`.
 - **Audio assets + final mix** (Story 008 mechanism shipped; streams/tone owed to
   audio-director, OQ-6).
-- **HUD-scene assembly** — wiring the widgets into a `CanvasLayer` connected to
-  the live `GameState`/`CommandInterface`/`BoardRenderer` is deferred integration
-  glue for the vertical-slice build, not an in-epic story.
+- **HUD-scene assembly** — ✅ **assembly layer done (2026-07-28)**: the `GameHud`
+  node (`src/ui/game_hud/game_hud.gd`) wires all 8 widgets into a `CanvasLayer` +
+  the world-space glyph layer + audio dispatcher through one
+  `assemble(reader, config, cmd, board, local_player, buildables)` entry
+  (`tests/integration/game-hud/game_hud_assembly_test.gd`, 9 tests). What remains
+  is the **runnable root scene** (real `start_match` + `BoardRenderer` + turn loop
+  as the main scene) — the larger vertical-slice step, which reaches the still-open
+  art (s3-06) + occupant-pick-region (s3-05) seams.
