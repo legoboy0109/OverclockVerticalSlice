@@ -10,6 +10,7 @@ config_version=5
 [application]
 
 config/name="OVERCLOCK"
+run/main_scene="res://scenes/vertical_slice.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 
 [autoload]
