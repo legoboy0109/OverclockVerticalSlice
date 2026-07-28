@@ -286,6 +286,20 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 	var threat: _ThreatInfo = _nearest_threatening_enemy(lookahead, unit)
 	var is_wounded_and_threatened: bool = _is_wounded(unit) and threat.found
 
+	# Single best advance, folded once after the loop. Every straight-line advance
+	# ties at POSITIONAL_VALUE_PER_TILE_CLOSED (dist_closed == tiles_moved, AC-20),
+	# so folding each tile through the global ap_cost tie-break would pick the
+	# 1-tile step and the unit would crawl one tile per commit. Instead we keep the
+	# tile that ends CLOSEST to the nearest enemy (max progress in one move),
+	# tie-broken among equally-close tiles by the standard comparator (score — e.g.
+	# a setup tile — then cheapest path).
+	var adv_found: bool = false
+	var adv_tile: Vector2i = Vector2i.ZERO
+	var adv_tiles_moved: int = 0
+	var adv_dist_after: int = nearest_enemy_dist_before
+	var adv_score: float = 0.0
+	var adv_ap_cost: int = 0
+
 	for r: Movement.ReachableTile in Movement.reachable(lookahead, unit):
 		if not AP.can_afford(lookahead, unit.owner, r.min_cost):
 			continue
@@ -312,23 +326,37 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 			continue # Anti-oscillation: no advance/SETUP candidate this call.
 
 		var dist_after: int = _nearest_live_enemy_distance(lookahead, r.tile, unit.owner)
-		# Anti-oscillation: enumerate a bare advance ONLY if it strictly closes
+		# Anti-oscillation: consider a bare advance ONLY if it strictly closes
 		# distance to the nearest enemy. A non-closing tile (lateral/backward) would
 		# otherwise score positive purely on SETUP_ADVANCE_BONUS — any tile within
 		# reach of a nearby target "sets up" — and since choose_action returns the
 		# top candidate with no pass-threshold gate, the AI would commit it and then
 		# commit the reverse move next iteration, ping-ponging until AP drained.
-		# Requiring strict closure makes bare advances distance-monotonic, so they
-		# cannot cycle. (Retreat, handled above, is already monotonic in threat
-		# distance; a pure non-advancing "setup" play is deferred to the broader
-		# positional-scoring rework.)
+		# Requiring strict closure makes bare advances distance-monotonic.
 		if dist_after >= nearest_enemy_dist_before:
 			continue
 		var sets_up: bool = _sets_up_attack_next_turn(lookahead, unit, r.tile)
 		var value: float = _positional_value(nearest_enemy_dist_before, dist_after, sets_up)
 		var score: float = value / float(tiles_moved)
-		if _is_better(score, r.min_cost, unit.entity_id, best.score, best.ap_cost, best.entity_id):
-			best = _Candidate.new(_make_move_action(unit, r.tile, tiles_moved), score, r.min_cost, unit.entity_id)
+		# Keep the furthest-advancing tile (smallest resulting distance); among tiles
+		# reaching the same closest frontier, break ties with the standard comparator.
+		var take: bool = false
+		if not adv_found:
+			take = true
+		elif dist_after < adv_dist_after:
+			take = true
+		elif dist_after == adv_dist_after and _is_better(score, r.min_cost, unit.entity_id, adv_score, adv_ap_cost, unit.entity_id):
+			take = true
+		if take:
+			adv_found = true
+			adv_tile = r.tile
+			adv_tiles_moved = tiles_moved
+			adv_dist_after = dist_after
+			adv_score = score
+			adv_ap_cost = r.min_cost
+
+	if adv_found and _is_better(adv_score, adv_ap_cost, unit.entity_id, best.score, best.ap_cost, best.entity_id):
+		best = _Candidate.new(_make_move_action(unit, adv_tile, adv_tiles_moved), adv_score, adv_ap_cost, unit.entity_id)
 
 	return best
 
