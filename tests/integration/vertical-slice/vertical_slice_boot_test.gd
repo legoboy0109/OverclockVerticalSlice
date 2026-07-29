@@ -45,7 +45,12 @@ func test_boots_a_live_match_with_board_hud_and_ai() -> void:
 	assert_int(state.active_player).is_equal(0) # the human starts.
 	assert_int(state.match_status).is_equal(GameState.MatchStatus.IN_PROGRESS)
 	assert_bool(state.per_player[1].is_ai_controlled).is_true()
-	assert_object(state.per_player[0].faction).is_not_null() # NEUTRAL pinned.
+	# Ownership-by-hue precondition (S4-02/S4-03): the two sides pin to DISTINCT
+	# factions (Rush vs Boom), not a Neutral mirror — both empty-delta so VS parity
+	# still holds. Distinctness is what lets the renderer color ownership by hue.
+	assert_object(state.per_player[0].faction).is_same(Factions.RUSH)
+	assert_object(state.per_player[1].faction).is_same(Factions.BOOM)
+	assert_bool(state.per_player[0].faction == state.per_player[1].faction).is_false()
 
 	# Two HQs placed, nothing else yet (the human hasn't acted, no AI turn ran).
 	assert_int(state.entities().size()).is_equal(2)

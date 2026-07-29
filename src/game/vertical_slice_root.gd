@@ -9,8 +9,9 @@
 ##
 ## [b]What it does[/b]:
 ## [br]1. Builds an authored all-Plain map + two HQs and starts a real match
-##    ([method GameState.start_match]); pins both players to the NEUTRAL faction
-##    and marks player 1 AI-controlled.
+##    ([method GameState.start_match]); pins the two sides to the RUSH and BOOM
+##    factions (ownership-by-hue; both empty-delta, so VS parity holds) and marks
+##    player 1 AI-controlled.
 ## [br]2. Adds a [BoardRenderer] (placeholder iso floor tiles + the overlay layer)
 ##    and a [Camera2D] framing the board.
 ## [br]3. Wires a [CommandInterface] to the board + state (input + overlays).
@@ -142,9 +143,11 @@ func _build_match() -> void:
 	_state = GameState.start_match(map, LOCAL_PLAYER)
 	# Faction / AI assignment is a direct Setup-phase field write (no
 	# faction-assignment verb exists yet; the "lock" is a future-verb convention,
-	# ADR-0012 — the widget/integration tests set these the same way).
-	_state.per_player[LOCAL_PLAYER].faction = Factions.NEUTRAL
-	_state.per_player[AI_PLAYER].faction = Factions.NEUTRAL
+	# ADR-0012). The two sides are pinned to RUSH/BOOM so ownership reads by hue
+	# (art-bible §4.2 / S4-02); both carry empty unit_deltas, so this is exact VS
+	# parity — mechanically identical to Neutral, distinct only in identity/hue.
+	_state.per_player[LOCAL_PLAYER].faction = Factions.RUSH
+	_state.per_player[AI_PLAYER].faction = Factions.BOOM
 	_state.per_player[AI_PLAYER].is_ai_controlled = true
 
 	# start_match places HQs as bare EntityState stubs (its own doc flags that

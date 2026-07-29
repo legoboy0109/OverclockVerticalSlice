@@ -45,7 +45,7 @@ stories:
     name: "Entity sprite renderer + live entities()→board feed (replace placeholder diamonds; scope §8 seam c)"
     file: "src/game/vertical_slice_root.gd"
     priority: must-have
-    status: backlog
+    status: backlog  # 2026-07-29: faction-pin PRECONDITION landed — VS pins Rush/Boom (empty-delta parity; ADR-0012 §2 registry RUSH/BOOM created), full suite 830/830. Entity sprite renderer + live entities()→board feed still await S4-02 art.
     owner: ""
     estimate_days: 1.5
     blocker: "s4-02"
