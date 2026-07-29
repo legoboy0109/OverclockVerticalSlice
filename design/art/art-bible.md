@@ -22,12 +22,18 @@
 >    `design/registry/entities.yaml` before backlog planning is finalized. → **scheduled as S2-07.**
 > 2. ~~`design/ux/hud.md` (per-screen HUD layout) missing — §7 defines HUD visual *language*, not
 >    layout.~~ → **RESOLVED 2026-07-27 (S2-05): `design/ux/hud.md` authored + `/ux-review` APPROVED.**
-> 3. §4.2 hue-neighborhood watch-item: Boom's cyan sits near the Dark Stage family — run a
+> 3. ~~§4.2 hue-neighborhood watch-item: Boom's cyan sits near the Dark Stage family — run a
 >    same-scene side-by-side prototype test (Boom units on max-elevation terrain) before final
->    hex lock.
-> 4. §8.9 engine-verification watch-item: confirm per-instance shader uniform behavior in 2D and
+>    hex lock.~~ → **RESOLVED 2026-07-29 (S4-01 de-risk spike): hexes LOCKED.** Boom `#22C7F0`
+>    clears every legibility bar against all five stage tiles incl. the worst case (max-elevation
+>    `#33405A`): ΔE2000 **51.8** (higher than Rush's 49.4 vs the same tile), WCAG **5.19:1**,
+>    grayscale Δ **104/255**. See the §4.2 resolution note. Reproducible spike: `prototypes/s4-01-art-spike/`.
+> 4. ~~§8.9 engine-verification watch-item: confirm per-instance shader uniform behavior in 2D and
 >    that the 4.6 glow-pipeline rework is 3D/WorldEnvironment-only (does not affect the 2D
->    CanvasItem-shader approach) via a one-unit glow spike before committing the shader pipeline.
+>    CanvasItem-shader approach) via a one-unit glow spike before committing the shader pipeline.~~
+>    → **RESOLVED 2026-07-29 (S4-01 de-risk spike): 2D CanvasItem per-instance-uniform approach
+>    CONFIRMED safe to commit** (engine-ref + headless smoke on Redot 26.2; one-unit windowed render
+>    folded into S4-07). See the §8.9 resolution note.
 
 > **Map projection decision (2026-07-23):** OVERCLOCK renders its tactical maps in
 > **isometric 2D** (Final Fantasy Tactics lineage), a revision of the concept doc's
@@ -240,6 +246,8 @@ A **7-color functional system** (5 stage neutrals + 2 faction neons), plus the a
 **Faction B — Boom (compounding economy): Cyan-Azure, ~H195°.** Cool, receding hues read as stable, technical, patient — the opposite psychological register from Rush (Pillar 4: factions are opposite verbs, their colors opposite too). Cyan's high-tech/networked connotation (data, energy grids) suits an economy/research faction. Cyan-vs-orange is the most reliable warm/cool near-complementary pair — both highly saturated, both legible against the same dark stage.
 
 **Structural risk (flagged):** the Dark Stage family (§4.1) is itself in the 210–240° cool-blue range — the same hue neighborhood as Boom. This is intentional (a cool dark stage makes any saturated hue pop) but means Boom's cyan sits closer to the stage than Rush's orange does. Mitigation is **saturation + lightness distance, not hue distance**: stage tops out at S 25%/L 22%; Boom sits at S 85–95%/L 55–62%. Recommend a same-scene side-by-side prototype test (Boom units on max-elevation terrain) before locking final hex.
+
+**→ RESOLVED 2026-07-29 (S4-01 de-risk spike — hexes LOCKED).** The side-by-side test (analytic + swatch, `prototypes/s4-01-art-spike/`) ran Boom `#22C7F0` against all five §4.1 stage tiles. The worst case is the max-elevation tile `#33405A`, and even there Boom clears every bar: **ΔE2000 51.8** (perceptually *further* than Rush's 49.4 vs the same tile), **WCAG contrast 5.19:1** (passes AA), **grayscale value Δ 104/255** (passes the §4.4 desaturation test). Boom is only **28°** from the stage hue (vs Rush's 150°) yet sits **60% S / 26% L** away — the saturation-plus-lightness-distance mitigation is validated numerically; **no hue adjustment needed.** *Doc reconciliation:* the "stage tops out at S 25%/L 22%" figure describes terrain *base* (`#232A38`, L 17.8%); the max-elevation tile `#33405A` actually reaches **S 27.7% / L 27.6%** — Boom was tested at (and passes at) that true brighter ceiling, so read the ceiling as ~L 28% at max elevation. A residual windowed eyeball is folded into S4-07.
 
 **Colorblind-safety of the A/B pair:** orange-red (~H15°) vs. cyan-azure (~H195°) is ~180° apart and falls on opposite sides of the red-green confusion axis (protanopia/deuteranopia, ~8% of men). Neither is a red-green pair with the other — about as safe a two-faction assignment as exists. Tritanopia risk on Boom's cyan is addressed in §4.4.
 
@@ -541,6 +549,8 @@ Use Godot 4's `y_sort_enabled` on a shared parent `Node2D` holding all board occ
 **Import:** Lossless for all gameplay sprites (flat neon bands/blocks under VRAM/BC compression — worst-case content for it; and memory is a non-issue at this scope). Mipmaps likely off (fixed iso camera; mip-blur would soften hard edges). Screen-space AA (SMAA/FXAA) handles edges.
 
 **⚠️ Engine-verify before this becomes load-bearing (post-4.3 cutoff):** confirm in the live Redot 26.2 / Godot 4.6 editor that (a) `set_instance_shader_parameter` / per-instance uniforms behave as expected in 2D, and (b) the 4.6 **glow-pipeline rework** (per `docs/engine-reference/godot/modules/rendering.md`) is understood — note that rework is the *3D/WorldEnvironment* post-process glow and does **not** affect the hand-authored 2D CanvasItem-shader emission approach above; but if the team also wants a soft `WorldEnvironment` 2D bloom halo on top, that 4.6 change *does* apply and should be spiked/screenshotted first. Run a one-unit glow spike to validate before committing the pipeline.
+
+**→ RESOLVED 2026-07-29 (S4-01 de-risk spike — approach CONFIRMED, safe to commit).** (a) The Redot 26.2 engine reference (`docs/engine-reference/godot/modules/rendering.md`) confirms the 4.6 glow rework is the **WorldEnvironment/Compositor 3D post-process** path (glow now processes *before* tonemapping, screen-blend) — it does **not** touch the hand-authored 2D CanvasItem emission shader above. (b) A headless smoke on Redot 26.2 confirmed two `Sprite2D` (CanvasItem) nodes **sharing one `ShaderMaterial`** hold divergent per-instance `faction_hue` / `pulse_intensity` via `set_instance_shader_parameter` — the batch-safe §8.7-rule-2 pattern works in 2D. **Residual (windowed, advisory → S4-07):** render the one-unit spike (`prototypes/s4-01-art-spike/GlowSpike.tscn`) in the live rasterizer to confirm the `instance uniform` declaration compiles + the additive emission reads correctly (the dummy headless rasterizer can't render). And per the ⚠️ above, a *WorldEnvironment 2D bloom halo* — if ever layered on top — **is** governed by the 4.6 rework and must be spiked separately.
 
 ## 9. Reference Direction
 

@@ -27,19 +27,19 @@ stories:
     name: "De-risk spikes: Boom-cyan hue side-by-side + glow-shader 2D/uniform (carryover s3-08)"
     file: "design/art/art-bible.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-29"  # Both watch-items RESOLVED in art-bible §4.2/§8.9. Hue: Boom #22C7F0 LOCKED (worst-case max-elev ΔE2000 51.8 / WCAG 5.19:1 / grayΔ104). Shader: 2D CanvasItem per-instance approach confirmed (engine-ref + headless smoke); windowed one-unit render residual → S4-07. Repro spike: prototypes/s4-01-art-spike/
   - id: "s4-02"
     name: "★ Representative Neon Retro-Future art — 5 entities + 2 terrain tiles (carryover s3-06)"
     file: "design/assets/entity-inventory.md"
     priority: must-have
-    status: backlog
+    status: ready-for-dev  # UNBLOCKED 2026-07-29 by s4-01 (hexes locked, shader approach confirmed) — awaiting human artist / AI-gen per art bible
     owner: ""
     estimate_days: 3
-    blocker: "s4-01"
+    blocker: ""
     completed: ""
   - id: "s4-03"
     name: "Entity sprite renderer + live entities()→board feed (replace placeholder diamonds; scope §8 seam c)"

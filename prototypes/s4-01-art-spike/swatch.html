@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S4-01 Hue Spike — Boom cyan vs the Dark Stage</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 24px 28px 48px; background: #05070c; color: #cdd6e6;
+         font: 14px/1.5 -apple-system, Segoe UI, Roboto, sans-serif; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { color: #8896b4; margin: 0 0 20px; font-size: 13px; }
+  .grid { border-collapse: collapse; margin-bottom: 28px; }
+  .grid th { color: #8896b4; font-weight: 500; padding: 6px 10px; text-align: center; font-size: 12px; }
+  .grid td { padding: 0; }
+  .cell { width: 132px; height: 96px; display: flex; align-items: center; justify-content: center; }
+  .rowlabel { padding-right: 14px; text-align: right; font-weight: 600; white-space: nowrap; }
+  .token { width: 46px; height: 46px; transform: rotate(45deg); border-radius: 8px;
+           box-shadow: 0 0 18px 4px currentColor; }
+  table.metrics { border-collapse: collapse; font-size: 13px; }
+  table.metrics th, table.metrics td { border: 1px solid #232a38; padding: 6px 12px; text-align: right; }
+  table.metrics th { color: #8896b4; font-weight: 500; }
+  table.metrics td:first-child, table.metrics th:first-child { text-align: left; }
+  .pass { color: #6ee7a8; } .warn { color: #ffcf6e; }
+  .note { color: #8896b4; max-width: 760px; margin-top: 22px; font-size: 13px; }
+  code { color: #22c7f0; }
+</style>
+</head>
+<body>
+  <h1>S4-01 — Boom cyan vs the Dark Stage (art-bible §4.2 side-by-side)</h1>
+  <p class="sub">Verdict: <span class="pass">LOCK the hexes</span>. Boom <code>#22C7F0</code> clears every legibility bar against all five stage tiles, worst case included. Each token below shares the exact <code>box-shadow</code> glow so you can eyeball "does it pop" per tile.</p>
+
+  <table class="grid">
+    <thead><tr><th></th>
+      <th>Void<br>#0A0E17</th><th>Terrain base<br>#232A38</th>
+      <th>Elevated (max)<br>#33405A</th><th>Recessed<br>#171C27</th><th>Structure<br>#1B2130</th>
+    </tr></thead>
+    <tbody>
+      <tr><td class="rowlabel" style="color:#22C7F0">Boom</td>
+        <td><div class="cell" style="background:#0A0E17"><div class="token" style="background:#22C7F0;color:#22C7F0"></div></div></td>
+        <td><div class="cell" style="background:#232A38"><div class="token" style="background:#22C7F0;color:#22C7F0"></div></div></td>
+        <td><div class="cell" style="background:#33405A"><div class="token" style="background:#22C7F0;color:#22C7F0"></div></div></td>
+        <td><div class="cell" style="background:#171C27"><div class="token" style="background:#22C7F0;color:#22C7F0"></div></div></td>
+        <td><div class="cell" style="background:#1B2130"><div class="token" style="background:#22C7F0;color:#22C7F0"></div></div></td></tr>
+      <tr><td class="rowlabel" style="color:#FF5A2E">Rush</td>
+        <td><div class="cell" style="background:#0A0E17"><div class="token" style="background:#FF5A2E;color:#FF5A2E"></div></div></td>
+        <td><div class="cell" style="background:#232A38"><div class="token" style="background:#FF5A2E;color:#FF5A2E"></div></div></td>
+        <td><div class="cell" style="background:#33405A"><div class="token" style="background:#FF5A2E;color:#FF5A2E"></div></div></td>
+        <td><div class="cell" style="background:#171C27"><div class="token" style="background:#FF5A2E;color:#FF5A2E"></div></div></td>
+        <td><div class="cell" style="background:#1B2130"><div class="token" style="background:#FF5A2E;color:#FF5A2E"></div></div></td></tr>
+      <tr><td class="rowlabel" style="color:#C6CED8">Neutral</td>
+        <td><div class="cell" style="background:#0A0E17"><div class="token" style="background:#C6CED8;color:#C6CED8"></div></div></td>
+        <td><div class="cell" style="background:#232A38"><div class="token" style="background:#C6CED8;color:#C6CED8"></div></div></td>
+        <td><div class="cell" style="background:#33405A"><div class="token" style="background:#C6CED8;color:#C6CED8"></div></div></td>
+        <td><div class="cell" style="background:#171C27"><div class="token" style="background:#C6CED8;color:#C6CED8"></div></div></td>
+        <td><div class="cell" style="background:#1B2130"><div class="token" style="background:#C6CED8;color:#C6CED8"></div></div></td></tr>
+    </tbody>
+  </table>
+
+  <h1 style="font-size:15px">Boom vs each stage tile — measured (from <code>hue_analysis.py</code>)</h1>
+  <table class="metrics">
+    <thead><tr><th>Stage tile</th><th>dHue°</th><th>dS%</th><th>dL%</th><th>WCAG</th><th>grayΔ/255</th><th>ΔE2000</th></tr></thead>
+    <tbody>
+      <tr><td>Void bg</td><td>30</td><td>48</td><td>47</td><td class="pass">9.65:1</td><td>153</td><td class="pass">65.5</td></tr>
+      <tr><td>Terrain base</td><td>28</td><td>64</td><td>36</td><td class="pass">7.19:1</td><td>125</td><td class="pass">59.2</td></tr>
+      <tr><td><b>Terrain ELEVATED (max — worst case)</b></td><td>28</td><td>60</td><td>26</td><td class="pass">5.19:1</td><td>104</td><td class="pass">51.8</td></tr>
+      <tr><td>Terrain recessed</td><td>29</td><td>61</td><td>42</td><td class="pass">8.52:1</td><td>139</td><td class="pass">62.7</td></tr>
+      <tr><td>Structure plate</td><td>31</td><td>59</td><td>39</td><td class="pass">8.03:1</td><td>134</td><td class="pass">61.7</td></tr>
+    </tbody>
+  </table>
+
+  <p class="note">
+    Boom sits only <b>28°</b> from the stage hue family (vs Rush's ~150°), confirming the flagged
+    §4.2 hue-neighborhood risk — but the mitigation is <b>saturation + lightness distance</b>: even on the
+    lightest tile, Boom is 60% S / 26% L away, ΔE2000 <b>51.8</b> (perceptually further than Rush's 49.4
+    vs the same tile), WCAG <b>5.19:1</b> (passes AA), grayscale Δ <b>104/255</b> (passes the §4.4
+    desaturation test). No hue adjustment needed. <b>Doc nit:</b> §4.2's "stage tops out at L 22%" describes
+    terrain <i>base</i>; the max-elevation tile <code>#33405A</code> reaches L 27.6% — Boom was tested at
+    that true brighter ceiling and passes. This CSS swatch is an approximation; the live shader render is
+    <code>GlowSpike.tscn</code> (run in the windowed editor for the §8.9 residual sign-off).
+  </p>
+</body>
+</html>
