@@ -396,6 +396,23 @@ func test_act_with_no_ap_flashes_an_ap_reason_instead_of_silently_doing_nothing(
 	assert_str(root.status_text()).contains("AP left") # ...but the overlay says why.
 
 
+func test_selecting_a_unit_renders_its_range_overlay_without_error() -> void:
+	# Selecting a unit draws its reachable/attackable range (blue fill / red outline)
+	# in _draw. Force a redraw + frame so _draw_selection_overlay runs; a bad draw
+	# call would surface as a script error here.
+	var root := _make_root()
+	var state := root.state()
+	_place_unit(state, 11, 0, Vector2i(6, 5), UnitTypes.TROOPER)
+	state.per_player[0].current_ap = 10
+	_move_cursor_to(root, Vector2i(6, 5))
+	assert_bool(root.select_at_cursor()).is_true()
+	root.queue_redraw()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	# Selection holds and the range was computed/drawn without error.
+	assert_int(root.command_interface().selected_id()).is_equal(11)
+
+
 func test_status_overlay_surfaces_selected_build_type_legend_and_updates_on_cycle() -> void:
 	var root := _make_root()
 

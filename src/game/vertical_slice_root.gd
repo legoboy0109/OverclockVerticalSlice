@@ -348,9 +348,7 @@ func _act_hint(unit: UnitState) -> String:
 	var can_attack: bool = not Combat.legal_targets(_state, unit).is_empty()
 	if not can_move and not can_attack:
 		return "%s can't act — only %d AP left this turn (End Turn to refresh)." % [unit.type.display_name, ap]
-	if can_attack:
-		return "%s: put the cursor on an adjacent enemy, or a reachable tile, then M." % unit.type.display_name
-	return "%s: that tile isn't reachable — try a nearer empty tile." % unit.type.display_name
+	return "%s: aim at a highlighted tile — blue = move, red outline = attack." % unit.type.display_name
 
 
 ## A one-line note about the first own producer still under construction (its units
@@ -533,7 +531,10 @@ func select_at_cursor() -> bool:
 		return false
 	var entity: EntityState = _state.entity_at(_cursor.grid_pos)
 	if entity is UnitState and entity.owner == LOCAL_PLAYER:
-		return _cmd.try_select(_state, entity as UnitState)
+		var ok: bool = _cmd.try_select(_state, entity as UnitState)
+		if ok:
+			queue_redraw() # paint the selected unit's move/attack range immediately.
+		return ok
 	return false
 
 
@@ -676,6 +677,9 @@ func act_at_cursor() -> bool:
 func _draw() -> void:
 	if _board == null or _reader == null:
 		return
+	# Under the entity markers: the selected unit's move/attack range, so the player
+	# can SEE where a unit can go (short-range units otherwise look unresponsive).
+	_draw_selection_overlay()
 	for entity: EntityState in _reader.entities():
 		var center: Vector2 = _board.grid_to_screen(entity.position)
 		var col: Color = Color(0.2, 0.7, 1.0) if entity.owner == LOCAL_PLAYER else Color(1.0, 0.4, 0.3)
@@ -694,6 +698,41 @@ func _draw() -> void:
 			c + Vector2(0, -cr), c + Vector2(cr, 0), c + Vector2(0, cr),
 			c + Vector2(-cr, 0), c + Vector2(0, -cr),
 		]), Color(1.0, 1.0, 0.4), 2.0)
+
+
+## Highlights the selected own unit's reachable MOVE tiles (translucent fill) and
+## attackable target tiles (red outline), plus a ring on the unit itself — so the
+## player can see a unit's (often short) range rather than guessing. Computed from
+## the same [Movement]/[Combat] queries [method act_at_cursor] commits through, so
+## the highlight and what M actually does never disagree.
+func _draw_selection_overlay() -> void:
+	if _cmd == null or _state == null:
+		return
+	var entity: EntityState = _state.entities_by_id.get(_cmd.selected_id())
+	if not (entity is UnitState) or entity.owner != LOCAL_PLAYER:
+		return
+	var unit: UnitState = entity as UnitState
+	for reach: Movement.ReachableTile in Movement.reachable(_state, unit):
+		draw_colored_polygon(_tile_diamond(_board.grid_to_screen(reach.tile)), Color(0.3, 0.8, 1.0, 0.18))
+	for target: Combat.TargetResult in Combat.legal_targets(_state, unit):
+		var d: PackedVector2Array = _tile_diamond(_board.grid_to_screen(target.tile))
+		d.append(d[0])
+		draw_polyline(d, Color(1.0, 0.35, 0.2, 0.95), 2.5)
+	# Ring the selected unit so the player knows which one is active.
+	var sel: PackedVector2Array = _tile_diamond(_board.grid_to_screen(unit.position))
+	sel.append(sel[0])
+	draw_polyline(sel, Color(0.4, 1.0, 0.5, 0.95), 2.5)
+
+
+## A tile-sized isometric diamond (matching the floor tile shape) centred at
+## [param center], for range highlights.
+func _tile_diamond(center: Vector2) -> PackedVector2Array:
+	var hw: float = BoardRenderer.TILE_WIDTH_PX * 0.5
+	var hh: float = BoardRenderer.TILE_HEIGHT_PX * 0.5
+	return PackedVector2Array([
+		center + Vector2(0.0, -hh), center + Vector2(hw, 0.0),
+		center + Vector2(0.0, hh), center + Vector2(-hw, 0.0),
+	])
 
 
 # --- Accessors (for the boot/integration test) -------------------------------
