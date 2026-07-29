@@ -36,7 +36,7 @@ stories:
     name: "★ Representative Neon Retro-Future art — 5 entities + 2 terrain tiles (carryover s3-06)"
     file: "design/assets/entity-inventory.md"
     priority: must-have
-    status: ready-for-dev  # UNBLOCKED 2026-07-29 by s4-01 (hexes locked, shader approach confirmed) — awaiting human artist / AI-gen per art bible
+    status: in-progress  # 2026-07-29: /asset-spec full mode → design/assets/specs/vs-entities-assets.md (ASSET-001..007) + asset-manifest.md. 7 assets specced (visual + AI-gen prompts + tech constraints), 3 hue variants each. REMAINING = actual art production (human/AI-gen) + import under assets/. Follow-up: wire VS faction pins Rush/Boom for ownership-by-hue (S4-03).
     owner: ""
     estimate_days: 3
     blocker: ""
