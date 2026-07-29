@@ -175,6 +175,14 @@ static func choose_action(state: GameState, economy_investments_committed: int) 
 		best = _score_research_candidates(lookahead, entity, economy_investments_committed, best)
 		best = _score_cancel_build_candidates(lookahead, entity, economy_investments_committed, best)
 
+	# Pass-threshold gate (ADR-0011 §1, AC-9): a candidate that does not clear
+	# AIBalance.ai.pass_threshold is not worth the AP — return null so the driver
+	# ends the turn (its documented "no candidate cleared pass_threshold" exit,
+	# previously unenforced). The move-scoring config sits just above the floor by
+	# design (positional 0.16, retreat 0.20 > pass_threshold 0.15), so genuine moves
+	# clear it; only sub-threshold busy-work is filtered.
+	if best.action == null or best.score <= AIBalance.ai.pass_threshold:
+		return null
 	return best.action
 
 

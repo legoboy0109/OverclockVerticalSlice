@@ -17,9 +17,9 @@
 ## advisory Visual/Feel evidence, AC-3b/5b).
 ##
 ## [b]FSM wiring[/b]: committed AP is refreshed on every [signal GameState.action_applied]
-## — a decrease is a spend ([constant ApCounterFsm.Trigger.COMMIT_SPEND] →
+## — a decrease is a spend ([constant ApCounterFsm.Trigger.COMMIT_SPEND] ->
 ## [constant ApCounterFsm.State.TICK_DOWN]), an increase is the start-of-turn fill
-## ([constant ApCounterFsm.Trigger.TURN_START_FILL] → [constant ApCounterFsm.State.FILL_FLOURISH]),
+## ([constant ApCounterFsm.Trigger.TURN_START_FILL] -> [constant ApCounterFsm.State.FILL_FLOURISH]),
 ## GAME_OVER settles to rest. The preview echo is driven by the explicit
 ## [method open_preview]/[method close_preview] entry points the scene glue calls
 ## when CAI opens/closes a preview (mirroring [method CommandInterface.route_click]/
@@ -72,13 +72,13 @@ var _echo_active: bool = false
 var _projected_ap: int = _NO_PROJECTION
 
 ## Whether the open preview is affordable — an unaffordable preview shows
-## "insufficient AP", never a negative or `→ negative` (AC-7).
+## "insufficient AP", never a negative or `-> negative` (AC-7).
 var _preview_affordable: bool = true
 
 ## Last-observed active player / round — to distinguish a genuine turn boundary
 ## (route through [constant ApCounterFsm.Trigger.TURN_TRANSITION] then a gated
-## start-of-turn fill) from a mid-turn AP change (a spend → tick, or a
-## Cancel-Build refund credit → NO flourish). [member _synced] guards the
+## start-of-turn fill) from a mid-turn AP change (a spend -> tick, or a
+## Cancel-Build refund credit -> NO flourish). [member _synced] guards the
 ## baseline so the first observation is never mistaken for a transition.
 var _prev_active: int = -1
 var _prev_round: int = -1
@@ -126,7 +126,7 @@ func _refresh_committed() -> void:
 
 	if is_transition:
 		# TR-hud-006: force-clear any open echo FIRST, as its own synchronous step
-		# (TURN_TRANSITION → COMMITTED from any state) — the FSM state never routes
+		# (TURN_TRANSITION -> COMMITTED from any state) — the FSM state never routes
 		# straight to a fill ...
 		_fsm_state = ApCounterFsm.next_state(_fsm_state, ApCounterFsm.Trigger.TURN_TRANSITION, _is_opponent)
 		_clear_echo()
@@ -136,7 +136,7 @@ func _refresh_committed() -> void:
 			_fsm_state = ApCounterFsm.next_state(_fsm_state, ApCounterFsm.Trigger.TURN_START_FILL, _is_opponent)
 			_start_settle(_config.ap_fill_flourish_ms if _config != null else 0)
 	elif new_ap < _committed_ap:
-		# Mid-turn spend → discrete tick-down (an opponent's own commits included).
+		# Mid-turn spend -> discrete tick-down (an opponent's own commits included).
 		_fsm_state = ApCounterFsm.next_state(_fsm_state, ApCounterFsm.Trigger.COMMIT_SPEND, _is_opponent)
 		_start_settle(_config.ap_tick_duration_ms if _config != null else 0)
 		_clear_echo()
@@ -220,7 +220,7 @@ func _on_settle() -> void:
 func committed_value() -> int:
 	return _committed_ap
 
-## True iff an affordable preview echo is open (renders `committed → projected`).
+## True iff an affordable preview echo is open (renders `committed -> projected`).
 func showing_echo() -> bool:
 	return _echo_active and _preview_affordable
 
@@ -254,7 +254,7 @@ func _draw() -> void:
 	var col: Color = Color(0.55, 0.55, 0.6) if _is_opponent else Color(0.2, 1.0, 0.9)
 	var text: String = "OPPONENT  %d" % _committed_ap if _is_opponent else "%d" % _committed_ap
 	if showing_echo():
-		text += "  → %d" % _projected_ap
+		text += "  -> %d" % _projected_ap # ASCII arrow — the engine fallback font has no U+2192 glyph (renders as a tofu box).
 	elif insufficient_ap():
 		text += "  (insufficient AP)"
 	draw_string(font, Vector2(4, font_size + 2), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, col)
