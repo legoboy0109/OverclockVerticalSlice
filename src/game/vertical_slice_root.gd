@@ -318,20 +318,45 @@ func _refresh_status() -> void:
 		var pafford: String = "affordable" if _reader.can_afford_produce(LOCAL_PLAYER, produce_type) else "too expensive"
 		lines.append("Produce [P]: %s — %d AP (%s)    [V] cycle" % [produce_type.display_name, pcost, pafford])
 
+	var building: String = _building_producer_note()
+	if building != "":
+		lines.append(building) # explains why the produce roster is limited while a producer builds.
+
 	lines.append("[Arrows] cursor  [Enter] select  [M] move/attack  [B]/[C] build/cycle  [P]/[V] produce/cycle  [Tab] end turn")
 	_status_label.text = "\n".join(lines)
 
 
+## A one-line note about the first own producer still under construction (its units
+## are unavailable until it completes, which is why they are absent from the produce
+## roster). Empty when no such producer exists.
+func _building_producer_note() -> String:
+	if _reader == null:
+		return ""
+	for e: EntityState in _reader.entities():
+		if e is StructureState and e.owner == LOCAL_PLAYER:
+			var s: StructureState = e as StructureState
+			if s.build_status != StructureState.BuildStatus.COMPLETED and not s.type.producible_types.is_empty():
+				var turns: int = int(_reader.structure_info(s.entity_id).get("build_turns_remaining", 0))
+				return "⏳ %s building (%d turn%s) — its units unlock when done" % [s.type.display_name, turns, "" if turns == 1 else "s"]
+	return ""
+
+
 ## The producible unit-type roster: the union (deduped, stable order) of every own
-## producer's [code]producible_types[/code]. Computed on demand so it grows the turn
-## a Production Outpost is built. Empty if the player owns no producer.
+## [b]COMPLETED[/b] producer's [code]producible_types[/code] — only types the player
+## can produce RIGHT NOW. An under-construction producer contributes nothing (its
+## units unlock when it finishes), so the player never cycles to a type they cannot
+## yet make. Computed on demand so it grows the turn a Production Outpost completes.
+## Empty if the player owns no completed producer.
 func _produce_roster() -> Array[UnitTypeDef]:
 	var roster: Array[UnitTypeDef] = []
 	if _reader == null:
 		return roster
 	for e: EntityState in _reader.entities():
 		if e is StructureState and e.owner == LOCAL_PLAYER:
-			for ut: UnitTypeDef in (e as StructureState).type.producible_types:
+			var s: StructureState = e as StructureState
+			if s.build_status != StructureState.BuildStatus.COMPLETED:
+				continue # can't produce from an unfinished structure yet.
+			for ut: UnitTypeDef in s.type.producible_types:
 				if not roster.has(ut):
 					roster.append(ut)
 	return roster
@@ -541,6 +566,9 @@ func request_produce_at_cursor() -> bool:
 		if not (e is StructureState) or e.owner != LOCAL_PLAYER:
 			continue
 		var producer: StructureState = e as StructureState
+		if producer.build_status != StructureState.BuildStatus.COMPLETED:
+			continue # unfinished structure can't produce (validate_produce's
+			         # NOT_COMPLETED gate) — skip so it never blocks a ready producer.
 		if not producer.type.producible_types.has(utype):
 			continue # this producer cannot make the selected type.
 		# Remaining cap this turn (validate_produce's first gate — legal_deploy_tiles
