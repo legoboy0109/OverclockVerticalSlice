@@ -472,3 +472,11 @@ func test_move_relocates_a_non_scout_unit() -> void:
 	assert_bool(root.act_at_cursor()).is_true() # the Trooper moves (was falsely rejected)
 	assert_bool(state.entity_at(Vector2i(6, 6)) is UnitState).is_true()
 	assert_vector((state.entities_by_id[12] as UnitState).position).is_equal(Vector2i(6, 6))
+
+
+func test_board_demo_placeholder_occupants_are_removed() -> void:
+	# Regression: BoardRenderer._ready seeds br-002 y-sort DEMO occupants (2 units +
+	# a tall prop) that otherwise sit as coloured blobs mid-board in the real slice.
+	var root := _make_root()
+	var board: BoardRenderer = root.board()
+	assert_int(board.occupant_layer.get_child_count()).is_equal(0)
