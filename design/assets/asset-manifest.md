@@ -17,6 +17,7 @@
 
 ### Vertical Slice: Entities & Terrain
 Spec file: `design/assets/specs/vs-entities-assets.md` · Source: `design/assets/entity-inventory.md`
+Paste-ready prompts (hues pre-expanded): `design/assets/specs/generation-prompts.md`
 
 | Asset ID | Name | Category | Hue variants | Status | Notes |
 |----------|------|----------|--------------|--------|-------|
