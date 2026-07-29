@@ -308,26 +308,28 @@ func _refresh_status() -> void:
 	if _status_label == null:
 		return
 	var lines := PackedStringArray()
-	lines.append("● AI thinking…" if _ai_running else "● Your turn")
+	# ASCII only — the engine fallback font has no glyph for many symbols
+	# (bullet/hourglass/warning/arrow), which render as "tofu" boxes.
+	lines.append(">> AI thinking..." if _ai_running else ">> Your turn")
 
 	var build_type: StructureTypeDef = selected_buildable()
 	if build_type != null:
 		var cost: int = BaseProduction.effective_build_cost(_state, build_type, LOCAL_PLAYER)
 		var afford: String = "affordable" if _reader.can_afford_build(LOCAL_PLAYER, build_type) else "too expensive"
-		lines.append("Build [B]: %s — %d AP (%s)    [C] cycle" % [build_type.display_name, cost, afford])
+		lines.append("Build [B]: %s - %d AP (%s)    [C] cycle" % [build_type.display_name, cost, afford])
 
 	var produce_type: UnitTypeDef = selected_produce_type()
 	if produce_type != null:
 		var pcost: int = Unit.effective_produce_cost(_state, produce_type, LOCAL_PLAYER)
 		var pafford: String = "affordable" if _reader.can_afford_produce(LOCAL_PLAYER, produce_type) else "too expensive"
-		lines.append("Produce [P]: %s — %d AP (%s)    [V] cycle" % [produce_type.display_name, pcost, pafford])
+		lines.append("Produce [P]: %s - %d AP (%s)    [V] cycle" % [produce_type.display_name, pcost, pafford])
 
 	var building: String = _building_producer_note()
 	if building != "":
 		lines.append(building) # explains why the produce roster is limited while a producer builds.
 
 	if _flash != "":
-		lines.append("⚠ " + _flash) # why the last action did nothing.
+		lines.append("(!) " + _flash) # why the last action did nothing.
 
 	lines.append("[Arrows] cursor  [Enter] select  [M] move/attack  [B]/[C] build/cycle  [P]/[V] produce/cycle  [Tab] end turn")
 	_status_label.text = "\n".join(lines)
@@ -362,7 +364,7 @@ func _building_producer_note() -> String:
 			var s: StructureState = e as StructureState
 			if s.build_status != StructureState.BuildStatus.COMPLETED and not s.type.producible_types.is_empty():
 				var turns: int = int(_reader.structure_info(s.entity_id).get("build_turns_remaining", 0))
-				return "⏳ %s building (%d turn%s) — its units unlock when done" % [s.type.display_name, turns, "" if turns == 1 else "s"]
+				return "* %s building (%d turn%s) - its units unlock when done" % [s.type.display_name, turns, "" if turns == 1 else "s"]
 	return ""
 
 
