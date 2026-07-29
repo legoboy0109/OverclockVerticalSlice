@@ -1,8 +1,8 @@
 # HUD Design
 
-> **Status**: Reviewed — APPROVED (`/ux-review` 2026-07-27, 0 blocking)
+> **Status**: Reviewed — APPROVED (`/ux-review` 2026-07-29, 0 blocking — S4-10 chrome finalization + slice-overlay fold; prior APPROVED 2026-07-27).
 > **Author**: user + ux-designer
-> **Last Updated**: 2026-07-27
+> **Last Updated**: 2026-07-29 (S4-10)
 > **Template**: HUD Design
 > **Scope**: Vertical Slice (S2-05). VS AP verbs = **Move · Attack · Produce**.
 > Build-outpost, research, and faction readouts are OUT of this slice; audio is
@@ -69,6 +69,9 @@ Aggregated from the game-hud GDD and the in-slice systems' UI Requirements.
 | 13 | **On-board has-acted marker** | game-hud CR-5 | **Must-Show** (on-board) | In |
 | 14 | **Income breakdown** (`BASE_INCOME` + outpost + econ-tech terms) | game-hud CR-3, Formulas | **On-Demand** (hover/toggle) | In — but shows `BASE_INCOME(10)` only; other terms are 0 in VS |
 | 15 | **Unspent-AP reminder** (`UNSPENT_AP_REMINDER`) | CAI | **Contextual** (near End Turn) | In (verb-agnostic nudge) |
+| 16 | **Selected command readout** (armed verb · name · effective cost · affordability) | CAI; base-production/ap-economy | **Contextual** (while an action is armed) | In (S4-10 fold, Element 10a) |
+| 17 | **No-op feedback toast** (why the last input did nothing) | CAI | **Contextual** (transient, after a no-op) | In (S4-10 fold, Element 10b) |
+| 18 | **Input hint bar** (keyboard/gamepad control legend) | CAI / slice scaffolding | **On-Demand** (VS-persistent, collapsible) | In (VS onboarding; migrates to help/pause in full game — Element 10c) |
 | — | Build button / legal-build-tile overlay | base-production | — | **Out** (build-outpost deferred) |
 | — | Per-unit tech / research-in-progress marker | game-hud CR-5 | — | **Out** (research deferred) |
 | — | Non-HQ structure hp, under-construction turns-remaining badge | game-hud CR-5; base-production | — | **Out** (no buildable structures in VS) |
@@ -85,8 +88,8 @@ only responsibility toward these is the **entry control** (the Produce button) a
 | Category | Items | Principle |
 |----------|-------|-----------|
 | **Must-Show** (always visible) | AP counter (1), turn/round (4), End Turn (6), Produce (7), action log (8), on-board hp (12), has-acted (13); opponent AP (3) during opponent turn; preview echo (2) while previewing; banner (5) & victory/defeat (9) as transients | Needed for the core per-turn triage or the "always know the state" promise (Pillar 3) |
-| **Contextual** (visible when relevant) | Detail panel (10), production_cap (11), unspent-AP reminder (15) | Selection/state-dependent; shown only when they carry meaning |
-| **On-Demand** (player-queried) | Income breakdown (14) | Explanatory depth, not glance info — progressive disclosure |
+| **Contextual** (visible when relevant) | Detail panel (10), production_cap (11), unspent-AP reminder (15), selected command readout (16), no-op toast (17) | Selection/state-dependent; shown only when they carry meaning |
+| **On-Demand** (player-queried) | Income breakdown (14), input hint bar (18 — VS-persistent, collapsible) | Explanatory depth, not glance info — progressive disclosure |
 | **Hidden** (world/audio, no chrome) | — (audio cues exist but are non-gating & always paired with a required visual; no HUD info is audio-only) | Non-Hue / accessibility: nothing gameplay-critical is a hidden channel |
 
 > **Conflict check** — the Must-Show list is long (7 persistent items), which suits an
@@ -141,6 +144,31 @@ across the upper board and self-clears before input is expected.
  └───────────────────────────────────────────────────────────────────────┘
    Zone C (log edge, collapsible)
 ```
+
+### Chrome Finalization (S4-10) — provisional widget offsets → pinned zone anchors
+
+`src/ui/game_hud/game_hud.gd::assemble()` positions its seven widgets at a *functional but
+provisional* arrangement (its own class doc flags the final anchoring as this `/ux-design`
+sign-off). This table pins each to a documented zone anchor + safe-zone margin; it supersedes the
+raw `Vector2` offsets in code (which become the *implementation* of these anchors, not the source
+of truth).
+
+| Widget | Zone | Anchor | Safe-zone margin | Notes |
+|--------|------|--------|------------------|-------|
+| AP counter (local) | A | top-left of the spine cluster | ≥16 px / ≥3 % of the shorter axis | Dominant numeral (Element 1); never occluded. |
+| Opponent AP | A | top-right | ≥16 px / ≥3 % | Muted `OPPONENT` treatment. |
+| Turn / round + banner | A | center-top | ≥12 px top | Banner is the one sanctioned transient board-crosser. |
+| Income breakdown | A | docked under the local AP counter | aligns to the AP left edge | On-demand (Element 9). |
+| Action log | C | bottom-left, collapsible | ≥16 px / ≥3 % | Never floats over the board. |
+| Command readout + Produce/End-Turn | B | bottom-right stack (readout top → Produce → End-Turn) | ≥16 px / ≥3 % | Element 10a docks onto the existing control corner. |
+| Detail panel | D | center-right, edge-docked | ≥16 px right | Distinct from the CAI on-board menu (D vs on-board). |
+| Input hint bar (10c) | letterbox | center-bottom band | inside the reserved band | Collapsible; never over the board. |
+
+**Acceptance (screenshot-verifiable — resolves the `game_hud.gd` sign-off):** at **1080p and 1440p**,
+(a) no widget's bounding rect overlaps another's; (b) the board interior (the tile grid) carries
+**no** HUD chrome except the transient turn banner and the Zone-E per-tile marks; (c) every HUD text
+run renders at ≥ the Element-1 minimum and clears the safe-zone margins. Captured as
+`production/qa/evidence/hud-chrome-layout-evidence.md` (the advisory Visual/Feel sign-off, S4-07).
 
 ---
 
@@ -229,6 +257,65 @@ Element-by-element. Interaction patterns are referenced by name from
 - Revealed by hover or an explicit toggle (keyboard-accessible). Shows the `ap_income` terms.
   In the VS this is `BASE_INCOME(10)` only — the outpost and econ-tech terms are structurally 0
   (no outposts, no research). The breakdown UI exists and is correct; it simply has one live term.
+
+### 10. Command Readout & Input Hints (Zone B + letterbox band) — Must-Show [S4-10 fold]
+
+Folds the vertical slice's provisional screen-space status/legend overlay
+(`vertical_slice_root.gd` `_build_status_overlay`/`_refresh_status` — a raw `CanvasLayer`+`Label`)
+into proper, zone-docked HUD controls. The overlay's *turn-indicator* line is **dropped** — it
+duplicates Element 2 (Turn/Round) + Element 3 (Turn Banner). The remaining three payloads become:
+
+**10a · Selected Command Readout** — *Zone B (control corner), docked directly above the
+Produce/End-Turn stack.*
+- **Content:** the action the player is currently armed to commit, one line:
+  `‹VERB› ‹display_name› · ‹effective AP cost› · ‹affordable | too expensive›` (e.g.
+  `PRODUCE Trooper · 3 AP · affordable`, `BUILD Economy Outpost · 4 AP · too expensive`). Covers
+  both the Build-arm and Produce-arm the CAI exposes.
+- **Data source / owner:** `GameStateReader.can_afford_build`/`can_afford_produce` +
+  `BaseProduction.effective_build_cost` / `Unit.effective_produce_cost` (read-only facade,
+  ADR-0016 §1). Owner = BaseProduction / Unit — **never the HUD** (UI-code rule: display only).
+- **Update trigger:** on arm/cycle change (the CAI selection/cycle) **and** on each
+  `action_applied` commit (effective cost + affordability shift as shared AP is spent).
+- **Affordability (dual-channel, Standard tier):** the word `too expensive` **and** the §4 non-hue
+  **Affordability Dimming** treatment (brightness clamp) — never color-only, never red.
+- **Empty state:** nothing armed → the readout is **absent** (not a blank row), so the corner stays
+  quiet until the player is mid-decision.
+- Supersedes the overlay's `Build [B]` / `Produce [P]` lines; the cycle-key affordances ([C]/[V])
+  migrate to 10c.
+
+**10b · Transient No-Op Feedback** — *Zone B-adjacent toast, screen-space, NEVER board-floating.*
+- **Content:** one line stating why the **last input did nothing** — e.g. `Not enough AP`,
+  `Nothing to act on there`. Appears only after a genuine no-op; a successful commit shows nothing
+  (the action log + AP tick are the success feedback).
+- **Queue / priority:** single slot — the latest no-op reason **replaces** any prior one (no stack).
+- **Dismiss:** self-clears on the **next cursor move**, the **next successful commit**, or after
+  `NOOP_FEEDBACK_MS` (Tuning Knob, default 2500 ms) — whichever comes first.
+- **Data source / owner:** the CAI / slice command result (the no-op reason string). Owner = CAI.
+- The proper home for the overlay's transient `_flash`. Pattern: **Toast** (single-slot variant) —
+  a **new pattern**, not currently in `interaction-patterns.md`; flagged for addition there (with
+  the single-slot/latest-replaces queue rule and the auto-dismiss timing).
+
+**10c · Input Hint Bar** — *the camera's reserved bottom **letterbox band** (below the board;
+Pillar 3 — never over the board interior), a styled collapsible control (not a raw Label).*
+- **Content:** the current control legend — `[Arrows] cursor · [Enter] select · [M] move/attack ·
+  [B]/[C] build/cycle · [P]/[V] produce/cycle · [Tab] end turn`. **ASCII-safe glyphs only** (the
+  fallback font tofus bullets/arrows — see S4-09); localized (UI-code rule), reflow + reserve
+  **+40 %** for translation expansion.
+- **Behavior:** **default-visible for the Vertical Slice** — it is the naive-tester onboarding
+  affordance the **S4-04 iso-legibility playtest depends on** (a silent-observer session needs the
+  controls surfaced) — with a keyboard-accessible **collapse toggle**. In the full game the complete
+  legend migrates to the pause/help overlay and this bar shows only contextual, just-in-time hints
+  for the armed verb.
+- **Gamepad variant:** key glyphs swap for button prompts in the same slots (partial-gamepad scope;
+  full parity is a Production item, not a VS gate).
+- **Visibility rule (Pillar 3):** anchored `PRESET_CENTER_BOTTOM` inside the letterbox band, so even
+  at its tallest it never crosses the board interior; collapses to a single `[?] Controls` chip.
+- **Pattern:** the collapse toggle composes **Standard Button**; the bar itself is a new
+  **Contextual Hint Bar** element flagged for addition to `interaction-patterns.md`.
+
+**Priority / visual budget:** 10a and 10b are **contextual** (present only mid-decision / right after
+a no-op) so they add **0** to the resting simultaneous-element count; 10c is one persistent element in
+the otherwise-empty letterbox band. None occupy Zone A (the sacred spine) or the board interior.
 
 ---
 
@@ -340,6 +427,15 @@ Testable pass/fail for `/story-done` and `/ux-review`:
 - [ ] Keyboard/gamepad focus enters HUD chrome in the order Controls → spine → log, and every
       interactive element shows a focus indicator distinct from mouse-hover.
 - [ ] With reduced-motion enabled, all flourishes are removed and no information is lost.
+- [ ] The armed Build/Produce readout (Element 10a) shows `‹verb› ‹name› · ‹effective AP› ·
+      ‹affordable|too expensive›`, updates on arm/cycle **and** on each commit, and is absent when
+      nothing is armed — affordability shown by text **and** dimming, never color alone.
+- [ ] A no-op input (e.g. insufficient AP) surfaces exactly one Element-10b toast that self-clears on
+      the next cursor move, commit, or `NOOP_FEEDBACK_MS`; a successful commit surfaces no toast.
+- [ ] The Input Hint Bar (10c) sits entirely within the bottom letterbox band (never over the tile
+      grid) at 1080p and 1440p, is collapsible, and its strings route through localization.
+- [ ] Every committed HUD widget sits at its Chrome-Finalization zone anchor with no bounding-rect
+      overlap and clears the safe-zone margins at 1080p and 1440p (screenshot evidence).
 
 ---
 
@@ -370,3 +466,10 @@ Testable pass/fail for `/story-done` and `/ux-review`:
    victory/defeat cues are designed to pair with the required visuals but are trimmed from the
    VS gate (game-hud story 008). Every cue already has a visual twin, so their absence loses no
    information.
+8. **HUD chrome finalization + slice-overlay fold** — ✅ **RESOLVED 2026-07-29 (S4-10):** the
+   provisional `game_hud.gd` widget offsets are pinned to zone anchors (Layout Zones → *Chrome
+   Finalization*), and the slice's provisional status/legend overlay is folded into **Element 10**
+   (Command Readout + No-Op Toast + Input Hint Bar). The design is of record here; the code fold
+   (a proper control replacing `vertical_slice_root.gd`'s `_build_status_overlay`, retiring the raw
+   `CanvasLayer`+`Label`) is a follow-up **dev story**, not part of S4-10 (whose AC is spec +
+   `/ux-review` APPROVED). The windowed screenshot sign-off rides S4-07.

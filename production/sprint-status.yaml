@@ -112,8 +112,8 @@ stories:
     name: "HUD chrome /ux-design pass — finalize slice HUD + fold status overlay into a proper control"
     file: "design/ux/hud.md"
     priority: nice-to-have
-    status: backlog
+    status: done
     owner: ""
     estimate_days: 1
     blocker: ""
-    completed: ""
+    completed: "2026-07-29"  # hud.md extended: Element 10 (Command Readout + No-Op Toast + Input Hint Bar folds the slice overlay) + Chrome-Finalization anchor table (resolves game_hud.gd sign-off) + IA rows 16-18 + 4 ACs. /ux-review hud → APPROVED (0 blocking). Code fold = follow-up dev story (OQ #8).
