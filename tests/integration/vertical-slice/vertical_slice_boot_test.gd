@@ -345,6 +345,41 @@ func test_produce_unit_type_selection_cycles_and_deploys_the_selected_type() -> 
 	assert_str((produced as UnitState).type.display_name).is_equal(chosen.display_name)
 
 
+func test_under_construction_producer_excluded_from_roster_until_complete() -> void:
+	# Regression for "can't produce anything but Scout": a freshly-built Production
+	# Outpost is UNDER_CONSTRUCTION (build_time 2) and cannot produce yet. Its types
+	# must stay OUT of the roster (so the player can't cycle to an un-producible
+	# type and have P silently do nothing), and the overlay must flag it.
+	var root := _make_root()
+	var state := root.state()
+	state.per_player[0].current_ap = 20
+	var outpost: StructureState = _place_structure(state, 30, 0, Vector2i(3, 5), StructureTypes.PRODUCTION_OUTPOST)
+	outpost.build_status = StructureState.BuildStatus.UNDER_CONSTRUCTION
+	outpost.build_turns_remaining = 2
+
+	# While building: roster is only the HQ's Scout; cycling can't reach an outpost
+	# type, and the overlay flags the building producer.
+	root.cycle_produce_type()
+	assert_bool(outpost.type.producible_types.has(root.selected_produce_type())).is_false()
+	assert_str(root.status_text()).contains("building")
+
+	# Complete it → its types join the roster and one becomes producible.
+	outpost.build_status = StructureState.BuildStatus.COMPLETED
+	outpost.build_turns_remaining = 0
+	var guard: int = 0
+	while not outpost.type.producible_types.has(root.selected_produce_type()) and guard < 8:
+		root.cycle_produce_type()
+		guard += 1
+	var chosen: UnitTypeDef = root.selected_produce_type()
+	assert_bool(outpost.type.producible_types.has(chosen)).is_true()
+	var deploy: Array[Vector2i] = GameStateReader.new(state).legal_deploy_tiles(30, chosen)
+	assert_bool(deploy.is_empty()).is_false()
+	_move_cursor_to(root, deploy[0])
+	var before: int = state.entities().size()
+	assert_bool(root.request_produce_at_cursor()).is_true() # now produces from the completed outpost
+	assert_int(state.entities().size()).is_equal(before + 1)
+
+
 func test_status_overlay_surfaces_selected_build_type_legend_and_updates_on_cycle() -> void:
 	var root := _make_root()
 
