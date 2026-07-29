@@ -102,6 +102,10 @@ var _selected_buildable: int = 0
 ## index) so it survives roster changes when a Production Outpost is built. Lazily
 ## resolved by [method selected_produce_type].
 var _selected_produce_type: UnitTypeDef = null
+## Transient one-line feedback shown on the overlay when an action does nothing
+## (e.g. "not enough AP"), so a no-op isn't silent. Set on a failed act/build/
+## produce; cleared on the next cursor move or successful commit.
+var _flash: String = ""
 
 
 func _ready() -> void:
@@ -322,8 +326,31 @@ func _refresh_status() -> void:
 	if building != "":
 		lines.append(building) # explains why the produce roster is limited while a producer builds.
 
+	if _flash != "":
+		lines.append("⚠ " + _flash) # why the last action did nothing.
+
 	lines.append("[Arrows] cursor  [Enter] select  [M] move/attack  [B]/[C] build/cycle  [P]/[V] produce/cycle  [Tab] end turn")
 	_status_label.text = "\n".join(lines)
+
+
+## Sets the transient feedback line and repaints the overlay.
+func _flash_msg(text: String) -> void:
+	_flash = text
+	_refresh_status()
+
+
+## The reason [method act_at_cursor] found nothing to do with [param unit] at the
+## cursor — AP exhaustion (the common case: producing spent the shared budget) vs a
+## non-actionable target tile.
+func _act_hint(unit: UnitState) -> String:
+	var ap: int = _state.per_player[LOCAL_PLAYER].current_ap
+	var can_move: bool = not Movement.reachable(_state, unit).is_empty()
+	var can_attack: bool = not Combat.legal_targets(_state, unit).is_empty()
+	if not can_move and not can_attack:
+		return "%s can't act — only %d AP left this turn (End Turn to refresh)." % [unit.type.display_name, ap]
+	if can_attack:
+		return "%s: put the cursor on an adjacent enemy, or a reachable tile, then M." % unit.type.display_name
+	return "%s: that tile isn't reachable — try a nearer empty tile." % unit.type.display_name
 
 
 ## A one-line note about the first own producer still under construction (its units
@@ -487,6 +514,9 @@ func move_cursor(direction: Vector2i) -> bool:
 	if not _cursor.step(direction, _state.grid):
 		return false
 	_cmd.inspect(_state, _cursor.grid_pos) # peek → detail panel (unpinned).
+	if _flash != "":
+		_flash = "" # a new cursor move supersedes the last no-op's message.
+		_refresh_status()
 	_keep_cursor_in_view() # pan the camera if the cursor nears the view edge (zoomed in).
 	queue_redraw() # repaint the cursor highlight.
 	return true
@@ -520,11 +550,14 @@ func cursor_tile() -> Vector2i:
 func request_build_at_cursor() -> bool:
 	if _cursor == null or _buildables.is_empty() or not _cmd.is_input_live(_state):
 		return false # live-gated (same is_input_live check as produce/act).
+	_flash = ""
 	var type: StructureTypeDef = _buildables[_selected_buildable]
 	var tile: Vector2i = _cursor.grid_pos
 	if not _reader.legal_build_tiles(LOCAL_PLAYER, type).has(tile):
+		_flash_msg("Can't build %s here — move the cursor onto an empty tile next to something you own." % type.display_name)
 		return false
 	if not _reader.can_afford_build(LOCAL_PLAYER, type):
+		_flash_msg("Can't afford %s (%d AP) — End Turn to refresh AP." % [type.display_name, BaseProduction.effective_build_cost(_state, type, LOCAL_PLAYER)])
 		return false
 	var action := BuildAction.new()
 	action.structure_type = type
@@ -558,8 +591,10 @@ func selected_buildable() -> StructureTypeDef:
 func request_produce_at_cursor() -> bool:
 	if _cursor == null or not _cmd.is_input_live(_state):
 		return false
+	_flash = ""
 	var utype: UnitTypeDef = selected_produce_type()
 	if utype == null:
+		_flash_msg("No completed producer yet — build a Production Outpost and wait for it to finish.")
 		return false
 	var tile: Vector2i = _cursor.grid_pos
 	for e: EntityState in _reader.entities():
@@ -584,6 +619,12 @@ func request_produce_at_cursor() -> bool:
 		action.unit_type = utype
 		action.tile = tile # action.player set by CommandInterface.commit.
 		return _cmd.dispatch_commit(action, _state)
+	# No completed producer could deploy the selected type at the cursor.
+	var afford: bool = _reader.can_afford_produce(LOCAL_PLAYER, utype)
+	if not afford:
+		_flash_msg("Can't afford %s (%d AP) — End Turn to refresh AP." % [utype.display_name, Unit.effective_produce_cost(_state, utype, LOCAL_PLAYER)])
+	else:
+		_flash_msg("Put the cursor on an empty tile next to a completed producer that makes %s." % utype.display_name)
 	return false
 
 
@@ -597,8 +638,10 @@ func request_produce_at_cursor() -> bool:
 func act_at_cursor() -> bool:
 	if _cursor == null or not _cmd.is_input_live(_state):
 		return false
+	_flash = "" # a successful commit refreshes the overlay via _on_action_applied.
 	var entity: EntityState = _state.entities_by_id.get(_cmd.selected_id())
 	if not (entity is UnitState) or entity.owner != LOCAL_PLAYER:
+		_flash_msg("Select your unit first (Enter), then M to move/attack.")
 		return false
 	var unit: UnitState = entity as UnitState
 	var tile: Vector2i = _cursor.grid_pos
@@ -620,6 +663,7 @@ func act_at_cursor() -> bool:
 			mv.tiles_entered = reach.min_cost
 			return _cmd.dispatch_commit(mv, _state)
 
+	_flash_msg(_act_hint(unit))
 	return false
 
 
