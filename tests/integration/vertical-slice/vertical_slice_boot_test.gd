@@ -455,3 +455,20 @@ func test_camera_frames_the_whole_board_within_the_view() -> void:
 	assert_float(cam.zoom.x).is_between(0.3, 1.5)
 
 	get_window().size = prev_size
+
+
+func test_move_relocates_a_non_scout_unit() -> void:
+	# Regression: moving a Trooper/Heavy/Sniper (move_cost > 1) was rejected because
+	# MoveAction.tiles_entered was set to the AP cost (reach.min_cost) instead of the
+	# tile count, so validate_move's cost check failed for everything but the Scout.
+	var root := _make_root()
+	var state := root.state()
+	_place_unit(state, 12, 0, Vector2i(6, 5), UnitTypes.TROOPER) # move_cost 2
+	state.per_player[0].current_ap = 20 # ample AP — not an affordability case.
+
+	_move_cursor_to(root, Vector2i(6, 5))
+	assert_bool(root.select_at_cursor()).is_true()
+	_move_cursor_to(root, Vector2i(6, 6)) # an adjacent reachable tile
+	assert_bool(root.act_at_cursor()).is_true() # the Trooper moves (was falsely rejected)
+	assert_bool(state.entity_at(Vector2i(6, 6)) is UnitState).is_true()
+	assert_vector((state.entities_by_id[12] as UnitState).position).is_equal(Vector2i(6, 6))

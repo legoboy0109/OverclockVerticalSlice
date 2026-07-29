@@ -661,11 +661,31 @@ func act_at_cursor() -> bool:
 			var mv := MoveAction.new()
 			mv.from = unit.position
 			mv.to = tile
-			mv.tiles_entered = reach.min_cost
+			# tiles_entered is the TILE COUNT (input to move_path_cost), NOT the AP
+			# cost — reach.min_cost is the AP cost. They coincide only for move_cost-1
+			# units (Scout); for Trooper/Heavy/Sniper the raw min_cost overstates the
+			# tile count and validate_move rejects the move. Convert back, as the AI does.
+			mv.tiles_entered = _tiles_for_cost(unit, reach.min_cost)
 			return _cmd.dispatch_commit(mv, _state)
 
 	_flash_msg(_act_hint(unit))
 	return false
+
+
+## Recovers the tile count whose [method Movement.move_path_cost] equals
+## [param ap_cost] (a [member Movement.ReachableTile.min_cost]) — the inverse the
+## [MoveAction] needs for its [member MoveAction.tiles_entered]. Linear search over
+## the monotonic cost function, mirroring the AI's own conversion. Falls back to 1.
+func _tiles_for_cost(unit: UnitState, ap_cost: int) -> int:
+	var tiles: int = 1
+	while tiles <= unit.type.soft_move_cap + unit.tiles_moved_this_turn + 64:
+		var c: int = Movement.move_path_cost(unit, tiles)
+		if c == ap_cost:
+			return tiles
+		if c > ap_cost:
+			break
+		tiles += 1
+	return 1
 
 
 # --- Placeholder entity rendering (STUB — see class doc) ---------------------
