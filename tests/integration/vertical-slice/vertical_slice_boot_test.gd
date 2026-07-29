@@ -380,6 +380,22 @@ func test_under_construction_producer_excluded_from_roster_until_complete() -> v
 	assert_int(state.entities().size()).is_equal(before + 1)
 
 
+func test_act_with_no_ap_flashes_an_ap_reason_instead_of_silently_doing_nothing() -> void:
+	# Regression for "produced units can't move or attack": producing spends the
+	# shared AP budget, so a fresh unit may have no AP to act the same turn. Pressing
+	# M must explain that (not silently no-op).
+	var root := _make_root()
+	var state := root.state()
+	_place_unit(state, 10, 0, Vector2i(5, 5), UnitTypes.TROOPER)
+	state.per_player[0].current_ap = 0 # spent it all producing.
+
+	_move_cursor_to(root, Vector2i(5, 5))
+	assert_bool(root.select_at_cursor()).is_true()
+	_move_cursor_to(root, Vector2i(5, 6)) # a cursor move clears any prior flash first.
+	assert_bool(root.act_at_cursor()).is_false() # can't move or attack with 0 AP
+	assert_str(root.status_text()).contains("AP left") # ...but the overlay says why.
+
+
 func test_status_overlay_surfaces_selected_build_type_legend_and_updates_on_cycle() -> void:
 	var root := _make_root()
 
