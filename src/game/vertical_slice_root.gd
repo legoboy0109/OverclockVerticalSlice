@@ -167,7 +167,14 @@ func _build_match() -> void:
 
 func _build_board_and_camera() -> void:
 	_board = BoardRenderer.new()
-	add_child(_board)
+	add_child(_board) # _ready() seeds the board's y-sort DEMO occupants (Story 002).
+	# Those 2 placeholder units + tall prop are br-002 fixtures, not real entities —
+	# strip them so they don't sit as coloured blobs mid-board (the slice draws live
+	# entities via its own _draw; the real entity renderer is an unbuilt seam).
+	if _board.occupant_layer != null:
+		for demo: Node in _board.occupant_layer.get_children():
+			_board.occupant_layer.remove_child(demo)
+			demo.queue_free()
 
 	_camera = Camera2D.new()
 	add_child(_camera)
