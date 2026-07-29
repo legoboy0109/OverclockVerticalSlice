@@ -103,11 +103,11 @@ stories:
     name: "Follow-ups: ap_counter →→ASCII; enforce pass_threshold in AI.choose_action"
     file: "src/ui/game_hud/ap_counter_widget.gd"
     priority: nice-to-have
-    status: backlog
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-07-29"  # ap_counter fully ASCII; pass_threshold enforced in choose_action (config 0.16/0.20 > 0.15 by design); +4 tests, full suite 830/830
   - id: "s4-10"
     name: "HUD chrome /ux-design pass — finalize slice HUD + fold status overlay into a proper control"
     file: "design/ux/hud.md"
