@@ -28,12 +28,16 @@
 ##   [code]GameState.entities()[/code] → board feed is unowned). Entities are drawn
 ##   here as minimal owner-coloured placeholder markers ([method _draw]) purely so
 ##   the board is not empty; replace with the real entity renderer when it lands.
-## [br]• [b]Click-to-select[/b] (mouse): picking a unit BY CLICK needs the
-##   occupant-pick-region authoring seam (an unassigned build task) — deferred.
-##   Keyboard selection is wired around it: the arrow-key grid cursor
-##   ([member _cursor]) resolves the entity from its own tile (peek →
-##   [method select_at_cursor]), so only mouse-click selection + click-driven
-##   board overlays remain on that blocked seam.
+## [br]• [b]Click-to-select[/b] (mouse): WIRED (scope §8 seam b closed). Left-click
+##   routes through [method select_at_mouse] → [method CommandInterface.route_click]
+##   → [method BoardRenderer.pick_at] against the occupant pick-regions this scene
+##   authors from the live entities ([method _refresh_occupant_pick_regions]) — the
+##   ADR-0013 §4 CAI boundary (never [code]screen_to_grid[/code] for routing). The
+##   regions are placeholder-era (sized to the tile diamond, matching the drawn
+##   markers); the real entity renderer (S4-03) re-authors them from sprite bounds.
+##   Click-to-MOVE (an action from a click into an open preview) stays Story 007
+##   scope — this closes selection only. The keyboard cursor path
+##   ([method select_at_cursor]) remains as the gamepad/keyboard equivalent.
 ## [br]• [b]Art[/b]: placeholder tinted diamonds until the art/TileSet pass.
 ## [br]• Camera framing/zoom is provisional (final feel = `/ux-design`).
 class_name VerticalSliceRoot
@@ -122,6 +126,7 @@ func _ready() -> void:
 	_reader.subscribe_action_applied(_on_action_applied)
 	# If the match ever opens on the AI's side, hand off immediately.
 	_drive_ai_turns()
+	_refresh_occupant_pick_regions() # author the initial click targets from the starting entities.
 	queue_redraw()
 	_refresh_status()
 
@@ -258,11 +263,12 @@ func _keep_cursor_in_view() -> void:
 func _build_command_interface() -> void:
 	_cmd = CommandInterface.new()
 	add_child(_cmd)
-	# Accept the real default query Callables. The overlay renderer is NOT injected
-	# yet: overlays only render during selection/preview, which rides the blocked
-	# click-pick seam — inject the board as renderer (a small CommandInterface
-	# set_renderer passthrough is owed) when board selection is wired.
+	# Accept the real default query Callables, then inject the board as the click
+	# renderer (scope §8 seam b closed): route_click consumes _board.pick_at as the
+	# ONE click-routing entry point (ADR-0013 §4), never screen_to_grid directly.
+	# _board is built first in _ready, so it exists here.
 	_cmd.configure_dependencies()
+	_cmd.set_renderer(_board)
 	_cmd.set_local_player(LOCAL_PLAYER)
 	_cmd.set_input_config(InputConfig.new())
 	_cmd.attach_to_state(_state)
@@ -441,6 +447,7 @@ func _build_cursor() -> void:
 ## than re-entrantly inside [method GameState.apply_action]'s own signal emission.
 func _on_action_applied(_result: ActionResult) -> void:
 	queue_redraw()
+	_refresh_occupant_pick_regions() # entities moved/spawned/died — re-author the click targets.
 	_refresh_status() # AP/affordability/selection may have changed.
 
 
@@ -474,7 +481,9 @@ func _drive_ai_turns() -> void:
 ## selects an own unit at the cursor; M moves/attacks the selected unit onto the
 ## cursor tile; B builds the selected structure and C cycles the buildable type; P
 ## produces the selected unit type at the cursor and V cycles that type; Tab ends
-## the human's turn. Mouse wheel zooms and middle-drag pans the camera. The cursor
+## the human's turn. Left-click selects the own unit under the pointer (routed
+## through the board's pick-regions, [method select_at_mouse]); mouse wheel zooms
+## and middle-drag pans the camera. The cursor
 ## keys reuse the built-in [code]ui_*[/code] actions; the letter/Tab keys are read
 ## by keycode. Dedicated, rebindable InputMap actions for all of these are a
 ## follow-up (the cai-005 InputMap-wiring tech-debt).
@@ -508,6 +517,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			_zoom_camera(CAMERA_ZOOM_STEP)      # wheel up: zoom in
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			_zoom_camera(1.0 / CAMERA_ZOOM_STEP) # wheel down: zoom out (to the fit floor)
+		elif event.button_index == MOUSE_BUTTON_LEFT:
+			select_at_mouse()                    # left-click: pick + select an own unit
 	elif event is InputEventMouseMotion and (event.button_mask & MOUSE_BUTTON_MASK_MIDDLE) != 0:
 		_camera.position -= event.relative / _camera.zoom # middle-drag: free pan
 
@@ -548,6 +559,87 @@ func select_at_cursor() -> bool:
 			queue_redraw() # paint the selected unit's move/attack range immediately.
 		return ok
 	return false
+
+
+## Mouse click-select (scope §8 seam b): resolves the click through the Command &
+## Action Interface's ONE routing entry point — [method CommandInterface.route_click]
+## → [method BoardRenderer.pick_at] against the authored occupant pick-regions, NEVER
+## [method BoardRenderer.screen_to_grid] directly (the ADR-0013 §4 CAI boundary).
+## Clicking an own unit pins it (detail panel + move/attack range), exactly like the
+## keyboard [method select_at_cursor]. The board-cursor is synced to the picked tile
+## (when in bounds) so keyboard control continues from where the mouse last acted and
+## the two input paths never disagree on "where we are". Click-to-MOVE (a committed
+## action from a click) stays Story 007 scope — this closes selection only. Returns
+## whether the click left an own unit selected.
+##
+## The board is a child Node2D under the framing camera, and pick_at works in the
+## board's local space (the space grid_to_screen and the pick-regions live in), so
+## [method Node2D.get_local_mouse_position] folds in the camera zoom/pan for free.
+## The actual routing lives in [method select_at_board_point] (a testable seam that
+## takes an explicit board-space point, since the live mouse position is not settable
+## headlessly).
+func select_at_mouse() -> bool:
+	if _board == null:
+		return false
+	return select_at_board_point(_board.get_local_mouse_position())
+
+
+## Click-select at an explicit board-local point (the injectable core of
+## [method select_at_mouse]). See that method for the full contract.
+func select_at_board_point(board_pos: Vector2) -> bool:
+	if _board == null or _cmd == null or _state == null:
+		return false
+	var pick: Object = _cmd.route_click(board_pos, _state)
+	if pick == null:
+		return false
+	# route_click returns the raw pick whether or not it selected; reflect it in the
+	# keyboard cursor + detail panel so the two input paths stay in lockstep.
+	if _cursor != null and _state.grid != null \
+			and _state.grid.in_bounds(pick.tile.x, pick.tile.y):
+		_cursor.grid_pos = pick.tile
+		_cmd.inspect(_state, pick.tile) # peek the picked tile into the detail panel.
+		if _flash != "":
+			_flash = ""
+			_refresh_status()
+		_keep_cursor_in_view()
+	queue_redraw() # paint (or clear) the selected unit's range highlight.
+	return pick.occupant_entity_id != -1 and _cmd.selected_id() == pick.occupant_entity_id
+
+
+## Rebuilds the board's occupant pick-regions from the live entities so a left-click
+## resolves to the occupant on that tile (scope §8 seam b, consumed by
+## [method BoardRenderer.pick_at]). Each region is the occupant tile's screen-space
+## AABB, authored back-to-front (ascending screen Y — the Y-sort paint order) so
+## pick_at's front-most-wins overlap rule (it tests regions in reverse) resolves a
+## tie to the occupant nearest the camera. Placeholder-era sizing: the tile diamond's
+## box, matching the markers [method _draw] paints; the real entity renderer (S4-03)
+## re-authors these from actual sprite bounds. Refreshed on every commit
+## ([method _on_action_applied]) since entities move, spawn, and die.
+func _refresh_occupant_pick_regions() -> void:
+	if _board == null or _reader == null:
+		return
+	var entities: Array[EntityState] = _reader.entities()
+	entities.sort_custom(_pick_region_paint_order)
+	var half := Vector2(BoardRenderer.TILE_WIDTH_PX, BoardRenderer.TILE_HEIGHT_PX) * 0.5
+	var regions: Array[BoardRenderer.OccupantPickRegion] = []
+	for entity: EntityState in entities:
+		var center: Vector2 = _board.grid_to_screen(entity.position)
+		var region := BoardRenderer.OccupantPickRegion.new()
+		region.rect = Rect2(center - half, half * 2.0)
+		region.entity_id = entity.entity_id
+		region.tile = entity.position
+		regions.append(region)
+	_board.occupant_pick_regions = regions
+
+
+## Back-to-front paint order for the pick-regions: ascending screen Y (the Y-sort
+## order), entity_id breaking exact-Y ties so the authored order is deterministic.
+func _pick_region_paint_order(a: EntityState, b: EntityState) -> bool:
+	var ay: float = _board.grid_to_screen(a.position).y
+	var by: float = _board.grid_to_screen(b.position).y
+	if ay == by:
+		return a.entity_id < b.entity_id
+	return ay < by
 
 
 ## The cursor's current grid tile (for the test + the [method _draw] highlight).

@@ -92,11 +92,11 @@ stories:
     name: "Occupant pick-region authoring + mouse click-select (scope §8 seam b)"
     file: "src/ui/board_renderer/board_renderer.gd"
     priority: should-have
-    status: backlog
+    status: done
     owner: ""
     estimate_days: 1
-    blocker: "s4-03"
-    completed: ""
+    blocker: ""
+    completed: "2026-08-05"  # Implemented against placeholders (decoupled from s4-03 per user call). Added CommandInterface.set_renderer passthrough; slice injects the board as click renderer + authors occupant_pick_regions per live entity (back-to-front Y-sort order), refreshed on every commit; left-click → select_at_mouse → route_click → pick_at (ADR-0013 §4 CAI boundary, never screen_to_grid). +3 integration tests; full suite 833/833, main scene boots clean. Placeholder-era regions sized to the tile diamond; S4-03 re-authors from real sprite bounds.
 
   # --- Nice to Have ---
   - id: "s4-09"

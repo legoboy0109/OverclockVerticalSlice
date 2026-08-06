@@ -331,6 +331,19 @@ func set_input_config(config: InputConfig) -> void:
 	_input_config = config
 
 
+## Injects the duck-typed board renderer after construction — the "renderer only"
+## passthrough the vertical-slice scene needs to wire click routing without
+## re-supplying the query Callables that the all-at-once [method configure_dependencies]
+## path demands (mirrors [method set_local_player] / [method set_input_config]).
+## The injected object must expose [code]pick_at(screen_pos: Vector2)[/code] (the ONE
+## click-routing entry point [method route_click] consumes, ADR-0013 §4) and, for the
+## overlay path, [code]set_overlays[/code] / [code]clear_overlay[/code] /
+## [code]glyph_anchor[/code]. A null renderer leaves the pick/overlay seams as
+## defensive no-ops.
+func set_renderer(renderer: Object) -> void:
+	_renderer = renderer
+
+
 ## Subscribes this interface to [param state]'s shared
 ## [signal GameState.action_applied] (Story 007, TR-cmdui-023) — the ONE seam the
 ## commit-flash (here) and the AP-counter tick (Game HUD epic) both hang off, so
