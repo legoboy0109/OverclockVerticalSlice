@@ -1,6 +1,6 @@
 # Research / Tech
 
-> **Status**: **Approved** — independent `/design-review` 2026-07-21 (5 agents: game-designer /
+> **Status**: **In Revision — PIVOT 2026-08-05.** Previously Approved — independent `/design-review` 2026-07-21 (5 agents: game-designer /
 > systems-designer / economy-designer / qa-lead + creative-director senior): verdict **NEEDS REVISION** →
 > 4 blocking items resolved in-file → **user accepted the revisions to Approved**. Fixes: (1) stale
 > "unlanded handoffs" header + BLOCKED AC tags corrected — **both cross-system handoffs LANDED** (Unit
@@ -19,9 +19,26 @@
 > adding its own cap, `ECONOMY_TECH_TIER_THRESHOLD` (6 completed Economy Outposts, AP-Economy-owned),
 > which lowers the practical ceiling from ~38 to ~32. `ECONOMY_TECH_INCOME_BONUS` (this doc's own value,
 > 1) is unchanged. Base & Production #7's re-review is still owed.**
+> **PIVOT 2026-08-05 (AP↔Credits split).** The single AP pool split into two resources (see
+> ap-economy.md). For Research: a tech's `research_cost` is now denominated in **Credits** (the banked
+> economy currency — same numbers as before, 7/10/10), paid via `credits_spend`; **plus** a small
+> per-tech **`ap_surcharge`** (AP) charged when research is committed — a new tech-template field whose
+> default is the base `RESEARCH_AP_COST` (1, owned by AP & Credits Economy) and which each tech may
+> override for its own tempo cost (the three VS techs all default to 1 for now). Research is therefore a
+> **dual-cost, both-or-neither** action — `research_cost` Credits **and** `ap_surcharge` AP, spent both
+> or neither. **Economy Tech's income bonus** now adds to **`credit_income`** (was `ap_income`), capped
+> by `ECONOMY_TECH_TIER_THRESHOLD` (6) as before. Attack/Defense Tech effects are unchanged (unit
+> combat-stat buffs). The **Research Lab** structure's `build_cost` (8) is now Credits + the standard
+> `BUILD_AP_COST` (2) AP surcharge (it follows Base & Production's build dual-cost, not the research
+> surcharge). No numeric values change — only the resource denomination and the added per-tech surcharge.
+> The pre-pivot "single shared AP pool" framing in the prose below is superseded; it is retained with
+> inline flags. **Pending:** `/design-review` on this delta; ⚠ **Pillar 1 wording** (see ap-economy.md
+> Open Questions).
 > **Author**: user + main session (systems-designer + economy-designer on tech/Lab numbers; qa-lead on acceptance criteria)
-> **Last Updated**: 2026-07-21 (independent `/design-review` revision — 4 blocking items)
-> **Implements Pillar**: Pillar 1 (One Economy, Every Choice — research spends AP like everything else); Pillar 2 (Tempo Is the Skill — a third tempo axis beyond units and economy)
+> **Last Updated**: 2026-08-05 (AP↔Credits pivot — research cost → Credits + per-tech `ap_surcharge` base 1; Economy-Tech income → Credits)
+> **Implements Pillar**: ⚠ Pillar 1 ("One Economy, Every Choice") is revised by the pivot — research now
+> spends **Credits + a small AP surcharge** (`ap_surcharge`, default 1), not a single pool (wording TBD —
+> see ap-economy.md Open Questions); Pillar 2 (Tempo Is the Skill — a third tempo axis beyond units and economy)
 > **Creative Director Review (CD-GDD-ALIGN)**: SKIPPED — Lean review mode (not a phase gate). Review pillar alignment manually or in the independent `/design-review`.
 > **Priority / Layer**: Vertical Slice / Core (system #8)
 
@@ -29,13 +46,16 @@
 
 Research / Tech is OVERCLOCK's progression lever: a small, flat set of three permanent unlocks —
 **Attack Tech** (+1 attack, all units), **Defense Tech** (+1 defense, all units), and **Economy Tech**
-(+1 AP of income per turn for each completed Economy Outpost the player owns) — researched at a **Research Lab**, a fifth
+(+1 **Credit** of income per turn for each completed Economy Outpost the player owns) — researched at a **Research Lab**, a fifth
 structure type built through Base & Production's existing structure system (`build_cost`/`build_time`/
 Under-Construction/Completed, destroyable with no refund while unfinished). A Lab researches one tech at
-a time; building a second Lab lets a player parallelize two techs at once, at the price of the AP and
-board risk that entails. Like every other action in OVERCLOCK, researching spends from the single
-shared AP pool — there is no separate tech currency. The player engages with this system directly:
-*when* to divert AP from units or outposts into a permanent power spike is a real tempo decision with
+a time; building a second Lab lets a player parallelize two techs at once, at the price of the Credits, AP
+surcharge, and board risk that entails. Like every other economic action in OVERCLOCK, researching is a
+**dual-cost** commit — its `research_cost` in **Credits** (the banked economy currency) **plus** a small
+per-tech **`ap_surcharge`** in AP, spent both or neither (pivot 2026-08-05: was a single shared AP pool;
+the Credit price is the resource gate, the AP surcharge the tempo gate — see ap-economy.md). The player
+engages with this system directly: *when* to divert Credits and tactical AP from units or outposts into a
+permanent power spike is a real tempo decision with
 the same texture as building an outpost. *Which* tech is largely an archetype-identity choice, not a
 live 3-way toss-up every turn — Economy Tech is the boom archetype's signature pick, Attack/Defense
 Tech the aggressive archetype's (see Player Fantasy and the "On 'which tech' as a decision" note in
@@ -47,9 +67,10 @@ undefended Outpost is punished.
 ## Player Fantasy
 
 Research is the **long bet** — the fantasy of choosing a permanent edge and defending it long enough to
-cash in. Where an Economy Outpost pays back in a predictable few turns of extra AP, a completed tech
+cash in. Where an Economy Outpost pays back in a predictable few turns of extra Credits, a completed tech
 never stops paying: every future attack lands harder, every future hit is shrugged off a little more,
-every future outpost costs a little less, for the rest of the match. That permanence is what makes the
+every future turn earns a little more Credit income (pivot 2026-08-05: Economy Tech's benefit is now
+Credit income per outpost, not the old outpost cost discount), for the rest of the match. That permanence is what makes the
 choice feel weighty — you're not asking "what do I need this turn," you're asking "what do I want to
 *be* for the rest of the game." The counterweight that keeps it a *bet* rather than a free power-up is
 the one Base & Production already established: the Lab is exposed and worthless while under construction,
@@ -61,7 +82,8 @@ expressed as patience.
 **Honest framing (snowball — not a no-brainer, but not a comeback tool either).** A *completed* tech is a
 permanent, army-wide, **un-raidable** edge — once banked it survives even if every Lab dies (Rule 8).
 That makes Research a genuine **mid-game snowball lever**: a player who is already ahead can spend surplus
-AP to bank a permanent advantage the loser (AP-starved, per Base & Production's closeout fixture) cannot
+Credits (and the tactical AP for the surcharge) to bank a permanent advantage the loser (Credit- and
+AP-starved, per Base & Production's closeout fixture) cannot
 match — it *widens* a lead rather than closing one. This is intended: Research is the **reward for winning
 the tempo duel**, not an equal-opportunity power-up, and this GDD does not pretend otherwise. The braking
 force is entirely front-loaded — the *only* window to punish a tech is the vulnerable build+research
@@ -75,7 +97,8 @@ turn among three equally-live options. A player compounding an economic lead rea
 a player pressing an army advantage reaches for Attack or Defense Tech. This is intended, not a design
 gap: it aligns Research with the game's rush/boom archetypes (the Pillar 4 seed) rather than pretending
 all three techs are interchangeable sticks a player picks between on pure per-turn merit. The real
-per-turn decision is *when* to divert AP into the tech that matches your archetype (Overview), not
+per-turn decision is *when* to divert Credits (and the tactical AP for the surcharge) into the tech that
+matches your archetype (Overview), not
 *which* of three symmetric options to pick.
 
 > `creative-director` not consulted — Lean review mode. Review this framing manually before production.
@@ -84,12 +107,16 @@ per-turn decision is *when* to divert AP into the tech that matches your archety
 
 ### Core Rules
 
-1. **A tech is an immutable data template** with: display name, `research_cost` (AP), `research_time`
+1. **A tech is an immutable data template** with: display name, `research_cost` (**Credits**),
+   **`ap_surcharge`** (AP — the per-tech tempo cost charged when research is committed; default is the
+   base `RESEARCH_AP_COST` (1, owned by AP & Credits Economy), overridable per tech; the three VS techs
+   all default to 1), `research_time`
    (owner-turns to complete), and an effect. The three Vertical-Slice techs — **Attack Tech** (+1
    attack, all this player's units), **Defense Tech** (+1 defense, all this player's units), **Economy
-   Tech** (+`ECONOMY_TECH_INCOME_BONUS` AP of income per turn per completed Economy Outpost this player
+   Tech** (+`ECONOMY_TECH_INCOME_BONUS` **Credits** of income per turn per completed Economy Outpost this player
    owns) — are **flat and unordered**: no prerequisites, researchable in any order, and each is a
-   **one-time, permanent, per-player** unlock (not per-unit, not per-Lab).
+   **one-time, permanent, per-player** unlock (not per-unit, not per-Lab). *(Pivot 2026-08-05: `research_cost`
+   is now in Credits and the `ap_surcharge` field is new — see the PIVOT header note.)*
 
 2. **The Research Lab is a fifth structure type**, built through **Base & Production's existing
    structure mechanics** unchanged: same `build_cost`/`build_time`/`hp` data shape, the same placement
@@ -101,8 +128,12 @@ per-turn decision is *when* to divert AP into the tech that matches your archety
    Dependencies.)*
 
 3. **A Completed Research Lab may research exactly one tech at a time.** Starting research
-   (`start_research(lab, tech)`) spends the tech's full `research_cost` AP **upfront** (mirroring how
-   `build_cost` is spent entirely at build time, not amortized) and begins a `research_time`-owner-turn
+   (`start_research(lab, tech)`) is a **dual-cost, both-or-neither** commit (AP & Credits Economy Rule 11):
+   it spends the tech's full `research_cost` **Credits** (via `credits_spend`) **and** its `ap_surcharge`
+   **AP** (via `ap_spend`) **upfront** (mirroring how a structure's `build_cost` + `BUILD_AP_COST` are
+   spent entirely at build time, not amortized) — legal only if the player can afford **both**
+   (`credits_can_afford` AND `ap_can_afford`), and it spends both or neither. It then begins a
+   `research_time`-owner-turn
    countdown; the tech enters **Under Research** at that Lab. An **Under-Construction** Lab cannot
    research (must be Completed first, same rule as producers in Base & Production).
 
@@ -119,8 +150,9 @@ per-turn decision is *when* to divert AP into the tech that matches your archety
    generalized to "completion before any effect that reads it").
 
 6. **If a Lab researching a tech is destroyed, that tech's progress is entirely lost.** The spent
-   `research_cost` is **not refunded** (the boom punish, matching Base & Production's
-   under-construction-destruction rule), and the tech's status reverts to **Not Started** — it may be
+   `research_cost` **Credits** are **not refunded** (the boom punish, matching Base & Production's
+   under-construction-destruction rule), and the `ap_surcharge` AP was already spent as tempo (never
+   refundable), and the tech's status reverts to **Not Started** — it may be
    attempted again later at any Completed Lab (this Rule does not permanently lock a tech out). A
    **completed** tech's effect is **never lost**, even if every Lab that ever housed it is later
    destroyed — the unlock lives on the player's tech-flag state, not on the Lab.
@@ -135,8 +167,10 @@ per-turn decision is *when* to divert AP into the tech that matches your archety
    the trigger; Research just adds one more state check to what that path already resolves.
 
 7. **Voluntary cancel** of an in-progress research works exactly like Base & Production's structure
-   cancel: `cancel_research(lab)` refunds `floor(research_cost × CANCEL_REFUND_RATE)` AP (reusing the
-   same registered constant, 0.5), the Lab returns to Idle, and the tech's status reverts to Not
+   cancel: `cancel_research(lab)` refunds `floor(research_cost × CANCEL_REFUND_RATE)` **Credits** (via
+   `credits_credit`, reusing the same registered constant, 0.5); the `ap_surcharge` AP paid at commit is
+   **not** refunded (the tempo is spent — matching how Base & Production's build-time AP surcharge is not
+   refunded on cancel). The Lab returns to Idle, and the tech's status reverts to Not
    Started.
 
 8. **Completed-tech effects are read live, not baked in.** `has_attack_tech(player)` and
@@ -144,10 +178,10 @@ per-turn decision is *when* to divert AP into the tech that matches your archety
    `effective_attack`/`effective_defense` for every unit that player owns — instantly, the moment the
    tech completes, exactly like the existing `RESEARCH_ATK_BONUS` research-buff rule in Unit System
    (Core Rule 9, unchanged in spirit, now generalized to two independent flags instead of one). Economy
-   Tech's income bonus is read live by **AP Economy** whenever it computes a researched player's
-   `ap_income` — an extra `ECONOMY_TECH_INCOME_BONUS` AP per completed Economy Outpost, up to
-   `ECONOMY_TECH_TIER_THRESHOLD` (6, AP-Economy-owned) outposts, added on top of AP Economy's existing
-   tiered outpost bonus.
+   Tech's income bonus is read live by **AP & Credits Economy** whenever it computes a researched player's
+   `credit_income` — an extra `ECONOMY_TECH_INCOME_BONUS` **Credits** per completed Economy Outpost, up to
+   `ECONOMY_TECH_TIER_THRESHOLD` (6, Economy-owned) outposts, added on top of AP & Credits Economy's existing
+   tiered outpost bonus (pivot 2026-08-05: was `ap_income`; the resource is now Credits, values unchanged).
 
 9. **Deterministic and headless.** Research start/cancel/timer-advance/completion are pure functions of
    game state and the chosen action — no RNG, stable order, computable on a `clone()` for AI look-ahead
@@ -175,8 +209,8 @@ longer exists).
 
 | System | Data in | Data out | Interface owner |
 |--------|---------|----------|-----------------|
-| Base & Production | Research Lab's `build_cost`/`build_time`/`hp` (Research-owned values, using B&P's generic build/cancel/destroy mechanics) | Research Lab as a placeable/destroyable structure | Base & Production owns the structure state machine; Research owns the Lab's own stats |
-| AP Economy | `can_afford`/`spend` for `research_cost` and the Lab's `build_cost`; **Economy Tech adds `ECONOMY_TECH_INCOME_BONUS × min(completed_outpost_count(player), ECONOMY_TECH_TIER_THRESHOLD)` to a researched player's `ap_income`** | the Economy-Tech income term (`has_economy_tech` + the per-outpost bonus value) | AP Economy owns the pool + the `ap_income` formula + the `ECONOMY_TECH_TIER_THRESHOLD` cap; Research owns `research_cost`, the Lab's `build_cost`, and the Economy-Tech income-bonus value |
+| Base & Production | Research Lab's `build_cost` (Credits)/`build_time`/`hp` (Research-owned values, using B&P's generic build/cancel/destroy mechanics — the Lab's build spends Credits + `BUILD_AP_COST` 2 AP) | Research Lab as a placeable/destroyable structure | Base & Production owns the structure state machine; Research owns the Lab's own stats |
+| AP & Credits Economy | `credits_can_afford`/`credits_spend` for `research_cost` (Credits) + `ap_can_afford`/`ap_spend` for the tech's `ap_surcharge` (both-or-neither); cancel refund credits the **Credit** pool; **Economy Tech adds `ECONOMY_TECH_INCOME_BONUS × min(completed_outpost_count(player), ECONOMY_TECH_TIER_THRESHOLD)` to a researched player's `credit_income`** | the Economy-Tech income term (`has_economy_tech` + the per-outpost bonus value) | AP & Credits Economy owns both pools + the `credit_income` formula + the `RESEARCH_AP_COST` base + the `ECONOMY_TECH_TIER_THRESHOLD` cap; Research owns `research_cost`, each tech's `ap_surcharge` override, the Lab's `build_cost`, and the Economy-Tech income-bonus value |
 | Unit System | `has_attack_tech(player)`, `has_defense_tech(player)` read to compute `effective_attack`/`effective_defense` | — | Research owns the two flags; Unit System owns the formulas that consume them (handoff — see Dependencies) |
 | Combat Resolution | consumes `effective_attack` (existing) and the new `effective_defense` as the `defense(defender)` term — **no formula change in Combat**, since `defense` was already generic | — | Combat's damage formula is unchanged; Unit System now populates a previously-always-0 field |
 | Game State & Turn Manager | research-timer advance applied as a start-of-turn effect (interleaved with Base & Production's build-timer advance); `apply_action` for start/cancel | updated Lab/tech state | Turn Manager owns start-of-turn sequencing |
@@ -184,7 +218,7 @@ longer exists).
 **Public interface:** `legal_research_targets(lab) -> set<tech>` (excludes already-Completed and
 already-Under-Research-elsewhere techs) · `start_research(lab, tech) -> Result` ·
 `cancel_research(lab) -> Result` · `has_attack_tech(player) -> bool` · `has_defense_tech(player) -> bool` ·
-`has_economy_tech(player) -> bool` (AP Economy reads it to add the per-outpost income bonus).
+`has_economy_tech(player) -> bool` (AP & Credits Economy reads it to add the per-outpost Credit-income bonus).
 
 ## Formulas
 
@@ -192,44 +226,51 @@ Research is a **data/state** system — its "formulas" are the Research Lab temp
 and the two new **effect formulas** (`effective_defense`, the Economy Tech income bonus) plus the reused
 `cancel_refund`. It introduces **no new combat math**: Attack Tech feeds the existing `effective_attack`;
 Defense Tech populates the `defense` term Combat's formula already reads; Economy Tech adds a term to AP
-Economy's `ap_income`.
+& Credits Economy's `credit_income` (pivot 2026-08-05: was `ap_income`).
 
 ### Research Lab template (a Base & Production structure)
 
 | Field | Value | Notes |
 |-------|-------|-------|
 | `hp` | 12 | Defensible enough that the no-refund destruction punish isn't a free raid |
-| `build_cost` | 8 AP | Capstone structure — just under the Production Outpost (9) |
+| `build_cost` | 8 Credits (+ `BUILD_AP_COST` 2 AP) | Capstone structure — just under the Production Outpost (9 Credits). Built through B&P's **structure** dual-cost (Credits main + the standard build AP surcharge), **not** the per-tech research `ap_surcharge` (pivot 2026-08-05) |
 | `build_time` | 2 owner-turns | Uses Base & Production's generic build lifecycle |
 | `defense` | 0 | Structure-owned (Combat's shared field), like the outposts |
 | `can_counterattack` | false | Not an attacker |
 
 ### Tech templates
 
-| Tech | `research_cost` (AP) | `research_time` (turns) | Effect |
-|------|----------------------|-------------------------|--------|
-| **Attack Tech** | 10 | 3 | `has_attack_tech(player) = true` → +`RESEARCH_ATK_BONUS` (1) attack, all that player's units |
-| **Defense Tech** | 10 | **4** | `has_defense_tech(player) = true` → +`DEFENSE_TECH_BONUS` (1) defense, all that player's units |
-| **Economy Tech** | 7 | 3 | `has_economy_tech(player) = true` → +`ECONOMY_TECH_INCOME_BONUS` (1) AP/turn income **per completed Economy Outpost, up to `ECONOMY_TECH_TIER_THRESHOLD` (6)** (added to AP Economy's `ap_income`) |
+| Tech | `research_cost` (Credits) | `ap_surcharge` (AP) | `research_time` (turns) | Effect |
+|------|---------------------------|---------------------|-------------------------|--------|
+| **Attack Tech** | 10 | 1 | 3 | `has_attack_tech(player) = true` → +`RESEARCH_ATK_BONUS` (1) attack, all that player's units |
+| **Defense Tech** | 10 | 1 | **4** | `has_defense_tech(player) = true` → +`DEFENSE_TECH_BONUS` (1) defense, all that player's units |
+| **Economy Tech** | 7 | 1 | 3 | `has_economy_tech(player) = true` → +`ECONOMY_TECH_INCOME_BONUS` (1) Credit/turn income **per completed Economy Outpost, up to `ECONOMY_TECH_TIER_THRESHOLD` (6)** (added to AP & Credits Economy's `credit_income`) |
 
+Research is a **dual-cost, both-or-neither** action (pivot 2026-08-05): `research_cost` **Credits** (the
+resource gate) **plus** `ap_surcharge` **AP** (the tempo gate), spent both or neither. The `ap_surcharge`
+column defaults to the base `RESEARCH_AP_COST` (1, owned by AP & Credits Economy); the override mechanism
+exists so different techs can carry different tempo costs, but all three VS techs default to 1 for now.
 Defense Tech's extra turn (4 vs 3) deliberately delays its power spike so it can't hard-counter the
 Scout-rush opening too early — the risk is priced into *time*, not cost.
 
 > **On "which tech" as a decision.** Attack and Defense Tech are deliberately symmetric flat +1 sticks —
-> between those two the real decision is *timing* (when to divert AP) and *order* under single-Lab AP
-> scarcity, not a game-shaping identity. **Economy Tech is the differentiator**: after the 2026-07-21
+> between those two the real decision is *timing* (when to divert Credits + the AP surcharge) and *order*
+> under single-Lab Credit/AP scarcity, not a game-shaping identity. **Economy Tech is the differentiator**: after the 2026-07-21
 > retune it *scales with the boom* (income per completed Economy Outpost), so it is the boom archetype's
 > signature tech and a genuinely different investment class, not a third interchangeable stick. Widening
 > Attack/Defense into non-interchangeable identities (per-Lab specialization, one-tech-per-player
 > exclusivity) is a reserved Alpha lever (Open Questions / tuning toggles).
 
 **Tempo-cost honesty (opportunity cost of opening Research).** Standing up any tech costs the Lab
-(8 AP / 2 build-turns) *plus* the tech (7–10 AP / 3–4 research-turns) — **15–18 AP across ~5–6 turns of
-board-presence-free exposure** before any payoff. Compare: an Economy Outpost breaks even in 3 turns
+(8 Credits + `BUILD_AP_COST` 2 AP / 2 build-turns) *plus* the tech (7–10 Credits + `ap_surcharge` 1 AP /
+3–4 research-turns) — **15–18 Credits plus 3 AP of surcharge, across ~5–6 turns of
+board-presence-free exposure** before any payoff (pivot 2026-08-05: the ~15–18 that used to be one AP
+pool is now the Credit spend; the tempo cost is the small combined 3-AP surcharge). Compare: an Economy
+Outpost breaks even in 3 turns
 total (Base & Production), a Production Outpost pays off the turn it completes. Research is deliberately
-the slowest, most AP-committed, most-exposed investment in the game — the "long bet." That is the
+the slowest, most Credit-committed, most-exposed investment in the game — the "long bet." That is the
 intended texture, but it also means Research is rarely a correct *first* pick over units/outposts; it is
-a *second-order* spend by a player who has already secured board presence and surplus AP.
+a *second-order* spend by a player who has already secured board presence and surplus Credits.
 
 ### Named constants (Research-owned)
 
@@ -237,7 +278,8 @@ a *second-order* spend by a player who has already secured board presence and su
 |----------|-------|------|-------------|
 | `RESEARCH_ATK_BONUS` | 1 | attack | Flat attack added to all a researched player's units. **Already referenced by `effective_attack` (Unit System)** — this GDD formally owns and registers it. |
 | `DEFENSE_TECH_BONUS` | 1 | defense | Flat defense added to all a researched player's units. **Provisional / playtest-gated** — see Open Questions (floor-lock). |
-| `ECONOMY_TECH_INCOME_BONUS` | 1 | AP/turn per outpost | Extra income per completed Economy Outpost while Economy Tech is held (added to `ap_income`). **Hold at 1** — 2 roughly doubles the per-outpost income and hard-snowballs; validate the raised ceiling in the economy spike. |
+| `ECONOMY_TECH_INCOME_BONUS` | 1 | Credits/turn per outpost | Extra income per completed Economy Outpost while Economy Tech is held (added to `credit_income`). **Hold at 1** — 2 roughly doubles the per-outpost income and hard-snowballs; validate the raised ceiling in the economy spike. (Pivot 2026-08-05: was AP/turn; now Credits/turn, value unchanged.) |
+| `ap_surcharge` (per-tech field, not a single constant) | 1 (all 3 VS techs) | AP | The per-tech AP tempo cost charged when research is committed (dual-cost alongside `research_cost` Credits). Defaults to the base `RESEARCH_AP_COST` (1, **AP & Credits Economy-owned**); Research owns each tech's override. All VS techs default to 1 for now. |
 
 ### `effective_defense(unit)` — the new Defense-Tech formula (mirrors `effective_attack`)
 
@@ -262,29 +304,33 @@ a *second-order* spend by a player who has already secured board presence and su
 
 `economy_tech_income_bonus(player) = has_economy_tech(player) ? ECONOMY_TECH_INCOME_BONUS × min(completed_outpost_count(player), ECONOMY_TECH_TIER_THRESHOLD) : 0`
 
-This term is **added to `ap_income` (owned by AP Economy)**: a researched player earns an extra
-`ECONOMY_TECH_INCOME_BONUS` AP per turn for **each completed Economy Outpost** they own, up to
-`ECONOMY_TECH_TIER_THRESHOLD` outposts, on top of AP Economy's existing tiered outpost bonus.
+This term is **added to `credit_income` (owned by AP & Credits Economy)** (pivot 2026-08-05: was
+`ap_income`): a researched player earns an extra
+`ECONOMY_TECH_INCOME_BONUS` Credits per turn for **each completed Economy Outpost** they own, up to
+`ECONOMY_TECH_TIER_THRESHOLD` outposts, on top of AP & Credits Economy's existing tiered outpost bonus.
 (Effectively each of the first 6 Economy Outposts' income rises from +2/+1 to +3/+2 for a researched
 player; the 7th and beyond get no further tech bonus.)
 
 | Variable | Symbol | Type | Range | Description |
 |----------|--------|------|-------|-------------|
-| `ECONOMY_TECH_INCOME_BONUS` | — | int const | 1 | Research-owned AP/turn granted per completed Economy Outpost, up to the cap below |
-| `ECONOMY_TECH_TIER_THRESHOLD` | — | int const | 6 | **AP-Economy-owned** — number of completed Economy Outposts the bonus applies to before it stops accruing (added 2026-07-22, AP Economy's own re-review) |
-| `completed_outpost_count(player)` | `n` | int | 0 – (board-limited) | Completed, alive, owned Economy Outposts — the **same** query `ap_income` uses (Base & Production-owned) |
-| `economy_tech_income_bonus` | — | int | 0 – 6 | Extra AP/turn added to the researched player's income, capped at `ECONOMY_TECH_INCOME_BONUS × ECONOMY_TECH_TIER_THRESHOLD` |
+| `ECONOMY_TECH_INCOME_BONUS` | — | int const | 1 | Research-owned Credits/turn granted per completed Economy Outpost, up to the cap below |
+| `ECONOMY_TECH_TIER_THRESHOLD` | — | int const | 6 | **AP & Credits Economy-owned** — number of completed Economy Outposts the bonus applies to before it stops accruing (added 2026-07-22, Economy's own re-review) |
+| `completed_outpost_count(player)` | `n` | int | 0 – (board-limited) | Completed, alive, owned Economy Outposts — the **same** query `credit_income` uses (Base & Production-owned) |
+| `economy_tech_income_bonus` | — | int | 0 – 6 | Extra Credits/turn added to the researched player's income, capped at `ECONOMY_TECH_INCOME_BONUS × ECONOMY_TECH_TIER_THRESHOLD` |
 
 **Output range:** 0 (un-researched, **or** no completed Economy Outposts) up to 6 (capped at
 `ECONOMY_TECH_TIER_THRESHOLD` outposts). It is **time-scaling and boom-scaling up to the cap** — it pays
 nothing until the player has both researched *and* built Economy Outposts, and grows with the boom until
 the 6th outpost, after which further outposts add nothing more from this term (they still earn the base
-tiered bonus). **Payback:** cost 7 AP; at `n ≤ 6` completed outposts it returns `n` AP/turn, so break-even
+tiered bonus). **Payback:** cost 7 Credits (+ 1 AP surcharge, a one-time tempo cost not part of the Credit
+ROI); at `n ≤ 6` completed outposts it returns `n` Credits/turn, so break-even
 ≈ `ceil(7 / n)` turns from completion (e.g. 3 outposts → ~2–3 turns); past 6 outposts, payback is fixed
 at `ceil(7/6) ≈ 2` turns and does not improve further.
 
-> **Cross-system handoff (AP Economy #3) — RESOLVED 2026-07-22.** Economy Tech modifies `ap_income`
-> directly — AP Economy's income formula gains the optional
+> **Cross-system handoff (AP Economy #3) — RESOLVED 2026-07-22 (resource re-denominated by the 2026-08-05
+> pivot: this term now feeds `credit_income`, not `ap_income`; values unchanged).** Economy Tech modifies
+> `credit_income`
+> directly — AP & Credits Economy's income formula gains the optional
 > `+ (has_economy_tech(player) ? ECONOMY_TECH_INCOME_BONUS × min(n, ECONOMY_TECH_TIER_THRESHOLD) : 0)`
 > term. AP Economy's 2026-07-22 re-review found the term, as originally added uncapped, structurally
 > cancelled AP Economy's own diminishing-returns brake past `n=4` — fixed by AP Economy adding
@@ -305,8 +351,10 @@ at `ceil(7/6) ≈ 2` turns and does not improve further.
 ### `cancel_refund` (reused, not new)
 
 Reuses Base & Production's registered `CANCEL_REFUND_RATE` (0.5, floor): cancelling in-progress research
-refunds `floor(research_cost × 0.5)` → Attack **5**, Defense **5**, Economy **3**. Cancelling a Lab
-build (Under-Construction) refunds `floor(8 × 0.5) = 4`.
+refunds `floor(research_cost × 0.5)` **Credits** → Attack **5**, Defense **5**, Economy **3** (the
+`ap_surcharge` AP paid at commit is **not** refunded). Cancelling a Lab
+build (Under-Construction) refunds `floor(8 × 0.5) = 4` **Credits** (the Lab's `BUILD_AP_COST` 2 AP is
+likewise not refunded).
 
 ### Compounding sanity check (both the asymmetric AND the mirror case)
 
@@ -315,7 +363,7 @@ researched Sniper takes the HQ 10→8 hits — no cliff, nothing one-shots).
 
 The flagged risk is **unit-vs-unit on Cover**, and it is worse than a one-sided edge — it **persists into
 the mirror match** where both players have researched (the realistic mid/late state this system produces,
-since both sides have equal AP for the same techs):
+since both sides can afford the same techs — equal Credits plus the AP surcharge):
 
 - **Asymmetric (A researched, B not):** A's Scout/Trooper on Cover (defense 1 + COVER_DR 1 = 2) floor-locks
   B's un-researched Scout (atk 2) and Trooper (atk 3) to `max(1, …)` = **1 damage**.
@@ -343,8 +391,9 @@ lever (non-stacking mitigation)** — see Open Questions.
 - **If a player tries to research a tech already Under Research at another of their Labs**: rejected — a
   tech may be in progress at only one Lab per player at a time (`legal_research_targets` excludes it).
   No benefit to racing yourself.
-- **If a player cannot afford `research_cost`**: rejected, no AP spent, no research started (AP Economy
-  `can_afford` gate + `apply_action` atomicity).
+- **If a player cannot afford *either* `research_cost` (Credits) *or* the tech's `ap_surcharge` (AP)**:
+  rejected, nothing spent from either pool, no research started — a **both-or-neither** dual-cost gate
+  (AP & Credits Economy's `credits_can_afford` AND `ap_can_afford` + `apply_action` atomicity).
 - **If a Lab is already researching a tech** and the player starts another: rejected — one tech at a
   time per Lab. The player must build a second Lab to parallelize.
 
@@ -359,12 +408,13 @@ lever (non-stacking mitigation)** — see Open Questions.
   step 4 is the income snapshot — step 4 strictly follows step 3 as a whole). **Corrected 2026-07-22
   (`/review-all-gdds` finding):** this does NOT mean the research-timer and build-timer advances are
   "disjoint state, order-irrelevant" — that claim is false for **Economy Tech**, whose completion flips
-  `has_economy_tech`, a direct multiplier in AP Economy's `ap_income`. The reason the outcome is still
+  `has_economy_tech`, a direct term in AP & Credits Economy's `credit_income` (pivot 2026-08-05: was
+  `ap_income`). The reason the outcome is still
   correct regardless of intra-step-3 order is narrower: Rule 3's *step boundary* (all of step 3 finishes
   before step 4 begins) guarantees the income snapshot observes both a newly-Completed Economy Outpost
   AND a newly-completed Economy Tech, no matter which one's timer advance ran first within step 3. Attack
   and Defense Tech genuinely are disjoint from the income snapshot (they touch unit buffs, not
-  `ap_income`) — only Economy Tech's completion is income-affecting and depends on this step-boundary
+  `credit_income`) — only Economy Tech's completion is income-affecting and depends on this step-boundary
   guarantee rather than true state-disjointness.
 - **If a unit is produced after its owner has completed Attack/Defense Tech**: the new unit gets the
   bonus immediately — effects are read live from the owner's tech flags, not baked at unit creation
@@ -374,8 +424,9 @@ lever (non-stacking mitigation)** — see Open Questions.
   committing an attack *on the same turn* due to research.
 
 **Destruction & loss:**
-- **If the Lab researching a tech is destroyed**: that tech's progress is entirely lost — `research_cost`
-  is **not refunded**, the tech reverts to **Not Started**, and it may be re-attempted later at any
+- **If the Lab researching a tech is destroyed**: that tech's progress is entirely lost — the
+  `research_cost` **Credits** are **not refunded** (and the `ap_surcharge` AP was already spent as tempo),
+  the tech reverts to **Not Started**, and it may be re-attempted later at any
   Completed Lab (not permanently locked out).
 - **If a player has two Labs each researching a different tech and one is destroyed**: only that Lab's
   tech is lost; the other Lab's research is unaffected (each Lab tracks its own target/timer
@@ -388,8 +439,9 @@ lever (non-stacking mitigation)** — see Open Questions.
   lose.
 
 **Cancel:**
-- **If a player cancels an in-progress research**: `floor(research_cost × 0.5)` AP is refunded
-  (Attack/Defense 5, Economy 3), the Lab returns to Idle, and the tech reverts to Not Started. The Lab
+- **If a player cancels an in-progress research**: `floor(research_cost × 0.5)` **Credits** is refunded
+  (Attack/Defense 5, Economy 3) via `credits_credit`; the `ap_surcharge` AP is **not** refunded (tempo is
+  spent). The Lab returns to Idle, and the tech reverts to Not Started. The Lab
   itself is unaffected (still Completed and usable).
 - **If a player tries to cancel research at an Idle Lab** (nothing in progress): no-op / rejected —
   there is nothing to cancel.
@@ -410,9 +462,9 @@ lever (non-stacking mitigation)** — see Open Questions.
 - **If Economy Tech is researched but the player owns no completed Economy Outposts**: the income bonus is
   0 (`ECONOMY_TECH_INCOME_BONUS × 0`) — the tech pays nothing until the player has both researched *and*
   completed at least one Economy Outpost. It is a boom-synergy tech, worthless to a pure rusher.
-- **If a researched player's Economy Outpost is destroyed**: the income bonus drops by
+- **If a researched player's Economy Outpost is destroyed**: the Credit-income bonus drops by
   `ECONOMY_TECH_INCOME_BONUS` at that player's **next** start-of-turn income snapshot — the bonus tracks
-  the *live* completed-outpost count exactly like AP Economy's base tiered bonus (frozen per turn, not
+  the *live* completed-outpost count exactly like AP & Credits Economy's base tiered bonus (frozen per turn, not
   recomputed mid-turn; a mid-turn loss is picked up at the next reset).
 - **If Economy Tech completes the same start-of-turn an Economy Outpost completes**: both the research-timer
   and the build-timer advance run **before** the income snapshot (Turn Manager Core Rule 3), so that turn's
@@ -427,8 +479,8 @@ lever (non-stacking mitigation)** — see Open Questions.
 
 | System | Nature | Interface |
 |--------|--------|-----------|
-| AP Economy | Hard | `can_afford`/`spend` for `research_cost` and the Lab's `build_cost`; cancel refund credits the pool |
-| Base & Production | Hard | The Research Lab is a 5th structure built entirely through B&P's generic structure mechanics (placement, build-timer, Under-Construction/Completed/Destroyed lifecycle, voluntary cancel). Research supplies the Lab's stat values; B&P owns the state machine |
+| AP & Credits Economy | Hard | `credits_can_afford`/`credits_spend` for `research_cost` (Credits) + `ap_can_afford`/`ap_spend` for the tech's `ap_surcharge` (both-or-neither); the Lab's `build_cost` follows B&P's structure dual-cost (Credits + `BUILD_AP_COST`); cancel refund credits the **Credit** pool; owns the base `RESEARCH_AP_COST` (1) the per-tech `ap_surcharge` defaults to |
+| Base & Production | Hard | The Research Lab is a 5th structure built entirely through B&P's generic structure mechanics (placement, build-timer, Under-Construction/Completed/Destroyed lifecycle, voluntary cancel — its build spends Credits + `BUILD_AP_COST`). Research supplies the Lab's stat values; B&P owns the state machine |
 | Game State & Turn Manager | Hard | `start_research`/`cancel_research` applied via `apply_action`; research-timer advance runs as a start-of-turn effect (interleaved with B&P's build-timer advance); clonable state for AI/tests |
 | Unit System | Hard | Owns `base_defense` (0 all VS units) and the `effective_attack`/`effective_defense` formulas Research feeds flags into |
 
@@ -438,13 +490,13 @@ lever (non-stacking mitigation)** — see Open Questions.
 |--------|----------------------------|
 | Unit System | `has_attack_tech(player)` / `has_defense_tech(player)` flags, read live to compute `effective_attack`/`effective_defense` *(reciprocal: Unit System is also upstream — it owns the formulas)* |
 | Combat Resolution | Consumes the buffed `effective_attack` and `effective_defense` through its **already-generic** `damage_formula` — **no Combat change** |
-| AP Economy | `has_economy_tech(player)` + `ECONOMY_TECH_INCOME_BONUS` read when computing a researched player's `ap_income` (per completed Economy Outpost) *(reciprocal: AP Economy is also upstream — it owns the pool + `spend`)* |
+| AP & Credits Economy | `has_economy_tech(player)` + `ECONOMY_TECH_INCOME_BONUS` read when computing a researched player's `credit_income` (per completed Economy Outpost) *(reciprocal: AP & Credits Economy is also upstream — it owns both pools + `credits_spend`/`ap_spend`)* |
 | Command & Action Interface (#9) | Research options, `research_cost`/`research_time`, in-progress timers, `legal_research_targets` |
 | Game HUD (#10) | Tech status (Not Started / Under Research / Completed), research progress, active buffs |
 | AI Opponent (#11) | Research start/cancel actions and their legal-target/affordability queries for planning |
 | Faction Identity (#12) | May differentiate which techs exist, their costs, or their bonuses per faction |
 
-*(Bidirectional note: AP Economy, Game State, Unit System, and Base & Production currently reference
+*(Bidirectional note: AP & Credits Economy, Game State, Unit System, and Base & Production currently reference
 Research / Tech only provisionally. This GDD is the first to make the interfaces concrete; the
 reciprocal edges are logged as handoffs below and should be wired when those GDDs next update.)*
 
@@ -462,12 +514,15 @@ reciprocal edges are logged as handoffs below and should be wired when those GDD
    flat 4 with no research discount. B&P Core Rule 2's note was updated to say so; Economy Tech now flows
    through AP Economy's income, not B&P's cost. B&P re-review owed (its number surface is unchanged, but the
    removed hook should be confirmed).
-3. **→ AP Economy (#3, Approved) — `research_cost` purity (unchanged):** `research_cost` is a concrete AP
-   spender; AP Economy's "downstream cost functions must be pure (no RNG)" contract applies — Research's
-   costs are deterministic constants, so it complies.
-4. **→ AP Economy (#3, Approved) — Economy Tech income term, RE-REVIEW RESOLVED 2026-07-22:**
+3. **→ AP & Credits Economy (#3) — cost purity (pivot 2026-08-05: `research_cost` is now a Credit spender,
+   plus the per-tech `ap_surcharge` AP spender):** both are concrete deterministic-constant
+   spenders; AP & Credits Economy's "downstream cost functions must be pure (no RNG)" contract applies —
+   Research's costs are deterministic constants, so it complies. Both legs run through the both-or-neither
+   dual-cost commit.
+4. **→ AP & Credits Economy (#3) — Economy Tech income term, RE-REVIEW RESOLVED 2026-07-22 (re-denominated
+   to Credits by the 2026-08-05 pivot; values unchanged):**
    Economy Tech adds `ECONOMY_TECH_INCOME_BONUS × min(completed_outpost_count(player),
-   ECONOMY_TECH_TIER_THRESHOLD)` to a researched player's `ap_income`. AP Economy owns `ap_income`; its
+   ECONOMY_TECH_TIER_THRESHOLD)` to a researched player's `credit_income`. AP & Credits Economy owns `credit_income`; its
    re-review found the term as originally added (uncapped) structurally cancelled its own
    diminishing-returns brake past `n=4`, and fixed it by adding `ECONOMY_TECH_TIER_THRESHOLD` (6,
    AP-Economy-owned) — practical income ceiling is now ~32 (was ~38 uncapped, ~26 with no Economy Tech).
@@ -484,16 +539,17 @@ reciprocal edges are logged as handoffs below and should be wired when those GDD
 | `RESEARCH_LAB_HP` | 8–16 | 12 | How raid-able the Lab is vs. the no-refund punish | Lab too safe → research is a free power spike | Lab dies to one Scout raid → the harsh no-refund rule feels unfair |
 | `RESEARCH_LAB_BUILD_COST` | 6–10 | 8 | Barrier to entering the tech game | Research never worth opening | Every game opens with a Lab, tech becomes mandatory |
 | `RESEARCH_LAB_BUILD_TIME` | 1–3 | 2 | Exposure window before the Lab can research | Lab arrives too slowly to matter in short games | Lab is up almost instantly, little commitment |
-| `ATTACK_TECH_COST` | 8–12 | 10 | When an attack spike is affordable | Attack Tech skipped in fast games | Too cheap → always researched, trivializes the choice |
+| `ATTACK_TECH_COST` | 8–12 | 10 | When an attack spike is affordable (**Credits** — pivot 2026-08-05) | Attack Tech skipped in fast games | Too cheap → always researched, trivializes the choice |
 | `ATTACK_TECH_TIME` | 2–4 | 3 | Delay before the +1 atk lands | Spike arrives too late to swing a game | Instant army-wide buff, too swingy |
-| `DEFENSE_TECH_COST` | 8–12 | 10 | When a defense spike is affordable | Skipped | Always taken |
+| `DEFENSE_TECH_COST` | 8–12 | 10 | When a defense spike is affordable (**Credits** — pivot 2026-08-05) | Skipped | Always taken |
 | `DEFENSE_TECH_TIME` | 3–5 | **4** | Delay before +1 def lands — **anti-early-rush brake** | Defense Tech irrelevant (too late) | ≤3 → hard-counters the Scout-rush opening too early (the flagged risk) |
-| `ECONOMY_TECH_COST` | 5–9 | 7 | When the outpost discount is affordable | Skipped by boom players | Always taken by boomers |
-| `ECONOMY_TECH_TIME` | 2–4 | 3 | Delay before the discount applies | Discount arrives too late to compound | Instant economy acceleration |
+| `ECONOMY_TECH_COST` | 5–9 | 7 | When the income tech is affordable (**Credits** — pivot 2026-08-05) | Skipped by boom players | Always taken by boomers |
+| `ECONOMY_TECH_TIME` | 2–4 | 3 | Delay before the income bonus starts | Bonus arrives too late to compound | Instant economy acceleration |
 | `RESEARCH_ATK_BONUS` | 1–2 | 1 | Magnitude of the attack spike | 2 → shots-to-kill cliffs (a Trooper 1-shots a Scout that a base Trooper 2-shots); rebalances the whole roster | 1 is the floor for a meaningful buff |
 | `DEFENSE_TECH_BONUS` | 0–1 | **1** | Magnitude of the defense spike | **>1 → `defense + COVER_DR` ≥ several units' attack → widespread floor-locking, breaks combat legibility (Combat's defense-stacking constraint)** | 0 → Defense Tech does nothing |
-| `ECONOMY_TECH_INCOME_BONUS` | 1–2 | **1** | AP/turn income per completed Economy Outpost, up to `ECONOMY_TECH_TIER_THRESHOLD` | **2 → roughly doubles the capped bonus (ceiling ~32→~38), narrows the diminishing-returns band** | 0 → Economy Tech does nothing |
-| `ECONOMY_TECH_TIER_THRESHOLD` | 4–8 | **6** | **AP-Economy-owned** — outposts the income bonus applies to before it stops accruing (added 2026-07-22 re-review, restores the diminishing-returns brake) | Effectively unbounded again → the untiered-snowball defect this cap exists to close reappears | Economy Tech feels weak, undermining its differentiator role |
+| `ECONOMY_TECH_INCOME_BONUS` | 1–2 | **1** | **Credits**/turn income per completed Economy Outpost, up to `ECONOMY_TECH_TIER_THRESHOLD` (pivot 2026-08-05: was AP/turn) | **2 → roughly doubles the capped bonus (ceiling ~32→~38), narrows the diminishing-returns band** | 0 → Economy Tech does nothing |
+| `ECONOMY_TECH_TIER_THRESHOLD` | 4–8 | **6** | **AP & Credits Economy-owned** — outposts the Credit-income bonus applies to before it stops accruing (added 2026-07-22 re-review, restores the diminishing-returns brake) | Effectively unbounded again → the untiered-snowball defect this cap exists to close reappears | Economy Tech feels weak, undermining its differentiator role |
+| per-tech `ap_surcharge` | 0–4 | **1** (all 3 VS techs; base `RESEARCH_AP_COST`) | Tempo (AP) cost of committing a research — the tech's slice of the tactical turn (pivot 2026-08-05) | Teching crowds out fighting; research too tempo-expensive to open | Teching has no tactical cost; a full Credit war chest tech-dumps in one turn |
 
 **Design-rule toggles (fixed for the VS):**
 
@@ -536,7 +592,7 @@ Action Interface #9 / HUD #10):
   opponent should be able to account for the +1 when reading a shot.
 - **Destruction:** a Lab destroyed mid-research gets the standard structure death-burst; if a tech's
   progress is lost, that should read as a distinct "research lost" beat (not just a structure dying) so
-  the sunk-AP punish lands emotionally.
+  the sunk-Credits punish lands emotionally.
 - Audio: a research-start cue, a low "working" ambient loop while a Lab researches, a satisfying
   tech-complete sting, and a "research lost" downer if a mid-research Lab dies (specs owned by the audio
   pass).
@@ -552,15 +608,19 @@ Action Interface #9 / HUD #10):
 
 Research feeds the pre-commit action menu like every other spend. Research owns the **data**; #9/#10 own
 presentation:
-- **Research menu** (on selecting a Completed Lab): the legal techs (`legal_research_targets`) with
-  `research_cost` and `research_time`, affordability-gated; Completed and already-in-progress techs shown
-  as unavailable with a reason (done / in progress elsewhere).
+- **Research menu** (on selecting a Completed Lab): the legal techs (`legal_research_targets`) with their
+  **dual cost** (`research_cost` **Credits** + `ap_surcharge` **AP**) and `research_time`, affordability-gated
+  on **both** pools (a tech affordable in Credits but not the AP surcharge, or vice-versa, shows
+  unavailable — both-or-neither); Completed and already-in-progress techs shown
+  as unavailable with a reason (done / in progress elsewhere). *(Pivot 2026-08-05: research is now a
+  dual-cost spend — the menu must surface both the Credit price and the AP surcharge.)*
 - **Tech status panel:** each tech's state (Not Started / Under Research + turns remaining / Completed)
   and the active buffs the player currently has.
 - **In-progress timer** on each researching Lab (turns remaining), mirroring Base & Production's
   build-progress readout.
-- **Cancel affordance:** cancelling in-progress research shows the refund (`floor(research_cost × 0.5)`)
-  **before** confirming, mirroring Movement/Combat/Base & Production's cancel pattern.
+- **Cancel affordance:** cancelling in-progress research shows the Credit refund (`floor(research_cost × 0.5)`
+  Credits; the AP surcharge is not refunded) **before** confirming, mirroring Movement/Combat/Base &
+  Production's cancel pattern.
 
 Presentation and interaction are owned by GDDs #9 and #10; this system provides the queries and data.
 
@@ -579,20 +639,25 @@ Presentation and interaction are owned by GDDs #9 and #10; this system provides 
 > `economy_outpost_discount` hook with an AP Economy income-bonus handoff — exercised by the Economy Tech
 > Integration AC below; AP Economy re-review is owed but does not block Research's own Logic gate.)*
 
-**Pure Logic gate (BLOCKING — fake/injected Grid + AP):**
+**Pure Logic gate (BLOCKING — fake/injected Grid + AP + Credits):**
 
 *Templates (Rule 1):*
 - **GIVEN** the Research Lab template, **THEN** fields match: hp 12, build_cost 8, build_time 2, defense
   0, production_cap 0, can_counterattack false.
-- **GIVEN** each tech template, **THEN** fields match — Attack (cost 10, time 3, +1 atk), Defense (cost
-  10, time 4, +1 def), Economy (cost 7, time 3, +1 AP/turn income per completed Economy Outpost, capped
-  at `ECONOMY_TECH_TIER_THRESHOLD` (6) outposts).
+- **GIVEN** each tech template, **THEN** fields match — Attack (`research_cost` 10 Credits, `ap_surcharge`
+  1, time 3, +1 atk), Defense (`research_cost` 10 Credits, `ap_surcharge` 1, time 4, +1 def), Economy
+  (`research_cost` 7 Credits, `ap_surcharge` 1, time 3, +1 Credit/turn income per completed Economy
+  Outpost, capped at `ECONOMY_TECH_TIER_THRESHOLD` (6) outposts). **AND** each tech's `ap_surcharge`
+  reads the base `RESEARCH_AP_COST` (1) unless overridden.
 - **GIVEN** any template read twice, **THEN** identical (immutable).
 
 *Start-research legality (Rules 3, 4):*
-- **GIVEN** a Completed Idle Lab and ≥10 AP, **WHEN** `start_research(lab, Attack)`, **THEN** AP −10,
-  tech Under Research at that Lab, `research_turns_remaining` = 3.
-- **GIVEN** a Completed Lab with < research_cost AP, **THEN** rejected, no AP spent, Lab stays Idle.
+- **GIVEN** a Completed Idle Lab, ≥10 Credits, **and** ≥ the Attack tech's `ap_surcharge` (1) AP, **WHEN**
+  `start_research(lab, Attack)`, **THEN** Credits −10 (via `credits_spend`) **and** AP −`ap_surcharge`
+  (via `ap_spend`) — **both**, a single both-or-neither commit — tech Under Research at that Lab,
+  `research_turns_remaining` = 3.
+- **GIVEN** a Completed Lab that can afford the Credits **but not** the `ap_surcharge` AP (or vice-versa),
+  **THEN** rejected, **nothing spent from either pool** (both-or-neither), Lab stays Idle.
 - **GIVEN** an Under-Construction Lab, **THEN** `start_research` rejected **and** `legal_research_targets(lab)`
   returns the empty set.
 - **GIVEN** a Lab already Under Research, **WHEN** a second `start_research`, **THEN** rejected (one tech
@@ -622,8 +687,9 @@ Presentation and interaction are owned by GDDs #9 and #10; this system provides 
   (ordering proof is an Integration AC).
 
 *Destruction & permanence (Rule 6):*
-- **GIVEN** a Lab Under Research destroyed, **THEN** the tech → Not Started, `research_cost` **not**
-  refunded, and it reappears in `legal_research_targets` at any other Completed Lab.
+- **GIVEN** a Lab Under Research destroyed, **THEN** the tech → Not Started, the `research_cost` **Credits**
+  **not** refunded (and the `ap_surcharge` AP already spent, never refundable), and it reappears in
+  `legal_research_targets` at any other Completed Lab.
 - **GIVEN** a Lab Under Research is destroyed the **same resolution step** a `cancel_research(lab)` is
   submitted for it, **THEN** the cancel is **rejected** (target no longer exists) and the **no-refund
   destruction** path applies — never the 50% cancel refund (destruction wins; no double-resolution, no
@@ -636,10 +702,11 @@ Presentation and interaction are owned by GDDs #9 and #10; this system provides 
   no-refund.
 
 *Cancel (Rule 7):*
-- **GIVEN** a Lab researching Attack/Defense (cost 10), **WHEN** `cancel_research`, **THEN**
-  `floor(10×0.5)=5` AP refunded, Lab → Idle, tech → Not Started.
-- **GIVEN** Economy Tech (cost 7), **THEN** `floor(7×0.5)=3` refunded (floor, not round).
-- **GIVEN** an Idle Lab, **WHEN** `cancel_research`, **THEN** rejected/no-op, no AP change.
+- **GIVEN** a Lab researching Attack/Defense (`research_cost` 10 Credits), **WHEN** `cancel_research`,
+  **THEN** `floor(10×0.5)=5` **Credits** refunded (via `credits_credit`), the `ap_surcharge` AP **not**
+  refunded, Lab → Idle, tech → Not Started.
+- **GIVEN** Economy Tech (`research_cost` 7 Credits), **THEN** `floor(7×0.5)=3` **Credits** refunded (floor, not round).
+- **GIVEN** an Idle Lab, **WHEN** `cancel_research`, **THEN** rejected/no-op, no Credit or AP change.
 - **GIVEN** a cancelled tech, **THEN** the Lab remains Completed and immediately re-eligible.
 
 *Flags & formulas (Rule 8, Formulas):*
@@ -662,15 +729,16 @@ Presentation and interaction are owned by GDDs #9 and #10; this system provides 
 - **GIVEN** the same fixture + action twice, **THEN** byte-identical results; **GIVEN** a `clone()`,
   **WHEN** an action hits the clone, **THEN** the original is unmutated.
 
-**Integration gate (BLOCKING — real Grid + AP + Turn Manager + Unit + Combat + Base & Production):**
+**Integration gate (BLOCKING — real Grid + AP + Credits + Turn Manager + Unit + Combat + Base & Production):**
 - **GIVEN** the real B&P roster, **WHEN** a player builds a Research Lab via real `build()`, **THEN** it
-  follows the same lifecycle + cancel refund (`floor(8×0.5)=4`) as any structure. *(Exercises the landed
-  Research-Lab 5th-structure handoff — see Dependencies.)*
+  spends 8 **Credits** + `BUILD_AP_COST` (2) AP (both-or-neither, B&P's structure dual-cost) and follows
+  the same lifecycle + cancel refund (`floor(8×0.5)=4` **Credits**; the 2 AP surcharge not refunded) as
+  any structure. *(Exercises the landed Research-Lab 5th-structure handoff — see Dependencies.)*
 - **GIVEN** a real Lab with `research_turns_remaining` = 1 at start-of-turn, **THEN** querying
   `has_attack_tech(player)` immediately post-start-of-turn/pre-action reads true, **AND** a real attack
   that same turn deals buffed damage — the end-to-end proof of Rule 5 ordering.
 - **GIVEN** a real Economy Outpost timer and an Economy Tech research timer both hitting 0 the same
-  start-of-turn, **THEN** both complete that pass, **AND** that same turn's `ap_income` snapshot reflects
+  start-of-turn, **THEN** both complete that pass, **AND** that same turn's `credit_income` snapshot reflects
   both — the tiered outpost bonus AND the now-live `has_economy_tech` term — proving the step-3-before-
   step-4 boundary (Game State & Turn Manager Core Rule 3) holds regardless of which timer advance runs
   first within step 3 (corrected 2026-07-22: this is a step-boundary guarantee, not state-disjointness —
@@ -682,13 +750,13 @@ Presentation and interaction are owned by GDDs #9 and #10; this system provides 
   real Combat reflects the extra mitigation (un-researched Scout atk 2 vs researched Trooper on Cover
   clamps to `MIN_DAMAGE` 1). *(Exercises the landed Unit System `effective_defense` handoff.)*
 - **GIVEN** a real player who has completed Economy Tech and owns `k` completed Economy Outposts, **WHEN**
-  their start-of-turn income is computed, **THEN** `ap_income` includes
-  `+ ECONOMY_TECH_INCOME_BONUS × min(k, ECONOMY_TECH_TIER_THRESHOLD)` on top of AP Economy's base tiered
+  their start-of-turn income is computed, **THEN** `credit_income` includes
+  `+ ECONOMY_TECH_INCOME_BONUS × min(k, ECONOMY_TECH_TIER_THRESHOLD)` on top of AP & Credits Economy's base tiered
   bonus (e.g. k=3 tier-1 → base `10 + 2×3 = 16`, with Economy Tech `16 + 3 = 19`; k=8 past the default
   threshold 6 → base `10 + 2×4 + 1×4 = 22`, with Economy Tech capped `22 + 6 = 28`, not `22 + 8 = 30`);
   **AND** an Economy Outpost that completes the same start-of-turn is counted **before** the snapshot, so
-  its contribution (subject to the cap) is included that turn. *(Exercises the AP Economy income
-  handoff — see Dependencies.)*
+  its contribution (subject to the cap) is included that turn. *(Exercises the AP & Credits Economy
+  `credit_income` handoff — see Dependencies.)*
 - **GIVEN** a real Lab mid-research destroyed by real Combat, **THEN** removed that step, tech → Not
   Started, no refund, observable via `legal_research_targets` later.
 - **GIVEN** a real `clone()` with in-progress research, **WHEN** an action hits the clone, **THEN** the
@@ -714,10 +782,10 @@ Presentation and interaction are owned by GDDs #9 and #10; this system provides 
 | Question | Owner | Notes / target |
 |----------|-------|----------------|
 | The Attack/Defense-on-Cover **floor-lock** — Scout (and Trooper vs an un-teched attacker) reads an identical 1 damage vs a Cover+Defense-Tech defender, **including in the researched mirror match** (a Pillar 3 legibility hit; the Scout case is structural — no attacker tech escapes it). Acceptable, or fix? | game-designer / systems-designer / Combat (#6) | **Pre-committed fallback lever (not "hold and hope"):** if playtest shows the floor-lock reads as broken, apply **non-stacking mitigation** — a unit's damage reduction becomes `max(defense, cover_reduction)` instead of `defense + cover_reduction`, capping a Defense-Teched unit on Cover at 1 mitigation and un-locking Scout/Trooper. This is a Combat-formula change (touches `combat-resolution.md`'s defense-stacking rule) held in reserve. Hold `DEFENSE_TECH_BONUS` at 1 meanwhile; the fallback is the decision-ready fix, not a re-opened design. |
-| Does Research **worsen the endgame closeout / snowball**? A winning player banks permanent +1/+1 (and, with Economy Tech, +income/outpost) on top of a board lead; a losing player is AP-starved and can't afford research at all. Lab-spam has **no brake** (unlike outpost-spam's closeout-drag answer). | game-designer / economy-designer / Base & Production (#7) | **Accepted as an intentional snowball** (the reward for winning the mid-game), **not braked in the VS**. Validate via the closeout re-run AC (winner holds Attack Tech) that decided games still *close* rather than stall; if a Lab/snowball brake proves needed, a **simultaneous-Lab soft cap or escalating research cost** is the reserved lever. |
-| Is **Economy Tech strictly dominant** over Attack/Defense Tech for any boomed player — its +income/outpost *compounds* (reinvestable), the flat +1/+1 sticks don't — collapsing the "which tech" decision? | economy-designer / game-designer | **DECIDED 2026-07-22 (`/review-all-gdds` D-1): accept as archetype identity** — Economy Tech is the boom's signature tech, Attack/Defense the aggressor's (see the Overview + Player Fantasy "which tech is archetype identity" reframe); this is intended, not a defect. **Pre-committed fallback lever (not "hold and hope"):** if a combined **20-round joint-curve simulation** (income + tech + army-size together — no doc has run it yet) *or* the slice shows Economy Tech so dominates that combat tech is *never* worth taking even for a player who wants combat power, apply a **cumulative lifetime cap** on Economy Tech's total AP contribution (converging it toward flat-buff parity) — held in reserve, not shipped. `ECONOMY_TECH_TIER_THRESHOLD` (6) already narrows the gap; the lifetime cap is the decision-ready deepening if data demands it. |
+| Does Research **worsen the endgame closeout / snowball**? A winning player banks permanent +1/+1 (and, with Economy Tech, +Credit-income/outpost) on top of a board lead; a losing player is Credit- and AP-starved and can't afford research at all. Lab-spam has **no brake** (unlike outpost-spam's closeout-drag answer). *(Pivot 2026-08-05: with Credits now banked (unbounded stock), a saved war chest could fund a late tech burst — see AP & Credits Economy's re-opened banking→snowball question; the per-tech `ap_surcharge` still rate-limits how many techs commit in one turn.)* | game-designer / economy-designer / Base & Production (#7) | **Accepted as an intentional snowball** (the reward for winning the mid-game), **not braked in the VS**. Validate via the closeout re-run AC (winner holds Attack Tech) that decided games still *close* rather than stall; if a Lab/snowball brake proves needed, a **simultaneous-Lab soft cap or escalating research cost** is the reserved lever. |
+| Is **Economy Tech strictly dominant** over Attack/Defense Tech for any boomed player — its +income/outpost *compounds* (reinvestable), the flat +1/+1 sticks don't — collapsing the "which tech" decision? | economy-designer / game-designer | **DECIDED 2026-07-22 (`/review-all-gdds` D-1): accept as archetype identity** — Economy Tech is the boom's signature tech, Attack/Defense the aggressor's (see the Overview + Player Fantasy "which tech is archetype identity" reframe); this is intended, not a defect. **Pre-committed fallback lever (not "hold and hope"):** if a combined **20-round joint-curve simulation** (income + tech + army-size together — no doc has run it yet) *or* the slice shows Economy Tech so dominates that combat tech is *never* worth taking even for a player who wants combat power, apply a **cumulative lifetime cap** on Economy Tech's total Credit-income contribution (converging it toward flat-buff parity) — held in reserve, not shipped. `ECONOMY_TECH_TIER_THRESHOLD` (6) already narrows the gap; the lifetime cap is the decision-ready deepening if data demands it. |
 | Should there be a **cap or escalating cost on simultaneous Labs**? With one-tech-per-Lab and no inter-tech opportunity cost, a player who affords 2–3 Labs researches everything, thinning the "which tech" decision. | game-designer | VS = no cap (flat). Reserved lever if multi-Lab spam trivializes the choice or the snowball in playtest (related to the closeout/snowball row above). The Economy Tech retune restores *some* differentiation (it scales with the boom, unlike the flat Attack/Defense sticks). |
-| Do the tech `research_cost`/`research_time` values leave **enough turns to pay off** in typical match lengths? | game-designer / systems-designer | Re-validate against `MAX_ROUNDS` and real game length in the slice — a tech researched too late is dead AP. |
+| Do the tech `research_cost`/`research_time` values leave **enough turns to pay off** in typical match lengths? | game-designer / systems-designer | Re-validate against `MAX_ROUNDS` and real game length in the slice — a tech researched too late is dead Credits (and a wasted AP surcharge). |
 | Should techs be **faction-differentiated** (different techs, costs, or bonuses per faction)? | Faction Identity (#12) | Natural asymmetry lever (e.g. a boom faction with cheaper Economy Tech); keep the faction GDD shallow until the asymmetry prototype. |
 | Should there ever be a **hard cap on simultaneous Labs**, or a tech tree with prerequisites? | game-designer | VS = no cap, flat tree. Both are Alpha levers if research proves too spammy or too shallow. |
 | Should **structure `attack`** (Defensive Structure) become research-buffable? | Base & Production (#7) / Combat | Currently OFF (Research buffs units only). Shared Open Question with Base & Production — a turret that scales with tech may be desirable in Alpha. |

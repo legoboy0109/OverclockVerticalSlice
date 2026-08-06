@@ -1,13 +1,15 @@
 # Game State & Turn Manager
 
-> **Status**: Designed (user-approved 2026-07-19 — pending independent `/design-review`)
+> **Status**: Designed — **In Revision (PIVOT 2026-08-05)** for the AP↔Credits split (see ap-economy.md).
 > **Author**: user + main session
-> **Last Updated**: 2026-07-21 (Base & Production `/design-review` reconciliation: Core Rule 3's
-> Start-of-turn phase is now an explicit **canonical numbered sequence** — flags → start-of-turn effects
-> (incl. Base & Production build-timer advance) → **AP income snapshot**, in that order — so a
-> just-completed Economy Outpost counts toward income the same turn. This system owns start-of-turn
-> ordering; `base-production.md` Rule 6 and AP Economy's snapshot both cite it. Additive — no
-> state-machine change.)
+> **Last Updated**: 2026-08-05 (AP↔Credits pivot: start-of-turn step 4 splits into **reset AP to a flat
+> value + capped carryover** and **add Credit income to the banked Credit pool**; end-of-turn no longer
+> discards AP (it carries into the next reset, capped) and Credits are never discarded. Both resets still
+> follow the build-timer advance, so a just-completed Economy Outpost counts toward Credit income this
+> turn. See ap-economy.md.)
+> **Prior**: 2026-07-21 (Base & Production reconciliation: Core Rule 3's Start-of-turn phase became an
+> explicit **canonical numbered sequence** — flags → start-of-turn effects (incl. build-timer advance)
+> → income, in that order. `base-production.md` Rule 6 and AP Economy both cite it.)
 > **Implements Pillar**: Pillar 2 (Tempo Is the Skill — deterministic, legible turn/state advancement); enables Pillar 3 (Readable Board)
 > **Priority / Layer**: Vertical Slice / Foundation (system #2)
 
@@ -15,8 +17,8 @@
 
 Game State & Turn Manager is the authoritative, render-decoupled model of everything true
 about a match — the grid, all entities (units and structures with their positions and health),
-each player's per-turn state (current AP, income modifiers, researched tech, faction), whose
-turn it is, the round number, and whether the match is still in progress or won — plus the
+each player's per-turn state (current AP, banked Credits, income modifiers, researched tech, faction),
+whose turn it is, the round number, and whether the match is still in progress or won — plus the
 turn/phase loop that advances play and detects victory. Every other system reads from and
 mutates this model through a single validated "apply action" path; the renderer and the AI are
 pure *consumers* of it and never own authoritative data. Crucially, the state is a deterministic,
@@ -41,8 +43,8 @@ always fair, always legible, and always exactly where they left it.
 
 1. **The game state is the single authoritative model.** It contains: the Grid (owned by Grid &
    Terrain, held here); the entity set (units + structures, each with owner, position, hp, and
-   per-turn flags); per-player state (current AP, income modifiers, researched-tech flags, faction
-   id); the `active_player`; the `round_number`; and the `match_status`.
+   per-turn flags); per-player state (current AP, banked Credits, income modifiers, researched-tech
+   flags, faction id); the `active_player`; the `round_number`; and the `match_status`.
 2. **A match is an alternating sequence of turns.** In the 2-player Vertical Slice, turns alternate
    P1 → P2 → P1 …. Exactly one player is active at a time.
 3. **Each turn runs three phases:**
@@ -55,15 +57,22 @@ always fair, always legible, and always exactly where they left it.
      3. **Apply start-of-turn effects** — including **Base & Production's build-timer advance** (under-
         construction structures decrement; any reaching 0 transition to Completed) and Research's
         research-timer advance. These run **before** step 4 so a just-completed Economy Outpost counts
-        toward income *this* turn.
-     4. **Reset AP to income** — snapshot `ap_income` (amount owned by AP Economy) and set `current_ap`.
-        Because this follows step 3, the income snapshot observes the freshly-completed structures.
-     *(The reset/discard **timing** is owned here; AP **amounts** are owned by AP Economy. Base &
-     Production's Rule 6 and AP Economy's start-of-turn snapshot both cite this ordered sequence — it is
-     the single source of truth for start-of-turn ordering.)*
-   - **Action phase** — the active player (human or AI) issues AP-costed actions via `apply_action`
-     until they end the turn or have no meaningful action left.
-   - **End-of-turn** — **discard unspent AP** (no banking — Pillar 1); pass control to the opponent.
+        toward Credit income *this* turn.
+     4. **Reset the two resources** (both amounts owned by AP & Credits Economy):
+        - **4a. Reset AP to flat + capped carryover** — set `current_ap := FLAT_AP_PER_TURN +
+          min(unspent_ap_from_last_turn, AP_CARRYOVER_CAP)`. AP does **not** depend on the economy.
+        - **4b. Add Credit income to the banked pool** — `current_credits += credit_income`. Because this
+          follows step 3, the income observes the freshly-completed structures. Credits **accumulate** —
+          this is an add, not a reset.
+     *(The reset/carry/bank **timing** is owned here; the resource **amounts** are owned by AP & Credits
+     Economy. Base & Production's Rule 6 and AP & Credits Economy's start-of-turn behavior both cite this
+     ordered sequence — it is the single source of truth for start-of-turn ordering.)*
+   - **Action phase** — the active player (human or AI) issues AP- and/or Credit-costed actions via
+     `apply_action` until they end the turn or have no meaningful action left.
+   - **End-of-turn** — **no discard**: unspent AP carries into the player's next start-of-turn reset
+     (capped at `AP_CARRYOVER_CAP`, step 4a) and banked Credits persist untouched. Pass control to the
+     opponent. *(The old "discard unspent AP" rule is superseded by the AP↔Credits pivot; capped AP
+     carryover replaces it, and Credits never discard.)*
 4. **`round_number` increments** each time control returns to the starting player (i.e. after both
    players have taken a turn). The HUD may display it as "Round N".
 5. **Victory is by HQ destruction.** After every state mutation that could destroy an HQ, a win-check
@@ -76,18 +85,19 @@ always fair, always legible, and always exactly where they left it.
    and **deep-copied** with no rendering node present. `clone()` yields an independent state the AI
    can apply hypothetical actions to without affecting the authoritative game. The renderer observes
    change events and draws; it never holds source-of-truth data.
-8. **All mutation flows through `apply_action(action)`**, which (a) validates legality (enough AP,
-   legal target, correct active player), (b) applies the change atomically, (c) deducts AP, and
-   (d) runs the win-check. **Illegal actions are rejected and leave the state — including AP —
-   unchanged.**
+8. **All mutation flows through `apply_action(action)`**, which (a) validates legality (enough of the
+   action's resource(s) — AP and/or Credits, legal target, correct active player), (b) applies the change
+   atomically, (c) deducts the cost (AP for move/attack; Credits **and** the AP surcharge for
+   produce/build/research — a both-or-neither commit), and (d) runs the win-check. **Illegal actions are
+   rejected and leave the state — including both AP and Credits — unchanged.**
 
 ### States and Transitions (match state machine)
 
 | State | Meaning | Transitions to |
 |-------|---------|----------------|
-| `Setup` | Map + entities initialized, `round_number = 1`, AP unset | → `PlayerTurn(starting)` on match start (fires Start-of-turn for the starting player) |
+| `Setup` | Map + entities initialized, `round_number = 1`, AP and Credits unset | → `PlayerTurn(starting)` on match start (fires Start-of-turn for the starting player) |
 | `PlayerTurn(P)` | Player `P` is in the Action phase | → `EndTurn(P)` when P ends the turn or has no legal action; → `GameOver` if a win-check triggers mid-turn |
-| `EndTurn(P)` | Cleanup: discard P's unspent AP | → `PlayerTurn(other)` (runs Start-of-turn for the other player); increments `round_number` when P was the second mover |
+| `EndTurn(P)` | Cleanup: retain P's unspent AP as carryover (capped at the next reset) and P's banked Credits — no discard | → `PlayerTurn(other)` (runs Start-of-turn for the other player); increments `round_number` when P was the second mover |
 | `GameOver(winner)` | Terminal | (none — no further input accepted) |
 
 `active_player` toggles on every `EndTurn → PlayerTurn` transition. The turn loop can never
@@ -98,17 +108,17 @@ softlock: a player with zero legal actions may always end their turn (see Edge C
 | System | Data in | Data out | Interface owner |
 |--------|---------|----------|-----------------|
 | Grid & Terrain | grid model at match load | occupancy/terrain queries for all systems | Grid (held inside state) |
-| AP Economy | income amount, spend/can_afford requests | current AP per player | AP Economy owns amounts (`income()`/`spend()`/`can_afford()`); **turn manager owns reset-at-start / discard-at-end timing** and stores `current_ap` |
+| AP & Credits Economy | `credit_income` amount, AP/Credit spend & can_afford requests | current AP + current Credits per player | Economy owns amounts (`credit_income()`/`ap_spend()`/`credits_spend()`/`*_can_afford()`); **turn manager owns the start-of-turn reset timing (AP flat+carry, Credit income add) and the no-discard carryover/bank at end-of-turn**, and stores `current_ap` + `current_credits` |
 | Unit System | unit definitions | per-unit state storage; per-turn flag reset | shared (state stores, turn manager resets) |
 | Base & Production, Combat, Research | apply-action mutations | updated entities/state; HQ-destroyed event → win-check | apply_action path (turn manager) |
 | AI Opponent | `clone()` + read API | chosen action sequence (via apply_action) | turn manager (read + clone interface) |
 | Command & Action Interface / HUD | read active_player, AP, round, entities, status | player actions via apply_action | turn manager (read + apply interface) |
 
 **Public interface (the contract everything builds against):**
-- Read (side-effect-free): `active_player`, `current_ap(player)`, `round_number`, `match_status`,
-  `entities()`, `entity_at(tile)`, `grid`.
+- Read (side-effect-free): `active_player`, `current_ap(player)`, `current_credits(player)`,
+  `round_number`, `match_status`, `entities()`, `entity_at(tile)`, `grid`.
 - Simulate: `clone() -> GameState` (deep copy for AI lookahead).
-- Mutate: `apply_action(action) -> Result` (validate → apply → deduct AP → win-check; atomic).
+- Mutate: `apply_action(action) -> Result` (validate → apply → deduct cost (AP and/or Credits) → win-check; atomic).
 - Control: `end_turn()`, `start_match(map, starting_player)`.
 
 ## Formulas
@@ -136,19 +146,23 @@ machine. The precise transition rules:
 `MAX_ROUNDS` is reached (if that optional knob is set). **Example:** starting player P1; after P1
 then P2 both end their turns, `round_number` goes 1 → 2 and `active_player` returns to P1.
 
-> AP **amounts** (income, spend costs) are owned by the AP Economy GDD. This system defines only
-> *when* AP is reset (start-of-turn) and discarded (end-of-turn).
+> Resource **amounts** (Credit income, spend costs, the flat-AP and carryover-cap constants) are owned
+> by the AP & Credits Economy GDD. This system defines only *when* AP is reset (start-of-turn, flat +
+> capped carryover) and *when* Credit income is added (start-of-turn, to the banked pool) — and that
+> neither resource is discarded at end-of-turn (AP carries capped; Credits bank).
 
 ## Edge Cases
 
 - **If the active player has zero legal actions at start of turn** (can't afford anything, no legal
   move): they may still `end_turn()` manually; if a UI auto-pass is offered, it simply ends the turn.
   **The loop never softlocks.**
-- **If a player ends the turn with unspent AP**: the AP is **discarded**, not banked (Pillar 1).
-- **If an illegal action is applied** (insufficient AP, illegal target, wrong active player): it is
-  **rejected**; the state, including AP and entities, is unchanged; no AP is spent.
+- **If a player ends the turn with unspent AP**: it is **carried** into their next start-of-turn reset,
+  capped at `AP_CARRYOVER_CAP` (superseding the old "discard" rule). Banked Credits persist untouched.
+- **If an illegal action is applied** (insufficient AP or Credits, illegal target, wrong active player):
+  it is **rejected**; the state, including AP, Credits, and entities, is unchanged; nothing is spent
+  from either pool (dual-cost actions are both-or-neither).
 - **If a win-condition is met mid-turn**: the match transitions to `GameOver` **immediately**;
-  remaining AP and any queued actions are ignored; no further input is accepted.
+  remaining AP/Credits and any queued actions are ignored; no further input is accepted.
 - **If two HQs would be destroyed in the same resolution step** (not possible with Vertical-Slice
   single-target combat, but reserved for future AoE): the **non-active player wins** — an attacker
   cannot win by an action that also destroys their own HQ. Documented so a future AoE weapon can't
@@ -170,8 +184,8 @@ then P2 both end their turns, `round_number` goes 1 → 2 and `active_player` re
 |--------|--------|-----------|
 | Grid & Terrain | Hard | Holds the grid model; uses its occupancy/terrain/`manhattan_distance` queries |
 
-**Downstream (systems that depend on this — all HARD):** AP Economy, Unit System, Movement, Combat
-Resolution, Base & Production, Research, AI Opponent, Command & Action Interface, Game HUD. Each,
+**Downstream (systems that depend on this — all HARD):** AP & Credits Economy, Unit System, Movement,
+Combat Resolution, Base & Production, Research, AI Opponent, Command & Action Interface, Game HUD. Each,
 when authored, must list Game State & Turn Manager under its own Dependencies.
 
 **Faction Identity (#12)** is also a downstream dependent (Hard): Game State stores `faction_of(player)`
@@ -181,11 +195,13 @@ handoff a playable Neutral-vs-Neutral VS needs; the per-domain `effective_X` del
 the Neutral default and land with the asymmetry prototype. *(Reciprocity closed 2026-07-22 via
 `/review-all-gdds` C-5 — see faction-identity.md Dependencies.)*
 
-**AP Economy interface (designed 2026-07-19 — confirmed compatible):** this GDD assumed an interface
-of `income(player) -> int`, `spend(player, amount) -> bool`, and a "reset to income" call the turn
-manager invokes at start-of-turn. The authored AP Economy GDD provides exactly
-`income()` / `spend() -> bool` / `can_afford(player, amount)`; the turn manager stores `current_ap`
-and honors the registered `ap_reset_policy`. No reconciliation needed — the interfaces agree.
+**AP & Credits Economy interface (updated by the 2026-08-05 pivot):** the turn manager stores
+`current_ap` + `current_credits` and invokes, at start-of-turn: (a) an **AP reset** to
+`FLAT_AP_PER_TURN + min(unspent, AP_CARRYOVER_CAP)`, and (b) a **Credit income add**
+(`current_credits += credit_income(player)`). During the Action phase it calls `ap_spend()` /
+`credits_spend()` (and `*_can_afford()` for legality). At end-of-turn it neither discards AP (it carries,
+capped) nor Credits (they bank). The Economy GDD owns those amounts/constants; the turn manager owns the
+timing. *(Supersedes the pre-pivot `income()`/`spend()`/`ap_reset_policy` single-pool interface.)*
 
 ## Tuning Knobs
 
@@ -208,13 +224,15 @@ feedback (owned mostly by the HUD / Command interface, specified here as require
 - **Turn-change feedback:** a clear "YOUR TURN / ENEMY TURN" banner on every `PlayerTurn`
   transition — the player must never be unsure whose turn it is (Pillar 3).
 - **Victory / defeat presentation** on `GameOver`, stating the winner.
-- **AP-reset moment** is a natural beat for a small start-of-turn flourish (the AP pool filling).
+- **Start-of-turn reset moment** is a natural beat for two small flourishes: the AP pool filling to its
+  flat value (+ any carryover) and the Credit balance ticking up by its income.
 - Audio: a turn-change stinger and a victory/defeat cue (specs owned by the audio pass, not this GDD).
 
 ## UI Requirements
 
 The turn manager exposes `active_player`, `round_number`, `match_status`, and per-player `current_ap`
-for the HUD to display, plus the **End Turn** control and the turn/victory banners. The *visual
+and `current_credits` for the HUD to display, plus the **End Turn** control and the turn/victory
+banners. The *visual
 design and interaction* of these live in the Game HUD (#10) and Command & Action Interface (#9) GDDs,
 not here — this system owns the data and events, not their presentation.
 
@@ -225,15 +243,19 @@ not here — this system owns the data and events, not their presentation.
 ## Acceptance Criteria
 
 - **GIVEN** a new match, **WHEN** it starts, **THEN** `active_player` = the starting player,
-  `round_number` = 1, `match_status` = in-progress, and the starting player's AP = their income.
-- **GIVEN** the active player ends their turn, **WHEN** End-of-turn resolves, **THEN** their unspent
-  AP is discarded, `active_player` switches to the opponent, and the opponent's AP is reset to income.
+  `round_number` = 1, `match_status` = in-progress, the starting player's AP = `FLAT_AP_PER_TURN` (10),
+  and their Credits = `credit_income` (the first income, added at the opening reset).
+- **GIVEN** the active player ends their turn with unspent AP, **WHEN** End-of-turn resolves, **THEN**
+  that AP is **retained as carryover** (not discarded) and their Credits persist, `active_player`
+  switches to the opponent, and the opponent's AP resets to `FLAT_AP_PER_TURN + min(their_carry,
+  AP_CARRYOVER_CAP)` while their Credits increase by `credit_income`.
 - **GIVEN** both players have taken a turn in a round, **WHEN** the second player's turn ends,
   **THEN** `round_number` increments by exactly 1.
 - **GIVEN** an HQ reaches 0 hp, **WHEN** the win-check runs, **THEN** `match_status` becomes
   `GameOver(winner = opponent)` and any subsequent `apply_action` is rejected.
-- **GIVEN** an action costing more AP than the active player has, **WHEN** `apply_action` is called,
-  **THEN** it returns failure and the state (AP + entities) is unchanged.
+- **GIVEN** an action costing more AP or Credits than the active player has, **WHEN** `apply_action` is
+  called, **THEN** it returns failure and the state (AP, Credits, and entities) is unchanged; a dual-cost
+  action short on either pool spends nothing from either.
 - **GIVEN** the same initial state and the same ordered action sequence, **WHEN** applied in two
   separate runs, **THEN** the two resulting states are identical (determinism).
 - **GIVEN** a headless instantiation with no rendering node, **WHEN** actions are applied and the

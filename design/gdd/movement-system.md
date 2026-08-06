@@ -11,7 +11,7 @@
 > Approved 2026-07-21. See `reviews/movement-system-review-log.md`.
 > **Author**: user + main session
 > **Last Updated**: 2026-07-21
-> **Implements Pillar**: Pillar 3 (Readable Board — reachable tiles shown before committing); Pillar 1 (movement spends from the one AP pool); Pillar 2 (positioning is tempo)
+> **Implements Pillar**: Pillar 3 (Readable Board — reachable tiles shown before committing); Pillar 1 (movement spends AP — the tactical budget; unchanged by the 2026-08-05 two-budget pivot, which moved only build/produce/research onto Credits); Pillar 2 (positioning is tempo)
 > **Priority / Layer**: Vertical Slice / Core (system #5)
 
 ## Overview
