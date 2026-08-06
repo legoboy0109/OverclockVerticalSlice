@@ -1,0 +1,19 @@
+; ADR-0013 engine spike — standalone throwaway mini-project.
+; Deliberately isolated from the repo root project.godot (owned by another spike) so this
+; can be launched independently: `./redot prototypes/adr0013-iso-spike/project.godot`
+; or `./redot --path prototypes/adr0013-iso-spike`.
+;
+; Engine: Redot 26.2 (Godot 4.6-compatible). See docs/engine-reference/godot/VERSION.md.
+
+config_version=5
+
+[application]
+
+config/name="ADR-0013 Iso Board Spike"
+run/main_scene="res://IsoSpike.tscn"
+config/features=PackedStringArray("4.6", "Forward Plus")
+
+[display]
+
+window/size/viewport_width=1600
+window/size/viewport_height=900
