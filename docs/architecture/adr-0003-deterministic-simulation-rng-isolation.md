@@ -92,7 +92,7 @@ across `clone()`/rebuild — the movement GDD explicitly distrusts it, TR-moveme
 point is permitted in exactly two places: (a) the AI's **advisory scoring** (never written back to
 state), and (b) **pure presentation** (animation curves, tweens). Where a float could influence a
 *decision*, it must not select nondeterministically: the AI resolves score ties by integer keys —
-`score` difference `< SCORE_TIE_EPSILON` ⇒ pick lowest `ap_cost`, then lowest `entity_id`
+`score` difference `< SCORE_TIE_EPSILON` ⇒ pick lowest `ap_equiv_cost`, then lowest `entity_id` (the unique integer final key)
 (TR-ai-011). Consequently AI float-score reproducibility is scoped to the **same build/machine**
 (cross-platform float bit-equality is explicitly *not* promised, per the AI GDD), while the resulting
 *state* remains fully integer-deterministic everywhere.
@@ -142,7 +142,7 @@ func entities_in_stable_order() -> Array:         # sorted by entity_id, not has
     return ids.map(func(id): return entities_by_id[id])
 
 # Rule 4 — AI tie-break by integer keys (float score never selects nondeterministically)
-#   candidates sorted by: (-score bucket) then ap_cost asc then entity_id asc
+#   candidates sorted by: (-score bucket) then ap_equiv_cost asc then entity_id asc
 #   two scores within SCORE_TIE_EPSILON are treated as tied → integer keys decide
 ```
 
@@ -213,7 +213,7 @@ func entities_in_stable_order() -> Array:         # sorted by entity_id, not has
 | movement-system.md | TR-movement-006/007: flat-array visited table, pinned expansion order | Rule 3 |
 | movement-system.md | TR-movement-011: `SOFT_MOVE_PENALTY` as fixed-point int, integer ceil-div | Rule 2 (scaled integers) |
 | grid-terrain.md | TR-grid-009: seeded procedural gen, byte-identical per seed | Rule 1 (dedicated seeded RNG, seed in map-def) |
-| ai-opponent.md | TR-ai-011: deterministic selection, no engine RNG, integer tie-breaks | Rule 4 (floats advisory-only; ties by ap_cost then entity_id) |
+| ai-opponent.md | TR-ai-011: deterministic selection, no engine RNG, deterministic tie-breaks anchored on a unique integer key | Rule 4 (floats advisory-only; ties by the deterministically-computed ap_equiv_cost, then the unique integer entity_id) |
 
 ## Performance Implications
 - **CPU**: Integer arithmetic is as fast or faster than float; `keys().sort()` on order-sensitive
@@ -232,7 +232,7 @@ N/A — greenfield. The rules here shape every system as it is written.
 - **Clone parity** (with ADR-0001): mutating a `clone()` never affects the original, and two clones
   of the same state are field-wise-equal.
 - **AI tie-break determinism**: a scenario with two equal-score candidate actions always selects the
-  same one (lowest `ap_cost`, then lowest `entity_id`) across repeated runs.
+  same one (lowest `ap_equiv_cost`, then lowest `entity_id`) across repeated runs.
 - **No-global-RNG check**: a CI grep asserts no `randi(`/`randf(`/`randomize(`/`seed(` appears
   outside the single sanctioned map-gen `RandomNumberGenerator`.
 - **Order-sensitivity**: a batch-completion scenario (two structures completing in one tick) resolves

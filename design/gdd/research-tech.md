@@ -512,7 +512,7 @@ reciprocal edges are logged as handoffs below and should be wired when those GDD
    2b). **Revision applied this session:** the earlier Economy-Tech `build_cost` discount hook
    (`economy_outpost_discount`, 4→3) is **removed** by the Economy Tech retune — Economy Outpost cost is a
    flat 4 with no research discount. B&P Core Rule 2's note was updated to say so; Economy Tech now flows
-   through AP Economy's income, not B&P's cost. B&P re-review owed (its number surface is unchanged, but the
+   through AP & Credits Economy's Credit income, not B&P's cost. B&P re-review owed (its number surface is unchanged, but the
    removed hook should be confirmed).
 3. **→ AP & Credits Economy (#3) — cost purity (pivot 2026-08-05: `research_cost` is now a Credit spender,
    plus the per-tech `ap_surcharge` AP spender):** both are concrete deterministic-constant

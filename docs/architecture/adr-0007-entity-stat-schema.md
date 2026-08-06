@@ -3,6 +3,8 @@
 ## Status
 Accepted
 
+**Revised 2026-08-05 — economy pivot: `TechDef.ap_surcharge` per-tech override added; `produce_cost`/`build_cost`/`research_cost` are now Credit-denominated (spent from the Credits pool, not AP); `economy_tech_income_bonus()` is now consumed by `Credits.credit_income()` instead of `AP.income()`.**
+
 ## Date
 2026-07-23
 
@@ -21,7 +23,7 @@ Accepted
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 (EntityState base class, Resource/`duplicate_deep()` cloning pattern — explicitly forward-declares this ADR), ADR-0002 (verb handlers for Build/Produce/Research actions dispatch against this schema), ADR-0005 (Grid occupancy indexes entities by `entity_id`, resolved via this schema's `EntityState`), ADR-0006 (forward-declared `completed_outpost_count()` / `economy_tech_income_bonus()` query contracts — this ADR supplies their concrete implementation) |
+| **Depends On** | ADR-0001 (EntityState base class, Resource/`duplicate_deep()` cloning pattern — explicitly forward-declares this ADR), ADR-0002 (verb handlers for Build/Produce/Research actions dispatch against this schema), ADR-0005 (Grid occupancy indexes entities by `entity_id`, resolved via this schema's `EntityState`), ADR-0006 (AP & Credits Economy — forward-declared `completed_outpost_count()` / `economy_tech_income_bonus()` query contracts and the `TechDef.ap_surcharge` field — this ADR supplies their concrete implementation) |
 | **Enables** | ADR-0008 (start-of-turn sequencing resets `tiles_moved_this_turn`, `has_attacked`, `units_produced_this_turn`, and advances `build_turns_remaining`/`research_turns_remaining` — all fields this ADR defines) |
 | **Blocks** | Epics: Unit System, Base & Production, Combat Resolution, Research/Tech — no implementation work in these can start until this ADR is Accepted |
 | **Ordering Note** | None beyond Depends On |
@@ -46,6 +48,7 @@ The decision must also satisfy a performance constraint ADR-0001 and ADR-0006 bo
 - Four unit types (Scout, Trooper, Heavy, Sniper) and five structure types (HQ, Economy Outpost, Production Outpost, Defensive Structure, Research Lab) each need an immutable stat template plus a concrete per-instance state class.
 - Research's three techs (Attack, Defense, Economy) need an immutable template; per-Lab research progress needs a home.
 - `completed_outpost_count(state, player)` and `economy_tech_income_bonus(state, player)` must be concretely defined against this schema.
+- Each tech template needs a per-tech AP-surcharge override (`TechDef.ap_surcharge`) so a heavy tech can tax more tempo than a quick one (economy pivot — ADR-0006).
 - Design tooling (economy-designer, systems-designer) must be able to retune stat values without touching code.
 
 ## Decision
@@ -81,16 +84,23 @@ Template layer (Resource, .tres, preloaded once, NOT on the clone-cost path):
 
   UnitTypeDef              StructureTypeDef            TechDef
   ├─ display_name          ├─ display_name             ├─ display_name
-  ├─ hp                    ├─ hp                       ├─ research_cost
-  ├─ attack                ├─ build_cost                ├─ research_time
-  ├─ attack_range          ├─ build_time                └─ effect: TechEffect (ATTACK|DEFENSE|ECONOMY)
-  ├─ move_cost             ├─ production_cap: int = 0
-  ├─ soft_move_cap         ├─ producible_types: Array[UnitTypeDef] = []
-  ├─ produce_cost          ├─ attack: int = 0
-  ├─ defense: int = 0      ├─ attack_range: int = 0
+  ├─ hp                    ├─ hp                       ├─ research_cost  (Credits)
+  ├─ attack                ├─ build_cost (Credits)      ├─ research_time
+  ├─ attack_range          ├─ build_time                ├─ effect: TechEffect (ATTACK|DEFENSE|ECONOMY)
+  ├─ move_cost             ├─ production_cap: int = 0   └─ ap_surcharge: int = 1   # per-tech AP surcharge
+  ├─ soft_move_cap         ├─ producible_types: Array[UnitTypeDef] = []              #  override (economy pivot);
+  ├─ produce_cost (Credits)├─ attack: int = 0                                        #  defaults to EconomyConfig
+  ├─ defense: int = 0      ├─ attack_range: int = 0                                  #  .research_ap_cost
   ├─ targeting_mode        ├─ defense: int = 0
   ├─ min_range: int = 1    └─ can_counterattack: bool = false
   └─ can_counterattack: bool = false
+
+  NOTE (economy pivot, ADR-0006): produce_cost / build_cost / research_cost above are
+  Credit-denominated (spent from the Credits pool, not AP). The AP surcharge to
+  produce/build is a FLAT field on EconomyConfig (produce_ap_cost / build_ap_cost —
+  NOT per-type, lives in AP & Credits Economy, not here). Research is the one
+  exception: its AP surcharge has a per-tech override, TechDef.ap_surcharge above,
+  falling back to EconomyConfig.research_ap_cost when unset.
 
 Registries (Autoload consts, preload()-populated at compile time — no runtime load()):
   UnitTypes.SCOUT / .TROOPER / .HEAVY / .SNIPER            : UnitTypeDef
@@ -137,7 +147,7 @@ enum TargetingMode { DIRECT, AREA }
 @export var attack_range: int
 @export var move_cost: int
 @export var soft_move_cap: int
-@export var produce_cost: int
+@export var produce_cost: int   # Credit-denominated (economy pivot); AP surcharge is EconomyConfig.produce_ap_cost, flat, not per-type
 @export var defense: int = 0
 @export var targeting_mode: int = TargetingMode.DIRECT
 @export var min_range: int = 1
@@ -148,7 +158,7 @@ extends Resource
 
 @export var display_name: String
 @export var hp: int
-@export var build_cost: int
+@export var build_cost: int   # Credit-denominated (economy pivot); AP surcharge is EconomyConfig.build_ap_cost, flat, not per-type
 @export var build_time: int
 @export var production_cap: int = 0
 @export var producible_types: Array[UnitTypeDef] = []
@@ -163,9 +173,12 @@ extends Resource
 enum TechEffect { ATTACK, DEFENSE, ECONOMY }
 
 @export var display_name: String
-@export var research_cost: int
+@export var research_cost: int   # Credit-denominated (economy pivot); AP surcharge is ap_surcharge below (per-tech), not this field
 @export var research_time: int
 @export var effect: int   # TechEffect
+@export var ap_surcharge: int = 1   # per-tech override of the research AP surcharge (economy pivot, ADR-0006/ADR-0018);
+                                     # defaults to EconomyConfig.research_ap_cost (base 1) when left at default;
+                                     # lets a heavy tech tax more tempo than a quick one — VS techs use the base (=1)
 ```
 
 ```gdscript
@@ -204,10 +217,11 @@ static func completed_outpost_count(state: GameState, player: int) -> int:
     return n
 
 static func economy_tech_income_bonus(state: GameState, player: int) -> int:
-    # Returns the FULLY-CAPPED Economy-Tech term (research-tech.md line 263). AP.income()
-    # (ADR-0006) adds this verbatim and does NOT re-apply the cap. Constant ownership per GDDs:
+    # Returns the FULLY-CAPPED Economy-Tech term (research-tech.md line 263). Added verbatim by
+    # Credits.credit_income() (ADR-0006, economy pivot — was AP.income() pre-pivot) and does NOT
+    # re-apply the cap. Constant ownership per GDDs:
     #   ECONOMY_TECH_INCOME_BONUS (=1)   — Research-owned (this system's tech-effect value)
-    #   ECONOMY_TECH_TIER_THRESHOLD (=6) — AP-Economy-owned brake, read cross-system from
+    #   ECONOMY_TECH_TIER_THRESHOLD (=6) — AP & Credits Economy-owned brake, read cross-system from
     #                                      EconomyConfig (Balance.economy.economy_tech_tier_threshold)
     if not state.per_player[player].has_economy_tech:
         return 0
@@ -249,7 +263,7 @@ static func economy_tech_income_bonus(state: GameState, player: int) -> int:
 - Every current and future structure type (including the Research Lab, and any Faction Identity #12 variant) is a `StructureState` — no growing subclass hierarchy as the roster expands.
 - Stat templates are fully data-driven `.tres` resources, editable in the inspector without code changes, satisfying `coding-standards.md` directly.
 - `preload()`-based registries give zero per-clone cost for templates (CONFIRMED, Engine Compatibility) — `GameState.clone()`'s cost scales with live entity count only, not template count. Because the shared-reference check happens *before* any recursion into a sub-resource's fields, `StructureTypeDef.producible_types: Array[UnitTypeDef]` is never even walked during a clone — the whole template subgraph (including nested template arrays) is skipped, not just the top-level reference.
-- `completed_outpost_count()` / `economy_tech_income_bonus()`, forward-declared by ADR-0006, now have concrete implementations, unblocking AP Economy's and Research's downstream work.
+- `completed_outpost_count()` / `economy_tech_income_bonus()`, forward-declared by ADR-0006, now have concrete implementations, unblocking AP & Credits Economy's and Research's downstream work. `TechDef.ap_surcharge` (economy pivot) similarly fulfills ADR-0006's forward-declared per-tech override field.
 - Adding a 6th structure type or 5th unit type is a new `.tres` + one registry constant — no schema or enum changes.
 
 ### Negative
@@ -267,16 +281,17 @@ static func economy_tech_income_bonus(state: GameState, player: int) -> int:
 
 | GDD System | Requirement | How This ADR Addresses It |
 |------------|-------------|---------------------------|
-| unit-system.md | Rule 1: unit type template fields (`hp`, `attack`, `attack_range`, `move_cost`, `soft_move_cap`, `produce_cost`) | `UnitTypeDef` Resource fields |
+| unit-system.md | Rule 1: unit type template fields (`hp`, `attack`, `attack_range`, `move_cost`, `soft_move_cap`, `produce_cost`) | `UnitTypeDef` Resource fields — `produce_cost` is Credit-denominated (economy pivot); the AP surcharge is `EconomyConfig.produce_ap_cost`, flat, not a `UnitTypeDef` field |
 | unit-system.md | Rule 2: runtime instance state (`entity_id`, `type` reference, `owner`, `current_hp`, `position`, `has_attacked`, `tiles_moved_this_turn`) | `UnitState` fields + inherited `EntityState` fields |
 | unit-system.md | Rule 9 / combat-resolution.md handoff: `defense`, `targeting_mode`, `min_range`, `can_counterattack` per-unit-type fields (currently only in `design/registry/entities.yaml`, flagged "Unit GDD revision pending") | Formalized on `UnitTypeDef` — closes the registry/GDD gap at the schema level (GDD prose still needs its own revision pass, tracked separately) |
-| base-production.md | Rule 1: structure template fields (`hp`, `build_cost`, `build_time`, `production_cap`, `producible_types`) + Defensive Structure's `attack`/`attack_range`/`defense`/`can_counterattack` | `StructureTypeDef` fields |
+| base-production.md | Rule 1: structure template fields (`hp`, `build_cost`, `build_time`, `production_cap`, `producible_types`) + Defensive Structure's `attack`/`attack_range`/`defense`/`can_counterattack` | `StructureTypeDef` fields — `build_cost` is Credit-denominated (economy pivot); the AP surcharge is `EconomyConfig.build_ap_cost`, flat, not a `StructureTypeDef` field |
 | base-production.md | States and Transitions: Under-Construction → Completed → Destroyed; `units_produced_this_turn`; `has_attacked` | `StructureState.build_status` (`BuildStatus` enum) + runtime fields |
 | base-production.md | Rule 11: `completed_outpost_count(player)` contract | Concrete `completed_outpost_count()` implementation, fulfilling ADR-0006's forward declaration |
-| research-tech.md | Rule 1: tech template (`research_cost`, `research_time`, `effect`) | `TechDef` Resource |
+| research-tech.md | Rule 1: tech template (`research_cost`, `research_time`, `effect`) | `TechDef` Resource — `research_cost` is Credit-denominated (economy pivot); the AP surcharge is the separate `ap_surcharge` field below, not this one |
 | research-tech.md | Rule 2: Research Lab reuses Base & Production's generic structure mechanics, no new mechanics | Research Lab is a `StructureState` with `type == StructureTypes.RESEARCH_LAB` — no new subclass |
 | research-tech.md | Per-Lab state (Rule 4/States table): `current_research_target`, `research_turns_remaining` | Folded onto generic `StructureState` per this ADR's decision (Alternative 2) |
-| research-tech.md | Economy Tech income bonus (Rule 8, Formulas) | Concrete `economy_tech_income_bonus()` implementation, fulfilling ADR-0006's forward declaration |
+| research-tech.md | Economy Tech income bonus (Rule 8, Formulas) | Concrete `economy_tech_income_bonus()` implementation, fulfilling ADR-0006's forward declaration; now consumed by `Credits.credit_income()` (economy pivot) |
+| research-tech.md / ADR-0018 | Per-tech AP surcharge override (economy pivot) | `TechDef.ap_surcharge: int = 1` — defaults to `EconomyConfig.research_ap_cost` (base 1); read by ADR-0018's research verb handler |
 | combat-resolution.md | `defense`/`targeting_mode`/`min_range`/`can_counterattack` as shared Unit- **and** structure-owned fields | Present on both `UnitTypeDef` and `StructureTypeDef` |
 | movement-system.md | `tiles_moved_this_turn` (Unit-owned counter, Movement-written) | `UnitState.tiles_moved_this_turn` |
 | coding-standards.md | Gameplay values must be data-driven (external config), never hardcoded | `UnitTypeDef`/`StructureTypeDef`/`TechDef` as `.tres` resources, not enums/consts |
@@ -294,12 +309,13 @@ None — this is new schema with no prior implementation to migrate. It fulfills
 - Unit test: `GameState.clone()` over a state including a Production Outpost (a `StructureTypeDef` with **non-empty** `producible_types`, to exercise the nested-template-array non-recursion path) plus at least one entity of every other unit and structure type asserts that `current_hp`/`position`/`build_status`/etc. mutate independently between clone and original (runtime fields are deep-copied), while `unit.type`/`structure.type` (and `structure.type.producible_types` and its elements) on the clone are the **same objects** (`===`) as on the original — the load-bearing perf assumption, made assertable rather than just claimed.
 - Unit test: `completed_outpost_count()` returns the correct count across Under-Construction, Completed, Destroyed, and enemy-owned Economy Outposts (all non-counted cases return 0 contribution), matching `base-production.md` Rule 11 exactly.
 - Unit test: `economy_tech_income_bonus()` returns 0 without `has_economy_tech`, and the tiered/capped value with it, matching `research-tech.md`'s worked examples (including the `k > ECONOMY_TECH_TIER_THRESHOLD` cap case).
+- Unit test: `TechDef.ap_surcharge` defaults to `EconomyConfig.research_ap_cost` (base 1) when a tech's `.tres` leaves it unset, and a tech with an overridden value reports that override — matching ADR-0018's research verb handler read (economy pivot).
 - Determinism test: `GameState.entities()` iteration order is stable and independent of entity creation/removal history (ADR-0003 Rule 3).
 
 ## Related Decisions
 - ADR-0001: State Model Ownership & Lifecycle (defines `EntityState`, forward-declares this ADR)
 - ADR-0002: Apply-Action Command Model (verb handlers dispatch against this schema)
 - ADR-0005: Grid Representation & Map Format (entity_id resolution via this schema)
-- ADR-0006: AP Economy Data Model & Spend Contract (forward-declares the two query contracts this ADR implements)
+- ADR-0006: AP & Credits Economy Data Model & Spend Contract (forward-declares the two query contracts and the `TechDef.ap_surcharge` field this ADR implements)
 - ADR-0008: Shared Start-of-Turn Sequencing (planned — consumes the per-turn reset fields this ADR defines)
 - `design/gdd/unit-system.md`, `design/gdd/base-production.md`, `design/gdd/research-tech.md`, `design/gdd/combat-resolution.md`, `design/gdd/movement-system.md`

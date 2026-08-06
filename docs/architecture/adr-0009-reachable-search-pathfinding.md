@@ -305,7 +305,7 @@ is the bottleneck; this decision is explicitly reversible without touching the a
 - **Description**: Add directly to `GameState` (ADR-0001).
 - **Pros**: Simplest call site (`state.reachable(unit)`).
 - **Cons**: `GameState` re-accretes every Core system's logic — exactly the pattern ADR-0006 explicitly
-  rejected for AP Economy in favor of a static utility class.
+  rejected for AP & Credits Economy in favor of a static utility class.
 - **Rejection Reason**: Inconsistent with the established `ap_economy_module_shape` precedent; no
   offsetting benefit.
 
@@ -414,7 +414,7 @@ N/A — new system, no existing code to migrate.
 - ADR-0002 (Action / apply_action Command Model)
 - ADR-0003 (Deterministic Simulation & RNG Isolation)
 - ADR-0005 (Grid Representation & Map-Definition Format)
-- ADR-0006 (AP Economy Data Model & Spend Contract)
+- ADR-0006 (AP & Credits Economy Data Model & Spend Contract)
 - ADR-0007 (Unit & Structure Entity/Stat Schema)
 - `design/gdd/movement-system.md`
 - `design/gdd/unit-system.md`

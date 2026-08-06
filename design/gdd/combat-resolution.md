@@ -140,8 +140,8 @@ through `apply_action`:
 | Step | Effect |
 |------|--------|
 | 1. Attacker selected | Combat computes the legal target set (per profile, Rule 4/5) for preview |
-| 2. Target chosen | Validate: `can_attack(attacker)` true, `can_afford(attack_cost)` true, target is a legal enemy in range/LoF |
-| 3. Commit | `spend(attack_cost)`; set attacker `has_attacked = true` (atomic; on any validation failure nothing changes) |
+| 2. Target chosen | Validate: `can_attack(attacker)` true, `ap_can_afford(attack_cost)` true, target is a legal enemy in range/LoF |
+| 3. Commit | `ap_spend(attack_cost)`; set attacker `has_attacked = true` (atomic; on any validation failure nothing changes) |
 | 4. Primary damage | Compute `damage` (Rule 6); subtract from defender `current_hp` |
 | 5. Primary death check | If defender `current_hp ≤ 0`: destroy + remove from Grid this step |
 | 6. Counter (conditional) | If defender alive **and** `can_counterattack` **and** attacker in defender's range/profile: apply defender's `damage` to attacker (free) |
@@ -157,7 +157,7 @@ nothing.
 |--------|---------|----------|-----------------|
 | Unit System | `effective_attack`, `attack_range` (=max range), `min_range`, `targeting_mode`, `defense`, `can_counterattack`, `can_attack()` | sets `has_attacked`; writes `current_hp` (via Unit's hp mutator); destroyed flag | **Unit owns all these stat fields + `can_attack()`/hp mutator; Combat owns the targeting rule, damage formula, counter rule, `attack_cost`, `COVER_DR`** |
 | Grid & Terrain | `occupant_at`, `is_cover`, `manhattan_distance`, `neighbors`; `remove` on death | — | Grid (query + mutation API) |
-| AP Economy | `can_afford(attack_cost)` / `spend(attack_cost)` | — | AP Economy owns the pool; Combat owns `attack_cost` |
+| AP & Credits Economy | `ap_can_afford(attack_cost)` / `ap_spend(attack_cost)` | — | AP & Credits Economy owns the pools; Combat owns `attack_cost` |
 | Game State & Turn Manager | attack applied via `apply_action`; runs win-check after resolution | updated entities; HQ-destroyed → GameOver | Turn Manager (mutation path + win rule) |
 | Base & Production | structure `hp`/`defense` (HQ/outposts) as targetable enemies; the **Defensive Structure as an attacker** (`attack`/`attack_range`/`can_counterattack`, fired at `DEFENSIVE_ATTACK_COST`) | destroyed structure; damage/counter applied to targets | Base & Production owns structure stats + `DEFENSIVE_ATTACK_COST`; Combat owns targeting/damage/counter resolution (its `attack()` accepts a structure as attacker) |
 | Research / Tech | attack buff already folded into `effective_attack` (read via Unit) | — | Research owns the bonus magnitude |
@@ -290,7 +290,7 @@ Base-&-Production-owned value below this rate, its reward for immobility. Counte
 - **If the attacker has already attacked this turn** (`has_attacked == true`): the attack is rejected
   (`can_attack()` false); the unit may still move if AP allows.
 - **If the attacker cannot afford `attack_cost`**: the attack is not offered and `attack()` rejects it
-  — no AP spent, no state change (AP Economy `can_afford` gate + `apply_action` atomicity).
+  — no AP spent, no state change (AP & Credits Economy `ap_can_afford` gate + `apply_action` atomicity).
 - **If the target is an enemy structure (HQ/outpost)**: damage applies via the same formula (with
   structure cover-immunity, Rule 6). **Most structures never counter** — HQ, Economy Outpost, and
   Production Outpost all ship `can_counterattack = false`. The **Defensive Structure is the exception**:
@@ -330,7 +330,7 @@ Base-&-Production-owned value below this rate, its reward for immobility. Counte
 |--------|--------|-----------|
 | Grid & Terrain | Hard | `occupant_at`, `is_cover`, `manhattan_distance`, `neighbors`; `remove` on death; 4-dir adjacency |
 | Unit System | Hard | `effective_attack`, `attack_range`, `min_range`, `targeting_mode`, `defense`, `can_counterattack`, `can_attack()`; sets `has_attacked`; hp mutator for damage |
-| AP Economy | Hard | `can_afford(attack_cost)` / `spend(attack_cost)` |
+| AP & Credits Economy | Hard | `ap_can_afford(attack_cost)` / `ap_spend(attack_cost)` |
 | Game State & Turn Manager | Hard | Attacks applied via `apply_action`; win-check on HQ destruction; clonable state for AI/tests |
 
 **Downstream (systems that depend on this — all HARD):** Command & Action Interface (renders legal
@@ -361,7 +361,7 @@ fields (`targeting_mode`, `min_range`, `defense`, `can_counterattack`) that Unit
 and `entities.yaml` must adopt; `attack_range` is reused as the maximum range for both targeting
 profiles. See Open Questions and Phase-5 registry sync.
 
-*Bidirectional note:* Grid & Terrain, Unit System, AP Economy, and Game State & Turn Manager already
+*Bidirectional note:* Grid & Terrain, Unit System, AP & Credits Economy, and Game State & Turn Manager already
 list Combat Resolution as a Hard downstream dependent; the `manhattan_distance` registry entry already
 anticipates `combat.md` referencing it (to be wired in Phase 5).
 
@@ -477,7 +477,7 @@ presentation and interaction.
   the attack will deal (post-cover, post-defense, post-research, min-1) — displayed before the player
   commits. Because combat is deterministic, this preview is a *guarantee*, not an estimate.
 - The interface must surface the `attack_cost` (2 AP) and gate the action on `can_afford` — an
-  unaffordable attack is shown as unavailable, consistent with AP Economy's affordability rule.
+  unaffordable attack is shown as unavailable, consistent with AP & Credits Economy's affordability rule.
 - It must be possible to **cancel** a pending attack (select target → review → back out) before
   committing, mirroring Movement's cancel affordance.
 - A reserved counter-preview: once a `can_counterattack` unit exists, the interface should be able to

@@ -3,6 +3,24 @@
 ## Status
 Accepted
 
+> **Revised 2026-08-05 — economy pivot: `CREDIT_TO_AP_RATE` + AP-equivalent scoring.** The single AP pool
+> split into **two resources** (see ADR-0006, ap-economy.md → "AP & Credits Economy"): **AP** (flat tactical
+> budget for move/attack + a small AP surcharge on economic actions) and **Credits** (banked, uncapped, paying
+> the main cost of produce/build/research). This ADR is updated in place to keep the AI's single-scale scoring
+> intact under two currencies — the loop architecture (clone + enumerate + score + pick-best; determinism;
+> headless) is unchanged. Specific deltas, all tracking the pivoted GDD (ai-opponent.md, Phase 1, source of
+> truth): (1) a new AI-only knob `CREDIT_TO_AP_RATE` (default 1.0, range 0.5–2.0) added to `AIConfig`, raising
+> its knob count from 15 to **16**; (2) the cost axis becomes an AP-equivalent combined cost
+> `ap_equiv_cost = ap_cost + credit_cost × CREDIT_TO_AP_RATE`, and `_is_better(...)`/the tie-break now compare
+> `ap_equiv_cost` then `entity_id`; (3) the affordability gate becomes **dual** — economic candidates require
+> `AP.can_afford(ap_surcharge) AND Credits.can_afford(credit_cost)`, move/attack stay AP-only; (4) the score
+> becomes `ap_equiv_value / ap_equiv_cost` (per the GDD's `action_score`), with Credit-denominated value terms
+> × `CREDIT_TO_AP_RATE`; (5) the `LETHAL_FLOOR_BONUS > economy_ceiling_score` invariant is re-validated — it now
+> reads against the **AP-equivalent** ceiling `economy_ceiling_score × CREDIT_TO_AP_RATE` and holds at defaults
+> (≈1.77 < 3.5), the invariant being linear in the rate so it survives up to rate **≈1.98** before the default
+> `LETHAL_FLOOR_BONUS` (3.5) is breached — flagged so a future rate change past ≈1.98 is caught (GDD AC-38,
+> OQ-11). Where the GDD and this ADR could still disagree, the GDD wins.
+
 > **QQ-06 perf spike CLEARED 2026-07-25 (performance-analyst, PASS).** The enumerate→commit loop
 > (TR-ai-012) at N≤24 units on the pinned 14×16 board measures **~3.7 ms p95 / ~3.68 ms mean** per
 > full `choose_action()` pass (845 candidates scored per pass, under a deliberately upward-biased
@@ -35,7 +53,7 @@ Accepted
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 (`GameState`/`clone()`/`entities()`/`entity_at()` — the AI's entire read surface), ADR-0002 (`apply_action`/typed `Action` subclasses/verb-handler shape — the AI constructs and commits through the exact same pipeline a human does), ADR-0003 (determinism: no RNG, stable iteration order — directly binds this ADR's entity-enumeration order), ADR-0004 (`action_applied` signal — how presentation observes each AI commit for TR-ai-013's streaming requirement), ADR-0006 (`AP.can_afford`/`current_ap`/`income`; `gameplay_config_storage`/`ap_economy_module_shape` patterns this ADR's `AIConfig`/`AI` mirror), ADR-0007 (`UnitTypeDef`/`StructureTypeDef` fields the scoring formulas read: `produce_cost`, `build_cost`, `hp`, `attack`), ADR-0009 (`Movement.reachable()` — candidate move tiles + cost), ADR-0010 (`Combat.legal_targets()`/`legal_targets_from()`/`preview_damage()`; `GameState.destroy_entity()`'s win-check path the AI's own lethal commits ride) |
+| **Depends On** | ADR-0001 (`GameState`/`clone()`/`entities()`/`entity_at()` — the AI's entire read surface), ADR-0002 (`apply_action`/typed `Action` subclasses/verb-handler shape — the AI constructs and commits through the exact same pipeline a human does), ADR-0003 (determinism: no RNG, stable iteration order — directly binds this ADR's entity-enumeration order), ADR-0004 (`action_applied` signal — how presentation observes each AI commit for TR-ai-013's streaming requirement), ADR-0006 (AP & Credits Economy — `AP.can_afford`/`current_ap` **and** `Credits.can_afford`/`current_credits`/`Credits.credit_income`; `gameplay_config_storage`/`ap_economy_module_shape` patterns this ADR's `AIConfig`/`AI` mirror; the two-currency split this ADR's dual affordability gate consumes), ADR-0007 (`UnitTypeDef`/`StructureTypeDef` fields the scoring formulas read: `produce_cost`, `build_cost`, `hp`, `attack`), ADR-0009 (`Movement.reachable()` — candidate move tiles + cost), ADR-0010 (`Combat.legal_targets()`/`legal_targets_from()`/`preview_damage()`; `GameState.destroy_entity()`'s win-check path the AI's own lethal commits ride) |
 | **Enables** | None yet. Faction Identity (ADR-0012, per faction-identity.md AC-24/TR-faction-015) will later confirm the AI reads `effective_X` through the same shared call sites with no AI-only branch — this ADR's "AI reads only through approved queries, no direct field access" decision is exactly what makes that possible without changes here. |
 | **Blocks** | AI Opponent epic implementation; Game State & Turn Manager's turn-handoff wiring (needs `PlayerState.is_ai_controlled` and the `AITurnDriver` hookup point this ADR introduces) |
 | **Ordering Note** | Eleventh ADR; the last of the seven Hard-dependency systems' architecture to land before this one could be written. **QQ-06 CLEARED 2026-07-25 (PASS); ACCEPTED 2026-07-25 as part of the bottom-up 18-ADR Accept batch.** |
@@ -51,9 +69,12 @@ chosen deliberately:
    with zero scene-tree dependency, exactly like `Movement`/`Combat`/`AP`.
 2. **Streamed, not batched** (TR-ai-013, AC-9b) — each committed action must visibly resolve
    before the next is decided, which needs *some* real-time pacing mechanism.
-3. **A 15-knob tunable scoring model** (TR-ai-007) with a cross-knob invariant
-   (`LETHAL_FLOOR_BONUS > economy_ceiling_score`, TR-ai-008) that can silently break CR-7 if a
-   future tuning pass raises `ECONOMY_HORIZON`/`ECONOMY_DECAY` without re-checking it.
+3. **A 16-knob tunable scoring model** (TR-ai-007; 15 pre-pivot + `CREDIT_TO_AP_RATE` added by the
+   2026-08-05 two-currency pivot) with a cross-knob invariant
+   (`LETHAL_FLOOR_BONUS > economy_ceiling_score × CREDIT_TO_AP_RATE`, TR-ai-008) that can silently break
+   CR-7 if a future tuning pass raises `ECONOMY_HORIZON`/`ECONOMY_DECAY`/`CREDIT_TO_AP_RATE` without
+   re-checking it. (The invariant is now linear in `CREDIT_TO_AP_RATE`: it holds at the 1.0 default and up to
+   rate ≈1.98 before the default `LETHAL_FLOOR_BONUS` of 3.5 is breached — GDD AC-38/OQ-11.)
 
 A naive single-class design satisfies at most two of these three: a `Node`-based AI that awaits
 frames for pacing is not headless; a purely synchronous static function has no way to pace itself
@@ -82,8 +103,9 @@ nothing on `PlayerState` currently distinguishes a human-controlled player from 
   (TR-ai-001; covers AC-2/3/4/7/10–33 wherever the AC is phrased as "Logic").
 - A separate, explicitly paced loop-driver that yields real frames/time between commits so
   presentation can render each one before the next is decided (TR-ai-013, AC-9b — "Integration").
-- All 15 scoring weights externally tunable via a data Resource, with the cross-knob invariant
-  enforced automatically rather than left to tribal memory (TR-ai-007, TR-ai-008).
+- All 16 scoring weights externally tunable via a data Resource (the pre-pivot 15 plus
+  `CREDIT_TO_AP_RATE`), with the cross-knob invariant enforced automatically rather than left to tribal
+  memory (TR-ai-007, TR-ai-008).
 - Deterministic candidate ordering: no `Dictionary` hash/insertion-order dependence anywhere in
   enumeration (AC-3, AC-23; `nondeterministic_iteration_order`).
 - The `MAX_ECONOMY_INVESTMENTS_PER_TURN` cadence cap (AC-30) needs turn-scoped memory (how many
@@ -139,22 +161,33 @@ stays free of any *turn-lifecycle* state; the counter is just another explicit i
 ### 2. Enumeration: streaming max-scan, deterministic order, tie-break by construction
 
 `choose_action` never materializes a full candidate array. It walks each verb family once,
-computing a running best `(action: Action, score: float, ap_cost: int, entity_id: int)` and
-replacing it only when a new candidate is strictly better under the GDD's tie-break rule:
+computing a running best `(action: Action, score: float, ap_equiv_cost: float, entity_id: int)` and
+replacing it only when a new candidate is strictly better under the GDD's tie-break rule. **The
+tie-break axis is the AP-equivalent combined cost** `ap_equiv_cost = ap_cost + credit_cost ×
+CREDIT_TO_AP_RATE` (2026-08-05 two-currency pivot), not the raw `ap_cost` — so a cheaper *total*
+(AP + converted Credits) equal-value action is preferred, matching the GDD's `action_score`
+denominator exactly. Move/attack carry `credit_cost = 0`, so their `ap_equiv_cost` equals their
+`ap_cost` and their tie-break is unchanged from the single-pool model:
 
 ```gdscript
-static func _is_better(score: float, ap_cost: int, entity_id: int,
-                        best_score: float, best_ap_cost: int, best_entity_id: int) -> bool:
+static func _is_better(score: float, ap_equiv_cost: float, entity_id: int,
+                       best_score: float, best_ap_equiv_cost: float, best_entity_id: int) -> bool:
     if score > best_score + AIConfig.score_tie_epsilon: return true
     if score < best_score - AIConfig.score_tie_epsilon: return false
-    if ap_cost != best_ap_cost: return ap_cost < best_ap_cost
+    # AP-equivalent cost is a float now (Credit leg × CREDIT_TO_AP_RATE); compare with the same
+    # score_tie_epsilon tolerance so a rate-scaled Credit cost can't create a spurious raw-float tie-break
+    if absf(ap_equiv_cost - best_ap_equiv_cost) > AIConfig.score_tie_epsilon:
+        return ap_equiv_cost < best_ap_equiv_cost
     return entity_id < best_entity_id
 ```
 
-This directly satisfies AC-23's tie-break (lowest `ap_cost`, then lowest `entity_id`) as a pure
+This directly satisfies AC-23's tie-break (lowest `ap_equiv_cost`, then lowest `entity_id`) as a pure
 comparator, and avoids ever allocating an O(candidates) array on top of the enumeration cost OQ-1
 already flags as the dominant perf risk — a candidate's `(action, score)` is compared and then
-immediately discarded unless it wins.
+immediately discarded unless it wins. *(The pre-pivot comparator keyed on an `int` `ap_cost`; the
+Credit leg makes the combined cost a `float`, so the secondary key now compares with the same
+`score_tie_epsilon` tolerance used for the score, keeping the "no fragile raw-float `==`" discipline
+the GDD's determinism note requires.)*
 
 **Entity iteration order is `entity_id`-ascending, never raw `GameState.entities()`/
 `entities_by_id` Dictionary order.** The registry's `nondeterministic_iteration_order` forbidden
@@ -162,14 +195,15 @@ pattern names "AI action enumeration" as its own example of an order-sensitive p
 depend on Dictionary hash/insertion order — `choose_action` satisfies this by collecting the
 active player's owned entity ids, sorting them once (`Array.sort()`, ascending int), and iterating
 that sorted list for every verb family. This also happens to make AC-23's "lowest entity ID"
-tie-break trivially consistent with enumeration order, though the comparator above is what actually
-enforces it (sort order is for determinism of *iteration*, not correctness of the tie-break itself).
+tie-break (the final key, after `ap_equiv_cost`) trivially consistent with enumeration order, though
+the comparator above is what actually enforces it (sort order is for determinism of *iteration*, not
+correctness of the tie-break itself).
 
 **Per-verb enumeration helpers**, each a private static function taking `(lookahead: GameState,
 unit_or_structure, economy_investments_committed: int) -> void` that folds candidates into the
 caller's running-best via `_is_better` (passed the running-best by `inout`-style return, since
-GDScript has no `inout` — each helper returns an updated `(action, score, ap_cost, entity_id)`
-tuple or the unchanged input):
+GDScript has no `inout` — each helper returns an updated `(action, score, ap_equiv_cost, entity_id)`
+tuple or the unchanged input; `ap_equiv_cost` is the AP-equivalent combined cost, a `float`):
 
 - `_score_move_and_attack_candidates` — per unit: `Movement.reachable(lookahead, unit)` for
   positional/retreat/setup-advance scoring (Edge Cases) and `Combat.legal_targets_from(lookahead,
@@ -186,6 +220,45 @@ tuple or the unchanged input):
 Each helper calls only the approved query surface (§5) and `AIConfig` — never a raw
 `UnitState`/`StructureState`/`PlayerState`/`GridState` field outside what `entity_at()`/`entities()`
 already exposes as public typed accessors.
+
+**Dual affordability gate before scoring (CR-4a, 2026-08-05 two-currency pivot).** Each helper
+affordability-gates a candidate *before* folding it into the running best, and the gate is now
+**dual**, matching the GDD's `ap_can_afford` AND `credits_can_afford`:
+
+- **Move / attack** (`_score_move_and_attack_candidates`): `credit_cost = 0`, so the gate is
+  `AP.can_afford(state, player, action.ap_cost)` only — unchanged from the single-pool model.
+- **Produce / build / research** (`_score_production_candidates`, `_score_build_and_economy_candidates`,
+  `_score_research_candidates`): the candidate is enumerated only if **both** legs pass —
+  `AP.can_afford(state, player, action.ap_cost)` (the AP surcharge: `PRODUCE_AP_COST` 1 /
+  `BUILD_AP_COST` 2 / the tech's `ap_surcharge`, base `RESEARCH_AP_COST` 1) **and**
+  `Credits.can_afford(state, player, action.credit_cost)` (the Credit price: produce 2/4/5/7,
+  build 4/9/6/8, research 7/10/10). A candidate affordable on exactly one leg is **not** enumerated
+  (never scored, neither pool touched) — mirroring AP & Credits Economy's both-or-neither atomic
+  commit (GDD AC-36). Because `Credits.can_afford` reads *banked* Credits (uncapped, carried across
+  turns), the greedy loop naturally leaves Credits banked and only enumerates an expensive build/tech
+  once income lifts the balance to it (GDD AC-37) — no explicit "save up" planner.
+- **Cancel-build** (`_score_cancel_build_candidates`): no affordability gate — it *refunds* Credits.
+
+**AP-equivalent value and cost (the one scale survives two currencies, CR-3).** Once a candidate is
+gated in, its score is `ap_equiv_value(action) / ap_equiv_cost(action)` (the GDD's `action_score`),
+where:
+
+- `ap_equiv_cost(action) = action.ap_cost + action.credit_cost × CREDIT_TO_AP_RATE` — move/attack
+  reduce to `ap_cost` (their `credit_cost` is 0); economic actions fold the Credit price, converted at
+  the rate, into the same denominator as the AP surcharge.
+- `ap_equiv_value(action)` dispatches to the four GDD value formulas, with **every Credit-denominated
+  value term multiplied by `CREDIT_TO_AP_RATE`** so the unified number stays in AP-equivalent units:
+  `combat_value` (opponent's sunk `produce_cost`/`build_cost`, and `HQ_SIEGE_VALUE`),
+  `production_value` (the produced unit's `produce_cost` anchor), `economy_value` (the projected
+  `credit_income` sum), and the **Economy-Tech income branch** of `research_value`. The **Attack/Defense
+  Tech branch of `research_value` is a combat effect already in AP-equivalent via `HP_PER_AP` and is
+  NOT rate-multiplied** — doing so would double-convert a value that never left the AP domain (GDD
+  `research_value`, AC-17/AC-17a). At the default rate 1.0 every value term reproduces the single-pool
+  number exactly; the only structural change at 1.0 is the added AP surcharge growing economic
+  denominators (which only widens the lethal-floor headroom).
+
+`CREDIT_TO_AP_RATE` is a fixed constant read from `AIConfig`, identical for every candidate in a turn,
+so it rescales the whole value/cost space uniformly and introduces **no new nondeterminism**.
 
 ### 3. Loop driver: `AITurnDriver` — a small `Node`, owned by Game State & Turn Manager's turn handoff
 
@@ -258,12 +331,16 @@ reads" claim is a static-analysis / code-review property, not a black-box runtim
 defines the allowlist a future lint check (owed to `godot-specialist`/CI, not authored here) verifies
 `ai.gd` never reaches outside of:
 
-- `GameState`: `clone()`, `active_player`, `current_ap(player)`, `entities()`, `entity_at(tile)`,
-  `match_status`, `faction_of(player)`, `apply_action()` (called only by `AITurnDriver`, never by `AI` itself)
+- `GameState`: `clone()`, `active_player`, `current_ap(player)`, `current_credits(player)`, `entities()`,
+  `entity_at(tile)`, `match_status`, `faction_of(player)`, `apply_action()` (called only by `AITurnDriver`,
+  never by `AI` itself)
 - `Movement.reachable(state, unit)`
 - `Combat.legal_targets(state, unit)`, `Combat.legal_targets_from(state, unit, tile)`,
   `Combat.preview_damage(state, attacker, target)`
-- `AP.can_afford(state, player, amount)`, `AP.current_ap(state, player)`, `AP.income(state, player)`
+- `AP.can_afford(state, player, amount)`, `AP.current_ap(state, player)`
+- `Credits.can_afford(state, player, amount)`, `Credits.current_credits(state, player)`,
+  `Credits.credit_income(state, player)` (the second leg of the dual affordability gate, and the income
+  projection `economy_value`/Economy-Tech `research_value` read — 2026-08-05 two-currency pivot)
 - `BaseProduction.legal_build_tiles(state, player, structure_type)`, `BaseProduction.legal_deploy_tiles(state, producer, unit_type)`, `BaseProduction.completed_outpost_count(state, player)` (forward-declared, §7)
 - `Research.legal_research_targets(state, lab)` (forward-declared, §7)
 - `GridState.manhattan_distance`, `terrain_at`, `occupant_at` (only reached indirectly, through the above)
@@ -285,7 +362,7 @@ get an `Action`, mutate `state` directly (simulating the hypothetical race — e
 target), and then call `state.apply_action(action)` itself, asserting `ok == false`. No mock/DI
 facade needed; the split module shape is the seam.
 
-### 6. `AIConfig` — 15 tunables, cross-knob invariant enforced at load
+### 6. `AIConfig` — 16 tunables, cross-knob invariant enforced at load
 
 New Resource, extending the `gameplay_config_storage` pattern (`EconomyConfig`/`UnitConfig`/
 `CombatConfig` precedent) and loaded by the **same** thin `Balance`-style Autoload those already
@@ -307,6 +384,11 @@ class_name AIConfig extends Resource
 @export var retreat_hp_fraction: float = 0.30
 @export var retreat_value_per_tile_fled: float = 0.20
 @export var hq_siege_value: int = 12
+@export var credit_to_ap_rate: float = 1.0     # NEW (2026-08-05 two-currency pivot). AI-only Credit→AP
+                                                # exchange rate; safe range 0.5–2.0. Multiplies every
+                                                # Credit-denominated cost leg AND value term so the two
+                                                # currencies reconcile onto CR-3's single scale. 1.0 is the
+                                                # derived 1:1 anchor (Credit costs == old AP costs).
 @export var score_tie_epsilon: float = 1e-6
 @export var commit_pacing_sec: float = 0.35   # AITurnDriver-only; not a GDD-named scoring knob,
                                                 # but lives here since it's the same tuning surface
@@ -316,16 +398,31 @@ class_name AIConfig extends Resource
 `AIConfig` fields: the GDD itself calls the multiplier band "fixed 3-band" (deliberately not meant
 to be casually retuned — kept as code constants inside `AI`), and `CANCEL_REFUND_RATE` is Base &
 Production-owned (the GDD's own Tuning Knobs table says so) — `AI` reads it from
-`BaseProductionConfig` rather than duplicating it. This keeps `AIConfig`'s count at exactly the 15
-knobs TR-ai-007 names as externally tunable.
+`BaseProductionConfig` rather than duplicating it (note it is now Credit-denominated and the AI's
+`cancel_build_value` converts it by `credit_to_ap_rate`, matching the GDD's Edge-Cases treatment).
+This keeps `AIConfig`'s count at exactly the **16** knobs TR-ai-007 names as externally tunable
+(the pre-pivot 15 plus `credit_to_ap_rate`).
 
-**Cross-knob invariant, enforced at load, not left as a comment:** the `Balance`-style loader
-Autoload, immediately after loading `AIConfig`, computes
+**Cross-knob invariant, enforced at load, not left as a comment (now AP-equivalent, coupling in
+`credit_to_ap_rate` — 2026-08-05 re-validation):** the `Balance`-style loader Autoload, immediately
+after loading `AIConfig`, computes the **AP-equivalent** first-outpost economy ceiling
 `economy_ceiling_score = OUTPOST_BONUS_TIER1 * Σ_{t=1}^{economy_horizon} economy_decay^t /
-first_economy_outpost.build_cost` and asserts `lethal_floor_bonus > economy_ceiling_score`,
-failing loudly (`assert()`, load-time, before the match can start) if a tuning pass raised
-`economy_horizon`/`economy_decay` without raising `lethal_floor_bonus` to match — resolving
-TR-ai-008/QQ-07 as a real automated check instead of a documentation-only warning.
+first_economy_outpost.build_cost` (where `build_cost` is now the Credit price 4) and asserts
+`lethal_floor_bonus > economy_ceiling_score * credit_to_ap_rate`, failing loudly (`assert()`,
+load-time, before the match can start) if a tuning pass raised
+`economy_horizon`/`economy_decay`/**`credit_to_ap_rate`** without raising `lethal_floor_bonus` to
+match — resolving TR-ai-008/QQ-07 as a real automated check instead of a documentation-only warning.
+
+**Re-validation at default tuning (2026-08-05):** at `economy_horizon` 6, `economy_decay` 0.85,
+`build_cost` 4, and `credit_to_ap_rate` 1.0, `economy_ceiling_score ≈ 1.77` (the pivot-neutral ceiling
+the GDD states, measured against the Credit `build_cost` alone — the conservative worst case that
+ignores the AP build surcharge's help), so `lethal_floor_bonus` (3.5) `> 1.77 × 1.0 = 1.77` holds with
+comfortable headroom — CR-7 is preserved by the pivot. Because the ceiling is now **linear in
+`credit_to_ap_rate`**, the invariant holds up to rate **≈1.98** (`1.77 × 1.98 ≈ 3.50`) before the
+default `lethal_floor_bonus` is breached; the GDD's AC-38 pins the worked violation at rate 2.0
+(≈1.765 × 2 ≈ 3.53 > 3.5). Any future rate change past ≈1.98 (or any `economy_horizon`/`economy_decay`
+increase) must recompute `economy_ceiling_score × credit_to_ap_rate` and raise `lethal_floor_bonus` to
+stay above it — the load-time assert above is exactly what flags this (GDD OQ-11).
 
 ### Architecture Diagram
 
@@ -357,7 +454,8 @@ static func choose_action(state: GameState, economy_investments_committed: int) 
 # ai_turn_driver.gd — top-level file, class_name AITurnDriver extends Node
 func run_ai_turn(state: GameState) -> void   # awaits AIConfig.commit_pacing_sec between commits
 
-# ai_config.gd — top-level file, class_name AIConfig extends Resource (15 @export knobs, see §6)
+# ai_config.gd — top-level file, class_name AIConfig extends Resource (16 @export knobs incl.
+#                credit_to_ap_rate, see §6)
 
 # Forward-declared (see §7):
 # static func legal_build_tiles(state: GameState, player: int, structure_type) -> Array[Vector2i]      # BaseProduction
@@ -408,7 +506,7 @@ func run_ai_turn(state: GameState) -> void   # awaits AIConfig.commit_pacing_sec
   per clone regardless, which the pull-based `choose_action(state)` design never has to think about.
 
 ### Alternative (enumeration): Materialize full candidate array, then `sort()`
-- **Description**: Build an `Array` of every `(action, score, ap_cost, entity_id)` candidate this
+- **Description**: Build an `Array` of every `(action, score, ap_equiv_cost, entity_id)` candidate this
   iteration, then sort and take the head.
 - **Pros**: Simpler to log/inspect the whole candidate set for debugging; a single well-tested
   `sort()` call instead of a hand-written tie-break comparator used during a running-best scan.
@@ -420,8 +518,8 @@ func run_ai_turn(state: GameState) -> void   # awaits AIConfig.commit_pacing_sec
 
 ### Alternative (invariant enforcement): Dedicated offline validation tool
 - **Description**: A standalone script/CI tool that validates `AIConfig.tres` against the
-  `LETHAL_FLOOR_BONUS > economy_ceiling_score` invariant, run manually or in CI, separate from the
-  runtime load path.
+  `LETHAL_FLOOR_BONUS > economy_ceiling_score × CREDIT_TO_AP_RATE` invariant, run manually or in CI,
+  separate from the runtime load path.
 - **Pros**: No runtime assert cost; can run without booting the game.
 - **Cons**: Relies on someone remembering to run it after any tuning pass — exactly the "silent
   regression on a future retune" TR-ai-008 exists to prevent. A load-time assert cannot be forgotten.
@@ -480,7 +578,11 @@ func run_ai_turn(state: GameState) -> void   # awaits AIConfig.commit_pacing_sec
   too (a `push_error` + hard `OS.crash`/quit, or a release-surviving guard), **not** a bare `assert()`
   — flagged for a single corpus-wide loader convention rather than a per-ADR fix, but called out here
   because this specific invariant guards a gameplay-correctness property (CR-7), not just a tuning
-  sanity check.
+  sanity check. **The 2026-08-05 pivot adds a third coupled knob** — `CREDIT_TO_AP_RATE` scales the
+  economy ceiling linearly, so the invariant `LETHAL_FLOOR_BONUS > economy_ceiling_score ×
+  CREDIT_TO_AP_RATE` can now also be tripped by a rate change alone (it holds only up to ≈1.98 at the
+  default floor). This *widens* the surface a silent-in-release assert would fail to catch, reinforcing
+  the case for the release-surviving guard.
 - **Minor, non-blocking (godot-specialist, 2026-07-24):** (a) if a future "pause mid-AI-turn" feature
   is ever added, `AITurnDriver` will need an explicit `process_mode` override so its
   `create_timer()` pacing does not stall against a paused tree — no pause feature exists in scope
@@ -497,19 +599,22 @@ func run_ai_turn(state: GameState) -> void   # awaits AIConfig.commit_pacing_sec
 | ai-opponent.md | TR-ai-002: AI acts only as second `active_player` in its own Action phase | `AITurnDriver.run_ai_turn` is invoked only when `PlayerState.is_ai_controlled` is the new `active_player` |
 | ai-opponent.md | TR-ai-003: iterative evaluate→commit loop | `AITurnDriver.run_ai_turn`'s `while` loop |
 | ai-opponent.md | TR-ai-004: enumerate via the named query set | §2's per-verb enumeration helpers, each calling only §5's approved surface |
-| ai-opponent.md | TR-ai-005: every candidate costed/affordability-gated before scoring | Each enumeration helper checks `AP.can_afford` before folding a candidate into the running best |
-| ai-opponent.md | TR-ai-006: single normalized `action_score`, verb-dispatch, no hardcoded priority | `_is_better` comparator operates on one `float` regardless of which helper produced it |
-| ai-opponent.md | TR-ai-007: 15 knobs externally tunable | `AIConfig` Resource (§6) |
-| ai-opponent.md | TR-ai-008: enforce `LETHAL_FLOOR_BONUS > economy_ceiling_score` invariant | Load-time assert in the `Balance`-style loader (§6) |
+| ai-opponent.md | TR-ai-005: every candidate costed/affordability-gated before scoring | Each enumeration helper applies the **dual** gate (§2) before folding a candidate into the running best — `AP.can_afford` for move/attack; `AP.can_afford` AND `Credits.can_afford` for produce/build/research (CR-4a, GDD AC-36) |
+| ai-opponent.md | TR-ai-006: single normalized `action_score`, verb-dispatch, no hardcoded priority | `_is_better` comparator operates on one `float` regardless of which helper produced it; the score is `ap_equiv_value / ap_equiv_cost`, both in AP-equivalent units so the two currencies stay on one scale (§2) |
+| ai-opponent.md | TR-ai-007: 16 knobs externally tunable (15 pre-pivot + `CREDIT_TO_AP_RATE`) | `AIConfig` Resource (§6) |
+| ai-opponent.md | TR-ai-008: enforce `LETHAL_FLOOR_BONUS > economy_ceiling_score × CREDIT_TO_AP_RATE` invariant | Load-time assert in the `Balance`-style loader, now AP-equivalent and coupling in `credit_to_ap_rate` (§6); re-validated at defaults (holds; linear in the rate up to ≈1.98) |
 | ai-opponent.md | TR-ai-009: guaranteed loop termination | `choose_action` returning `null`, or `match_status == GAME_OVER`, both explicit `break`/`return` points in `run_ai_turn` |
 | ai-opponent.md | TR-ai-010: `apply_action()` rejection handled defensively | `run_ai_turn`'s `if not result.ok: continue` |
-| ai-opponent.md | TR-ai-011: deterministic selection, ties by `ap_cost` then `entity_id` | `_is_better` comparator (§2) |
+| ai-opponent.md | TR-ai-011: deterministic selection, ties by cost then `entity_id` | `_is_better` comparator (§2), now keyed on `ap_equiv_cost` (`ap_cost + credit_cost × CREDIT_TO_AP_RATE`) then `entity_id` (GDD AC-23) |
 | ai-opponent.md | TR-ai-012: perf budget for the loop | Flagged as the Status-gating QQ-06 spike; strategy documented, numeric ceiling deferred |
 | ai-opponent.md | TR-ai-013: incremental rendering, not silent batch | `AITurnDriver`'s per-commit `await` (§3) — pacing lives outside the headless `AI` module |
 | ai-opponent.md | TR-ai-014: query-call instrumentation seam | Resolved as a static-analysis lint allowlist (§5), not runtime DI, per the GDD's own routing note |
 | ai-opponent.md | TR-ai-015: field-level diff harness vs. human commits | Satisfied by construction — `AITurnDriver` commits through the identical `apply_action` pipeline (ADR-0002) a human's UI uses; no AI-specific mutation path exists to diverge |
 | ai-opponent.md | TR-ai-016: fixture + fuzz corpus, `current_ap` never negative | Enabled by `AI.choose_action`'s headlessness (§1) — the corpus is ordinary unit tests, no scene tree |
 | ai-opponent.md | TR-ai-017: Grid queries for positional/retreat scoring, tiles-normalized | `_score_move_and_attack_candidates` reads `GridState.manhattan_distance` only via `Movement.reachable`'s already-computed tiles (§2, §5) |
+| ai-opponent.md | CR-4a / AC-36: dual affordability gate (economic candidate needs both AP surcharge and Credit legs affordable) | §2's dual gate — `_score_production_candidates`/`_score_build_and_economy_candidates`/`_score_research_candidates` enumerate only if `AP.can_afford` AND `Credits.can_afford` both pass (2026-08-05 pivot) |
+| ai-opponent.md | CR-4a / CR-5 / AC-37: banked-Credit saving emerges from the greedy loop | `Credits.can_afford` reads *banked*, uncapped Credits (§2); an unaffordable expensive candidate is simply not enumerated until income lifts the balance — no explicit "save up" planner in `run_ai_turn` |
+| ai-opponent.md | AC-38: `CREDIT_TO_AP_RATE` cross-knob invariant (rate ≳1.98 breaches `LETHAL_FLOOR_BONUS`) | Load-time assert on `lethal_floor_bonus > economy_ceiling_score × credit_to_ap_rate` (§6); the rate reaches every value term via `ap_equiv_value` (§2) |
 | game-state-turn-manager.md | (implicit) "active player, human or AI" needs a data-model backing | New `PlayerState.is_ai_controlled` field (§4) |
 
 ## Performance Implications
@@ -535,14 +640,23 @@ N/A — greenfield.
 - **Streaming**: an integration test drives `AITurnDriver.run_ai_turn` inside a running scene tree
   and asserts `action_applied` fires once per commit with the configured `commit_pacing_sec` gap
   between them (AC-9b; the QQ-06 spike set the ceiling at ~3.7 ms p95 per pass — 2026-07-25, PASS).
-- **Cross-knob invariant**: loading an `AIConfig.tres` with `economy_horizon`/`economy_decay` raised
-  toward their safe-range maxima without also raising `lethal_floor_bonus` must fail the load-time
-  assert, not silently start the match.
-- **Determinism**: run a fixed board+AP-total AI turn twice via `AITurnDriver`/`choose_action` and
-  assert an identical ordered sequence of committed actions (AC-3).
+- **Cross-knob invariant**: loading an `AIConfig.tres` with `economy_horizon`/`economy_decay`/**`credit_to_ap_rate`**
+  raised toward their safe-range maxima without also raising `lethal_floor_bonus` must fail the load-time
+  assert, not silently start the match. Concretely, `credit_to_ap_rate = 2.0` at default
+  `economy_horizon`/`economy_decay`/`lethal_floor_bonus` must fail (≈1.765 × 2 ≈ 3.53 > 3.5), and rate 1.0
+  must pass (≈1.77 < 3.5) — the re-validated defaults per §6 (GDD AC-38).
+- **Determinism**: run a fixed board+AP-total+Credit-total AI turn twice via `AITurnDriver`/`choose_action` and
+  assert an identical ordered sequence of committed actions (AC-3); `credit_to_ap_rate` is a fixed per-turn
+  constant, so it introduces no new nondeterminism.
+- **Dual affordability gate**: construct an economic candidate the AI can afford on exactly one leg (Credits
+  sufficient but AP surcharge not, or vice versa) and assert it is **not** enumerated (neither pool touched);
+  with both legs affordable, assert it is enumerated and scored (AC-36). Across successive turns with rising
+  Credit income and no competing above-threshold play, assert the AI leaves Credits **banked** and commits an
+  expensive build only once its banked balance clears the price (AC-37).
 - **Tie-break**: construct two candidates with `action_score` values differing by less than
-  `AIConfig.score_tie_epsilon`, differing `ap_cost`, and assert the lower-`ap_cost` one is chosen
-  (AC-23), then repeat with equal `ap_cost` and differing `entity_id`.
+  `AIConfig.score_tie_epsilon`, differing `ap_equiv_cost` (`ap_cost + credit_cost × credit_to_ap_rate`), and
+  assert the lower-`ap_equiv_cost` one is chosen (AC-23), then repeat with equal `ap_equiv_cost` and differing
+  `entity_id`.
 - **Cadence cap**: construct a state with more than `max_economy_investments_per_turn` clearing
   candidates and assert `run_ai_turn` commits at most that many before falling through to
   non-economy actions (AC-30).
@@ -554,8 +668,10 @@ N/A — greenfield.
   mutation path exists)
 - ADR-0003: Determinism & RNG isolation (binds this ADR's entity-iteration-order decision, §2)
 - ADR-0004: Event/signal architecture (`action_applied` is how presentation observes each streamed commit)
-- ADR-0006: AP economy (`can_afford`/`current_ap`/`income`; `ap_economy_module_shape`/
-  `gameplay_config_storage` precedents this ADR's `AI`/`AIConfig` mirror)
+- ADR-0006: AP & Credits Economy (two-resource; `AP.can_afford`/`current_ap` **and**
+  `Credits.can_afford`/`current_credits`/`credit_income`; `ap_economy_module_shape`/
+  `gameplay_config_storage` precedents this ADR's `AI`/`AIConfig` mirror; the two-currency split
+  this ADR converts to AP-equivalent via `CREDIT_TO_AP_RATE`)
 - ADR-0007: Entity stat schema (`produce_cost`/`build_cost`/`hp`/`attack` fields the formulas read)
 - ADR-0009: Movement/reachable search (`Movement.reachable()` — candidate move tiles)
 - ADR-0010: Combat resolution (`Combat.legal_targets`/`legal_targets_from`/`preview_damage`;

@@ -21,7 +21,7 @@ Accepted
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 (`PlayerState` — this ADR adds the `faction` field + the `faction_of(player)` accessor already named in the GameState read API; `clone()` carries it), ADR-0003 (determinism — `FactionDef` is fixed data, no per-match RNG; every effective value is integer arithmetic), ADR-0006 (`ap_income` — `effective_ap_income` folds faction income deltas into the existing 4-term formula; `gameplay_config_storage`/registry-const precedent), ADR-0007 (`entity_stat_template_storage` — the preload'd-registry + Resource-reference-identity pattern `FactionDef`/`Factions` reuses; the forward-declared-`effective_X` pattern), ADR-0010 (`effective_attack` — the existing effective-value site faction combat deltas extend, identity-locked in the VS), ADR-0011 (AI reads `effective_X` via the shared sites with `player` as an argument; the `is_ai_controlled` Setup-lock precedent this ADR's `faction` field mirrors) |
+| **Depends On** | ADR-0001 (`PlayerState` — this ADR adds the `faction` field + the `faction_of(player)` accessor already named in the GameState read API; `clone()` carries it), ADR-0003 (determinism — `FactionDef` is fixed data, no per-match RNG; every effective value is integer arithmetic), ADR-0006 (`credit_income` — `effective_credit_income` folds faction income deltas into the Credit income formula; `gameplay_config_storage`/registry-const precedent), ADR-0007 (`entity_stat_template_storage` — the preload'd-registry + Resource-reference-identity pattern `FactionDef`/`Factions` reuses; the forward-declared-`effective_X` pattern), ADR-0010 (`effective_attack` — the existing effective-value site faction combat deltas extend, identity-locked in the VS), ADR-0011 (AI reads `effective_X` via the shared sites with `player` as an argument; the `is_ai_controlled` Setup-lock precedent this ADR's `faction` field mirrors) |
 | **Enables** | The Faction Identity epic (framework + Neutral baseline); the faction-asymmetry prototype runs against this framework. The AI reads faction-correct costs with zero AI-code change (ADR-0011). |
 | **Blocks** | Faction epic implementation; the effective-value fold-ins owed to Unit/AP/Base & Production/Research (this ADR forward-declares them). Not a hard blocker on any Presentation ADR (no overlap). |
 | **Ordering Note** | The last of the 16-ADR plan; the only Feature-layer ADR besides ADR-0011. **Owed-but-deferrable** (game-hud/faction GDDs): under the VS's Neutral-vs-Neutral default every delta is identity, so only the `PlayerState.faction` plumbing + Neutral `FactionDef` are needed for a playable VS — the effective-value fold-ins + owed floors land alongside the asymmetry prototype, not before. This ADR fixes *what a faction may modify and how*, matching the GDD's framework-only scope (Rush/Boom values stay prototype-gated). |
@@ -186,8 +186,9 @@ effective_attack(state, attacker) = base_attack(type) + (RESEARCH_ATK_BONUS if h
 effective_produce_cost(state, unit_type, player) = max(1, base_produce_cost(type) + (d.cost_delta if d else 0))
 effective_move_cost(state, unit_type, player)    = max(MIN_MOVE_COST, base_move_cost(type) + (d.move_cost_delta if d else 0))
 effective_soft_move_cap(state, unit_type, player)= max(1, base_soft_move_cap(type) + (d.soft_move_cap_delta if d else 0))
-# AP Economy (folds into the EXISTING 4-term formula, preserving the econ-tech term + its cap — TR-faction-004):
-effective_ap_income(state, player) = max(BASE_INCOME_FLOOR, (BASE_INCOME + f.base_income_delta)
+# AP & Credits Economy (folds into the EXISTING 4-term CREDIT income formula, preserving the econ-tech term + its cap — TR-faction-004):
+# (economy pivot: income deltas now fold into Credit income — effective_ap_income renamed effective_credit_income)
+effective_credit_income(state, player) = max(BASE_INCOME_FLOOR, (BASE_INCOME + f.base_income_delta)
     + (OUTPOST_BONUS_TIER1 + f.outpost_tier1_delta)·min(n,T) + (OUTPOST_BONUS_TIER2 + f.outpost_tier2_delta)·max(0,n−T)
     + econ_tech_term)   # econ_tech_term carried VERBATIM from ADR-0006; factions never touch it or ECONOMY_TECH_TIER_THRESHOLD
 # Base & Production (TR-faction-005) + Research (TR-faction-007) analogously, each with its domain floor.
@@ -283,7 +284,7 @@ Both are no-ops under Neutral.
                              ▼
    Owning systems' effective_X(state, base_owner, player) ── fold Faction.{unit,structure,tech}_delta(...) at each read site:
      Unit: effective_produce_cost/move_cost/soft_move_cap/attack(+faction combat, id-locked)
-     AP:   effective_ap_income (into the 4-term formula, econ-tech term preserved)
+     Credits: effective_credit_income (into the 4-term Credit income formula, econ-tech term preserved)
      B&P:  effective_build_cost/build_time/production_cap (two-sided inert invariant)
      Research: effective_research_cost/research_time + faction_allows tech gate
                              │  all clamped to their domain floor
@@ -309,7 +310,7 @@ static func tech_delta(f: FactionDef, tech: TechDef) -> FactionTechDelta
 
 # Forward-declared effective_X to the owning systems (§3):
 #   Unit:     effective_produce_cost / effective_move_cost / effective_soft_move_cap (+ faction term in effective_attack)
-#   AP:       effective_ap_income
+#   Credits:  effective_credit_income
 #   B&P:      effective_build_cost / effective_build_time / effective_production_cap (two-sided, §4)
 #   Research: effective_research_cost / effective_research_time / faction_allows
 ```
@@ -383,8 +384,8 @@ static func tech_delta(f: FactionDef, tech: TechDef) -> FactionTechDelta
   (reciprocity gap, GDD OQ-6) — closed via `/propagate-design-change`, deferrable because Neutral
   makes them no-ops. Named so the propagation isn't lost.
 - **A faction income delta stacks a third per-`n` term onto the base×tech curve** — the same
-  unbounded-stacking failure AP Economy already caught once (econ-tech term). The GDD's combined-income-
-  ceiling rule (any non-zero income delta re-validated against AP Economy's `n`-swept ceiling model,
+  unbounded-stacking failure AP & Credits Economy already caught once (econ-tech term). The GDD's combined-income-
+  ceiling rule (any non-zero income delta re-validated against AP & Credits Economy's `n`-swept ceiling model,
   combined ceiling re-approved as a single number) is a *validation-discipline* obligation owed at the
   first real income delta — no-op under Neutral, flagged here so the asymmetry prototype honors it.
 - **Combat-stat deltas are schema-present but identity-locked** (`unit_combat_delta`, CR-6). If the
@@ -400,7 +401,7 @@ static func tech_delta(f: FactionDef, tech: TechDef) -> FactionTechDelta
 | faction-identity.md | TR-faction-001: FactionDef data-only Resource, loaded at setup; lint asserts no logic | §1 (`extends Resource`, `@export`-only, no `_process`; schema/lint check) |
 | faction-identity.md | TR-faction-002: schema exposes exactly 6 CR-2 domains, reject out-of-set field at load | §1 (closed schema; loader rejects extra fields) |
 | faction-identity.md | TR-faction-003: effective_produce_cost/move_cost/soft_move_cap fold faction delta, floors | §3 (Unit effective_X with `max(1,…)`/`max(MIN_MOVE_COST,…)`) |
-| faction-identity.md | TR-faction-004: effective_ap_income folds Δ into 4-term formula, floored, preserves econ-tech term+cap | §3 (AP `effective_ap_income`, econ-tech term carried verbatim from ADR-0006) |
+| faction-identity.md | TR-faction-004: effective_credit_income folds Δ into the 4-term Credit income formula, floored, preserves econ-tech term+cap | §3 (Credits `effective_credit_income`, econ-tech term carried verbatim from ADR-0006) |
 | faction-identity.md | TR-faction-005: effective_build_cost/build_time/production_cap, floors | §3 (B&P effective_X) + §4 (production_cap) |
 | faction-identity.md | TR-faction-006: production_cap two-sided inert invariant, branch on base-cap sign not single clamp | §4 (explicit `if base_cap == 0: return 0` else `max(1,…)`) |
 | faction-identity.md | TR-faction-007: effective_research_cost/time/tech_available(faction_allows), floors + AND-gate | §3 (Research effective_X + `faction_allows` = NOT the tech's `FactionTechDelta.denied` flag) |
@@ -432,7 +433,7 @@ ships them as identity.)
 
 ## Validation Criteria
 - **Neutral pin**: `effective_X(state, base_owner, neutral_player) == base_X` for every unit cost/
-  mobility, every structure cost/time/cap, every tech cost/time/availability, and `ap_income`
+  mobility, every structure cost/time/cap, every tech cost/time/availability, and `credit_income`
   (TR-faction-011 / AC-4a — reads the base tables directly, no playable build).
 - **Floors bind correctly**: a subtractive delta driving any value below its floor returns exactly the
   floor, never below/0/negative (AC-7/8/9/10/11/13).
@@ -451,7 +452,7 @@ ships them as identity.)
 ## Related Decisions
 - ADR-0001: state model (`PlayerState.faction` field + `faction_of(player)`; `clone()` carries it)
 - ADR-0003: determinism (`FactionDef` fixed data, no per-match RNG; integer-only deltas)
-- ADR-0006: AP economy (`effective_ap_income` folds into the 4-term formula, econ-tech term preserved)
+- ADR-0006: AP & Credits Economy (`effective_credit_income` folds faction income deltas into the 4-term Credit income formula, econ-tech term preserved)
 - ADR-0007: entity stat schema (the preload'd-registry + Resource-ref-identity pattern reused; the
   path-having-Resource clone-sharing finding; the forward-declared-`effective_X` pattern)
 - ADR-0010: combat resolution (`effective_attack` — the existing effective-value site the faction

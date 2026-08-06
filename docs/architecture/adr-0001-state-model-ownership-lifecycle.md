@@ -3,6 +3,12 @@
 ## Status
 Accepted
 
+> **Revised 2026-08-05 (economy pivot).** `PlayerState` gains `current_credits: int` (banked economic
+> pool) and a `current_credits(player)` read accessor; the old `income_this_turn` AP-income snapshot is
+> retired (AP is now a flat + capped-carryover budget, not income-driven — ADR-0006). The state-model
+> architecture (Resource + `duplicate_deep()` clone, ownership/writer contracts, trusted-index reads) is
+> unchanged.
+
 ## Date
 2026-07-23
 
@@ -57,8 +63,8 @@ lookahead and the project's headless-test requirement structurally awkward to re
 - Must support `clone() -> GameState` yielding a **fully independent deep copy** (TR-gamestate-003).
 - Every field must be a **plain, serializable value** — no engine object references that would
   break a future save/load pass (TR-gamestate-015).
-- Must expose a side-effect-free read API: `active_player`, `current_ap(player)`, `round_number`,
-  `match_status`, `entities()`, `entity_at(tile)`, `grid`, `faction_of(player)` (TR-gamestate-011, -014).
+- Must expose a side-effect-free read API: `active_player`, `current_ap(player)`, `current_credits(player)`,
+  `round_number`, `match_status`, `entities()`, `entity_at(tile)`, `grid`, `faction_of(player)` (TR-gamestate-011, -014).
 - Must store `faction_of(player)` and apply `starting_loadout` once at Setup, locked thereafter
   (TR-gamestate-014).
 - Must support an optional `MAX_ROUNDS` cap + `TIEBREAK_METRIC` for the anti-drag terminal predicate
@@ -104,7 +110,7 @@ automatically included in every `clone()` with no separate object to keep in syn
         ┌───────────────────────────┴───────────────────────────┐
         │ grid: GridState (Resource, ADR-0005 owns internals)    │
         │ per_player: Array[PlayerState]                         │
-        │   PlayerState: current_ap, income_this_turn, faction,  │
+        │   PlayerState: current_ap, current_credits, faction,   │
         │                tech flags (write-owner = Research/AP)  │
         │ entities_by_id: Dictionary  # int entity_id->EntityState│
         │ next_entity_id: int                                    │
@@ -142,6 +148,7 @@ enum MatchStatus { IN_PROGRESS, GAME_OVER }
 
 # --- read (side-effect-free) — names match game-state-turn-manager.md public interface exactly ---
 func current_ap(player: int) -> int
+func current_credits(player: int) -> int                  # economic pool read facade (economy pivot)
 func entities() -> Array[EntityState]                     # public accessor over entities_by_id (matches GDD)
 func entity_at(tile: Vector2i) -> EntityState             # null if empty; delegates to grid.occupant_at
 func faction_of(player: int) -> FactionDef
@@ -159,11 +166,18 @@ static func start_match(map: MapDefinition, starting_player: int) -> GameState
 
 class PlayerState extends Resource:
     @export var faction: FactionDef
-    @export var current_ap: int = 0                        # sole writer: AP Economy.spend() + turn-reset
-    @export var income_this_turn: int = 0                  # sole writer: AP Economy start-of-turn snapshot
+    @export var current_ap: int = 0                        # tactical pool. sole writers: AP.spend() +
+                                                           # start-of-turn reset (flat + capped carryover; NOT discarded)
+    @export var current_credits: int = 0                   # economic pool (banked, no cap, >= 0). sole writers:
+                                                           # Credits.spend() + start-of-turn income add + Credits.credit() (cancel refund)
     @export var has_attack_tech: bool = false               # sole writer: Research
     @export var has_defense_tech: bool = false
     @export var has_economy_tech: bool = false
+    # NOTE (economy pivot, ADR-0006): the old `income_this_turn` AP-income snapshot is RETIRED. AP is
+    # now a flat budget (not income-driven), and Credit income is ADDED to current_credits at
+    # start-of-turn rather than snapshotted. The HUD's credit-income breakdown reads
+    # Credits.credit_income_breakdown() live — equal to the start-of-turn value within a turn, since
+    # completed_outpost_count is stable during a player's own turn.
 
 class EntityState extends Resource:                        # base; ADR-0007 defines Unit/Structure specializations
     @export var entity_id: int
@@ -303,8 +317,9 @@ func set_current(state: GameState) -> void: current = state
 N/A — greenfield decision, no existing code to migrate.
 
 ## Validation Criteria
-- **Clone-isolation test**: construct a `GameState`, `clone()` it, mutate an entity's `position`
-  and a `PlayerState.current_ap` on the clone — assert the original is unchanged and vice versa.
+- **Clone-isolation test**: construct a `GameState`, `clone()` it, mutate an entity's `position`,
+  a `PlayerState.current_ap`, and a `PlayerState.current_credits` on the clone — assert the original
+  is unchanged and vice versa.
   This is the single most important test in the project; it must pass before any other Foundation
   ADR's code is built on `clone()`.
 - **Determinism test**: two `clone()` calls on the same unmodified state produce field-wise-equal
@@ -319,8 +334,8 @@ N/A — greenfield decision, no existing code to migrate.
 
 ### Addendum (S2-02, 2026-07-27): Per-player-index access is a trusted contract
 
-The read API's per-player accessors (`current_ap(player)`, `faction_of(player)`,
-and the sibling `AP.*(state, player)` / `Unit.effective_*` reads) treat the
+The read API's per-player accessors (`current_ap(player)`, `current_credits(player)`,
+`faction_of(player)`, and the sibling `AP.*` / `Credits.*(state, player)` / `Unit.effective_*` reads) treat the
 `player` index as a **trusted internal contract**: an out-of-range or invalid
 index is a programmer error and is allowed to fail-fast (crash) — no accessor
 bounds-guards the index or returns a sentinel. Rationale: the simulation is
