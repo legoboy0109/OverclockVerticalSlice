@@ -579,7 +579,10 @@ func test_menu_model_producer_under_cap_with_deploy_space_and_ap_produce_enabled
 	var producer_type := _make_structure_type(6, 2, [unit_type]) # cap = 2.
 	var producer := _place_structure(state, 1, 0, Vector2i(5, 5), producer_type)
 	producer.units_produced_this_turn = 0 # under cap.
-	state.per_player[0].current_ap = 10 # affords produce_cost (4).
+	# Dual-cost (ADR-0006 pivot): produce needs Credits (produce_cost 4) AND the AP
+	# surcharge (produce_ap_cost 1) — fund both so the verb is enabled.
+	state.per_player[0].current_ap = 10
+	state.per_player[0].current_credits = 10
 	# (5,5) sits on an open blank grid, so all 4 cardinal deploy tiles are free.
 
 	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, producer)

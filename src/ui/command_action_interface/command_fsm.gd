@@ -115,6 +115,7 @@ enum Reason {
 	PRODUCTION_CAP_REACHED = 64, ## BaseProduction.effective_production_cap() exhausted this turn.
 	NO_DEPLOY_SPACE = 128,      ## BaseProduction.legal_deploy_tiles() is empty.
 	NOT_UNDER_CONSTRUCTION = 256, ## Cancel Build: entity is not an owned, UNDER_CONSTRUCTION StructureState.
+	INSUFFICIENT_CREDITS = 512,   ## Credits.can_afford() returned false — the Credit main cost of a dual-cost economic action (Build/Produce) is unaffordable (ADR-0006 pivot). INSUFFICIENT_AP covers the AP-surcharge leg.
 }
 
 
@@ -372,13 +373,23 @@ static func _produce_entry(state: GameState, entity: EntityState) -> VerbEntry:
 	if deploy_tiles.is_empty():
 		reason |= Reason.NO_DEPLOY_SPACE
 
+	# Dual-cost (ADR-0006 pivot): a unit is affordable iff BOTH its Credit main cost
+	# AND the shared AP surcharge (produce_ap_cost) are payable.
+	var ap_surcharge_affordable: bool = AP.can_afford(state, producer.owner, Balance.economy.produce_ap_cost)
 	var cheapest_affordable: bool = false
 	for unit_type: UnitTypeDef in producer.type.producible_types:
-		if AP.can_afford(state, producer.owner, Unit.effective_produce_cost(state, unit_type, producer.owner)):
+		var credit_cost: int = Unit.effective_produce_cost(state, unit_type, producer.owner)
+		if ap_surcharge_affordable and Credits.can_afford(state, producer.owner, credit_cost):
 			cheapest_affordable = true
 			break
 	if not cheapest_affordable:
-		reason |= Reason.INSUFFICIENT_AP
+		# Name the binding pool: the AP surcharge is per-action (identical for every
+		# producible type), so if it's unaffordable that's the reason; otherwise no
+		# type's Credit main cost fits.
+		if not ap_surcharge_affordable:
+			reason |= Reason.INSUFFICIENT_AP
+		else:
+			reason |= Reason.INSUFFICIENT_CREDITS
 
 	if reason == Reason.NONE:
 		return VerbEntry.new(Verb.PRODUCE, true, Reason.NONE)
@@ -459,11 +470,13 @@ static func projected_remaining_ap(state: GameState, player: int, previewed_cost
 ## [code]CommandFSM.BuildEntry[/code] prefix.
 ##
 ## Unlike [VerbEntry]'s bitmask [member VerbEntry.reason] (which OR's
-## multiple simultaneously-failing conjuncts for Attack/Produce), Build's two
-## gates are exposed as two [b]independent[/b] booleans
-## ([member insufficient_ap]/[member no_legal_tile]) — AC-16 names exactly two
-## exclusion reasons and requires them "distinguishable," never combined into
-## one flag; a caller checks each independently rather than unpacking a mask.
+## multiple simultaneously-failing conjuncts for Attack/Produce), Build's
+## gates are exposed as [b]independent[/b] booleans
+## ([member insufficient_credits]/[member insufficient_ap]/[member no_legal_tile])
+## — AC-16's "distinguishable" exclusion reasons, never combined into one flag; a
+## caller checks each independently rather than unpacking a mask. The dual-cost
+## pivot (ADR-0006) split the single affordability gate into the Credit main cost
+## and the AP surcharge, so there are now three.
 class BuildEntry extends RefCounted:
 	## The structure type this row previews.
 	var structure_type: StructureTypeDef
@@ -473,28 +486,32 @@ class BuildEntry extends RefCounted:
 	var build_cost: int
 	## [method BaseProduction.effective_build_time]'s live return.
 	var build_time: int
-	## True iff [method AP.can_afford] returned true for [member build_cost].
+	## True iff BOTH the Credit main cost AND the AP surcharge are affordable
+	## (dual-cost, ADR-0006 pivot) — the Build button is enabled only then.
 	var affordable: bool
 	## [method BaseProduction.legal_build_tiles]'s live result set for
 	## [param player]/[member structure_type] — placement preview restricts to
 	## exactly this set, never a locally re-derived adjacency/standoff rule.
 	var legal_tiles: Array[Vector2i]
-	## True iff [member affordable] is false — the first of AC-16's two
-	## distinguishable exclusion reasons.
+	## True iff the Credit main cost ([member build_cost]) is unaffordable — a
+	## distinguishable exclusion reason (the ADR-0006 pivot's dual-cost Credit leg).
+	var insufficient_credits: bool
+	## True iff the AP surcharge (build_ap_cost) is unaffordable — a distinguishable
+	## exclusion reason. Independent of [member insufficient_credits].
 	var insufficient_ap: bool
-	## True iff [member legal_tiles] is empty — the second of AC-16's two
-	## distinguishable exclusion reasons. Independent of [member insufficient_ap]:
-	## both may be true simultaneously (an unaffordable structure with no
-	## legal tile either).
+	## True iff [member legal_tiles] is empty — a distinguishable exclusion reason,
+	## independent of the two affordability reasons (any combination may be true
+	## simultaneously — an unaffordable structure with no legal tile either).
 	var no_legal_tile: bool
 
-	func _init(type: StructureTypeDef, cost: int, time: int, tiles: Array[Vector2i], afford: bool) -> void:
+	func _init(type: StructureTypeDef, cost: int, time: int, tiles: Array[Vector2i], credits_afford: bool, ap_afford: bool) -> void:
 		structure_type = type
 		build_cost = cost
 		build_time = time
 		legal_tiles = tiles
-		affordable = afford
-		insufficient_ap = not afford
+		affordable = credits_afford and ap_afford
+		insufficient_credits = not credits_afford
+		insufficient_ap = not ap_afford
 		no_legal_tile = tiles.is_empty()
 
 
@@ -503,8 +520,10 @@ class BuildEntry extends RefCounted:
 ## every value [b]only[/b] via [BaseProduction]/[AP]'s side-effect-free
 ## queries — [method BaseProduction.effective_build_cost],
 ## [method BaseProduction.effective_build_time],
-## [method BaseProduction.legal_build_tiles], [method AP.can_afford] — never a
-## locally-held balance constant (Pass-Through Invariant, ADR-0015 §4). Build
+## [method BaseProduction.legal_build_tiles], and the dual-cost affordability pair
+## [method Credits.can_afford] (Credit main cost) + [method AP.can_afford] (AP
+## surcharge) — never a locally-held balance constant (Pass-Through Invariant,
+## ADR-0015 §4). Build
 ## is a player-level command (CR-5) with no source entity, so — unlike
 ## [method menu_model] — this takes [param player] directly, never an
 ## [EntityState].
@@ -517,5 +536,9 @@ static func build_preview(state: GameState, player: int, structure_type: Structu
 	var cost: int = BaseProduction.effective_build_cost(state, structure_type, player)
 	var time: int = BaseProduction.effective_build_time(state, structure_type, player)
 	var tiles: Array[Vector2i] = BaseProduction.legal_build_tiles(state, player, structure_type)
-	var affordable: bool = AP.can_afford(state, player, cost)
-	return BuildEntry.new(structure_type, cost, time, tiles, affordable)
+	# Dual-cost (ADR-0006 pivot): affordable iff BOTH the Credit main cost (build_cost)
+	# AND the AP surcharge (build_ap_cost) are payable; both are surfaced separately so
+	# the picker can name the binding pool.
+	var credits_afford: bool = Credits.can_afford(state, player, cost)
+	var ap_afford: bool = AP.can_afford(state, player, Balance.economy.build_ap_cost)
+	return BuildEntry.new(structure_type, cost, time, tiles, credits_afford, ap_afford)
