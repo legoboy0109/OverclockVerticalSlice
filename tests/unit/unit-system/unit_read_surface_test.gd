@@ -123,7 +123,8 @@ func test_game_state_reader_exposes_only_unit_info_as_script_method() -> void:
 		"_init", "unit_info", "legal_build_tiles", "legal_deploy_tiles",
 		"structure_info", "can_afford_build", "can_afford_produce",
 		"active_player", "round_number", "match_status", "winner", "current_ap",
-		"income_breakdown", "can_afford", "entities", "entity_at",
+		"income_breakdown", "can_afford", "current_credits", "can_afford_credits",
+		"entities", "entity_at",
 		"subscribe_action_applied", "unsubscribe_action_applied",
 	])
 

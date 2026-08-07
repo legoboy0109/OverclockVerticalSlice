@@ -44,7 +44,8 @@ func _make_controls(reader: GameStateReader, local_player: int) -> HudControlsWi
 
 func test_build_enabled_when_affordable_dimmed_when_not_but_always_opens() -> void:
 	var state := _make_state(0) # local player 0 active.
-	state.per_player[0].current_ap = 100 # affords something.
+	state.per_player[0].current_ap = 100 # affords the AP surcharge ...
+	state.per_player[0].current_credits = 100 # ... and the Credit main cost (dual-cost pivot).
 	var reader := GameStateReader.new(state)
 	var controls := _make_controls(reader, 0)
 
@@ -52,8 +53,8 @@ func test_build_enabled_when_affordable_dimmed_when_not_but_always_opens() -> vo
 	assert_bool(controls.build_affordable()).is_true()
 	assert_bool(controls.request_build()).is_true() # opens structure selection.
 
-	state.per_player[0].current_ap = 0 # affords nothing.
-	assert_bool(controls.build_affordable()).is_false() # dimmed ...
+	state.per_player[0].current_ap = 0 # zero AP -> the AP surcharge is now unaffordable.
+	assert_bool(controls.build_affordable()).is_false() # dimmed (AP-surcharge leg fails) ...
 	assert_bool(controls.request_build()).is_true() # ... but STILL opens selection (AC-16).
 
 

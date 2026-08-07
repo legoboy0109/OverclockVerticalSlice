@@ -76,17 +76,19 @@ func test_advance_completes_one_remaining_appends_one_completed_event() -> void:
 
 
 func test_advance_reads_no_income_state_pure_transition_only() -> void:
-	# Arrange -- advance_build_timers must not touch AP/income fields at all;
-	# it is a pure transition, commutative with advance_research_timers.
+	# Arrange -- advance_build_timers must not touch either economy pool at all;
+	# it is a pure transition, commutative with advance_research_timers. (Post-pivot
+	# there is no income_this_turn snapshot; income banks into current_credits at
+	# step 4b, which advance_build_timers must likewise never touch.)
 	var state := _make_state()
 	_make_structure(state, 0, StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
 	var ap_before: int = state.per_player[0].current_ap
-	var income_before: int = state.per_player[0].income_this_turn
+	var credits_before: int = state.per_player[0].current_credits
 	# Act
 	BaseProduction.advance_build_timers(state, 0)
-	# Assert -- untouched.
+	# Assert -- both pools untouched.
 	assert_int(state.per_player[0].current_ap).is_equal(ap_before)
-	assert_int(state.per_player[0].income_this_turn).is_equal(income_before)
+	assert_int(state.per_player[0].current_credits).is_equal(credits_before)
 
 
 # --- advance_build_timers: batch completion (Rule 6) -------------------------

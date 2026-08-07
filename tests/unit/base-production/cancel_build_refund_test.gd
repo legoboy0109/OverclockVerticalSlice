@@ -14,9 +14,10 @@
 # Injected Grid + AP fixtures (GameStateFactory + a hand-built GridState),
 # mirroring build_verb_legal_build_tiles_occupancy_test.gd's _make_grid/
 # _make_state/_place style. Cancel is the active player's voluntary action, so
-# owner == active_player == 0 throughout (AP.credit is active-player-gated like
-# AP.spend). The refund credits real AP via AP.credit, so current_ap is set
-# explicitly per test and asserted after.
+# owner == active_player == 0 throughout (Credits.credit is active-player-gated
+# like Credits.spend/AP.spend). The refund credits real Credits via
+# Credits.credit (ADR-0006 pivot — the AP surcharge is not refunded), so
+# current_credits is set explicitly per test and asserted after.
 #
 # No RNG, no time-dependent asserts, no file I/O; each test builds its own
 # isolated state. Naming follows tests/README.md:
@@ -41,11 +42,13 @@ func _make_grid() -> GridState:
 	return grid
 
 
-func _make_state(current_ap: int = 0) -> GameState:
+func _make_state(current_ap: int = 0, current_credits: int = 0) -> GameState:
 	var state := GameStateFactory.make_state(2, 0)
 	state.grid = _make_grid()
 	state.per_player[0].current_ap = current_ap
 	state.per_player[1].current_ap = current_ap
+	state.per_player[0].current_credits = current_credits
+	state.per_player[1].current_credits = current_credits
 	return state
 
 
@@ -76,7 +79,7 @@ func _make_cancel_action(structure_id: int, player: int = 0) -> CancelBuildActio
 
 func test_cancel_under_construction_economy_outpost_credits_2_removes_and_empties_tile() -> void:
 	# Arrange -- an Under-Construction Economy Outpost (build_cost 4 -> refund 2).
-	var state := _make_state(0)
+	var state := _make_state()
 	var tile := Vector2i(5, 5)
 	var structure := _make_structure(1, 0, tile, StructureTypes.ECONOMY_OUTPOST)
 	_place(state, structure)
@@ -85,8 +88,8 @@ func test_cancel_under_construction_economy_outpost_credits_2_removes_and_emptie
 	assert_int(BaseProduction.validate_cancel(state, action)).is_equal(Action.Reason.OK)
 	# Act
 	var events: Array[Event] = BaseProduction.apply_cancel(state, action)
-	# Assert -- floor(4*0.5) = 2 AP credited.
-	assert_int(state.per_player[0].current_ap).is_equal(2)
+	# Assert -- floor(4*0.5) = 2 Credits credited (refund is Credits, ADR-0006 pivot).
+	assert_int(state.per_player[0].current_credits).is_equal(2)
 	# Structure removed from the entity map and the grid; tile now empty.
 	assert_bool(state.entities_by_id.has(structure.entity_id)).is_false()
 	assert_object(state.entity_at(tile)).is_null()
@@ -101,7 +104,7 @@ func test_cancel_under_construction_economy_outpost_credits_2_removes_and_emptie
 
 func test_cancel_under_construction_production_outpost_credits_4_removes_and_empties_tile() -> void:
 	# Arrange -- Production Outpost (build_cost 9 -> refund 4).
-	var state := _make_state(0)
+	var state := _make_state()
 	var tile := Vector2i(5, 5)
 	var structure := _make_structure(1, 0, tile, StructureTypes.PRODUCTION_OUTPOST)
 	_place(state, structure)
@@ -109,35 +112,35 @@ func test_cancel_under_construction_production_outpost_credits_4_removes_and_emp
 	BaseProduction.apply_cancel(state, _make_cancel_action(structure.entity_id))
 	# Assert -- floor(9*0.5) = 4; removal dimensions checked per-type (not only for
 	# Economy Outpost) so a hypothetical per-type divergence would be caught.
-	assert_int(state.per_player[0].current_ap).is_equal(4)
+	assert_int(state.per_player[0].current_credits).is_equal(4)
 	assert_bool(state.entities_by_id.has(structure.entity_id)).is_false()
 	assert_int(state.grid.occupant_at(tile.x, tile.y)).is_equal(GridState.EMPTY_OCCUPANT)
 
 
 func test_cancel_under_construction_defensive_structure_credits_3_removes_and_empties_tile() -> void:
 	# Arrange -- Defensive Structure (build_cost 6 -> refund 3).
-	var state := _make_state(0)
+	var state := _make_state()
 	var tile := Vector2i(5, 5)
 	var structure := _make_structure(1, 0, tile, StructureTypes.DEFENSIVE_STRUCTURE)
 	_place(state, structure)
 	# Act
 	BaseProduction.apply_cancel(state, _make_cancel_action(structure.entity_id))
 	# Assert -- floor(6*0.5) = 3; removal dimensions checked per-type.
-	assert_int(state.per_player[0].current_ap).is_equal(3)
+	assert_int(state.per_player[0].current_credits).is_equal(3)
 	assert_bool(state.entities_by_id.has(structure.entity_id)).is_false()
 	assert_int(state.grid.occupant_at(tile.x, tile.y)).is_equal(GridState.EMPTY_OCCUPANT)
 
 
-func test_cancel_refund_adds_to_existing_ap_not_overwrite() -> void:
-	# Arrange -- the player already has 10 AP; cancelling an Economy Outpost
+func test_cancel_refund_adds_to_existing_credits_not_overwrite() -> void:
+	# Arrange -- the player already has 10 Credits; cancelling an Economy Outpost
 	# (refund 2) must CREDIT (add), not overwrite, the pool.
-	var state := _make_state(10)
+	var state := _make_state(0, 10)
 	var structure := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.ECONOMY_OUTPOST)
 	_place(state, structure)
 	# Act
 	BaseProduction.apply_cancel(state, _make_cancel_action(structure.entity_id))
-	# Assert -- 10 + 2 = 12 (refund is additive; the refunded AP is spendable again).
-	assert_int(state.per_player[0].current_ap).is_equal(12)
+	# Assert -- 10 + 2 = 12 (refund is additive; the refunded Credits are spendable again).
+	assert_int(state.per_player[0].current_credits).is_equal(12)
 
 
 # --- Cancel rejection: Completed structures cannot be cancelled --------------
@@ -145,7 +148,7 @@ func test_cancel_refund_adds_to_existing_ap_not_overwrite() -> void:
 func test_cancel_completed_structure_rejected_no_refund_unchanged() -> void:
 	# Arrange -- a Completed Economy Outpost. Completed structures are only
 	# combat-destroyed, never cancelled (Rule 10).
-	var state := _make_state(0)
+	var state := _make_state()
 	var tile := Vector2i(5, 5)
 	var structure := _make_structure(1, 0, tile, StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.COMPLETED)
 	_place(state, structure)
@@ -156,7 +159,7 @@ func test_cancel_completed_structure_rejected_no_refund_unchanged() -> void:
 	# structure still present, tile still occupied.
 	var events: Array[Event] = BaseProduction.apply_cancel(state, action)
 	assert_array(events).is_empty()
-	assert_int(state.per_player[0].current_ap).is_equal(0)
+	assert_int(state.per_player[0].current_credits).is_equal(0)
 	assert_object(state.entity_at(tile)).is_same(structure)
 	assert_int(state.grid.occupant_at(tile.x, tile.y)).is_equal(structure.entity_id)
 
@@ -164,7 +167,7 @@ func test_cancel_completed_structure_rejected_no_refund_unchanged() -> void:
 func test_cancel_not_owned_structure_rejected_illegal_target() -> void:
 	# Arrange -- an Under-Construction structure owned by player 1, while player 0
 	# is active. You cannot cancel an opponent's build.
-	var state := _make_state(0)
+	var state := _make_state()
 	var structure := _make_structure(1, 1, Vector2i(5, 5), StructureTypes.ECONOMY_OUTPOST)
 	_place(state, structure)
 	var action := _make_cancel_action(structure.entity_id)
@@ -174,13 +177,13 @@ func test_cancel_not_owned_structure_rejected_illegal_target() -> void:
 	assert_array(events).is_empty()
 	assert_object(state.entity_at(Vector2i(5, 5))).is_same(structure)
 	# No refund credited to either pool on a rejected cancel.
-	assert_int(state.per_player[0].current_ap).is_equal(0)
-	assert_int(state.per_player[1].current_ap).is_equal(0)
+	assert_int(state.per_player[0].current_credits).is_equal(0)
+	assert_int(state.per_player[1].current_credits).is_equal(0)
 
 
 func test_cancel_unknown_structure_id_rejected_no_such_entity() -> void:
 	# Arrange -- an action naming a structure id not in entities_by_id.
-	var state := _make_state(0)
+	var state := _make_state()
 	var action := _make_cancel_action(999)
 	# Act / Assert
 	assert_int(BaseProduction.validate_cancel(state, action)).is_equal(Action.Reason.NO_SUCH_ENTITY)

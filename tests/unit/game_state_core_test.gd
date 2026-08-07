@@ -223,7 +223,7 @@ func test_all_fields_are_plain_serializable_values_no_node_rid_or_float() -> voi
 	assert_bool(typeof(state.match_status) == TYPE_INT).is_true()
 	# Assert — PlayerState fields.
 	assert_bool(typeof(player.current_ap) == TYPE_INT).is_true()
-	assert_bool(typeof(player.income_this_turn) == TYPE_INT).is_true()
+	assert_bool(typeof(player.current_credits) == TYPE_INT).is_true()
 	assert_bool(typeof(player.has_attack_tech) == TYPE_BOOL).is_true()
 	assert_bool(typeof(player.has_defense_tech) == TYPE_BOOL).is_true()
 	assert_bool(typeof(player.has_economy_tech) == TYPE_BOOL).is_true()

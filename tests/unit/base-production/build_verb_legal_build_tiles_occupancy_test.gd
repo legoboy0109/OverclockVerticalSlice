@@ -53,14 +53,20 @@ func _make_grid() -> GridState:
 	return grid
 
 
-# current_ap defaults to StructureTypes.ECONOMY_OUTPOST.build_cost (4) so a
-# legal build fixture is affordable unless a test explicitly drives it lower.
-func _make_state(current_ap: int = -1) -> GameState:
+# current_credits defaults to StructureTypes.ECONOMY_OUTPOST.build_cost (4, the
+# Credit-denominated main cost post-pivot) so a legal build fixture is
+# affordable unless a test explicitly drives it lower. current_ap defaults
+# independently to Balance.economy.build_ap_cost (2, the AP surcharge) --
+# the two pools have different scales under the ADR-0006 dual-cost pivot.
+func _make_state(current_ap: int = -1, current_credits: int = -1) -> GameState:
 	var state := GameStateFactory.make_state(2, 0)
 	state.grid = _make_grid()
-	var ap: int = current_ap if current_ap >= 0 else StructureTypes.ECONOMY_OUTPOST.build_cost
+	var ap: int = current_ap if current_ap >= 0 else Balance.economy.build_ap_cost
+	var credits: int = current_credits if current_credits >= 0 else StructureTypes.ECONOMY_OUTPOST.build_cost
 	state.per_player[0].current_ap = ap
 	state.per_player[1].current_ap = ap
+	state.per_player[0].current_credits = credits
+	state.per_player[1].current_credits = credits
 	return state
 
 
@@ -169,9 +175,10 @@ func test_occupied_tile_never_offered_and_build_there_is_rejected() -> void:
 
 # --- Building (Rule 4) -------------------------------------------------------
 
-func test_affordable_legal_build_spends_ap_places_under_construction_blocks_and_targets() -> void:
-	# Arrange -- a friendly unit with an adjacent legal tile, exactly enough AP.
-	var state := _make_state(StructureTypes.ECONOMY_OUTPOST.build_cost)
+func test_affordable_legal_build_spends_credits_and_ap_surcharge_places_under_construction_blocks_and_targets() -> void:
+	# Arrange -- a friendly unit with an adjacent legal tile, exactly enough
+	# Credits (main cost) and AP (surcharge) via _make_state's defaults.
+	var state := _make_state()
 	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
 	_place(state, unit)
 	var tile := Vector2i(6, 5)
@@ -179,7 +186,9 @@ func test_affordable_legal_build_spends_ap_places_under_construction_blocks_and_
 	assert_int(BaseProduction.validate_build(state, action)).is_equal(Action.Reason.OK)
 	# Act
 	var events: Array[Event] = BaseProduction.apply_build(state, action)
-	# Assert -- AP spent exactly build_cost (4).
+	# Assert -- Credits spent exactly build_cost (4); AP spent exactly the
+	# build_ap_cost surcharge (2).
+	assert_int(state.per_player[0].current_credits).is_equal(0)
 	assert_int(state.per_player[0].current_ap).is_equal(0)
 	# A new StructureState exists, Under-Construction, placed on the grid.
 	var placed: EntityState = state.entity_at(tile)
@@ -198,7 +207,7 @@ func test_affordable_legal_build_spends_ap_places_under_construction_blocks_and_
 
 func test_fresh_under_construction_structure_is_inert_for_completed_outpost_count() -> void:
 	# Arrange -- a freshly built Economy Outpost (Under-Construction).
-	var state := _make_state(StructureTypes.ECONOMY_OUTPOST.build_cost)
+	var state := _make_state()
 	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
 	_place(state, unit)
 	var action := _make_build_action(Vector2i(6, 5), StructureTypes.ECONOMY_OUTPOST, 0)
@@ -207,9 +216,11 @@ func test_fresh_under_construction_structure_is_inert_for_completed_outpost_coun
 	assert_int(BaseProduction.completed_outpost_count(state, 0)).is_equal(0)
 
 
-func test_unaffordable_build_rejected_ap_and_grid_unchanged() -> void:
-	# Arrange -- current_ap below build_cost (4).
-	var state := _make_state(3)
+func test_unaffordable_build_credits_short_rejected_credits_and_grid_unchanged() -> void:
+	# Arrange -- current_credits one short of build_cost (4), the binding leg;
+	# AP surcharge fully funded so CANT_AFFORD_CREDITS is unambiguously the
+	# Credits gate firing, not the AP gate.
+	var state := _make_state(-1, 3)
 	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
 	_place(state, unit)
 	var tile := Vector2i(6, 5)
@@ -217,21 +228,23 @@ func test_unaffordable_build_rejected_ap_and_grid_unchanged() -> void:
 	# Act
 	var reason: int = BaseProduction.validate_build(state, action)
 	# Assert
-	assert_int(reason).is_equal(Action.Reason.CANT_AFFORD)
-	assert_int(state.per_player[0].current_ap).is_equal(3)
+	assert_int(reason).is_equal(Action.Reason.CANT_AFFORD_CREDITS)
+	assert_int(state.per_player[0].current_credits).is_equal(3)
+	assert_int(state.per_player[0].current_ap).is_equal(Balance.economy.build_ap_cost)
 	assert_object(state.entity_at(tile)).is_null()
 	# apply_build() itself must also refuse to mutate if called directly
 	# against a still-failing validation (idempotent re-validation guard).
 	var events: Array[Event] = BaseProduction.apply_build(state, action)
 	assert_array(events).is_empty()
-	assert_int(state.per_player[0].current_ap).is_equal(3)
+	assert_int(state.per_player[0].current_credits).is_equal(3)
+	assert_int(state.per_player[0].current_ap).is_equal(Balance.economy.build_ap_cost)
 	assert_object(state.entity_at(tile)).is_null()
 
 
 func test_commit_revalidation_rejects_when_tile_becomes_occupied_between_preview_and_commit() -> void:
 	# Arrange -- a legal tile at preview time, then occupied by something else
 	# before apply_build() actually commits (simulates a stale preview).
-	var state := _make_state(StructureTypes.ECONOMY_OUTPOST.build_cost)
+	var state := _make_state()
 	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
 	_place(state, unit)
 	var tile := Vector2i(6, 5)
@@ -240,10 +253,12 @@ func test_commit_revalidation_rejects_when_tile_becomes_occupied_between_preview
 	# Act -- tile becomes occupied before commit.
 	var intruder := _make_unit(2, 1, UnitTypes.SCOUT, tile)
 	_place(state, intruder)
+	var credits_before: int = state.per_player[0].current_credits
 	var ap_before: int = state.per_player[0].current_ap
 	var events: Array[Event] = BaseProduction.apply_build(state, action)
-	# Assert -- rejected at commit, no AP spent, no structure placed.
+	# Assert -- rejected at commit, no Credits/AP spent, no structure placed.
 	assert_array(events).is_empty()
+	assert_int(state.per_player[0].current_credits).is_equal(credits_before)
 	assert_int(state.per_player[0].current_ap).is_equal(ap_before)
 	assert_object(state.entity_at(tile)).is_same(intruder)
 
@@ -353,7 +368,7 @@ func test_hq_never_offered_as_a_candidate_even_when_adjacent_to_friendly_unit() 
 
 func test_structure_placed_adjacent_to_unit_that_later_moves_away_remains_no_reevaluation() -> void:
 	# Arrange -- build a structure adjacent to a friendly unit.
-	var state := _make_state(StructureTypes.ECONOMY_OUTPOST.build_cost)
+	var state := _make_state()
 	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
 	_place(state, unit)
 	var tile := Vector2i(6, 5)
@@ -374,9 +389,10 @@ func test_structure_placed_adjacent_to_unit_that_later_moves_away_remains_no_ree
 # --- Design-rule toggles ------------------------------------------------------
 
 func test_two_builds_same_turn_both_succeed_parallel_construction_ap_gated() -> void:
-	# Arrange -- enough AP for two Economy Outposts (4 + 4 = 8), two separate
-	# friendly-adjacent legal tiles.
-	var state := _make_state(StructureTypes.ECONOMY_OUTPOST.build_cost * 2)
+	# Arrange -- dual-cost pivot: fund BOTH pools for two Economy Outposts --
+	# Credits = 2 * build_cost (4+4=8), AP = 2 * build_ap_cost (2+2=4) -- two
+	# separate friendly-adjacent legal tiles.
+	var state := _make_state(Balance.economy.build_ap_cost * 2, StructureTypes.ECONOMY_OUTPOST.build_cost * 2)
 	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
 	_place(state, unit)
 	var tile_a := Vector2i(6, 5)
@@ -389,10 +405,11 @@ func test_two_builds_same_turn_both_succeed_parallel_construction_ap_gated() -> 
 	var action_b := _make_build_action(tile_b, StructureTypes.ECONOMY_OUTPOST, 0)
 	assert_int(BaseProduction.validate_build(state, action_b)).is_equal(Action.Reason.OK)
 	var events_b: Array[Event] = BaseProduction.apply_build(state, action_b)
-	# Assert -- both succeeded; AP fully spent (8 - 4 - 4 = 0).
+	# Assert -- both succeeded; both pools fully spent (Credits 8-4-4=0, AP 4-2-2=0).
 	assert_int(events_b.size()).is_equal(1)
 	assert_object(state.entity_at(tile_a)).is_not_null()
 	assert_object(state.entity_at(tile_b)).is_not_null()
+	assert_int(state.per_player[0].current_credits).is_equal(0)
 	assert_int(state.per_player[0].current_ap).is_equal(0)
 
 

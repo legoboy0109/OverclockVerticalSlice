@@ -153,8 +153,12 @@ static func _clears_enemy_standoff(state: GameState, player: int, tile: Vector2i
 ## Performance Guardrail).
 static func validate_build(state: GameState, action: BuildAction) -> int:
 	var player: int = state.active_player
+	# Dual-cost (ADR-0006 pivot): effective_build_cost is the Credit main cost;
+	# build also spends a BUILD_AP_COST AP surcharge. Legal iff BOTH afford.
 	var cost: int = effective_build_cost(state, action.structure_type, player)
-	if not AP.can_afford(state, player, cost):
+	if not Credits.can_afford(state, player, cost):
+		return Action.Reason.CANT_AFFORD_CREDITS
+	if not AP.can_afford(state, player, Balance.economy.build_ap_cost):
 		return Action.Reason.CANT_AFFORD
 	if not (action.tile in legal_build_tiles(state, player, action.structure_type)):
 		return Action.Reason.NOT_LEGAL_BUILD_TILE
@@ -166,8 +170,10 @@ static func validate_build(state: GameState, action: BuildAction) -> int:
 ## commit re-validation, ADR-0002: a tile/affordability change between
 ## preview and commit is rejected here with [b]no mutation at all[/b], rather
 ## than trusting the caller's earlier preview-time check). Only after that
-## re-validation passes does this mutate, atomically: (1) [method AP.spend]
-## the [method effective_build_cost]; (2) construct a new [StructureState]
+## re-validation passes does this mutate, atomically: (1) dual-cost spend —
+## [method Credits.spend] the [method effective_build_cost] (Credit main cost) and
+## [method AP.spend] the [code]build_ap_cost[/code] surcharge (both-or-neither, ADR-0006);
+## (2) construct a new [StructureState]
 ## ([member StructureState.type] = [param action].structure_type,
 ## [member StructureState.owner] = active player,
 ## [member StructureState.position] = [param action].tile,
@@ -194,8 +200,11 @@ static func apply_build(state: GameState, action: BuildAction) -> Array[Event]:
 	if validate_build(state, action) != Action.Reason.OK:
 		return []
 	var player: int = state.active_player
+	# Dual-cost spend, both-or-neither (safe: validate_build re-checked BOTH pools
+	# above, so neither leg can fail here — ADR-0002 validate-before-mutate).
 	var cost: int = effective_build_cost(state, action.structure_type, player)
-	AP.spend(state, player, cost)
+	Credits.spend(state, player, cost)                       # Credit main cost
+	AP.spend(state, player, Balance.economy.build_ap_cost)   # AP surcharge
 
 	var structure := StructureState.new()
 	structure.entity_id = state.next_entity_id
@@ -289,10 +298,11 @@ static func advance_build_timers(state: GameState, player: int) -> Array[Event]:
 	return events
 
 
-## The AP-income contract (ADR-0006 forward-declared, TR-baseprod-007) —
+## The Credit-income contract (ADR-0006 forward-declared, TR-baseprod-007) —
 ## replaces [code]base_production_stub.gd[/code]'s test-controllable stand-in;
-## [code]AP.ap_income_breakdown[/code] calls this cross-system exactly as it
-## called the stub. Counts [param player]'s alive, owned structures where
+## [code]Credits.credit_income_breakdown[/code] calls this cross-system exactly as
+## it called the stub (repointed from [code]AP.ap_income_breakdown[/code] by the
+## pivot). Counts [param player]'s alive, owned structures where
 ## [member StructureState.type] [code]==[/code] [constant StructureTypes.ECONOMY_OUTPOST]
 ## (Resource-reference identity, never a string/enum compare) AND
 ## [member StructureState.build_status] [code]==[/code]
@@ -304,7 +314,7 @@ static func advance_build_timers(state: GameState, player: int) -> Array[Event]:
 ##
 ## O(entity count) — a single pass over [param state]'s entities
 ## (control-manifest Performance Guardrail); called once per player per turn
-## via [code]AP.reset_turn[/code] (ADR-0008 step 4), never per-frame.
+## via [code]Credits.add_income[/code] (ADR-0008 step 4b), never per-frame.
 static func completed_outpost_count(state: GameState, player: int) -> int:
 	var count: int = 0
 	for e: EntityState in state.entities():
@@ -385,8 +395,9 @@ static func validate_cancel(state: GameState, action: CancelBuildAction) -> int:
 ## preview and commit is rejected here with [b]no mutation at all[/b]). Only
 ## after that passes does this mutate, atomically: (1) compute the refund via
 ## [method cancel_refund] on the structure's base [member StructureTypeDef.build_cost];
-## (2) [method AP.credit] the refund to the owner's pool (the AP-owned write
-## path — never a direct [member PlayerState.current_ap] mutation); (3)
+## (2) [method Credits.credit] the refund to the owner's pool in CREDITS (ADR-0006
+## pivot — the Credits-owned write path, never a direct
+## [member PlayerState.current_credits] mutation; the AP surcharge is not refunded); (3)
 ## [method GridState.remove] the structure's tile; (4)
 ## [method Dictionary.erase] the entity from [member GameState.entities_by_id]
 ## (the "in `entities_by_id` ⇔ alive" invariant's terminal exit, ADR-0017 D1);
@@ -407,14 +418,16 @@ static func apply_cancel(state: GameState, action: CancelBuildAction) -> Array[E
 		return []
 	var player: int = state.active_player
 	var structure: StructureState = state.entities_by_id[action.structure_id]
+	# Refund is in CREDITS (ADR-0006 pivot: build was paid mainly in Credits; the
+	# AP surcharge is not refunded). Was AP.credit pre-pivot.
 	var refund: int = cancel_refund(structure.type.build_cost)
-	AP.credit(state, player, refund)
+	Credits.credit(state, player, refund)
 	# validate_cancel (re-run above) guarantees this is a live StructureState, and
 	# every structure is Grid.place'd when built (apply_build) — so remove() cannot
 	# fail here. Assert it loudly rather than silently discard the bool: a false
 	# return would mean an entities_by_id/Grid desync (an entity with no grid
-	# occupant), leaving a half-committed cancel (AP credited, entity erased, event
-	# emitted) with a stale grid cell. Mirrors apply_build/apply_produce's Grid
+	# occupant), leaving a half-committed cancel (Credits credited, entity erased,
+	# event emitted) with a stale grid cell. Mirrors apply_build/apply_produce's Grid
 	# tripwire. (Dev-only; assert is stripped in release, matching convention.)
 	var removed: bool = state.grid.remove(structure.position.x, structure.position.y)
 	assert(removed, "BaseProduction.apply_cancel: Grid.remove failed on a live structure's tile — entities_by_id/Grid desync.")
@@ -532,8 +545,12 @@ static func validate_produce(state: GameState, action: ProduceAction) -> int:
 		return Action.Reason.NOT_PRODUCIBLE
 	if producer.units_produced_this_turn >= effective_production_cap(state, producer, player):
 		return Action.Reason.PRODUCTION_CAP_REACHED
+	# Dual-cost (ADR-0006 pivot): effective_produce_cost is the Credit main cost;
+	# produce also spends a PRODUCE_AP_COST AP surcharge. Legal iff BOTH afford.
 	var cost: int = Unit.effective_produce_cost(state, action.unit_type, player)
-	if not AP.can_afford(state, player, cost):
+	if not Credits.can_afford(state, player, cost):
+		return Action.Reason.CANT_AFFORD_CREDITS
+	if not AP.can_afford(state, player, Balance.economy.produce_ap_cost):
 		return Action.Reason.CANT_AFFORD
 	if not (action.tile in legal_deploy_tiles(state, producer, action.unit_type)):
 		return Action.Reason.NOT_LEGAL_DEPLOY_TILE
@@ -545,7 +562,9 @@ static func validate_produce(state: GameState, action: ProduceAction) -> int:
 ## re-validation, ADR-0002: a producer/tile change between preview and commit is
 ## rejected here with [b]no mutation at all[/b], rather than trusting the caller's
 ## earlier preview-time check). Only after that passes does this mutate,
-## atomically: (1) [method AP.spend] the [method Unit.effective_produce_cost];
+## atomically: (1) dual-cost spend — [method Credits.spend] the
+## [method Unit.effective_produce_cost] (Credit main cost) and [method AP.spend]
+## the [code]produce_ap_cost[/code] surcharge (both-or-neither, ADR-0006);
 ## (2) construct a new [UnitState] ([member UnitState.type] = [param action].unit_type,
 ## [member UnitState.owner] = active player, [member EntityState.position] =
 ## [param action].tile, [member UnitState.current_hp] = [code]type.hp[/code]) —
@@ -570,8 +589,10 @@ static func apply_produce(state: GameState, action: ProduceAction) -> Array[Even
 		return []
 	var player: int = state.active_player
 	var producer: StructureState = state.entities_by_id[action.producer_id]
+	# Dual-cost spend, both-or-neither (validate_produce re-checked BOTH pools above).
 	var cost: int = Unit.effective_produce_cost(state, action.unit_type, player)
-	AP.spend(state, player, cost)
+	Credits.spend(state, player, cost)                          # Credit main cost
+	AP.spend(state, player, Balance.economy.produce_ap_cost)    # AP surcharge
 
 	var unit := UnitState.new()
 	unit.entity_id = state.next_entity_id

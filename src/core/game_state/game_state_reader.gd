@@ -202,11 +202,16 @@ func structure_info(entity_id: int) -> Dictionary:
 ## [method BaseProduction.effective_build_cost] then hands it straight to
 ## [method AP.can_afford]. This facade holds no build-cost constant by name.
 ##
-## O(query) — two O(1) calls (control-manifest Performance Guardrail note:
+## O(query) — a few O(1) calls (control-manifest Performance Guardrail note:
 ## read accessor, not simulation-hot-path).
+##
+## [b]Dual-cost (ADR-0006 pivot):[/b] a build is affordable only if the player can
+## pay [b]both[/b] the Credit cost ([method BaseProduction.effective_build_cost],
+## now Credit-denominated) [b]and[/b] the AP surcharge ([code]build_ap_cost[/code]).
 func can_afford_build(player: int, structure_type: StructureTypeDef) -> bool:
 	var cost: int = BaseProduction.effective_build_cost(_state, structure_type, player)
-	return AP.can_afford(_state, player, cost)
+	return Credits.can_afford(_state, player, cost) \
+		and AP.can_afford(_state, player, Balance.economy.build_ap_cost)
 
 
 ## True iff [param player] can currently afford to produce [param unit_type]
@@ -215,11 +220,16 @@ func can_afford_build(player: int, structure_type: StructureTypeDef) -> bool:
 ## [method Unit.effective_produce_cost] then hands it straight to
 ## [method AP.can_afford]. This facade holds no produce-cost constant by name.
 ##
-## O(query) — two O(1) calls (control-manifest Performance Guardrail note:
+## O(query) — a few O(1) calls (control-manifest Performance Guardrail note:
 ## read accessor, not simulation-hot-path).
+##
+## [b]Dual-cost (ADR-0006 pivot):[/b] a produce is affordable only if the player can
+## pay [b]both[/b] the Credit cost ([method Unit.effective_produce_cost], now
+## Credit-denominated) [b]and[/b] the AP surcharge ([code]produce_ap_cost[/code]).
 func can_afford_produce(player: int, unit_type: UnitTypeDef) -> bool:
 	var cost: int = Unit.effective_produce_cost(_state, unit_type, player)
-	return AP.can_afford(_state, player, cost)
+	return Credits.can_afford(_state, player, cost) \
+		and AP.can_afford(_state, player, Balance.economy.produce_ap_cost)
 
 
 ## The active player's index into [member GameState.per_player] (TR-hud-009,
@@ -257,21 +267,39 @@ func current_ap(player: int) -> int:
 	return AP.current_ap(_state, player)
 
 
-## [param player]'s AP income decomposed into its three additive terms
-## ([code]{base, outpost, econ_tech}[/code], TR-hud-019, ADR-0016 §1) — a
-## direct pass-through to [method AP.ap_income_breakdown]. A real pass-through,
-## not a stub: [method AP.ap_income_breakdown] is a fully implemented AP Economy
-## query as of this story. Never locally re-split from raw inputs (Pass-Through
+## [param player]'s Credit income decomposed into its three additive terms
+## ([code]{base, outpost, econ_tech}[/code], TR-hud-019, ADR-0016 §1) — a direct
+## pass-through to [method Credits.credit_income_breakdown] (repointed from
+## [code]AP.ap_income_breakdown[/code] by the ADR-0006 pivot; income now funds the
+## Credits pool). Read live, never locally re-split from raw inputs (Pass-Through
 ## Invariant — ADR-0016 §1 forbids the HUD receiving raw outpost count/tech flag
 ## and splitting locally). O(1) plus the owning query's own O(1) reads.
 func income_breakdown(player: int) -> Dictionary:
-	return AP.ap_income_breakdown(_state, player)
+	return Credits.credit_income_breakdown(_state, player)
 
 
 ## True iff [param player] can currently afford [param amount] AP (TR-hud-015,
-## ADR-0016 §1) — a direct pass-through to [method AP.can_afford]. O(1).
+## ADR-0016 §1) — a direct pass-through to [method AP.can_afford]. This is the
+## [b]tactical[/b] (AP) affordability query (move/attack + AP surcharges); the
+## economic (Credit) sibling is [method can_afford_credits]. O(1).
 func can_afford(player: int, amount: int) -> bool:
 	return AP.can_afford(_state, player, amount)
+
+
+## [param player]'s Credits available to spend (TR-hud-005, ADR-0016 §1, pivot) —
+## a direct pass-through to [method Credits.current_credits], the economic-pool
+## sibling of [method current_ap]. Never a locally re-derived value (Pass-Through
+## Invariant). O(1).
+func current_credits(player: int) -> int:
+	return Credits.current_credits(_state, player)
+
+
+## True iff [param player] can currently afford [param amount] Credits (ADR-0016 §1,
+## pivot) — the economic sibling of [method can_afford], a direct pass-through to
+## [method Credits.can_afford]. Drives the Credit-cost half of dual-cost
+## affordability on economic actions. O(1).
+func can_afford_credits(player: int, amount: int) -> bool:
+	return Credits.can_afford(_state, player, amount)
 
 
 ## Every entity in the match, in stable [member EntityState.entity_id]-ascending

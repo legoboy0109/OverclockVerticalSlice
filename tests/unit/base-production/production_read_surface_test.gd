@@ -195,15 +195,19 @@ func test_structure_info_remaining_production_cap_matches_cap_minus_produced() -
 
 # --- AC5: affordability -------------------------------------------------------
 
-func test_can_afford_build_matches_ap_can_afford_on_effective_build_cost() -> void:
-	# Arrange
+func test_can_afford_build_matches_dual_cost_credits_and_ap_surcharge() -> void:
+	# can_afford_build is DUAL-cost (ADR-0006 pivot): the Credit main cost
+	# (effective_build_cost) AND the AP surcharge (build_ap_cost). It matches the
+	# conjunction of the two owning queries verbatim, never a single-pool check.
 	var state := _make_story_state()
+	state.per_player[0].current_credits = 20  # fund Credits (build_cost is now Credits)
 	var reader := GameStateReader.new(state)
 	# Act
 	var via_reader: bool = reader.can_afford_build(0, StructureTypes.ECONOMY_OUTPOST)
 	var cost: int = BaseProduction.effective_build_cost(state, StructureTypes.ECONOMY_OUTPOST, 0)
-	var via_direct: bool = AP.can_afford(state, 0, cost)
-	# Assert -- non-vacuous true (20 AP affords a 4-cost build) and matches the query.
+	var via_direct: bool = Credits.can_afford(state, 0, cost) \
+		and AP.can_afford(state, 0, Balance.economy.build_ap_cost)
+	# Assert -- non-vacuous true (both pools afford) and matches the dual query.
 	assert_bool(via_reader).is_true()
 	assert_bool(via_reader).is_equal(via_direct)
 
@@ -217,15 +221,19 @@ func test_can_afford_build_false_when_ap_insufficient() -> void:
 	assert_bool(reader.can_afford_build(0, StructureTypes.ECONOMY_OUTPOST)).is_false()
 
 
-func test_can_afford_produce_matches_ap_can_afford_on_effective_produce_cost() -> void:
-	# Arrange
+func test_can_afford_produce_matches_dual_cost_credits_and_ap_surcharge() -> void:
+	# can_afford_produce is DUAL-cost (ADR-0006 pivot): the Credit main cost
+	# (effective_produce_cost) AND the AP surcharge (produce_ap_cost). It matches
+	# the conjunction of the two owning queries verbatim, never a single-pool check.
 	var state := _make_story_state()
+	state.per_player[0].current_credits = 20  # fund Credits (produce_cost is now Credits)
 	var reader := GameStateReader.new(state)
 	# Act
 	var via_reader: bool = reader.can_afford_produce(0, UnitTypes.TROOPER)
 	var cost: int = Unit.effective_produce_cost(state, UnitTypes.TROOPER, 0)
-	var via_direct: bool = AP.can_afford(state, 0, cost)
-	# Assert -- non-vacuous true and matches the query; no locally-held cost.
+	var via_direct: bool = Credits.can_afford(state, 0, cost) \
+		and AP.can_afford(state, 0, Balance.economy.produce_ap_cost)
+	# Assert -- non-vacuous true (both pools afford) and matches the dual query.
 	assert_bool(via_reader).is_true()
 	assert_bool(via_reader).is_equal(via_direct)
 
@@ -266,7 +274,8 @@ func test_structure_info_cancel_refund_equals_apply_cancels_actual_credit() -> v
 	action.player = 0
 	action.structure_id = 1
 	BaseProduction.apply_cancel(clone, action)
-	var actual_credit: int = clone.per_player[0].current_ap - state.per_player[0].current_ap
+	# Refund lands in CREDITS now (ADR-0006 pivot), not AP.
+	var actual_credit: int = clone.per_player[0].current_credits - state.per_player[0].current_credits
 
 	# Assert -- the preview equals what a real cancel actually credited (both
 	# routes are BaseProduction.cancel_refund(type.build_cost) -- proving the

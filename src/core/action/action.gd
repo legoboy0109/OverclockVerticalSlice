@@ -63,6 +63,10 @@ enum Reason {
 	FACTION_LOCKED,
 	NO_SUCH_ENTITY,
 	UNKNOWN_VERB,
+	# Insufficient Credits for a dual-cost economic action (ADR-0006 pivot); an
+	# AP-surcharge shortfall still uses CANT_AFFORD, so the Command interface can
+	# name the binding pool. Appended at the end to preserve existing ordinals.
+	CANT_AFFORD_CREDITS,
 }
 
 ## Which verb this is — the dispatch key [method GameState.apply_action] uses

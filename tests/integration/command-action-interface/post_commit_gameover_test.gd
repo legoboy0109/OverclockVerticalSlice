@@ -185,6 +185,7 @@ func test_build_commit_lands_on_new_structure_not_prior_selection() -> void:
 	var state := _make_state(0)
 	_place_structure(state, 1, 0, Vector2i(5, 5), _make_buildable_type()) # anchor so tiles are legal.
 	state.per_player[0].current_ap = 20
+	state.per_player[0].current_credits = 20 # fund the build's Credit main cost (dual-cost pivot).
 
 	var buildable := _make_buildable_type(6)
 	var preview: CommandFSM.BuildEntry = CommandFSM.build_preview(state, 0, buildable)

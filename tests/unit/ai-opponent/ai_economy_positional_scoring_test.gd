@@ -56,11 +56,16 @@ func _make_grid(size: int = GRID_SIZE) -> GridState:
 	return grid
 
 
-func _make_state(current_ap: int = 20) -> GameState:
+func _make_state(current_ap: int = 20, current_credits: int = 30) -> GameState:
 	var state := GameStateFactory.make_state(2, 0)
 	state.grid = _make_grid()
 	state.per_player[0].current_ap = current_ap
 	state.per_player[1].current_ap = current_ap
+	# Fund Credits too (dual-cost pivot, ADR-0006): the AI's build/produce enumeration
+	# now gates on Credits.can_afford(main_cost) AND AP.can_afford(surcharge), so an
+	# unfunded Credit pool would suppress every economic candidate.
+	state.per_player[0].current_credits = current_credits
+	state.per_player[1].current_credits = current_credits
 	return state
 
 

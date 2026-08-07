@@ -186,11 +186,12 @@ func test_ac4_attack_commit_hp_delta_equals_previewed_damage() -> void:
 	assert_int(hp_before - hp_after).is_equal(previewed_damage)
 
 
-func test_ac4_build_commit_ap_delta_equals_previewed_build_cost() -> void:
+func test_ac4_build_commit_splits_ap_surcharge_and_credit_main_cost() -> void:
 	var state := _make_state(0)
 	var hq_type := _make_structure_type_for_build()
 	_place_structure(state, 1, 0, Vector2i(5, 5), hq_type)
 	state.per_player[0].current_ap = 20
+	state.per_player[0].current_credits = 20  # fund Credits (build main cost, ADR-0006 pivot)
 
 	var buildable := _make_structure_type_for_build(6)
 	var preview: CommandFSM.BuildEntry = CommandFSM.build_preview(state, 0, buildable)
@@ -199,6 +200,7 @@ func test_ac4_build_commit_ap_delta_equals_previewed_build_cost() -> void:
 	var target_tile: Vector2i = preview.legal_tiles[0]
 
 	var ap_before: int = AP.current_ap(state, 0)
+	var credits_before: int = Credits.current_credits(state, 0)
 
 	var iface: CommandInterface = auto_free(CommandInterface.new())
 	iface.set_local_player(0)
@@ -208,8 +210,10 @@ func test_ac4_build_commit_ap_delta_equals_previewed_build_cost() -> void:
 	var result: ActionResult = iface.commit(state, action)
 
 	assert_bool(result.ok).is_true()
-	var ap_after: int = AP.current_ap(state, 0)
-	assert_int(ap_before - ap_after).is_equal(preview.build_cost)
+	# Dual-cost: the AP delta is the build_ap_cost surcharge; the Credit main cost
+	# (preview.build_cost) comes out of the Credits pool.
+	assert_int(ap_before - AP.current_ap(state, 0)).is_equal(Balance.economy.build_ap_cost)
+	assert_int(credits_before - Credits.current_credits(state, 0)).is_equal(preview.build_cost)
 
 
 func _make_structure_type_for_build(build_cost: int = 6) -> StructureTypeDef:

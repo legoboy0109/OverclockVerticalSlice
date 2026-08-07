@@ -252,10 +252,11 @@ func clone() -> GameState:
 ## [code]Research.advance_research_timers[/code]) — the two calls are
 ## commutative (order between them must never affect the result); both
 ## fully complete before step 4 runs.
-## [br]4. Snapshot [param player]'s AP income for the turn
-## ([code]AP.reset_turn[/code]) — deliberately last, so a structure/tech
-## completed this same turn in step 3 is already reflected in the income
-## this snapshot freezes (never reorder step 4 before step 3).
+## [br]4. Reset [param player]'s AP ([code]AP.reset_turn[/code] — flat budget +
+## capped carryover, step 4a) and bank the turn's Credit income
+## ([code]Credits.add_income[/code], step 4b). Step 4b is deliberately after step
+## 3, so a structure/tech completed this same turn is reflected in the Credit
+## income it adds (never reorder 4b before step 3; 4a is order-independent).
 ##
 ## Returns every [Event] step 3 appended (completions), in the order they
 ## happened — flows through the existing [signal action_applied] once the
@@ -263,8 +264,9 @@ func clone() -> GameState:
 ## [method start_match]) finishes. No new signal or polling path.
 ##
 ## O(entity count): one filtered pass over [method entities] (dominated by
-## its stable-order sort) plus two per-system O(entity count) passes and one
-## O(1) AP snapshot — runs once per player per turn, never per-frame/per-action.
+## its stable-order sort) plus two per-system O(entity count) passes and the two
+## O(1) economy resets (AP flat-carry + Credit income add) — runs once per player
+## per turn, never per-frame/per-action.
 ##
 ## Usage:
 ## [codeblock]
@@ -291,8 +293,10 @@ func start_turn(player: int) -> Array:
 	events.append_array(BaseProduction.advance_build_timers(self, player))
 	events.append_array(Research.advance_research_timers(self, player))
 
-	# 4. AP income snapshot — after step 3, so same-turn completions count.
+	# 4a. AP reset — flat budget + capped carryover (ADR-0006; not income-driven).
 	AP.reset_turn(self, player)
+	# 4b. Credit income — bank credit_income AFTER step 3, so same-turn completions count.
+	Credits.add_income(self, player)
 
 	return events
 
@@ -333,7 +337,8 @@ func start_turn(player: int) -> Array:
 ## var state: GameState = GameState.start_match(map_def, 0) # player 0 moves first
 ## # state.active_player == 0, state.round_number == 1,
 ## # state.match_status == GameState.MatchStatus.IN_PROGRESS,
-## # state.per_player[0].current_ap == AP.income(state, 0)
+## # state.per_player[0].current_ap == Balance.economy.flat_ap_per_turn (leftover 0),
+## # state.per_player[0].current_credits == Credits.credit_income(state, 0)
 ## [/codeblock]
 static func start_match(map: MapDefinition, starting_player: int) -> GameState:
 	var state := GameState.new()
@@ -435,13 +440,14 @@ static func _validate_end_turn(_state: GameState, _action: Action) -> int:
 
 
 ## [EndTurnAction]'s [code]apply()[/code] handler (ADR-0008). Runs, in
-## order: (1) discard the outgoing (currently-active) player's unspent AP —
-## no banking; (2) determine the next player via strict 2-player alternation
+## order: (1) determine the next player via strict 2-player alternation
 ## ([code]1 - outgoing[/code] — out of scope for any future N-player mode,
-## see ADR-0008 Risks); (3) increment [member round_number] [b]only[/b] if
+## see ADR-0008 Risks); (2) increment [member round_number] [b]only[/b] if
 ## [param next_player] equals [member starting_player] (control has looped
-## back to whoever moved first this match); (4) run [method start_turn] for
-## [param next_player] and return its events.
+## back to whoever moved first this match); (3) run [method start_turn] for
+## [param next_player] and return its events. There is no AP-discard step — the
+## economy pivot (ADR-0006) removed it: unspent AP carries (capped) into the
+## outgoing player's next reset, and Credits bank across the turn boundary.
 ##
 ## Deliberately implemented here (a private static handler on [GameState]),
 ## not as a method on [EndTurnAction] itself — ADR-0002 forbids embedding
@@ -457,7 +463,8 @@ static func _validate_end_turn(_state: GameState, _action: Action) -> int:
 ## unconditionally OK for the active player) — never fails.
 static func _apply_end_turn(state: GameState, _action: Action) -> Array:
 	var outgoing: int = state.active_player
-	AP.discard(state, outgoing)
+	# No AP discard (ADR-0006 pivot): unspent AP carries (capped) into the outgoing
+	# player's next AP.reset_turn(); Credits bank. `outgoing` is used only below.
 	var next_player: int = 1 - outgoing # 2-player VS: strict alternation.
 	if next_player == state.starting_player:
 		state.round_number += 1 # Control looped back to the starting player.

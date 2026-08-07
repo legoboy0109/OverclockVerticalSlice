@@ -145,7 +145,7 @@ func test_hold_reaching_threshold_commits_and_refunds_exactly_the_previewed_amou
 	state.per_player[0].current_ap = 3
 
 	var refund: int = CommandFSM.cancel_build_preview(state, structure)
-	var ap_before: int = AP.current_ap(state, 0)
+	var credits_before: int = Credits.current_credits(state, 0)
 
 	var iface: CommandInterface = auto_free(CommandInterface.new())
 	iface.set_local_player(0)
@@ -157,8 +157,9 @@ func test_hold_reaching_threshold_commits_and_refunds_exactly_the_previewed_amou
 	var second: int = iface.tick_cancel_hold(60.0, true, state, structure)
 	assert_int(second).is_equal(CommandInterface.CancelHoldResult.COMMITTED)
 
-	# current_ap increased by EXACTLY the previewed refund (real apply_cancel).
-	assert_int(AP.current_ap(state, 0) - ap_before).is_equal(refund)
+	# current_credits increased by EXACTLY the previewed refund (Credits refund,
+	# ADR-0006 pivot: cancel-build refunds Credits, not AP — real apply_cancel).
+	assert_int(Credits.current_credits(state, 0) - credits_before).is_equal(refund)
 
 
 func test_bare_click_never_triggers_cancel_build() -> void:

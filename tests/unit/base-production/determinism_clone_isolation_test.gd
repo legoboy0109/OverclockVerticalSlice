@@ -53,11 +53,14 @@ func _make_grid() -> GridState:
 
 # Both players Neutral (produce's Unit.effective_produce_cost dereferences
 # state.faction_of(owner)); active_player 0 (the acting player for every verb here).
-func _make_state(current_ap: int = 20) -> GameState:
+func _make_state(current_ap: int = 20, current_credits: int = 20) -> GameState:
 	var state := GameStateFactory.make_state(2, 0)
 	state.grid = _make_grid()
 	for i: int in state.per_player.size():
 		state.per_player[i].current_ap = current_ap
+		# Fund Credits too (dual-cost pivot, ADR-0006): build spends build_cost from
+		# Credits + a build_ap_cost surcharge from AP.
+		state.per_player[i].current_credits = current_credits
 		state.per_player[i].faction = Factions.NEUTRAL
 	return state
 

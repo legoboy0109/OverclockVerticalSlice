@@ -672,7 +672,14 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 
 	for unit_type: UnitTypeDef in producer.type.producible_types:
 		var cost: int = Unit.effective_produce_cost(lookahead, unit_type, producer.owner)
-		if not AP.can_afford(lookahead, producer.owner, cost):
+		# Dual-cost affordability (ADR-0006 pivot): produce needs BOTH the Credit
+		# main cost AND the AP surcharge, else apply_action rejects it — skip such
+		# candidates so the driver never enters an unaffordable-commit reject loop.
+		# NOTE (Landing 4b): scoring below still uses the Credit `cost` as the
+		# value/cost denominator (== ap_equiv_cost at CREDIT_TO_AP_RATE=1); the full
+		# two-currency scoring is deferred to the AI CREDIT_TO_AP_RATE rework.
+		if not Credits.can_afford(lookahead, producer.owner, cost) \
+				or not AP.can_afford(lookahead, producer.owner, Balance.economy.produce_ap_cost):
 			continue
 		for tile: Vector2i in deploy_tiles:
 			var multiplier: float = _reachability_multiplier(lookahead, producer.owner, tile, unit_type)
@@ -808,7 +815,14 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 			continue
 
 		var cost: int = BaseProduction.effective_build_cost(lookahead, structure_type, player)
-		if not AP.can_afford(lookahead, player, cost):
+		# Dual-cost affordability (ADR-0006 pivot): build needs BOTH the Credit main
+		# cost AND the AP surcharge, else apply_action rejects it — skip such
+		# candidates so the driver never enters an unaffordable-commit reject loop.
+		# NOTE (Landing 4b): scoring below still uses the Credit `cost` as the
+		# value/cost denominator (== ap_equiv_cost at CREDIT_TO_AP_RATE=1); the full
+		# two-currency scoring is deferred to the AI CREDIT_TO_AP_RATE rework.
+		if not Credits.can_afford(lookahead, player, cost) \
+				or not AP.can_afford(lookahead, player, Balance.economy.build_ap_cost):
 			continue
 
 		var tiles: Array[Vector2i] = BaseProduction.legal_build_tiles(lookahead, player, structure_type)
@@ -840,7 +854,7 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 ##
 ## `marginal_ap_income(t)` is [b]this candidate outpost's own marginal
 ## contribution[/b] at future turn `t`, computed the same tiered way
-## [code]AP.ap_income_breakdown[/code] does but isolated to the single
+## [code]Credits.credit_income_breakdown[/code] does but isolated to the single
 ## marginal outpost being evaluated: if this would be [param player]'s
 ## outpost number [code]n+1[/code] (where [code]n[/code] =
 ## [method BaseProduction.completed_outpost_count]) and [code]n+1 <=

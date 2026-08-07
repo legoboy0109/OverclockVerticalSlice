@@ -102,7 +102,7 @@ func test_income_breakdown_renders_fields_verbatim() -> void:
 	income.configure(HUDConfig.new(), 0)
 	add_child(income)
 
-	var expected: Dictionary = AP.ap_income_breakdown(state, 0)
+	var expected: Dictionary = Credits.credit_income_breakdown(state, 0)
 	assert_int(income.base_value()).is_equal(expected["base"])
 	assert_int(income.outpost_value()).is_equal(expected["outpost"])
 	assert_int(income.econ_tech_value()).is_equal(expected["econ_tech"])
