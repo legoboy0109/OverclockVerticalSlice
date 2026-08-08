@@ -4,8 +4,10 @@
 ## This is the integration glue the per-widget Game HUD stories (001–008)
 ## deliberately deferred — each widget was built + unit/integration-tested in
 ## isolation; this node is where they become a single reactive surface. It is a
-## [CanvasLayer] (the seven screen-space [Control] widgets are its children,
-## rendered above the world), and it additionally parents the world-space
+## [CanvasLayer] (the screen-space [Control] widgets are its children — including
+## the two co-equal budget counters, the AP counter and the Credits counter added
+## by the 2026-08-05 economy pivot per CR-3d — rendered above the world), and it
+## additionally parents the world-space
 ## [OnBoardGlyphLayer] onto the board (a [Node2D] that must live under the board's
 ## transform to anchor glyphs over tiles) and owns the silent [HudAudioDispatcher].
 ##
@@ -51,6 +53,8 @@ var _local_player: int = 0
 # The assembled widgets (accessible via the getters below).
 var _ap_counter: ApCounterWidget = null
 var _ap_counter_opponent: ApCounterWidget = null
+var _credits_counter: CreditsCounterWidget = null
+var _credits_counter_opponent: CreditsCounterWidget = null
 var _turn_banner: TurnBannerWidget = null
 var _income_breakdown: IncomeBreakdownWidget = null
 var _action_log: ActionLogWidget = null
@@ -95,6 +99,23 @@ func assemble(reader: GameStateReader, config: HUDConfig, cmd: CommandInterface,
 		_ap_counter_opponent.position = Vector2(-160, 12)
 		add_child(_ap_counter_opponent)
 
+	# The Credits counter (CR-3d) — the AP counter's co-equal, in a distinct hue
+	# family, sitting just below it on the top spine (provisional layout). Both
+	# counters are gated as a pair by SHOW_OPPONENT_AP for the opponent (CR-3b).
+	_credits_counter = CreditsCounterWidget.new()
+	_credits_counter.bind(reader)
+	_credits_counter.configure(config, local_player)
+	_credits_counter.position = Vector2(16, 30)
+	add_child(_credits_counter)
+
+	if config.show_opponent_ap:
+		_credits_counter_opponent = CreditsCounterWidget.new()
+		_credits_counter_opponent.bind(reader)
+		_credits_counter_opponent.configure(config, opponent, true) # muted opponent Credits.
+		_credits_counter_opponent.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		_credits_counter_opponent.position = Vector2(-160, 30)
+		add_child(_credits_counter_opponent)
+
 	_turn_banner = TurnBannerWidget.new()
 	_turn_banner.bind(reader)
 	_turn_banner.configure(config, local_player)
@@ -102,11 +123,14 @@ func assemble(reader: GameStateReader, config: HUDConfig, cmd: CommandInterface,
 	_turn_banner.position = Vector2(-80, 12)
 	add_child(_turn_banner)
 
+	# The Credit income breakdown is anchored to the Credits counter (CR-3d — the
+	# income now funds the Credits pool, so the on-demand breakdown belongs to it,
+	# not the AP counter). Parented under the counter, offset just below its number.
 	_income_breakdown = IncomeBreakdownWidget.new()
 	_income_breakdown.bind(reader)
 	_income_breakdown.configure(config, local_player)
-	_income_breakdown.position = Vector2(16, 40)
-	add_child(_income_breakdown)
+	_income_breakdown.position = Vector2(0, 20)
+	_credits_counter.add_child(_income_breakdown)
 
 	_action_log = ActionLogWidget.new()
 	_action_log.bind(reader)
@@ -192,6 +216,15 @@ func ap_counter() -> ApCounterWidget:
 ## [member HUDConfig.show_opponent_ap] is false.
 func opponent_ap_counter() -> ApCounterWidget:
 	return _ap_counter_opponent
+
+## The local player's Credits counter (the banked war chest, CR-3d).
+func credits_counter() -> CreditsCounterWidget:
+	return _credits_counter
+
+## The opponent's muted Credits counter, or [code]null[/code] if
+## [member HUDConfig.show_opponent_ap] is false (it gates both budgets, CR-3b).
+func opponent_credits_counter() -> CreditsCounterWidget:
+	return _credits_counter_opponent
 
 ## The turn/round indicator + YOUR/ENEMY banner.
 func turn_banner() -> TurnBannerWidget:

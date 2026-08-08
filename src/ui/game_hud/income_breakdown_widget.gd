@@ -1,10 +1,14 @@
-## IncomeBreakdownWidget — the AP-income breakdown popover (ADR-0016 §8 +
-## ADR-0006, TR-hud-019). Renders [method GameStateReader.income_breakdown]'s
-## PRE-LABELED fields ([code]base[/code], [code]outpost[/code], [code]econ_tech[/code])
-## VERBATIM — the HUD never receives raw inputs (outpost count, tech flag) and
-## splits locally, and never re-derives a coefficient (Pass-Through Invariant).
+## IncomeBreakdownWidget — the Credit-income breakdown popover (ADR-0016 §8 +
+## ADR-0006, TR-hud-019, CR-3d). Since the 2026-08-05 economy pivot, income funds
+## the Credits pool, so this belongs to the [CreditsCounterWidget] (it is parented
+## under that counter by [method GameHud.assemble]). Renders
+## [method GameStateReader.income_breakdown]'s PRE-LABELED fields
+## ([code]base[/code], [code]outpost[/code], [code]econ_tech[/code]) VERBATIM — read
+## through [method Credits.credit_income_breakdown] — the HUD never receives raw
+## inputs (outpost count, tech flag) and splits locally, and never re-derives a
+## coefficient (Pass-Through Invariant).
 ##
-## An on-demand popover: hover/click/keyboard-toggles the AP counter. Starts
+## An on-demand popover: hover/click/keyboard-toggles the Credits counter. Starts
 ## expanded iff [member HUDConfig.income_breakdown_default_expanded].
 ##
 ## [b]Testable model[/b] (AC-8): [method breakdown] / [method base_value] /

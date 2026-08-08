@@ -43,10 +43,12 @@ extends Resource
 ## one in the total-priority collision order (TR-hud-021).
 @export var hud_audio_duck_ms: int = 150
 
-## Whether the opponent's AP counter renders at all (TR-hud-005). Mechanics-
-## adjacent, not purely cosmetic (ADR-0016 Risks) — flipping this changes
-## information available for play (opponent-budget threat reads); a balance owner
-## should sign off changes, not just UX.
+## Whether the opponent's budget counters render at all (TR-hud-005, CR-3b). Since
+## the 2026-08-05 economy pivot this gates BOTH the opponent's AP counter and their
+## Credits counter as a pair (the knob keeps its name per the GDD Tuning table).
+## Mechanics-adjacent, not purely cosmetic (ADR-0016 Risks) — flipping this changes
+## information available for play (opponent AP threat ranges AND their banked Credit
+## war chest); a balance owner should sign off changes, not just UX.
 @export var show_opponent_ap: bool = true
 
 ## Whether the opponent's AP counter plays the start-of-turn fill-flourish

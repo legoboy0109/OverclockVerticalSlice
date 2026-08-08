@@ -66,6 +66,8 @@ func test_assembles_all_widgets_and_wires_their_parents() -> void:
 	# Every element assembled.
 	assert_object(hud.ap_counter()).is_not_null()
 	assert_object(hud.opponent_ap_counter()).is_not_null() # show_opponent_ap default true.
+	assert_object(hud.credits_counter()).is_not_null()      # co-equal Credits counter (CR-3d).
+	assert_object(hud.opponent_credits_counter()).is_not_null() # gated by show_opponent_ap too.
 	assert_object(hud.turn_banner()).is_not_null()
 	assert_object(hud.income_breakdown()).is_not_null()
 	assert_object(hud.action_log()).is_not_null()
@@ -78,9 +80,13 @@ func test_assembles_all_widgets_and_wires_their_parents() -> void:
 	# Screen-space Controls + audio are children of the CanvasLayer; the
 	# world-space glyph layer is parented onto the board.
 	assert_object(hud.ap_counter().get_parent()).is_equal(hud)
+	assert_object(hud.credits_counter().get_parent()).is_equal(hud)
 	assert_object(hud.game_over_overlay().get_parent()).is_equal(hud)
 	assert_object(hud.audio().get_parent()).is_equal(hud)
 	assert_object(hud.glyph_layer().get_parent()).is_equal(board)
+
+	# The Credit income breakdown is anchored to the Credits counter (CR-3d).
+	assert_object(hud.income_breakdown().get_parent()).is_equal(hud.credits_counter())
 
 	# The dispatcher built its two channels.
 	assert_object(hud.audio().channel_high()).is_not_null()
@@ -219,15 +225,18 @@ func test_open_and_close_ap_preview_forward_to_the_counter() -> void:
 
 
 # ==============================================================================
-# The opponent AP counter is omitted when show_opponent_ap is off.
+# Both opponent counters are omitted when show_opponent_ap is off (it gates the
+# AP and Credits counters as a pair, CR-3b).
 # ==============================================================================
 
-func test_opponent_ap_counter_omitted_when_show_opponent_ap_false() -> void:
+func test_opponent_counters_omitted_when_show_opponent_ap_false() -> void:
 	var state := _make_state(0)
 	var reader := GameStateReader.new(state)
 	var cfg := HUDConfig.new()
 	cfg.show_opponent_ap = false
 	var hud := _make_hud(reader, _make_cmd(state), _make_board(), 0, cfg)
 
-	assert_object(hud.opponent_ap_counter()).is_null()  # omitted.
-	assert_object(hud.ap_counter()).is_not_null()        # local counter still present.
+	assert_object(hud.opponent_ap_counter()).is_null()       # omitted.
+	assert_object(hud.opponent_credits_counter()).is_null()  # omitted as a pair.
+	assert_object(hud.ap_counter()).is_not_null()             # local counters still present.
+	assert_object(hud.credits_counter()).is_not_null()
