@@ -1,13 +1,13 @@
 # Asset Manifest
 
-> Last updated: 2026-07-29 (Sprint 4 · S4-02)
+> Last updated: 2026-08-12 (/asset-generate — ASSET-006 produced)
 > Master index of every specced game asset. IDs are sequential across the whole project.
 
 ## Progress Summary
 
 | Total | Needed | In Progress | Done | Approved |
 |-------|--------|-------------|------|----------|
-| 7 | 7 | 0 | 0 | 0 |
+| 7 | 6 | 1 | 0 | 0 |
 
 > "Needed" = specced, awaiting art production. Each unit/structure ships in **3 hue variants**
 > (rush / boom / neutral) and — for units — 4 facings × the §8.5 state set; terrain ships one
@@ -26,7 +26,7 @@ Paste-ready prompts (hues pre-expanded): `design/assets/specs/generation-prompts
 | ASSET-003 | Trooper | Infantry (4 facings) | rush/boom/neutral | Needed | Balanced-rectangle baseline; silhouette-test reference |
 | ASSET-004 | Heavy | Infantry (4 facings) | rush/boom/neutral | Needed | Widest mass; atlas-width driver |
 | ASSET-005 | Production Outpost | Structure | rush/boom/neutral | Needed | Open-bay "mouth"; pre-placed, no construction sprites |
-| ASSET-006 | Plain terrain tile | Environment | faction-agnostic | Needed | Flush `TileMapLayer` floor; no glow |
+| ASSET-006 | Plain terrain tile | Environment | faction-agnostic | In Progress | Flush `TileMapLayer` floor; no glow. `clean` variant in `assets/art/terrain/` 2026-08-12 — procedural draw (flat geometry; SDXL rejected, see `art-source/generated/asset-006-plain-tile/`). Wear variants pending |
 | ASSET-007 | Cover terrain tile | Environment | faction-agnostic | Needed | **Hybrid: floor cell + Y-sorted prop** (§8.8) |
 
 **Cross-cutting notes:** all actors share ONE `ShaderMaterial` (per-instance uniforms for hue/glow,
