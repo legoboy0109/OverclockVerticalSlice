@@ -46,6 +46,22 @@
 **Prompt:** `flat cel-shaded isometric sci-fi capital structure, 2:1 dimetric projection, massive stacked rectilinear tower on a wide flat base-plate, single dominant central spire, hard-surface matte plating, no PBR no specular, no greeble, large simple panel shapes, base color #1B2130 with #33405A value-lifted upper facets, neon trim glow accent in achromatic silver #C6CED8 along spire edges and base-plate rim rendered as a thin emissive line, dark void background #0A0E17, flat painted illustration, TRON synthwave lighting, clean hard edges, orthographic dimetric camera`
 **Negative:** `photoreal, PBR, specular, greebles, rivets, panel-line noise, organic/rounded shapes, gradient sky, full-image bloom, saturated ground, face, character, text, watermark, 3/4 or top-down perspective, additional unlisted hues, rust/grime`
 
+### ⚑ HQ — PROVEN SDXL recipe (2026-08-12, /asset-generate round 5; base look approved from it)
+
+The original block above drifts badly on local SDXL (paints city scenes, hue hijacks
+the palette). 15-generation session converged on three required additions — **lead
+with the subject-as-game-asset + dark-first color order + explicit framing**:
+
+**Prompt (worked — seed 2408465881 → `art-source/generated/asset-001-hq/hq_rush_r5_c3.png`):**
+`isometric game asset sprite of a dark sci-fi capital tower, entire structure fully visible in frame, wide empty black margin around the building, small centered building viewed from a distance, pure black void background, dark navy-black #1B2130 matte plating, single tall angular spire rising from a wide flat rectilinear base-plate, stacked rectangular tower segments, thin hot orange-red #FF5A2E emissive trim lines along spire edges and base-plate rim, flat cel shading, flat color fields, 2:1 dimetric projection, large simple panel shapes, hard clean edges, minimalist geometric design, TRON aesthetic, single isolated game building asset`
+**Negative:** `cropped, close-up, cut off at edge, partial view, filling the frame, dramatic angle, surrounding buildings, spires in background, courtyard, scenery, sky, moon, sun, horizon, terrain, ground plane, red background, orange background, bright background, grey background, white background, gradient background, 3D render, glossy, photoreal, PBR, specular, greebles, panel-line noise, organic shapes, bloom, face, character, text, watermark`
+
+Session learnings (apply to ALL structure prompts here):
+1. **Isolation**: "single isolated building / one lone structure / game asset sprite" up front, or SDXL paints a city.
+2. **Dark-first**: name the dark base color before any accent hue, or the accent hijacks the palette ("neon glow accent" early → whole image goes that hue).
+3. **Framing**: "entire structure fully visible in frame, wide empty margin, viewed from a distance" or SDXL crops dramatically.
+4. **Same-seed hue swap is unreliable** (verified — composition drifts): derive boom/neutral from the approved base by accent recolor, not fresh generation.
+
 ---
 
 ## ASSET-002 · Scout (infantry) — 3 hue variants

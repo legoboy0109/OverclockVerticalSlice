@@ -7,7 +7,7 @@
 
 | Total | Needed | In Progress | Done | Approved |
 |-------|--------|-------------|------|----------|
-| 7 | 6 | 1 | 0 | 0 |
+| 7 | 5 | 2 | 0 | 0 |
 
 > "Needed" = specced, awaiting art production. Each unit/structure ships in **3 hue variants**
 > (rush / boom / neutral) and — for units — 4 facings × the §8.5 state set; terrain ships one
@@ -21,7 +21,7 @@ Paste-ready prompts (hues pre-expanded): `design/assets/specs/generation-prompts
 
 | Asset ID | Name | Category | Hue variants | Status | Notes |
 |----------|------|----------|--------------|--------|-------|
-| ASSET-001 | HQ | Structure | rush/boom/neutral | Needed | Largest sprite; atlas anchor / 4096-escalation risk |
+| ASSET-001 | HQ | Structure | rush/boom/neutral | In Progress | Largest sprite; atlas anchor / 4096-escalation risk. Base look approved 2026-08-12: `art-source/generated/asset-001-hq/hq_rush_r5_c3.png` (seed 2408465881, round-5 prompt in generation-prompts.md addendum). Post-work: bg→alpha, remove lamp-post props, downscale, boom/neutral via accent recolor, damaged/destroyed states |
 | ASSET-002 | Scout | Infantry (4 facings) | rush/boom/neutral | Needed | Low horizontal silhouette; fastest |
 | ASSET-003 | Trooper | Infantry (4 facings) | rush/boom/neutral | Needed | Balanced-rectangle baseline; silhouette-test reference |
 | ASSET-004 | Heavy | Infantry (4 facings) | rush/boom/neutral | Needed | Widest mass; atlas-width driver |
