@@ -21,7 +21,7 @@ Paste-ready prompts (hues pre-expanded): `design/assets/specs/generation-prompts
 
 | Asset ID | Name | Category | Hue variants | Status | Notes |
 |----------|------|----------|--------------|--------|-------|
-| ASSET-001 | HQ | Structure | rush/boom/neutral | In Progress | Largest sprite; atlas anchor / 4096-escalation risk. Base look approved 2026-08-12: `art-source/generated/asset-001-hq/hq_rush_r5_c3.png` (seed 2408465881, round-5 prompt in generation-prompts.md addendum). Post-work: bg→alpha, remove lamp-post props, downscale, boom/neutral via accent recolor, damaged/destroyed states |
+| ASSET-001 | HQ | Structure | rush/boom/neutral | In Progress | Largest sprite; atlas anchor / 4096-escalation risk. **Base look approved 2026-08-18: `art-source/generated/asset-001-hq/hq_rush_r7_c2.png`** (seed 3566038092, round-7 light-background recipe in generation-prompts.md addendum). **Supersedes `hq_rush_r5_c3`** — that one rendered its base-plate as light off-palette pavement and carried 7 lamp-post props, both only visible once composited at board scale. Post-work: clean the cast-shadow smudge fused to the base-plate's left side, downscale, boom/neutral via accent recolor, damaged/destroyed states. bg→alpha is now tooled (`tools/asset-pipeline/cutout.py`) |
 | ASSET-002 | Scout | Infantry (4 facings) | rush/boom/neutral | Needed | Low horizontal silhouette; fastest |
 | ASSET-003 | Trooper | Infantry (4 facings) | rush/boom/neutral | Needed | Balanced-rectangle baseline; silhouette-test reference |
 | ASSET-004 | Heavy | Infantry (4 facings) | rush/boom/neutral | Needed | Widest mass; atlas-width driver |

@@ -69,7 +69,24 @@ and trim that vanish at 256px on the board.
 **Prompt:** `flat cel-shaded isometric sci-fi capital structure, 2:1 dimetric projection, massive stacked rectilinear tower on a wide flat base-plate, single dominant central spire, hard-surface matte plating, no PBR no specular, no greeble, large simple panel shapes, base color #1B2130 with #33405A value-lifted upper facets, neon trim glow accent in achromatic silver #C6CED8 along spire edges and base-plate rim rendered as a thin emissive line, dark void background #0A0E17, flat painted illustration, TRON synthwave lighting, clean hard edges, orthographic dimetric camera`
 **Negative:** `photoreal, PBR, specular, greebles, rivets, panel-line noise, organic/rounded shapes, gradient sky, full-image bloom, saturated ground, face, character, text, watermark, 3/4 or top-down perspective, additional unlisted hues, rust/grime`
 
-### ⚑ HQ — PROVEN SDXL recipe (2026-08-12, /asset-generate round 5; base look approved from it)
+### ⚑⚑ HQ — CURRENT approved recipe (2026-08-18, round 7 — use THIS one)
+
+Round 5 below produced a good-looking image but an unusable asset (light off-palette
+base-plate, 7 lamp-post props, and a background that only keyed by luck). Round 7 keeps
+round 5's structure, forces the base-plate dark, negates the props, and renders on a
+**light** background so the sprite can actually be cut out.
+
+**Prompt (approved — seed 3566038092 → `art-source/generated/asset-001-hq/hq_rush_r7_c2.png`):**
+`isometric game asset sprite of a dark sci-fi capital tower, entire structure fully visible in frame, wide empty margin around the building, small centered building viewed from a distance, plain flat solid light grey studio background, dark navy-black #1B2130 matte plating, single tall angular spire rising from a wide flat rectilinear base-plate, the base-plate is dark navy-black matte metal, stacked rectangular tower segments, thin hot orange-red #FF5A2E emissive trim lines along spire edges and base-plate rim, flat cel shading, flat color fields, 2:1 dimetric projection, large simple panel shapes, hard clean edges, minimalist geometric design, TRON aesthetic, single isolated game building asset, nothing else in the image`
+**Negative:** `shadow, cast shadow, drop shadow, ground shadow, contact shadow, ambient occlusion, dark background, black background, gradient background, vignette, cyan, blue accent, red accent, magenta, pink, purple, multiple accent colours, lamp post, street light, poles, signpost, street furniture, pavement, paving slabs, plaza, courtyard, city square, scattered props, small objects on the ground, surrounding buildings, spires in background, scenery, sky, horizon, terrain, cropped, close-up, cut off at edge, filling the frame, dramatic angle, 3D render, glossy, photoreal, PBR, specular, greebles, rivets, panel-line noise, organic shapes, bloom, face, character, text, watermark`
+
+> Known residual on the approved image: a cast-shadow smudge fused to the base-plate's
+> left side. It is *connected* to the subject, so `--largest-only` will not remove it —
+> clean it before deriving hue variants or damage states, or it bakes into all of them.
+
+---
+
+### ⚑ HQ — superseded round-5 recipe (2026-08-12; kept for reference only)
 
 The original block above drifts badly on local SDXL (paints city scenes, hue hijacks
 the palette). 15-generation session converged on three required additions — **lead
