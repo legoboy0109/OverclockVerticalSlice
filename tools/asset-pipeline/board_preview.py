@@ -50,7 +50,8 @@ def iso_lattice(width: int, height: int, cols: int, rows: int,
 
 def preview(src: str, dst: str, target_w: int = 256, cols: int = 6, rows: int = 6,
             canvas=(900, 620), largest_only: bool = True) -> None:
-    img, _ = cutout(src, largest_only=largest_only)
+    # units enclose background between their legs; always key those pockets
+    img, _ = cutout(src, largest_only=largest_only, pockets=True)
     img = trim(img)
     scale = target_w / img.width
     img = img.resize((target_w, max(1, round(img.height * scale))), Image.LANCZOS)
