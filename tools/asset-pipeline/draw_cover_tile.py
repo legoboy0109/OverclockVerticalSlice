@@ -46,6 +46,26 @@ SS = 4                            # supersampling factor
 COVER = (0x33, 0x40, 0x5A)        # §4.1 elevated/cover value
 INSET = 0.16                      # keeps the mass off the cell edge (§6.3)
 HEIGHT_TILES = 0.44               # slab height as a fraction of tile height*scale
+CHAMFER = 0.30                    # sheared-corner depth, as a fraction of the span
+
+
+def _footprint(variant: str) -> list[tuple[float, float]]:
+    """The slab's base outline in tile space, clockwise from the north corner.
+
+    `chipped-corner` is §6.5's named wear for a cover mass -- "a Cover mass with
+    a sheared corner" -- expressed the way §6.2 requires damage to be expressed:
+    a hard-edged silhouette notch, not a decal or texture. Shearing the footprint
+    means the notch is real geometry, so it survives at board scale and in
+    grayscale, where a painted-on mark would not.
+    """
+    a, b = INSET, 1.0 - INSET
+    if variant == "clean":
+        return [(a, a), (b, a), (b, b), (a, b)]
+    if variant == "chipped-corner":
+        c = (b - a) * CHAMFER
+        # shear the east corner -- the one facing the camera's right
+        return [(a, a), (b - c, a), (b, a + c), (b, b), (a, b)]
+    raise ValueError(f"unknown variant {variant!r}")
 
 
 def _step(rgb: tuple[int, int, int], factor: float) -> tuple[int, int, int]:
@@ -56,7 +76,8 @@ def _step(rgb: tuple[int, int, int], factor: float) -> tuple[int, int, int]:
     return (round(r2 * 255), round(g2 * 255), round(b2 * 255))
 
 
-def draw_cover(faceted: bool = True, scale: int = AUTHOR_SCALE) -> Image.Image:
+def draw_cover(faceted: bool = True, scale: int = AUTHOR_SCALE,
+               variant: str = "clean") -> Image.Image:
     w, h = TILE_W * scale, TILE_H * scale
     mass_h = round(h * HEIGHT_TILES)
     canvas_h = h + mass_h
@@ -73,23 +94,33 @@ def draw_cover(faceted: bool = True, scale: int = AUTHOR_SCALE) -> Image.Image:
         sy = MH + (x + y) * (th / 2) - lift
         return sx, sy
 
-    a, b = INSET, 1.0 - INSET
-    base = {k: screen(*p) for k, p in
-            {"n": (a, a), "e": (b, a), "s": (b, b), "w": (a, b)}.items()}
-    top = {k: screen(*p, lift=MH) for k, p in
-           {"n": (a, a), "e": (b, a), "s": (b, b), "w": (a, b)}.items()}
+    poly = _footprint(variant)
+    base = [screen(*p) for p in poly]
+    top = [screen(*p, lift=MH) for p in poly]
+    cx = sum(px for px, _ in base) / len(base)
+    cy = sum(py for _, py in base) / len(base)
 
-    if faceted:
-        top_c = COVER
-        left_c = _step(COVER, 0.74)
-        right_c = _step(COVER, 0.88)
-    else:
-        top_c = left_c = right_c = COVER
+    # Draw only the faces turned toward the camera, back-to-front. A face is
+    # front-facing when its base midpoint sits below the footprint centroid on
+    # screen; this generalises to the chamfered outline, where three faces are
+    # visible instead of two.
+    faces = []
+    for i in range(len(base)):
+        j = (i + 1) % len(base)
+        mx, my = (base[i][0] + base[j][0]) / 2, (base[i][1] + base[j][1]) / 2
+        if my <= cy:
+            continue
+        if faceted:
+            # shade by which way the face turns, in LIGHTNESS only (§4.1)
+            t = (mx - cx) / max(abs(mx - cx), 1.0)
+            factor = 0.74 if t < -0.3 else (0.88 if t > 0.3 else 0.81)
+        else:
+            factor = 1.0
+        faces.append((my, [base[i], base[j], top[j], top[i]], factor))
 
-    # left-front and right-front faces, then the lit top face over them
-    d.polygon([base["w"], base["s"], top["s"], top["w"]], fill=left_c + (255,))
-    d.polygon([base["s"], base["e"], top["e"], top["s"]], fill=right_c + (255,))
-    d.polygon([top["n"], top["e"], top["s"], top["w"]], fill=top_c + (255,))
+    for _, quad, factor in sorted(faces, key=lambda f: f[0]):
+        d.polygon(quad, fill=_step(COVER, factor) + (255,))
+    d.polygon(top, fill=(COVER if faceted else COVER) + (255,))
 
     return img.resize((w, canvas_h), Image.LANCZOS)
 
@@ -102,12 +133,15 @@ def main() -> None:
     g.add_argument("--faceted", action="store_true", default=True)
     g.add_argument("--flat", dest="faceted", action="store_false")
     p.add_argument("--scale", type=int, default=AUTHOR_SCALE)
+    p.add_argument("--variant", default="clean",
+                   choices=("clean", "chipped-corner"))
     args = p.parse_args()
 
-    img = draw_cover(args.faceted, args.scale)
+    img = draw_cover(args.faceted, args.scale, args.variant)
     img.save(args.out)
     print(f"{args.out}: {img.width}x{img.height} "
-          f"({'faceted' if args.faceted else 'flat'}, {args.scale}x tile)")
+          f"({'faceted' if args.faceted else 'flat'}, {args.scale}x tile, "
+          f"{args.variant})")
 
 
 if __name__ == "__main__":

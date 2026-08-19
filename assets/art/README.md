@@ -80,6 +80,37 @@ Suggested `pulse_intensity`: breathe ≈ 0.25→0.85 slow sine · AP-spent clamp
 spike ≈ 1.0 decaying · destroyed → 0. Drive `state_timer` from GDScript, **not** the shader `TIME`
 built-in, so glow freezes with the turn-based pause (§8.9).
 
+### Terrain wear variants (§6.2 tile-variant kit)
+
+| File | What it is |
+|---|---|
+| `tile_plain_clean.png` | flush floor |
+| `tile_plain_cracked.png` | floor + angular value facets |
+| `tile_plain_scorched.png` | floor + darker scorch-block patches |
+| `tile_cover_clean.png` | cover mass |
+| `tile_cover_chipped-corner.png` | cover mass with a **sheared corner** (real geometry) |
+
+**The three plain variants share the exact same footprint — 16640 opaque px each** — so they are
+drop-in swappable per-cell with no layout change. Only values differ; the diamond is untouched
+(§6.3: no silhouette break within the tile bounds). Swap them per-tile for variety and for §6.5's
+"tell 'fought over' through asymmetry of wear".
+
+**Wear is always DARKER than the floor, never lighter.** §6.4 makes non-gameplay terrain detail
+value-recessive — "at or below Terrain-base lightness, never at the +L Cover/Elevation step" —
+because +L *means* cover/elevation. The value ladder, which is the thing to preserve if these are
+ever retuned:
+
+`void #0A0E17` (13.8) · **scorched (32.5)** · **cracked (37.4)** · `floor #232A38` (41.5) ·
+`cover #33405A` (63.1)
+
+A first pass put scorch at luma 26 and it read as a **hole in the floor**, i.e. an Impassable void
+tile — exactly the confusion §6.4 exists to prevent. Verified against a genuine missing tile: a void
+gap is a *full tile-shaped diamond and much darker*, while scorch is a *sub-tile patch and clearly
+lighter*, so footprint separates them as well as value.
+
+No hue, ever — §6.5 requires faction-neutral scarring; wear never indicates who held a tile.
+Regenerate any variant with `draw_plain_tile.py --variant` / `draw_cover_tile.py --variant`.
+
 ### ⚠⚠ Cover is NOT a TileMapLayer cell — it is two layers (§8.8)
 `tile_cover_clean.png` is the **cover-mass prop only**, not a whole tile. "One PNG = one
 `TileMapLayer` cell" **breaks for cover**, which is exactly what the spec says to flag to the board
