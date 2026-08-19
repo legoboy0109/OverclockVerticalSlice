@@ -138,6 +138,38 @@ Three user-approved changes supersede the ASSET-002/003/004 fields below. They c
    "legs/wheels/treads" as the Scout's locomotion read. Verified: the three silhouettes separate in
    grayscale with no hue information.
 
+> ### ✅ FACINGS RESOLVED — 2 authored sprites, n/s aliased (user-approved 2026-08-19)
+> §8.4 asks for 4 facings but expects only **2–3 unique paintovers** with `w` = flip(`e`). We ship
+> the minimum end: **one master + its mirror**, in `art-source/facings/` as
+> `unit_<archetype>_<faction>_<e|w>.png`. Renderer mapping (pick by sign of screen-x travel):
+>
+> | grid facing | screen direction | sprite |
+> |---|---|---|
+> | `n` | up-right | `e` |
+> | `e` | down-right | `e` |
+> | `s` | down-left | `w` |
+> | `w` | up-left | `w` |
+>
+> **Why not author real n/e views:** the local ComfyUI is bare SDXL base — no ControlNet, no
+> IPAdapter — and text-to-image cannot rotate a *specific* design. Tested on the Trooper: three
+> "strict side profile" attempts returned **front views** (one with a **cyan visor — Boom's locked
+> hue on a Rush unit**), and back-view attempts drifted into a different machine. A unit whose design
+> changes when it turns is worse for Pillar 3 than a unit that does not turn.
+>
+> **Affordable because nothing reads facing:** combat resolves along cardinal directions with **no
+> facing/flanking/rear modifier**, `entities.yaml` has no facing field, and neither S4-03's
+> acceptance criteria nor S4-04's Pillar-3 gate mention facing. This is cosmetic travel feedback only.
+>
+> **Observed cue strength** (board scale): **Scout** — clear turn (sensor mass flips side);
+> **Heavy** — noticeable (shoulder/arm asymmetry); **Trooper** — near-symmetric, so the mirror is
+> close to a no-op. Accepted.
+>
+> **Mirror-safety confirmed** (§8.4 requires this before committing a sprite to flip): no text,
+> insignia, or asymmetric faction kit — §5.2 Mass-Distribution-Bias markers are deferred with
+> Pillar-4. **Re-confirm if kit markers are ever added.**
+>
+> ⏭ Deferred: true authored n/e facings, revisit post-VS with a pose-capable pipeline.
+
 > The "sealed helmet / no face" rule (§5.1) still binds the **Trooper**. The Scout and Heavy walkers
 > are headless chassis, which satisfies the same underlying rule — no face to compete with the neon
 > state layer — by having no head at all.

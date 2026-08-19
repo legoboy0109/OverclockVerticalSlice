@@ -48,6 +48,15 @@ Role silhouettes separate fine without hue; army ownership does not. The art bib
 **non-hue ownership markers** (trim pattern / emblem / silhouette-family trait) remain the actual
 fix — this is the measured number for that work.
 
+**★ Facings (2026-08-19, user-approved):** units ship **2 authored sprites, not 4** —
+`art-source/facings/unit_<archetype>_<faction>_<e|w>.png` (18 files: 3 units × 3 hues × 2). `n`
+aliases `e` and `s` aliases `w`; the renderer picks by sign of screen-x travel. Bare SDXL cannot
+rotate a specific design (verified — "side profile" prompts return front views, back views drift
+into a different machine), and **nothing in the game reads facing**: no facing/flanking/rear combat
+modifier, no registry field, and neither S4-03 nor the S4-04 gate requires it. Cue strength: Scout
+clear, Heavy noticeable, Trooper near-symmetric so nearly a no-op. True authored n/e facings are
+deferred post-VS. Full rationale + the mapping table in `vs-entities-assets.md`.
+
 **★ Cleaned masters (2026-08-19):** every approved base look now has a cut-out, shadow-cleaned
 master in **`art-source/cleaned/`** (tracked in git — unlike the raw generations). **All downstream
 work — hue variants, facings, damage states, downscales — derives from the cleaned master, never
