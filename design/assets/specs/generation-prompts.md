@@ -188,6 +188,24 @@ Added 2026-08-18 (21-generation session on ASSET-005 + HQ re-roll):
 
 ---
 
+### ⚑⚑ Production Outpost — approved recipe (2026-08-18, round 5)
+
+The blocks above drift badly: `factory` / `industrial` paint a whole district (rule 6), and
+free-styled rewrites never converged (rule 5). What worked was the **HQ round-7 scaffold with only
+the shape words swapped** — and describing the aperture without naming what comes out of it.
+
+**Prompt (approved — seed 1143338806 → `art-source/generated/asset-005-production-outpost/outpost_rush_r5_c3.png`):**
+`isometric game asset sprite of a dark sci-fi bunker building, entire structure fully visible in frame, wide empty margin around the building, small centered building viewed from a distance, plain flat solid light grey studio background, dark navy-black #1B2130 matte plating, a single low wide rectangular building, one large open bay doorway cut into the front face, flat roof, no spire, standing on a wide flat rectilinear base-plate, the base-plate is dark navy-black matte metal, stacked rectangular blocks, thin hot orange-red #FF5A2E emissive trim lines along the bay doorway edges and base-plate rim, flat cel shading, flat color fields, 2:1 dimetric projection, large simple panel shapes, hard clean edges, minimalist geometric design, TRON aesthetic, single isolated game building asset, nothing else in the image`
+**Negative:** `shadow, cast shadow, drop shadow, ground shadow, contact shadow, ambient occlusion, dark background, black background, gradient background, vignette, cyan, blue accent, red accent, magenta, pink, purple, multiple accent colours, tall central spire, tower, industrial complex, factory district, city grid, streets, roads, pavement, plaza, courtyard, walled compound, open-top box, hollow roofless building, multiple buildings, surrounding structures, scattered props, crates, containers, vehicles, machinery, pipes, catwalks, ladders, antennas, lamp post, street light, poles, greebles, rivets, panel-line noise, exploded diagram, contact sheet, multiple views, border, picture frame, cropped, close-up, cut off at edge, filling the frame, dramatic angle, sky, horizon, terrain, white building, blown out highlights, 3D render, glossy, photoreal, PBR, specular, organic rounded shapes, face, character, text, watermark`
+
+> **`bunker` is doing the work** — it is singular and monolithic where `factory` is not. Note the
+> prompt still *asks* for a front-face doorway; the model delivered a glowing **open top** instead,
+> which was reviewed and approved as the better isometric reading (see the spec's Bay Aperture note).
+> A follow-up round that pushed harder for a front wall opening (`no open roof` + roofless negatives)
+> was **0/3** — it produced roofless compounds and hue-less grey buildings. Don't re-litigate it.
+
+---
+
 ## ASSET-006 · Plain Terrain Tile (faction-agnostic — one pass)
 
 **Prompt:** `flat painted isometric floor tile, 2:1 dimetric projection, single flush open ground tile, completely flat single color value #232A38, no hue, no gradient, no texture, no pattern, no hatch, hard clean tile-aligned edges matching iso grid, minimalist geometric flat design, restrained cool-neutral value, dark stage aesthetic, single isolated tile asset on void #0A0E17 background, orthographic dimetric camera, no shading beyond flat fill`

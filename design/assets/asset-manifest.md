@@ -25,7 +25,7 @@ Paste-ready prompts (hues pre-expanded): `design/assets/specs/generation-prompts
 | ASSET-002 | Scout | Infantry (4 facings) | rush/boom/neutral | Needed | Low horizontal silhouette; fastest |
 | ASSET-003 | Trooper | Infantry (4 facings) | rush/boom/neutral | Needed | Balanced-rectangle baseline; silhouette-test reference |
 | ASSET-004 | Heavy | Infantry (4 facings) | rush/boom/neutral | Needed | Widest mass; atlas-width driver |
-| ASSET-005 | Production Outpost | Structure | rush/boom/neutral | Needed | Open-bay "mouth"; pre-placed, no construction sprites |
+| ASSET-005 | Production Outpost | Structure | rush/boom/neutral | In Progress | **Base look approved 2026-08-18: `art-source/generated/asset-005-production-outpost/outpost_rush_r5_c3.png`** (seed 1143338806, round-5 recipe in generation-prompts.md). ★ **Bay is a glowing OPEN TOP, not a front-face mouth** — approved deviation from the spec's §3.2 reading (see the spec's Bay Aperture note). Verified against the HQ at board scale: distinct silhouettes in colour *and* grayscale. Post-work: downscale, boom/neutral via accent recolor, damaged/destroyed states |
 | ASSET-006 | Plain terrain tile | Environment | faction-agnostic | In Progress | Flush `TileMapLayer` floor; no glow. `clean` variant in `assets/art/terrain/` 2026-08-12 — procedural draw (flat geometry; SDXL rejected, see `art-source/generated/asset-006-plain-tile/`). Wear variants pending |
 | ASSET-007 | Cover terrain tile | Environment | faction-agnostic | Needed | **Hybrid: floor cell + Y-sorted prop** (§8.8) |
 

@@ -246,11 +246,29 @@ the visual center (Y-sort accuracy).
 | Hue variants | 3 (rush / boom / neutral) — re-hue, same geometry |
 
 **Visual Description:** A smaller-footprint static structure than the HQ, from the same
-stacked/extruded rectilinear family, distinguished by a distinct **open bay/aperture** in its
-silhouette where units emerge — "the factory," a mouth in the mass rather than a spire. Flat
-tile-aligned base-plate in the structure dark-neutral value, matte hard-surface plating, a
-faction-hue accent band, and a glow-state trim (idle-breathe vs clamp / production-ready cue).
-Pre-placed complete — no construction sprite.
+stacked/extruded rectilinear family, distinguished by a distinct **open bay/aperture** where units
+emerge — "the factory," an opening in the mass rather than a spire. Flat tile-aligned base-plate in
+the structure dark-neutral value, matte hard-surface plating, a faction-hue accent band, and a
+glow-state trim (idle-breathe vs clamp / production-ready cue). Pre-placed complete — no
+construction sprite.
+
+> ### ★ Bay Aperture — approved deviation (2026-08-18)
+> This entry originally called for the bay as a **mouth cut into the front face**. The approved base
+> look (`outpost_rush_r5_c3`) instead reads the bay as a **glowing open top**: a solid boxy mass whose
+> roof opens onto a hot faction-hue interior.
+>
+> **Why this is better here, not just easier:** the board camera is fixed 2:1 dimetric and looks *down*
+> into the mass, so an open top is visible from every approach, while a front-wall doorway is occluded
+> whenever the structure faces away — and this asset has **no facings** (static, non-directional), so
+> there is no rotation to bring a hidden mouth back into view. The production cue must read from one
+> fixed angle, and the open top is the reading that does.
+>
+> **Legibility verified** at board scale (192px on 128x64 tiles) against the HQ, in colour *and*
+> grayscale: tall spired vertical mass vs low cube — §5.2 role-silhouette separation holds without hue.
+>
+> Six generation rounds failed to produce a front-face version that held the locked palette (they
+> drifted to roofless compounds, or dropped the faction hue entirely). Full detail in
+> `generation-prompts.md`.
 
 **Art-Bible Anchors:** §3.2 (Production Outpost = open-bay "mouth," smaller than HQ), §3.5,
 §4.1/§4.2 (plate hex + faction accent), §6.2 (flat/painted), §8.4 (dimetric, no facings), §2
