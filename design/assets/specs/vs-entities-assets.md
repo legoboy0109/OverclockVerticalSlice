@@ -163,8 +163,9 @@ trim shapes; faction hue is a flat color-block accent on plating only.
 
 **☑ Approved base look (2026-08-19):** `art-source/generated/asset-002-scout/scout_rush_r9_c2.png`
 (seed 1383706175). Low four-legged walker per the amendment above — supersedes the humanoid
-"forward-leaning infantry" reading in the Visual Description. Residual: soft cast shadow to clean
-before deriving variants.
+"forward-leaning infantry" reading in the Visual Description. ✅ **Shadow cleaned 2026-08-19** —
+derive everything from `art-source/cleaned/scout_rush_r9_c2_clean.png`
+(`--deshadow --ink-ratio 0.62`; 0.50 eroded the feet).
 
 **Art-Bible Anchors:** §5.1 (sealed helmet, chunky proportions, matte plating), §3.1 (Scout = low +
 horizontal posture + locomotion appendage), §5.4 (no visor-eyes, utilitarian pose), §5.5
@@ -210,7 +211,8 @@ accent block only.
 
 **☑ APPROVED BASELINE (2026-08-19):** `art-source/generated/asset-003-trooper/trooper_rush_r7_c1.png`
 (seed 3049366272). Authored **first** as the family's control group per §3.1 — the Scout and Heavy
-body plans were derived from this recipe by swapping only the shape/noun words. Shadow-free.
+body plans were derived from this recipe by swapping only the shape/noun words. Shadow-free as
+generated. Master: `art-source/cleaned/trooper_rush_r7_c1_clean.png`.
 Supersedes `r6_c2` (seed 3228806907), which had a cast shadow fused to the feet.
 
 **Art-Bible Anchors:** §5.1, §3.1 (Trooper = balanced-rectangle baseline; the reference silhouette
@@ -254,8 +256,11 @@ not speed. Matte flat-value plating in large simple shapes; faction hue a flat a
 **☑ Approved base look (2026-08-19):** `art-source/generated/asset-004-heavy/heavy_rush_r9_c2.png`
 (seed 1840110820). Squat headless siege walker per the amendment above — supersedes the "infantry
 scaled up and widened" reading in the Visual Description, which produced a silhouette too close to
-the Trooper to pass the §5.2 grayscale role test. Residual: soft cast shadow to clean before
-deriving variants.
+the Trooper to pass the §5.2 grayscale role test. ⚠ **Shadow NOT removable** — a warm ground streak
+whose luma overlaps this asset's own grey plating; every setting that lifted it ate the hands.
+**Verified invisible at board scale (74px)**, so it is accepted. Master:
+`art-source/cleaned/heavy_rush_r9_c2_clean.png` (pockets + largest-only, no deshadow).
+See the shadow-cleanup table in `generation-prompts.md`.
 
 **Art-Bible Anchors:** §5.1, §3.1 (Heavy = Trooper scaled up/widened, widest bottom-heavy mass, the
 anvil), §5.4, §5.5, §8.4. *§5.2 deferred — hue-only.*

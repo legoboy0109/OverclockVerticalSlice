@@ -120,9 +120,10 @@ round 5's structure, forces the base-plate dark, negates the props, and renders 
 `isometric game asset sprite of a dark sci-fi capital tower, entire structure fully visible in frame, wide empty margin around the building, small centered building viewed from a distance, plain flat solid light grey studio background, dark navy-black #1B2130 matte plating, single tall angular spire rising from a wide flat rectilinear base-plate, the base-plate is dark navy-black matte metal, stacked rectangular tower segments, thin hot orange-red #FF5A2E emissive trim lines along spire edges and base-plate rim, flat cel shading, flat color fields, 2:1 dimetric projection, large simple panel shapes, hard clean edges, minimalist geometric design, TRON aesthetic, single isolated game building asset, nothing else in the image`
 **Negative:** `shadow, cast shadow, drop shadow, ground shadow, contact shadow, ambient occlusion, dark background, black background, gradient background, vignette, cyan, blue accent, red accent, magenta, pink, purple, multiple accent colours, lamp post, street light, poles, signpost, street furniture, pavement, paving slabs, plaza, courtyard, city square, scattered props, small objects on the ground, surrounding buildings, spires in background, scenery, sky, horizon, terrain, cropped, close-up, cut off at edge, filling the frame, dramatic angle, 3D render, glossy, photoreal, PBR, specular, greebles, rivets, panel-line noise, organic shapes, bloom, face, character, text, watermark`
 
-> Known residual on the approved image: a cast-shadow smudge fused to the base-plate's
-> left side. It is *connected* to the subject, so `--largest-only` will not remove it —
-> clean it before deriving hue variants or damage states, or it bakes into all of them.
+> ~~Known residual: a cast-shadow smudge fused to the base-plate's left side.~~
+> ✅ **CLEANED 2026-08-19** — `cutout.py --deshadow --ink-ratio 0.50 --pockets --largest-only`.
+> Master: `art-source/cleaned/hq_rush_r7_c2_clean.png`. Derive hue variants and damage states
+> from the **cleaned master**, never from the raw generation.
 
 ---
 
@@ -209,8 +210,23 @@ this is what finally delivered the §3.1 "outline dominated by locomotion" read.
 > biological, humanoid figure, standing man, upright biped` on top of the biped set — a four-legged
 > noun pulls toward animals, and the Heavy's noun pulls back toward the Trooper's biped.
 
-> ⚠ **Residual on both walkers:** a soft cast shadow near the feet. Clean it **before** deriving hue
-> variants, facings or damage states, or it bakes into every one of them (same debt as the HQ's).
+> ### Shadow cleanup (2026-08-19) — always derive from `art-source/cleaned/`
+>
+> | Asset | Setting | Result |
+> |---|---|---|
+> | HQ | `--deshadow --ink-ratio 0.50` | ✅ clean — the fused base-plate smudge is gone |
+> | Outpost | `--deshadow --ink-ratio 0.50` | ✅ clean |
+> | Scout | `--deshadow --ink-ratio 0.62` | ✅ clean — **0.50 chewed the light tops off the feet**, 0.62 keeps them |
+> | Trooper | *(none needed)* | ✅ was generated shadow-free |
+> | Heavy | *(none possible)* | ⚠ see below |
+>
+> **The Heavy cannot be de-shadowed automatically and does not need to be.** Its render sits on an
+> unusually dark background (luma 103 vs the others' 140–169) and its residue is a thin **warm**
+> ground streak — rgb ≈ (105, 74, 62) — whose luma overlaps the Heavy's own grey plating (42–78).
+> No ink/saturation threshold separates them: every setting aggressive enough to lift the streak also
+> ate the hands and joint plating. **Verified invisible at board scale (74px)** — the cleaned and
+> uncleaned versions are indistinguishable on the lattice. Only revisit if the Heavy is ever shown
+> large (portrait, codex, UI), where a re-roll on this same recipe is the cheaper fix than mask surgery.
 
 ---
 
