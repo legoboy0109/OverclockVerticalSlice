@@ -100,10 +100,11 @@ would read as a raised tile instead.
 No hue, no glow, no faction variants — cover is faction-agnostic, and its value is one lightness
 step above the floor (`#33405A`) with side faces stepped down **in lightness only** (§4.1).
 
-> ⚠ `tile_cover_clean.png` ships at **2×** (matching units/structures) while
-> `tile_plain_clean.png` is still **1×**. They compose fine — they are separate nodes and the
-> renderer scales each to the same on-screen tile size — but the floor will resolve softer than the
-> prop until the plain tile is re-authored at 2×.
+> ✅ Both terrain assets now ship at **2×** (`tile_plain_clean.png` 256×128, re-authored
+> 2026-08-19), consistent with units and structures. **The floor texture is 2× the on-screen cell**,
+> so a `TileMapLayer` using it needs `tile_set.tile_size = (256, 128)` with the layer scaled 0.5 —
+> `board_renderer.gd`'s `TILE_WIDTH_PX/TILE_HEIGHT_PX` (128×64) remain the **on-screen** cell size.
+> Regenerate either tile at any scale with `draw_plain_tile.py` / `draw_cover_tile.py`.
 
 ### ⚠ Only frame `01` exists for every state
 There are no multi-frame sprite sheets. `move`/`attack`/`hit` are transform animations on the
