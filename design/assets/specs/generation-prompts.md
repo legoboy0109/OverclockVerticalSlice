@@ -174,8 +174,24 @@ been replaced by the recipes below, all validated at board scale in colour *and*
 
 **Shared across all three:** armour `#6E7C99` slate with `#3E4860` shadowed facets, accent as large
 solid `#FF5A2E` colour blocks (not thin trim), flat light-grey studio background, one lone figure.
-Derive **boom / neutral by accent recolor** of the approved base — never by fresh generation (rule 1).
 Cut out with `--pockets --largest-only` (rule 10).
+
+> ### ✅ Hue variants are TOOLED — do not generate them (2026-08-19)
+> Only the **rush** master is generated. Boom and neutral are derived from it:
+> ```
+> python3 tools/asset-pipeline/recolor.py \
+>     art-source/cleaned/<asset>_rush_<id>_clean.png \
+>     art-source/cleaned/<asset>_boom_<id>_clean.png boom
+> ```
+> All 5 assets × 3 hues exist in `art-source/cleaned/`. The tool replaces hue outright but
+> **scales** saturation/value by the target anchor's ratio, so the accent keeps its lit/shadow
+> structure instead of flattening into a sticker. Run it on a **cleaned** master, never a raw.
+>
+> ★ **The hue window must wrap past 360°.** Accent pixels blending toward the ink outline drift to
+> ~350°; a naive `hue <= 45` test misses every one, leaving a 1px **orange fringe around each cyan
+> panel** — both locked hues on one unit. What protects the armour is the *hue* gate, not the
+> saturation gate (slate `#6E7C99` sits at saturation 0.28 but reads blue at ~218°), so the
+> saturation gate stays low at 0.25 to catch shaded and anti-aliased accent.
 
 ### ⚑⚑ ASSET-003 · Trooper — APPROVED BASELINE (the family's control group)
 
