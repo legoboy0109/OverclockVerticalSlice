@@ -80,6 +80,31 @@ Suggested `pulse_intensity`: breathe ≈ 0.25→0.85 slow sine · AP-spent clamp
 spike ≈ 1.0 decaying · destroyed → 0. Drive `state_timer` from GDScript, **not** the shader `TIME`
 built-in, so glow freezes with the turn-based pause (§8.9).
 
+### ⚠⚠ Cover is NOT a TileMapLayer cell — it is two layers (§8.8)
+`tile_cover_clean.png` is the **cover-mass prop only**, not a whole tile. "One PNG = one
+`TileMapLayer` cell" **breaks for cover**, which is exactly what the spec says to flag to the board
+renderer. Compose it as:
+
+1. **floor cell** — reuse `terrain/tile_plain_clean.png` on the `TileMapLayer` (cover's floor is the
+   plain floor; there is no separate cover floor art), plus
+2. **cover mass** — `tile_cover_clean.png` as a **Y-sorted prop** in the occupant group, so it
+   occludes and is occluded by units on adjacent rows.
+
+The prop's canvas is the **full tile diamond plus headroom above it** (256×184 at 2×; the tile
+footprint is the bottom 256×128). So **bottom-centre of the canvas is the ground-contact pivot**,
+identical to the unit rule — drop it on the cell centre and the mass lands inside the cell. The mass
+is deliberately inset from the cell edge: §6.3's rule is that *elevation lifts the whole floor plane
+while cover breaks the floor with an object silhouette*, and a mass filling the cell edge-to-edge
+would read as a raised tile instead.
+
+No hue, no glow, no faction variants — cover is faction-agnostic, and its value is one lightness
+step above the floor (`#33405A`) with side faces stepped down **in lightness only** (§4.1).
+
+> ⚠ `tile_cover_clean.png` ships at **2×** (matching units/structures) while
+> `tile_plain_clean.png` is still **1×**. They compose fine — they are separate nodes and the
+> renderer scales each to the same on-screen tile size — but the floor will resolve softer than the
+> prop until the plain tile is re-authored at 2×.
+
 ### ⚠ Only frame `01` exists for every state
 There are no multi-frame sprite sheets. `move`/`attack`/`hit` are transform animations on the
 single sprite, and `destroyed` cross-fades `idle_01` → `destroyed_01`. Bare SDXL cannot author

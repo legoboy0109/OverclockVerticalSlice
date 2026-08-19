@@ -7,7 +7,7 @@
 
 | Total | Needed | In Progress | Done | Approved |
 |-------|--------|-------------|------|----------|
-| 7 | 1 | 1 | 5 | 0 |
+| 7 | 0 | 1 | 6 | 0 |
 
 > **"Done (idle)"** = base look approved, cleaned, all 3 hues, facings, and placed in
 > `assets/art/` with import sidecars — but **`idle` frame 01 only**; the §8.5 state sets
@@ -30,7 +30,7 @@ Paste-ready prompts (hues pre-expanded): `design/assets/specs/generation-prompts
 | ASSET-004 | Heavy | Infantry (4 facings) | rush/boom/neutral | Done (idle) | ★ **Body plan changed to a squat siege WALKER** (user-approved 2026-08-19) — "Trooper scaled up" read too close to the Trooper to pass the §5.2 grayscale role test. **Base look approved: `art-source/generated/asset-004-heavy/heavy_rush_r9_c2.png`** (seed 1840110820). ~74px tall; still the atlas-width driver. ⚠ shadow not removable (overlaps its own plating) but **invisible at board scale** — accepted; master `art-source/cleaned/heavy_rush_r9_c2_clean.png`. Post-work: variants |
 | ASSET-005 | Production Outpost | Structure | rush/boom/neutral | Done (idle) | **Base look approved 2026-08-18: `art-source/generated/asset-005-production-outpost/outpost_rush_r5_c3.png`** (seed 1143338806, round-5 recipe in generation-prompts.md). ★ **Bay is a glowing OPEN TOP, not a front-face mouth** — approved deviation from the spec's §3.2 reading (see the spec's Bay Aperture note). Verified against the HQ at board scale: distinct silhouettes in colour *and* grayscale. Post-work: downscale, boom/neutral via accent recolor, damaged/destroyed states |
 | ASSET-006 | Plain terrain tile | Environment | faction-agnostic | In Progress | Flush `TileMapLayer` floor; no glow. `clean` variant in `assets/art/terrain/` 2026-08-12 — procedural draw (flat geometry; SDXL rejected, see `art-source/generated/asset-006-plain-tile/`). Wear variants pending |
-| ASSET-007 | Cover terrain tile | Environment | faction-agnostic | Needed | **Hybrid: floor cell + Y-sorted prop** (§8.8) |
+| ASSET-007 | Cover terrain tile | Environment | faction-agnostic | Done (clean) | **Drawn procedurally**, not generated — same call as ASSET-006, plus cover must sit on the plain tile's exact 2:1 footprint to stay drop-in composable, which a generator cannot hit. `assets/art/terrain/tile_cover_clean.png` (256×184 @2×) is the **cover-mass prop only**; §8.8's floor cell is `tile_plain_clean.png` reused. Faceted in **L only** (§4.1) — top face `#33405A`, side faces stepped down. Mass inset from the cell edge so it reads as an object breaking the floor, not a raised tile (§6.3). Y-sort occlusion verified against units on adjacent rows. Tool: `tools/asset-pipeline/draw_cover_tile.py`. Wear variants pending |
 
 **★ Unit spec amendment (2026-08-19, user-approved):** unit armour is **`#6E7C99` slate**, not the
 `#232A38` terrain-tile family the specs originally named — units were invisible against the board and
@@ -50,6 +50,11 @@ ownership now reads on *structures* (large trim area) and is still **marginal on
 Role silhouettes separate fine without hue; army ownership does not. The art bible's deferred
 **non-hue ownership markers** (trim pattern / emblem / silhouette-family trait) remain the actual
 fix — this is the measured number for that work.
+
+**★ ASSET-007 cover (2026-08-19):** ships as **two layers**, not one tile — "one PNG = one
+`TileMapLayer` cell" **breaks for cover**, which the spec says to flag to S4-03. Floor = the plain
+tile reused; mass = a Y-sorted prop with a bottom-centre ground-contact pivot. Composition rule is
+in `assets/art/README.md`.
 
 **★ RUNTIME SET PLACED (2026-08-19):** 24 sprites live in `assets/art/` with Godot `.import`
 sidecars generated (`./redot --headless --import`; mipmaps off, lossless, as the spec requires).
