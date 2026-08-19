@@ -45,7 +45,8 @@ MIN_BORDER_FRACTION = 0.15
 
 
 def cutout(path: str, tol: int = 22, largest_only: bool = False,
-           pockets: bool = False):
+           pockets: bool = False, deshadow: bool = False,
+           ink_ratio: float = 0.5, sat_max: int = 40):
     """Return (RGBA image, background mask). Background pixels get alpha 0."""
     im = Image.open(path).convert("RGB")
     a = np.array(im).astype(np.int16)
@@ -76,16 +77,27 @@ def cutout(path: str, tol: int = 22, largest_only: bool = False,
         seed(y, 0)
         seed(y, w - 1)
 
+    walk = near
+    if deshadow:
+        walk = _shadow_walkable(a, bg, ink_ratio, sat_max)
+        # re-seed: the relaxed field reaches border pixels the tight one skipped
+        for x in range(w):
+            _seed_into(walk, seen, dq, 0, x)
+            _seed_into(walk, seen, dq, h - 1, x)
+        for y in range(h):
+            _seed_into(walk, seen, dq, y, 0)
+            _seed_into(walk, seen, dq, y, w - 1)
+
     while dq:
         y, x = dq.popleft()
         for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
             ny, nx = y + dy, x + dx
-            if 0 <= ny < h and 0 <= nx < w and near[ny, nx] and not seen[ny, nx]:
+            if 0 <= ny < h and 0 <= nx < w and walk[ny, nx] and not seen[ny, nx]:
                 seen[ny, nx] = True
                 dq.append((ny, nx))
 
     if pockets:
-        seen |= _enclosed_pockets(near, seen)
+        seen |= _enclosed_pockets(walk, seen)
 
     alpha = np.where(seen, 0, 255).astype(np.uint8)
     rgba = np.dstack([a.astype(np.uint8), alpha])
@@ -94,6 +106,40 @@ def cutout(path: str, tol: int = 22, largest_only: bool = False,
         rgba = _keep_largest(rgba)
 
     return Image.fromarray(rgba, "RGBA"), seen
+
+
+def _seed_into(field: np.ndarray, seen: np.ndarray, dq: deque, y: int, x: int) -> None:
+    if field[y, x] and not seen[y, x]:
+        seen[y, x] = True
+        dq.append((y, x))
+
+
+def _shadow_walkable(a: np.ndarray, bg: np.ndarray,
+                     ink_ratio: float = 0.5, sat_max: int = 40) -> np.ndarray:
+    """Pixels a de-shadowing fill may cross: neutral, and lighter than the ink line.
+
+    Cast shadows survive every other cleanup we have. Negatives do not suppress
+    them (confirmed on structures AND units), and a shadow *touching* the subject
+    is connected to it, so --largest-only cannot lift it — which is why the HQ
+    shipped with a smudge fused to its base-plate.
+
+    The lever is that these are cel-shaded renders: the subject is fully enclosed
+    by a hard dark ink outline, and a cast shadow is not. So a fill that walks
+    through neutral pixels *lighter than ink* consumes the shadow and halts at the
+    subject's outline. Interior plating in the same value range is unreachable —
+    it is enclosed — so connectivity protects it.
+
+    Barriers are dark ink (luma < ink_ratio × background luma) and anything
+    saturated (the faction accent), which covers subject edges that meet the
+    background without an ink line.
+
+    Verify the result: a broken outline lets the fill leak into the subject. Pair
+    with --largest-only, and look at the sprite before shipping it.
+    """
+    luma = 0.2126 * a[:, :, 0] + 0.7152 * a[:, :, 1] + 0.0722 * a[:, :, 2]
+    sat = a.max(axis=2) - a.min(axis=2)
+    bg_luma = 0.2126 * bg[0] + 0.7152 * bg[1] + 0.0722 * bg[2]
+    return (luma >= bg_luma * ink_ratio) & (sat <= sat_max)
 
 
 def _enclosed_pockets(near: np.ndarray, seen: np.ndarray,
@@ -193,10 +239,23 @@ def main() -> None:
     p.add_argument("--pockets", action="store_true",
                    help="also key background-coloured regions the border fill "
                         "cannot reach (between an infantry sprite's legs/arms)")
+    p.add_argument("--deshadow", action="store_true",
+                   help="also key cast shadows fused to the subject (walks neutral "
+                        "midtones, halts at the cel ink outline) — verify the result")
+    p.add_argument("--ink-ratio", type=float, default=0.5,
+                   help="--deshadow barrier, as a fraction of background luma "
+                        "(default 0.5). Raise it when the render sits on a DARK "
+                        "background, or the fill leaks into the subject's plating")
+    p.add_argument("--sat-max", type=int, default=40,
+                   help="--deshadow barrier: saturation above this is treated as "
+                        "subject (default 40). Raise it for WARM shadows that carry "
+                        "colour bounced off the accent, but keep it well under the "
+                        "accent's own saturation")
     p.add_argument("--trim", action="store_true", help="crop to the opaque bounds")
     args = p.parse_args()
 
-    img, seen = cutout(args.src, args.tol, args.largest_only, args.pockets)
+    img, seen = cutout(args.src, args.tol, args.largest_only, args.pockets,
+                       args.deshadow, args.ink_ratio, args.sat_max)
     if args.trim:
         img = trim(img)
     img.save(args.dst)
