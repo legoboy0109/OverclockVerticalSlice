@@ -38,11 +38,15 @@ separation is by **body plan**, not proportion adjectives. Full rationale in
 **★ Hue variants complete (2026-08-19):** all 5 approved assets now exist in **rush / boom /
 neutral** in `art-source/cleaned/` (15 masters). Only rush is generated; boom and neutral are
 derived with `tools/asset-pipeline/recolor.py`, preserving the shared silhouette per rule 1.
-⚠ **Measured accessibility gap:** rendered accent luma is rush ≈100 vs boom ≈119 — a grayscale
-delta of only ~19/255 (7%), so **ownership is currently readable by hue alone**. Role silhouettes
-still separate fine without hue; army ownership does not. The art bible already defers the non-hue
-ownership markers (trim pattern / emblem / silhouette-family trait) — this is the measured number
-for that deferred work.
+**Brightness is remapped in luma, not HSV value** (`recolor.py --scale luma`, the default): value
+scaling made the grayscale result depend on saturation, so shaded accent barely moved and the armies
+sat only ~18/255 apart. Luma scaling roughly doubles it — rush ≈98 vs boom ≈133 (**Δ~34**), neutral
+≈165 (Δ~67 vs rush).
+⚠ **Residual accessibility gap:** Δ34/255 (13%) is a real improvement but **not a fix**. Grayscale
+ownership now reads on *structures* (large trim area) and is still **marginal on units** at 65–74px.
+Role silhouettes separate fine without hue; army ownership does not. The art bible's deferred
+**non-hue ownership markers** (trim pattern / emblem / silhouette-family trait) remain the actual
+fix — this is the measured number for that work.
 
 **★ Cleaned masters (2026-08-19):** every approved base look now has a cut-out, shadow-cleaned
 master in **`art-source/cleaned/`** (tracked in git — unlike the raw generations). **All downstream

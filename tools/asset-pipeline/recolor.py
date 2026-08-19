@@ -26,11 +26,20 @@ recolored invisible streak is still invisible -- and the alternative, raising th
 gate above it, leaves an orange fringe on a cyan unit, which is a palette
 violation you *can* see.
 
-How the remap works: hue is replaced outright, while saturation and value are
-*scaled* by the target anchor's ratio to the rush anchor rather than being set
+How the remap works: hue is replaced outright, while saturation and brightness
+are *scaled* by the target anchor's ratio to the rush anchor rather than being set
 flat. That preserves the accent's internal shading -- lit faces, shadowed faces,
 the emissive hot spots -- instead of flattening it into one dead colour. A flat
 fill reads as a sticker at board scale.
+
+Brightness is scaled in LUMA, not in HSV value (`--scale`, default `luma`).
+Scaling value made the grayscale result depend on saturation, so shaded and
+anti-aliased accent barely moved and the two armies ended up only ~18/255 apart
+in grayscale -- indistinguishable. Scaling luma moves every accent pixel's
+luminance by the same anchor ratio and roughly doubles that separation to ~34.
+That is a real improvement but NOT a solution to the colourblind ownership gap:
+at unit size the remaining difference is still subtle, and the non-hue ownership
+markers the art bible defers are what actually fix it.
 
 Neutral is achromatic by design (art bible: the reserved-neon budget is exactly
 two hues), so its variant lands as light silver and carries no hue information at
@@ -102,10 +111,18 @@ def _from_hsv(h: np.ndarray, s: np.ndarray, v: np.ndarray) -> np.ndarray:
     return rgb + (v - c)[..., None]
 
 
-def recolor(path: str, target: str, sat_min: float = ACCENT_SAT_MIN):
+def _luma(rgb: np.ndarray) -> np.ndarray:
+    """Rec.709 relative luminance of a float RGB array in 0..1."""
+    return 0.2126 * rgb[..., 0] + 0.7152 * rgb[..., 1] + 0.0722 * rgb[..., 2]
+
+
+def recolor(path: str, target: str, sat_min: float = ACCENT_SAT_MIN,
+            scale: str = "luma"):
     """Return (RGBA image, accent pixel count) with the accent moved to `target`."""
     if target not in ANCHORS:
         raise ValueError(f"unknown faction {target!r}; expected {sorted(ANCHORS)}")
+    if scale not in ("luma", "value"):
+        raise ValueError(f"unknown scale mode {scale!r}; expected luma or value")
 
     im = Image.open(path).convert("RGBA")
     a = np.array(im)
@@ -124,7 +141,25 @@ def recolor(path: str, target: str, sat_min: float = ACCENT_SAT_MIN):
     # scale, do not flatten: the accent's own light/shadow structure survives
     new_h = np.full_like(h, float(dst_h[0, 0]))
     new_s = np.clip(s * (float(dst_s[0, 0]) / float(src_s[0, 0])), 0.0, 1.0)
-    new_v = np.clip(v * (float(dst_v[0, 0]) / float(src_v[0, 0])), 0.0, 1.0)
+
+    if scale == "value":
+        new_v = np.clip(v * (float(dst_v[0, 0]) / float(src_v[0, 0])), 0.0, 1.0)
+    else:
+        # Scaling VALUE makes the grayscale result depend on saturation: at full
+        # saturation cyan-over-orange lifts luma x1.45, but shaded and
+        # anti-aliased accent sits near neutral where the ratio collapses toward
+        # 1. Averaged over a real sprite that left rush and boom only ~18/255
+        # apart -- the two armies were indistinguishable in grayscale.
+        #
+        # So scale LUMA directly instead: every accent pixel's luminance moves by
+        # the same anchor ratio regardless of its saturation. V is then solved
+        # per pixel from the luma we want and the luma the new hue/sat carries at
+        # V=1. Ownership survives desaturation; the accent's internal shading
+        # still scales proportionally, so nothing flattens.
+        ratio = _luma(np.array(ANCHORS[target], float) / 255.0) / \
+            _luma(np.array(ANCHORS["rush"], float) / 255.0)
+        unit = _from_hsv(new_h, new_s, np.ones_like(v))
+        new_v = np.clip(_luma(rgb) * ratio / np.maximum(_luma(unit), 1e-6), 0.0, 1.0)
 
     out = _from_hsv(np.where(mask, new_h, h),
                     np.where(mask, new_s, s),
@@ -142,13 +177,19 @@ def main() -> None:
     p.add_argument("src", help="an approved master from art-source/cleaned/")
     p.add_argument("dst")
     p.add_argument("faction", choices=sorted(ANCHORS))
+    p.add_argument("--scale", choices=("luma", "value"), default="luma",
+                   help="how the accent's brightness is remapped. 'luma' (default) "
+                        "moves every accent pixel's luminance by the anchor ratio, "
+                        "so the factions stay apart in grayscale. 'value' scales "
+                        "HSV value instead, which collapses that separation on "
+                        "shaded pixels — kept only for reproducing older output")
     p.add_argument("--sat-min", type=float, default=ACCENT_SAT_MIN,
                    help="accent saturation gate (default 0.25). The hue window "
                         "is what protects the armour, so this can stay low; "
                         "raise it only if a sprite has warm non-accent detail")
     args = p.parse_args()
 
-    img, n = recolor(args.src, args.faction, args.sat_min)
+    img, n = recolor(args.src, args.faction, args.sat_min, args.scale)
     if not n:
         print(f"WARN {args.src}: no accent pixels matched — nothing recolored",
               file=sys.stderr)

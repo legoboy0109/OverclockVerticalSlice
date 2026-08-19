@@ -184,8 +184,16 @@ Cut out with `--pockets --largest-only` (rule 10).
 >     art-source/cleaned/<asset>_boom_<id>_clean.png boom
 > ```
 > All 5 assets × 3 hues exist in `art-source/cleaned/`. The tool replaces hue outright but
-> **scales** saturation/value by the target anchor's ratio, so the accent keeps its lit/shadow
-> structure instead of flattening into a sticker. Run it on a **cleaned** master, never a raw.
+> **scales** saturation and brightness by the target anchor's ratio, so the accent keeps its
+> lit/shadow structure instead of flattening into a sticker. Run it on a **cleaned** master,
+> never a raw.
+>
+> ★ **Brightness scales in LUMA, not HSV value** (`--scale luma`, the default). Value scaling makes
+> the grayscale result depend on saturation — shaded and anti-aliased accent barely moves — which
+> left rush and boom only ~18/255 apart in grayscale. Luma scaling moves every accent pixel's
+> luminance by the same anchor ratio: **rush ≈98 → boom ≈133 (Δ34), neutral ≈165 (Δ67)**. It also
+> makes boom read as proper neon rather than a muted teal. `--scale value` reproduces the old
+> output and should not be used for new work.
 >
 > ★ **The hue window must wrap past 360°.** Accent pixels blending toward the ink outline drift to
 > ~350°; a naive `hue <= 45` test misses every one, leaving a 1px **orange fringe around each cyan
