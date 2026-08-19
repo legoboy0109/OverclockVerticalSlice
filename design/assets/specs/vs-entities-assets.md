@@ -111,12 +111,45 @@ damaged tiers) is an extrapolation from §3.2 — confirm before backlog estimat
 
 ---
 
+## ⛔ UNIT SPEC AMENDMENT — 2026-08-19 (read before generating any unit)
+
+Three user-approved changes supersede the ASSET-002/003/004 fields below. They came out of a
+39-generation infantry session; the evidence and the proven prompts are in
+`design/assets/specs/generation-prompts.md`.
+
+1. **Armour value: `#6E7C99` slate, NOT the `#232A38`-family.** The original text specified unit
+   armour in the *same value family as the plain terrain tile* (`#232A38`, ASSET-006), so units
+   disappeared into the board — at sprite size only the accent trim survived, and in grayscale they
+   failed §3.5 (identifiable by outline alone) outright. `#6E7C99` clears every stage tile
+   (luma Δ82 vs base, Δ60 vs max-elevation `#33405A`) and stays Δ82 below Neutral silver `#C6CED8`.
+   **Structures stay near-black; actors are the light objects on a dark stage.**
+2. **On-screen size: ~60–70px tall, not ~24–40px.** At the original size the silhouette was mush
+   even at 1.5× spec. Sizing note per role: the **Scout is sized by WIDTH** (~74px — it is the long
+   low one), Trooper ~65px tall, Heavy ~74px tall. Heavy remains the atlas-width driver.
+3. **Role separation is by BODY PLAN, not by proportion adjectives.** Adjectives never moved the
+   humanoid silhouette off upright — all three roles collapsed into one shape and failed the §5.2
+   grayscale role test. The approved roster:
+   - **Scout** → low **four-legged walker**, headless, long horizontal body, forward sensor block.
+     This is what finally delivers §3.1's "outline dominated by locomotion."
+   - **Trooper** → the upright **armored sentinel** biped (unchanged; the §3.1 control group).
+   - **Heavy** → **squat siege walker**, no neck, slab shoulders, short piston legs planted wide.
+
+   The art bible already permits this: §5.1 is explicitly body-plan-agnostic and §3.1 names
+   "legs/wheels/treads" as the Scout's locomotion read. Verified: the three silhouettes separate in
+   grayscale with no hue information.
+
+> The "sealed helmet / no face" rule (§5.1) still binds the **Trooper**. The Scout and Heavy walkers
+> are headless chassis, which satisfies the same underlying rule — no face to compete with the neon
+> state layer — by having no head at all.
+
+---
+
 ## ASSET-002 — Scout (`unit_scout`)
 
 | Field | Value |
 |-------|-------|
 | Category | Infantry unit |
-| Dimensions | ~24–40px on-screen height (low end — horizontal posture); author ~72–120px/facing (§8.3), canvas wide for the forward lean |
+| Dimensions | **~74px on-screen WIDTH** (sized by width — the long low walker); author ~72–120px/facing (§8.3), canvas wide for the four-leg splay. *Amended 2026-08-19 — was ~24–40px height.* |
 | Format | PNG 8-bit+alpha; layered source (4 facings as layer groups); lossless; mipmaps off |
 | Naming | `unit_scout_[faction]_[facing]_[state]_[frame].png` — e.g. `unit_scout_rush_n_idle_01.png`, `unit_scout_boom_e_move_03.png` |
 | Facings | 4 (`n/s/e/w`; `w`=flip(`e`) if symmetric — **confirm the lean/locomotion detail is mirror-safe**) |
@@ -127,6 +160,11 @@ silhouette — the longest ground-footprint of the roster — with visible locom
 motion even at rest. Sealed helmet, no face, no visor-glow; chunky exaggerated mass proportions, the
 *lowest/most horizontal* of the four archetypes. Matte flat-value hard-surface plating, large simple
 trim shapes; faction hue is a flat color-block accent on plating only.
+
+**☑ Approved base look (2026-08-19):** `art-source/generated/asset-002-scout/scout_rush_r9_c2.png`
+(seed 1383706175). Low four-legged walker per the amendment above — supersedes the humanoid
+"forward-leaning infantry" reading in the Visual Description. Residual: soft cast shadow to clean
+before deriving variants.
 
 **Art-Bible Anchors:** §5.1 (sealed helmet, chunky proportions, matte plating), §3.1 (Scout = low +
 horizontal posture + locomotion appendage), §5.4 (no visor-eyes, utilitarian pose), §5.5
@@ -158,7 +196,7 @@ base+glow-mask × 3 hues.
 | Field | Value |
 |-------|-------|
 | Category | Infantry unit |
-| Dimensions | ~24–40px on-screen (mid-tier baseline); author ~72–120px/facing (least canvas-overhang of the three) |
+| Dimensions | **~65px on-screen height** (mid-tier baseline); author ~72–120px/facing (least canvas-overhang of the three). *Amended 2026-08-19 — was ~24–40px.* |
 | Format | PNG 8-bit+alpha; layered source; lossless; mipmaps off |
 | Naming | `unit_trooper_[faction]_[facing]_[state]_[frame].png` — e.g. `unit_trooper_rush_n_idle_01.png` |
 | Facings | 4 (`n/s/e/w`; **best mirror-flip candidate** — even mass, no dominant protrusion) |
@@ -169,6 +207,11 @@ rectangle silhouette that is the roster's control-group baseline — even mass t
 dominant protrusion, paired symmetrical limbs/weapon at mid-height. Sealed helmet, no face; chunky
 medium build (neither Scout-horizontal nor Heavy-wide). Matte flat-value plating; faction hue a flat
 accent block only.
+
+**☑ APPROVED BASELINE (2026-08-19):** `art-source/generated/asset-003-trooper/trooper_rush_r7_c1.png`
+(seed 3049366272). Authored **first** as the family's control group per §3.1 — the Scout and Heavy
+body plans were derived from this recipe by swapping only the shape/noun words. Shadow-free.
+Supersedes `r6_c2` (seed 3228806907), which had a cast shadow fused to the feet.
 
 **Art-Bible Anchors:** §5.1, §3.1 (Trooper = balanced-rectangle baseline; the reference silhouette
 others are judged against), §5.4, §5.5, §8.4. *§5.2 deferred — hue-only.*
@@ -197,7 +240,7 @@ silhouette validation test.
 | Field | Value |
 |-------|-------|
 | Category | Infantry unit |
-| Dimensions | ~24–40px height (upper end); **width, not height, is the driver** — author ~72–120px, canvas closer to square for the widest footprint (§8.3) |
+| Dimensions | **~74px on-screen height**; **width, not height, is the atlas driver** — author ~72–120px, canvas closer to square for the widest footprint (§8.3). *Amended 2026-08-19 — was ~24–40px.* |
 | Format | PNG 8-bit+alpha; layered source; lossless; mipmaps off |
 | Naming | `unit_heavy_[faction]_[facing]_[state]_[frame].png` — e.g. `unit_heavy_boom_w_attack_01.png` |
 | Facings | 4 (`n/s/e/w`; confirm shoulder/weapon-mount symmetry before flipping `w`) |
@@ -207,6 +250,12 @@ silhouette validation test.
 — same DNA, more mass — with the widest footprint and bulkiest, bottom-heavy silhouette, broader
 than tall. Sealed helmet, no face; blocky shoulder/chassis mass and short thick limbs read as armor,
 not speed. Matte flat-value plating in large simple shapes; faction hue a flat accent block only.
+
+**☑ Approved base look (2026-08-19):** `art-source/generated/asset-004-heavy/heavy_rush_r9_c2.png`
+(seed 1840110820). Squat headless siege walker per the amendment above — supersedes the "infantry
+scaled up and widened" reading in the Visual Description, which produced a silhouette too close to
+the Trooper to pass the §5.2 grayscale role test. Residual: soft cast shadow to clean before
+deriving variants.
 
 **Art-Bible Anchors:** §5.1, §3.1 (Heavy = Trooper scaled up/widened, widest bottom-heavy mass, the
 anvil), §5.4, §5.5, §8.4. *§5.2 deferred — hue-only.*

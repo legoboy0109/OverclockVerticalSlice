@@ -32,7 +32,7 @@ and trim that vanish at 256px on the board.
 
 ---
 
-## ⚠️ Read first — 4 rules that keep the set consistent
+## ⚠️ Read first — rules that keep the set consistent
 
 1. **Same silhouette across a unit's 3 hues.** The VS uses **one shared silhouette per role**; the
    rush/boom/neutral variants differ **only in the accent hue**. Do **not** generate three
@@ -52,6 +52,46 @@ and trim that vanish at 256px on the board.
 
 **Palette anchors** (LOCKED, S4-01): Rush `#FF5A2E` · Boom `#22C7F0` · Neutral `#C6CED8` · void
 `#0A0E17` · terrain base `#232A38` · elevated/cover `#33405A` · structure plate `#1B2130`.
+
+> ★ **Units do NOT use the structure plate value.** Unit armour is **`#6E7C99`** (cool slate),
+> deliberately lighter than every stage tile. See the actor-value rule below.
+
+### ⛔ Unit-specific rules (2026-08-19, 39-generation infantry session)
+
+5. **Units must be LIGHTER than the stage, not darker.** The unit specs originally said base
+   armour `#232A38`-family — *the exact colour of the plain terrain tile* — so units vanished
+   into the board and only their accent trim survived at sprite size. Unit armour is now
+   **`#6E7C99`**: grayscale luma Δ82 vs the base tile `#232A38`, Δ60 vs the worst case
+   (max-elevation `#33405A`), and Δ82 below Neutral silver `#C6CED8` so it never reads as a
+   faction claim. Structures stay near-black `#1B2130`. **Actors light, stage dark.**
+6. **Character nouns carry worse baggage than structure nouns.** `soldier` / `infantry` summon a
+   **concept-art model sheet** (multi-view turnarounds with callout panels) the way `factory`
+   summons a district — 3/3 rejects, and no amount of anti-sheet negatives fixed it. `armored
+   sentinel` produced 3/3 single isolated figures on the very next round. Swap the noun; don't
+   stack negatives.
+7. **A negative prompt cannot say "less" — only "none".** Negating `orange armor, mostly orange`
+   to dial the accent back produced 3/3 **hue-less grey** units, killing the faction read
+   outright. Control accent *coverage* on the positive side (`large solid #FF5A2E color blocks
+   covering the whole chest plate and both shoulder pauldrons`), never by negating the hue.
+8. **Never negate body proportions — it triggers pose sheets.** Adding `tall figure, long legs,
+   standing at full height` to the negatives brought the multi-figure sheets straight back: told
+   what body shape *not* to draw, the model explores body shapes. Proportion language is
+   positive-side only.
+9. **Role silhouettes come from the BODY PLAN, not from adjectives.** `squat`, `pitched forward`,
+   `broader than tall` never moved the `sentinel` noun off its upright stance — six Scout rounds
+   and one Heavy round all converged on the same biped, failing the §5.2 grayscale role test.
+   Changing the **noun's body plan** fixed it in one round each: Scout = `four-legged walker
+   drone`, Heavy = `squat heavy siege walker`, Trooper = the upright `armored sentinel`. The art
+   bible permits this — §5.1 is explicitly body-plan-agnostic and §3.1 wants the Scout's outline
+   dominated by locomotion.
+10. **Infantry cutouts need `--pockets`.** A figure encloses background between its legs and under
+    its arms; the border flood-fill cannot reach those, so the sprite ships with a pale slab
+    between its knees. `python3 tools/asset-pipeline/cutout.py … --pockets` keys them (87k px on
+    the Scout). Structures rarely enclose anything, which is why ASSET-001/005 never hit this.
+11. **Judge units in GRAYSCALE, not just at board scale.** Colour hides everything: the dark-armour
+    units looked acceptable in colour and were invisible in grayscale. Grayscale is the art bible's
+    actual bar (§3.5 identifiable by outline alone) and it is the test that caught both the value
+    defect and the role-separation failure.
 
 ---
 
@@ -124,51 +164,53 @@ Added 2026-08-18 (21-generation session on ASSET-005 + HQ re-roll):
 
 ---
 
-## ASSET-002 · Scout (infantry) — 3 hue variants
+## ASSET-002/003/004 · Units — ⚑⚑ PROVEN RECIPES (2026-08-19)
 
-### Scout · Rush (orange)
-**Prompt:** `flat cel-shaded isometric sci-fi infantry soldier, 2:1 dimetric projection, sealed powered armor helmet no face no visor glow, chunky exaggerated proportions oversized shoulders short thick limbs compressed torso, low horizontal forward-leaning stance, visible leg/locomotion silhouette implying speed, matte hard-surface plating flat color blocks large simple trim no greeble, base armor dark neutral #232A38-family shading, faction accent color-block in hot orange-red #FF5A2E on chest/limb plating only, thin neon emissive trim on armor edges, dark void background #0A0E17, flat painted illustration, TRON synthwave lighting, hard edges, orthographic dimetric camera, single character full body, 4-directional iso facing sheet`
-**Negative:** `face, visible skin, eyes, glowing visor eyes, cartoon eye slit, photoreal, PBR, specular, greebles, realistic human proportions, thin limbs, tall vertical stance, sniper barrel, wide bottom-heavy mass, weapon longer than body, organic curves, cloth-sim, skin texture, unlisted hues, gradient background, saturated terrain, text, watermark, 3/4 or top-down perspective`
+The per-hue blocks that used to live here were **stale and actively harmful**: they specified
+`dark void background #0A0E17` (unkeyable — see the light-background rule at the top) and asked for
+a `4-directional iso facing sheet` (a contact sheet, which every working recipe negates). They have
+been replaced by the recipes below, all validated at board scale in colour *and* grayscale.
 
-### Scout · Boom (cyan)
-**Prompt:** `flat cel-shaded isometric sci-fi infantry soldier, 2:1 dimetric projection, sealed powered armor helmet no face no visor glow, chunky exaggerated proportions oversized shoulders short thick limbs compressed torso, low horizontal forward-leaning stance, visible leg/locomotion silhouette implying speed, matte hard-surface plating flat color blocks large simple trim no greeble, base armor dark neutral #232A38-family shading, faction accent color-block in cyan-azure #22C7F0 on chest/limb plating only, thin neon emissive trim on armor edges, dark void background #0A0E17, flat painted illustration, TRON synthwave lighting, hard edges, orthographic dimetric camera, single character full body, 4-directional iso facing sheet`
-**Negative:** `face, visible skin, eyes, glowing visor eyes, cartoon eye slit, photoreal, PBR, specular, greebles, realistic human proportions, thin limbs, tall vertical stance, sniper barrel, wide bottom-heavy mass, weapon longer than body, organic curves, cloth-sim, skin texture, unlisted hues, gradient background, saturated terrain, text, watermark, 3/4 or top-down perspective`
+**Shared across all three:** armour `#6E7C99` slate with `#3E4860` shadowed facets, accent as large
+solid `#FF5A2E` colour blocks (not thin trim), flat light-grey studio background, one lone figure.
+Derive **boom / neutral by accent recolor** of the approved base — never by fresh generation (rule 1).
+Cut out with `--pockets --largest-only` (rule 10).
 
-### Scout · Neutral (silver, achromatic)
-**Prompt:** `flat cel-shaded isometric sci-fi infantry soldier, 2:1 dimetric projection, sealed powered armor helmet no face no visor glow, chunky exaggerated proportions oversized shoulders short thick limbs compressed torso, low horizontal forward-leaning stance, visible leg/locomotion silhouette implying speed, matte hard-surface plating flat color blocks large simple trim no greeble, base armor dark neutral #232A38-family shading, faction accent color-block in achromatic silver #C6CED8 on chest/limb plating only, thin neon emissive trim on armor edges, dark void background #0A0E17, flat painted illustration, TRON synthwave lighting, hard edges, orthographic dimetric camera, single character full body, 4-directional iso facing sheet`
-**Negative:** `face, visible skin, eyes, glowing visor eyes, cartoon eye slit, photoreal, PBR, specular, greebles, realistic human proportions, thin limbs, tall vertical stance, sniper barrel, wide bottom-heavy mass, weapon longer than body, organic curves, cloth-sim, skin texture, unlisted hues, gradient background, saturated terrain, text, watermark, 3/4 or top-down perspective`
+### ⚑⚑ ASSET-003 · Trooper — APPROVED BASELINE (the family's control group)
 
----
+Authored **first** on purpose: the art bible makes Trooper the visual control group every other
+role deviates from, and the upright biped is what the model produces naturally.
 
-## ASSET-003 · Trooper (infantry) — 3 hue variants
+**Approved — seed 3049366272 → `art-source/generated/asset-003-trooper/trooper_rush_r7_c1.png`**
+(shadow-free; superseded `r6_c2`, seed 3228806907, which had a cast shadow fused to the feet)
 
-### Trooper · Rush (orange)
-**Prompt:** `flat cel-shaded isometric sci-fi infantry soldier, 2:1 dimetric projection, sealed powered armor helmet no face no visor glow, chunky exaggerated proportions oversized shoulders short thick limbs, upright balanced symmetrical rectangle silhouette, medium even mass top to bottom no dominant protrusion, weapon at mid-height, matte hard-surface plating flat color blocks large simple trim no greeble, base armor dark neutral #232A38-family, faction accent color-block in hot orange-red #FF5A2E on chest/shoulder plating only, thin neon emissive trim, dark void #0A0E17 background, flat painted illustration, TRON synthwave lighting, hard edges, orthographic dimetric camera, single character full body, 4-directional iso sheet`
-**Negative:** `face, skin, eyes, glowing visor, photoreal, PBR, specular, greebles, realistic proportions, low horizontal lean, emphasized locomotion legs, wide bottom-heavy mass, long barrel, organic curves, cloth-sim, unlisted hues, gradient background, saturated terrain, text, watermark, 3/4 or top-down`
+**Prompt:** `flat cel-shaded isometric game asset sprite of a sci-fi armored sentinel, one lone figure alone in empty space, entire figure fully visible in frame, wide empty margin around the figure, small centered figure viewed from a distance, plain flat solid light grey studio background, mid slate-grey #6E7C99 matte armor plating, medium grey armor, cool neutral grey plating with darker #3E4860 shadowed facets, sealed featureless helmet with no visor, squat stocky build broad and low, head sunk down between huge shoulders, oversized blocky shoulder pauldrons, very short thick stubby legs, long low body, crouched forward-leaning ready stance, wide horizontal silhouette, large solid hot orange-red #FF5A2E color blocks covering the whole chest plate and both shoulder pauldrons, bold flat orange panels, flat cel shading, flat color fields, no gradients, hand painted 2D illustration, 2:1 dimetric projection, large simple panel shapes, hard clean edges, minimalist geometric design, TRON aesthetic, single isolated game character asset, one pose only, nothing else in the image`
+**Negative:** `3D render, CGI, octane render, unreal engine render, raytracing, soft shading, smooth gradient shading, ambient occlusion, subsurface, glossy, specular highlight, reflective metal, chrome, photoreal, PBR, white panels, blown out highlights, pure white, sticker, badge, rounded rectangle backdrop, white shape behind the figure, backdrop panel, spotlight pool, reflection, puddle, mirror floor, ground plane lines, floor grid, concept art sheet, design sheet, model sheet, reference sheet, turnaround sheet, character sheet, contact sheet, orthographic views, multiple angles, front and back view, side view panel, callout panels, annotation, labels, diagram, blueprint, schematic, exploded diagram, multiple views, four views, side by side poses, multiple characters, crowd, squad, duplicate figure, cream, ivory, near-black armor, pitch black armor, shadow, cast shadow, drop shadow, ground shadow, contact shadow, dark background, black background, gradient background, vignette, cyan, blue accent, red accent, magenta, pink, purple, multiple accent colours, face, facial features, skin, eyes, glowing visor, visor glow, helmet lights, mouth, nose, hair, realistic human proportions, cape, cloak, cloth, fabric, flag, banner, antenna, aerial, scattered props, crates, weapons on the ground, pedestal, display stand, base ring, ground plane, floor, terrain, sky, horizon, surrounding buildings, scenery, border, picture frame, cropped, close-up, cut off at edge, filling the frame, dramatic angle, greebles, rivets, panel-line noise, organic rounded shapes, bloom, text, watermark`
 
-### Trooper · Boom (cyan)
-**Prompt:** `flat cel-shaded isometric sci-fi infantry soldier, 2:1 dimetric projection, sealed powered armor helmet no face no visor glow, chunky exaggerated proportions oversized shoulders short thick limbs, upright balanced symmetrical rectangle silhouette, medium even mass top to bottom no dominant protrusion, weapon at mid-height, matte hard-surface plating flat color blocks large simple trim no greeble, base armor dark neutral #232A38-family, faction accent color-block in cyan-azure #22C7F0 on chest/shoulder plating only, thin neon emissive trim, dark void #0A0E17 background, flat painted illustration, TRON synthwave lighting, hard edges, orthographic dimetric camera, single character full body, 4-directional iso sheet`
-**Negative:** `face, skin, eyes, glowing visor, photoreal, PBR, specular, greebles, realistic proportions, low horizontal lean, emphasized locomotion legs, wide bottom-heavy mass, long barrel, organic curves, cloth-sim, unlisted hues, gradient background, saturated terrain, text, watermark, 3/4 or top-down`
+### ⚑⚑ ASSET-002 · Scout — APPROVED (low four-legged walker)
 
-### Trooper · Neutral (silver, achromatic)
-**Prompt:** `flat cel-shaded isometric sci-fi infantry soldier, 2:1 dimetric projection, sealed powered armor helmet no face no visor glow, chunky exaggerated proportions oversized shoulders short thick limbs, upright balanced symmetrical rectangle silhouette, medium even mass top to bottom no dominant protrusion, weapon at mid-height, matte hard-surface plating flat color blocks large simple trim no greeble, base armor dark neutral #232A38-family, faction accent color-block in achromatic silver #C6CED8 on chest/shoulder plating only, thin neon emissive trim, dark void #0A0E17 background, flat painted illustration, TRON synthwave lighting, hard edges, orthographic dimetric camera, single character full body, 4-directional iso sheet`
-**Negative:** `face, skin, eyes, glowing visor, photoreal, PBR, specular, greebles, realistic proportions, low horizontal lean, emphasized locomotion legs, wide bottom-heavy mass, long barrel, organic curves, cloth-sim, unlisted hues, gradient background, saturated terrain, text, watermark, 3/4 or top-down`
+Body plan changed from humanoid to a **low headless walker** (rule 9, user-approved 2026-08-19) —
+this is what finally delivered the §3.1 "outline dominated by locomotion" read. Size the Scout by
+**width**, not height: it is the long low one.
 
----
+**Approved — seed 1383706175 → `art-source/generated/asset-002-scout/scout_rush_r9_c2.png`**
 
-## ASSET-004 · Heavy (infantry) — 3 hue variants
+**Prompt:** `flat cel-shaded isometric game asset sprite of a sci-fi four-legged walker drone, one lone figure alone in empty space, entire figure fully visible in frame, wide empty margin around the figure, small centered figure viewed from a distance, plain flat solid light grey studio background, mid slate-grey #6E7C99 matte armor plating, medium grey armor, cool neutral grey plating with darker #3E4860 shadowed facets, sealed featureless helmet with no visor, four articulated insectlike walking legs splayed wide, small low armored body slung between the legs, no head, low flat wide chassis close to the ground, long horizontal silhouette much wider than tall, sensor block at the front, large solid hot orange-red #FF5A2E color blocks covering the whole chest plate and both shoulder pauldrons, bold flat orange panels, flat cel shading, flat color fields, no gradients, hand painted 2D illustration, 2:1 dimetric projection, large simple panel shapes, hard clean edges, minimalist geometric design, TRON aesthetic, single isolated game character asset, one pose only, nothing else in the image`
+**Negative:** `3D render, CGI, octane render, unreal engine render, raytracing, soft shading, smooth gradient shading, ambient occlusion, subsurface, glossy, specular highlight, reflective metal, chrome, photoreal, PBR, white panels, blown out highlights, pure white, sticker, badge, rounded rectangle backdrop, white shape behind the figure, backdrop panel, spotlight pool, reflection, puddle, mirror floor, ground plane lines, floor grid, concept art sheet, design sheet, model sheet, reference sheet, turnaround sheet, character sheet, contact sheet, orthographic views, multiple angles, front and back view, side view panel, callout panels, annotation, labels, diagram, blueprint, schematic, exploded diagram, multiple views, four views, side by side poses, multiple characters, crowd, squad, duplicate figure, cream, ivory, near-black armor, pitch black armor, shadow, cast shadow, drop shadow, ground shadow, contact shadow, dark background, black background, gradient background, vignette, cyan, blue accent, red accent, magenta, pink, purple, multiple accent colours, face, facial features, skin, eyes, glowing visor, visor glow, helmet lights, mouth, nose, hair, realistic human proportions, cape, cloak, cloth, fabric, flag, banner, antenna, aerial, scattered props, crates, weapons on the ground, pedestal, display stand, base ring, ground plane, floor, terrain, sky, horizon, surrounding buildings, scenery, border, picture frame, cropped, close-up, cut off at edge, filling the frame, dramatic angle, greebles, rivets, panel-line noise, organic rounded shapes, animal, dog, horse, insect, spider, creature, fur, tail, claws, biological, humanoid figure, standing man, upright biped, bloom, text, watermark`
 
-### Heavy · Rush (orange)
-**Prompt:** `flat cel-shaded isometric sci-fi heavy infantry soldier, 2:1 dimetric projection, sealed powered armor helmet no face no visor glow, chunky exaggerated proportions scaled up and widened, widest bulkiest bottom-heavy silhouette broader than tall, blocky oversized shoulder and chassis mass, short thick stubby limbs, immovable anvil stance, matte hard-surface plating flat color blocks large simple trim no greeble, base armor dark neutral #232A38-family, faction accent color-block in hot orange-red #FF5A2E on chest/shoulder plating only, thin neon emissive trim, dark void #0A0E17 background, flat painted illustration, TRON synthwave lighting, hard edges, orthographic dimetric camera, single character full body, 4-directional iso sheet`
-**Negative:** `face, skin, eyes, glowing visor, photoreal, PBR, specular, greebles, realistic proportions, thin limbs, low horizontal lean, tall narrow silhouette, long barrel, organic curves, cloth-sim, unlisted hues, gradient background, saturated terrain, text, watermark, 3/4 or top-down`
+### ⚑⚑ ASSET-004 · Heavy — APPROVED (squat siege walker)
 
-### Heavy · Boom (cyan)
-**Prompt:** `flat cel-shaded isometric sci-fi heavy infantry soldier, 2:1 dimetric projection, sealed powered armor helmet no face no visor glow, chunky exaggerated proportions scaled up and widened, widest bulkiest bottom-heavy silhouette broader than tall, blocky oversized shoulder and chassis mass, short thick stubby limbs, immovable anvil stance, matte hard-surface plating flat color blocks large simple trim no greeble, base armor dark neutral #232A38-family, faction accent color-block in cyan-azure #22C7F0 on chest/shoulder plating only, thin neon emissive trim, dark void #0A0E17 background, flat painted illustration, TRON synthwave lighting, hard edges, orthographic dimetric camera, single character full body, 4-directional iso sheet`
-**Negative:** `face, skin, eyes, glowing visor, photoreal, PBR, specular, greebles, realistic proportions, thin limbs, low horizontal lean, tall narrow silhouette, long barrel, organic curves, cloth-sim, unlisted hues, gradient background, saturated terrain, text, watermark, 3/4 or top-down`
+**Approved — seed 1840110820 → `art-source/generated/asset-004-heavy/heavy_rush_r9_c2.png`**
 
-### Heavy · Neutral (silver, achromatic)
-**Prompt:** `flat cel-shaded isometric sci-fi heavy infantry soldier, 2:1 dimetric projection, sealed powered armor helmet no face no visor glow, chunky exaggerated proportions scaled up and widened, widest bulkiest bottom-heavy silhouette broader than tall, blocky oversized shoulder and chassis mass, short thick stubby limbs, immovable anvil stance, matte hard-surface plating flat color blocks large simple trim no greeble, base armor dark neutral #232A38-family, faction accent color-block in achromatic silver #C6CED8 on chest/shoulder plating only, thin neon emissive trim, dark void #0A0E17 background, flat painted illustration, TRON synthwave lighting, hard edges, orthographic dimetric camera, single character full body, 4-directional iso sheet`
-**Negative:** `face, skin, eyes, glowing visor, photoreal, PBR, specular, greebles, realistic proportions, thin limbs, low horizontal lean, tall narrow silhouette, long barrel, organic curves, cloth-sim, unlisted hues, gradient background, saturated terrain, text, watermark, 3/4 or top-down`
+**Prompt:** `flat cel-shaded isometric game asset sprite of a sci-fi squat heavy siege walker, one lone figure alone in empty space, entire figure fully visible in frame, wide empty margin around the figure, small centered figure viewed from a distance, plain flat solid light grey studio background, mid slate-grey #6E7C99 matte armor plating, medium grey armor, cool neutral grey plating with darker #3E4860 shadowed facets, sealed featureless helmet with no visor, enormous squat armored bunker-like body, no neck, two very short thick piston legs planted wide apart, massive slab shoulders far wider than the body, bottom-heavy anvil mass, wide flared base, dense blocky silhouette broader than tall, large solid hot orange-red #FF5A2E color blocks covering the whole chest plate and both shoulder pauldrons, bold flat orange panels, flat cel shading, flat color fields, no gradients, hand painted 2D illustration, 2:1 dimetric projection, large simple panel shapes, hard clean edges, minimalist geometric design, TRON aesthetic, single isolated game character asset, one pose only, nothing else in the image`
+**Negative:** `3D render, CGI, octane render, unreal engine render, raytracing, soft shading, smooth gradient shading, ambient occlusion, subsurface, glossy, specular highlight, reflective metal, chrome, photoreal, PBR, white panels, blown out highlights, pure white, sticker, badge, rounded rectangle backdrop, white shape behind the figure, backdrop panel, spotlight pool, reflection, puddle, mirror floor, ground plane lines, floor grid, concept art sheet, design sheet, model sheet, reference sheet, turnaround sheet, character sheet, contact sheet, orthographic views, multiple angles, front and back view, side view panel, callout panels, annotation, labels, diagram, blueprint, schematic, exploded diagram, multiple views, four views, side by side poses, multiple characters, crowd, squad, duplicate figure, cream, ivory, near-black armor, pitch black armor, shadow, cast shadow, drop shadow, ground shadow, contact shadow, dark background, black background, gradient background, vignette, cyan, blue accent, red accent, magenta, pink, purple, multiple accent colours, face, facial features, skin, eyes, glowing visor, visor glow, helmet lights, mouth, nose, hair, realistic human proportions, cape, cloak, cloth, fabric, flag, banner, antenna, aerial, scattered props, crates, weapons on the ground, pedestal, display stand, base ring, ground plane, floor, terrain, sky, horizon, surrounding buildings, scenery, border, picture frame, cropped, close-up, cut off at edge, filling the frame, dramatic angle, greebles, rivets, panel-line noise, organic rounded shapes, animal, dog, horse, insect, spider, creature, fur, tail, claws, biological, humanoid figure, standing man, upright biped, bloom, text, watermark`
+
+> The walker negatives add `animal, dog, horse, insect, spider, creature, fur, tail, claws,
+> biological, humanoid figure, standing man, upright biped` on top of the biped set — a four-legged
+> noun pulls toward animals, and the Heavy's noun pulls back toward the Trooper's biped.
+
+> ⚠ **Residual on both walkers:** a soft cast shadow near the feet. Clean it **before** deriving hue
+> variants, facings or damage states, or it bakes into every one of them (same debt as the HQ's).
 
 ---
 
