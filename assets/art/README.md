@@ -58,10 +58,32 @@ Every sprite is trimmed to its opaque bounds, so **bottom-centre = ground contac
 §8.4/§8.8 require as the Y-sort key. Never sort or anchor by bbox centre. Sprites are *not* uniform
 size; anchor per-texture rather than assuming a common frame.
 
-### ⚠ Only `idle` frame `01` exists
-The approved base look **is** the idle pose. The §8.5 state sets (`move` / `attack` / `hit` /
-`destroyed`) are **not authored yet**, so no other frame exists to load. Structures likewise ship
-`idle` only — no `damaged` / `destroyed`.
+### States: what exists, and how each is driven
+
+| §8.5 state | How it is realised | Assets needed |
+|---|---|---|
+| **Idle (AP-available)** | `idle_01` sprite + glow mask; shader breathes `pulse_intensity` (slow sine) | ✅ shipped |
+| **Idle (AP-spent)** | **Same sprite and mask**, `pulse_intensity` clamped low (§8.5: do not author a second pose) | ✅ shipped |
+| **Destroyed** | `destroyed_01` powered-down texture + `pulse_intensity` → 0 over the 2–4 frame beat | ✅ shipped |
+| **Move** | Directional lean/bob — **renderer transform**, no texture | ⏳ renderer work |
+| **Attack** | Lunge + §2.2 flare spike — the flare is `pulse_intensity`, already available | ⏳ renderer work |
+| **Hit** | Recoil offset + flash — **renderer transform**, no texture | ⏳ renderer work |
+
+### Glow masks — `*_glow.png`, one per asset+facing, hue-agnostic
+§8.9 blends `emission_mask × faction_hue × pulse_intensity` with hue and intensity as **per-instance
+uniforms**, so one mask serves all three hues — that is why masks carry **no faction token**. Sample
+as a single channel. The mask is the accent's **rim**, not the whole colour block: our accent blocks
+are large (40–62% of a unit) and emitting all of it blows the panels out and destroys their shape
+read, where §5.1 asks for "thin neon emissive trim on armor edges".
+
+Suggested `pulse_intensity`: breathe ≈ 0.25→0.85 slow sine · AP-spent clamp ≈ 0.08 · attack flare
+spike ≈ 1.0 decaying · destroyed → 0. Drive `state_timer` from GDScript, **not** the shader `TIME`
+built-in, so glow freezes with the turn-based pause (§8.9).
+
+### ⚠ Only frame `01` exists for every state
+There are no multi-frame sprite sheets. `move`/`attack`/`hit` are transform animations on the
+single sprite, and `destroyed` cross-fades `idle_01` → `destroyed_01`. Bare SDXL cannot author
+temporally consistent frames (same limitation as facings).
 
 > **Flagged inconsistency (not fixed here):** `terrain/tile_plain_clean.png` is 128×64, i.e. **1×**,
 > while units and structures ship at 2×. Per §8.3 tiles should also be authored ~2–3× tile. Left as
