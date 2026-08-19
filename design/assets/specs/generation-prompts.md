@@ -9,6 +9,29 @@
 
 ---
 
+## ⛔ Read first — render on a LIGHT background, never the void
+
+**Every prompt block below says `dark void #0A0E17 background`. Do not use that literally.**
+Our sprites are near-black (`#1B2130`). A dark-background render is **unkeyable** — the
+background-removal step (`tools/asset-pipeline/cutout.py`) either stalls at the frame or floods
+through the building and eats it. Both failure modes verified on the HQ, 2026-08-18.
+
+Substitute in every prompt below:
+
+| Instead of | Use |
+|---|---|
+| `dark void #0A0E17 background` | `plain flat solid light grey studio background` |
+| *(add to negatives)* | `dark background, black background, gradient background, vignette, shadow, cast shadow, ground shadow` |
+
+The dark stage colour is applied **in-engine**; baking it into a sprite is always wrong. The
+originally-approved HQ (`hq_rush_r5_c3`) keyed cleanly only by luck — it happened to render on
+light grey. Expect roughly **1 in 3** generations to honour the light-background instruction;
+budget candidates accordingly. Review every candidate with
+`tools/asset-pipeline/board_preview.py` at true sprite scale — a 1024px render flatters greeble
+and trim that vanish at 256px on the board.
+
+---
+
 ## ⚠️ Read first — 4 rules that keep the set consistent
 
 1. **Same silhouette across a unit's 3 hues.** The VS uses **one shared silhouette per role**; the
@@ -61,6 +84,26 @@ Session learnings (apply to ALL structure prompts here):
 2. **Dark-first**: name the dark base color before any accent hue, or the accent hijacks the palette ("neon glow accent" early → whole image goes that hue).
 3. **Framing**: "entire structure fully visible in frame, wide empty margin, viewed from a distance" or SDXL crops dramatically.
 4. **Same-seed hue swap is unreliable** (verified — composition drifts): derive boom/neutral from the approved base by accent recolor, not fresh generation.
+
+Added 2026-08-18 (21-generation session on ASSET-005 + HQ re-roll):
+
+5. **Transfer a proven scaffold; do not free-style a new prompt.** Nine Outpost images written
+   "fresh around the subject" were all rejects. Take a prompt that has *worked* on another asset
+   and change **only the shape words** — swapping the HQ's spire clause for a bay-doorway clause
+   was the first thing to yield single isolated buildings.
+6. **Subject nouns carry scene baggage.** `factory` and `industrial` paint a whole **district**
+   (roads, vehicles, neighbouring plants) no matter how many isolation clauses you stack;
+   `capital tower` doesn't, because it is inherently singular and monumental. `hangar` is weakly
+   singular. **Never name what emerges** — "open bay where *vehicles* emerge" populated the scene
+   with little trucks. Describe the aperture, never its purpose.
+7. **Pin the accent or the model invents its own.** Under-specified rush prompts came back with
+   fire-engine red *plus cyan panels* — cyan being Boom's LOCKED hue, which would break
+   ownership-by-hue on the board. Add `cyan, blue accent, red accent, magenta, pink, purple,
+   multiple accent colours` to the negatives of every single-hue prompt.
+8. **Cast shadows need explicit negatives** (`shadow, cast shadow, drop shadow, ground shadow,
+   contact shadow, ambient occlusion`). A shadow *touching* the base-plate is connected to the
+   subject, so it survives `--largest-only` cleanup and bakes into every downstream hue variant
+   and damage state. Re-roll; do not attempt mask surgery.
 
 ---
 
