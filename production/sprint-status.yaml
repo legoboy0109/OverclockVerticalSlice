@@ -26,7 +26,7 @@ goal: "Wire the completed art into the board, run the iso-legibility + swing-bac
 start: "2026-08-19"
 end: "2026-09-02"
 generated: "2026-08-19"
-updated: "2026-08-19"
+updated: "2026-08-19"  # s5-04 session opened; day-1 gate satisfied
 # QA plan: production/qa/qa-plan-sprint-5-2026-08-19.md (2026-08-19).
 # Story files authored for s5-01/s5-02 only — the other eight are verification,
 # decision or process work and intentionally have no story file.
@@ -74,17 +74,18 @@ stories:
 
   - id: "s5-04"
     name: "★ Swing-back playtest — tempo/comeback, pivot-aware (carryover S4-05)"
-    file: "production/playtests/"
+    file: "production/playtests/swing-back-playtest-session-2026-08-19.md"
     priority: must-have
-    status: ready-for-dev
-    owner: ""
+    status: in-progress
+    owner: "user (game-designer)"
     estimate_days: 1
     blocker: ""
     completed: ""
-    # ART-INDEPENDENT and runnable on the current build TODAY. Start day 1 in parallel.
-    # Queueing this behind the renderer is what caused both prior rollovers.
-    # ⛔ DAY-1 GATE: a specific session must be BOOKED before any s5-01 code is written
-    # (Sprint 4 retro action 1). Unblocked for three sprints; never run.
+    # ✅ DAY-1 GATE SATISFIED 2026-08-19: session opened BEFORE any s5-01 code was
+    # written — the user chose to run it first rather than merely book it. Build 39767de
+    # (two-pool economy + dual HUD counters, placeholder-diamond board), suite 860/860.
+    # Session record: production/playtests/swing-back-playtest-session-2026-08-19.md
+    # Protocol (template, unmodified): swing-back-playtest-2026-07-29.md
 
   - id: "s5-05"
     name: "VS REPORT + PROCEED/PIVOT/KILL verdict + re-run /gate-check (carryover S4-06)"
