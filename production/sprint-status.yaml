@@ -37,11 +37,19 @@ stories:
     name: "Entity sprite renderer + live entities()→board feed (carryover S4-03)"
     file: "production/epics/board-renderer/story-006-entity-sprite-feed.md"
     priority: must-have
-    status: ready-for-dev
-    owner: ""
+    status: done
+    owner: "godot-gdscript-specialist"
     estimate_days: 2
     blocker: ""
-    completed: ""
+    completed: "2026-08-19"
+    # DONE 2026-08-19. Suite 888/888 (was 860). Windowed boot verified: floor diamond
+    # correct, both HQ hues right, produced Scout Y-sorts in front of its HQ.
+    # ⚠ Surfaced a LATENT engine bug: TileMapLayer iso cells are not grid tiles —
+    # set_cell(tile) drifted up to 1408px. Fixed via BoardRenderer.cell_for();
+    # ADR-0013 amended + 3 new control-manifest rules. Affected the OVERLAY layer too,
+    # unnoticed since Story 003 (its alignment evidence doc was owed, never filed).
+    # ⚠ AC-10 (destroyed art) is resolver-only: GameState erases entities on death, so
+    # S5-06's death-echo is now LOAD-BEARING for it, not polish.
     # Unblocked 2026-08-19: art landed. Load contract is in assets/art/README.md —
     # TileSet.tile_size 256x128 with layer scale 0.5 (textures are 2x; TILE_WIDTH_PX/
     # TILE_HEIGHT_PX stay the on-screen 128x64); cover = floor cell + Y-sorted prop,
@@ -52,11 +60,13 @@ stories:
     name: "Glow shader wiring — §8.9 emission mask + per-instance uniforms"
     file: "production/epics/board-renderer/story-007-glow-shader-wiring.md"
     priority: must-have
-    status: backlog
+    status: ready-for-dev
     owner: ""
     estimate_days: 1
-    blocker: "s5-01"
+    blocker: ""
     completed: ""
+    # UNBLOCKED 2026-08-19 — s5-01 done. Sprites are one Sprite2D per entity under
+    # OccupantLayer, owned by EntitySpriteFeed; that is where the ShaderMaterial goes.
     # 8 glow masks already shipped (one per asset+facing, hue-agnostic). Drives
     # idle-AP breathe vs AP-spent clamp — a Pillar-1 read. pulse_intensity: breathe
     # 0.25→0.85, clamp 0.08, attack flare 1.0 decaying, destroyed 0. state_timer from

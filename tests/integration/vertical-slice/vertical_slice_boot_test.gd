@@ -531,9 +531,25 @@ func test_move_relocates_a_non_scout_unit() -> void:
 	assert_vector((state.entities_by_id[12] as UnitState).position).is_equal(Vector2i(6, 6))
 
 
-func test_board_demo_placeholder_occupants_are_removed() -> void:
-	# Regression: BoardRenderer._ready seeds br-002 y-sort DEMO occupants (2 units +
-	# a tall prop) that otherwise sit as coloured blobs mid-board in the real slice.
+func test_board_occupant_layer_holds_one_real_sprite_per_live_entity() -> void:
+	# Story 006 replaced this test's original premise. It used to assert the layer
+	# was EMPTY at boot, because BoardRenderer._ready seeded br-002 Polygon2D demo
+	# fixtures the slice had to strip. Those fixtures are gone and the layer now
+	# holds the real board, so the regression worth guarding is the inverse: every
+	# child is genuine content, and nothing placeholder-shaped survives.
 	var root := _make_root()
 	var board: BoardRenderer = root.board()
-	assert_int(board.occupant_layer.get_child_count()).is_equal(0)
+	var state := root.state()
+	var children := board.occupant_layer.get_children()
+
+	var sprites := 0
+	for child: Node in children:
+		# No Polygon2D placeholders, and nothing that fights the parent Y-sort.
+		assert_bool(child is Sprite2D).is_true()
+		assert_int((child as Node2D).z_index).is_equal(0)
+		if not child.name.begins_with(BoardRenderer.COVER_PROP_NAME_PREFIX):
+			sprites += 1
+
+	# One entity sprite per live entity — two HQs at boot.
+	assert_int(sprites).is_equal(state.entities().size())
+	assert_int(sprites).is_equal(2)

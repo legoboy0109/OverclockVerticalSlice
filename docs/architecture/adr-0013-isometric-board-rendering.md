@@ -251,6 +251,59 @@ class PickResult extends RefCounted:
     var occupant_entity_id: int   # -1 if none
 ```
 
+## Amendment 2026-08-19 — a grid tile is not a tile-map cell (`cell_for`)
+
+**Found during Story 006 (sprint task S5-01)**, the first story to paint real floor art. Until
+then both TileMapLayers were either empty or carrying overlay tiles nothing had been visually
+checked against, so the defect below was latent and invisible.
+
+**The defect.** `set_cell(tile, ...)` called with a raw grid tile does **not** draw at
+`grid_to_screen(tile)`. Redot lays `TILE_SHAPE_ISOMETRIC` cells out in a *stacked* basis whose
+origin and axes differ from this ADR's hand-rolled 2:1 dimetric pair — measured on Redot 26.2:
+
+| grid tile | `grid_to_screen` | engine cell position | drift |
+|---|---|---|---|
+| (0,0) | (0, 0) | (64, 32) | 71px |
+| (1,1) | (0, 64) | (256, 64) | 256px |
+| (11,9) | (128, 640) | (1536, 320) | **1408px** |
+
+This is the same engine-iso mismatch the Status block already flags via GH#89423, showing up on
+the *forward* path rather than the inverse. It affected the floor (new) **and** the overlay layer
+(since Story 003) — the overlay's alignment evidence doc was owed and never filed, which is why it
+went unnoticed.
+
+**The fix.** `BoardRenderer.cell_for(tile)` is now the single mandatory adapter, and every
+`set_cell`/cell query goes through it:
+
+```gdscript
+func cell_for(tile: Vector2i) -> Vector2i:
+    var unoffset := _project(tile, TILE_WIDTH_PX, TILE_HEIGHT_PX, Vector2.ZERO)
+    return floor_layer.local_to_map(unoffset / TILE_LAYER_SCALE)
+```
+
+**Why this does not violate the "never use `local_to_map`" rule.** That rule (Decision §1,
+control-manifest) forbids the engine's iso math for *our own coordinate math* — picking, and the
+grid↔screen pair. Here it is used only to ask the engine which of **its own** cells covers a point
+we located with our transform. Engine forward and engine inverse are mutually exact even where the
+layout differs from ours: verified over the full 12×10 board at **0.0px error, 120 distinct cells,
+zero collisions**. No hand-rolled inverse is mixed with an engine forward.
+
+Rejected alternative: replacing the tile layers with individually-placed sprites. That would have
+sidestepped the engine basis entirely but forfeits native batching, which the Consequences section's
+draw-call budget depends on — an explicitly forbidden pattern in the control manifest.
+
+**Regression cover**: `tests/integration/board-renderer/entity_sprite_feed_test.gd` —
+`test_painted_floor_cells_draw_exactly_where_grid_to_screen_says` (all 120 tiles),
+`test_cell_for_is_injective_across_the_board`, and
+`test_overlay_cells_land_on_the_same_anchors_as_floor_cells` (which finally asserts §3's
+floor/overlay alignment guarantee instead of assuming it).
+
+**Also amended by Story 006:** `TileSet.tile_size` is now `256×128` with both layers scaled `0.5`,
+because art ships at 2× its on-screen size (art-bible §8.3). `TILE_WIDTH_PX`/`TILE_HEIGHT_PX`
+(128×64) remain the **on-screen** cell and the transform pair is untouched — the two doublings
+cancel. The §4 occupant-clickable-region authoring gap is closed by
+`EntitySpriteFeed.pick_regions()`.
+
 ## Alternatives Considered
 
 ### Alternative A (transform): Hand-rolled forward + inverse, exact by construction — CHOSEN

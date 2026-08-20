@@ -48,14 +48,14 @@ func test_set_overlay_populates_exactly_given_tiles_with_class_source_id() -> vo
 	var used_cells := renderer.overlay_layer.get_used_cells()
 	assert_int(used_cells.size()).is_equal(tiles.size())
 	for tile in tiles:
-		assert_array(used_cells).contains([tile])
-		assert_int(renderer.overlay_layer.get_cell_source_id(tile)).is_equal(
+		assert_array(used_cells).contains([renderer.cell_for(tile)])
+		assert_int(renderer.overlay_layer.get_cell_source_id(renderer.cell_for(tile))).is_equal(
 			BoardRenderer.OverlayClass.ATTACK_TARGET
 		)
-		assert_vector(renderer.overlay_layer.get_cell_atlas_coords(tile)).is_equal(Vector2i.ZERO)
+		assert_vector(renderer.overlay_layer.get_cell_atlas_coords(renderer.cell_for(tile))).is_equal(Vector2i.ZERO)
 
 	# A tile outside the set was never touched.
-	assert_int(renderer.overlay_layer.get_cell_source_id(Vector2i(10, 10))).is_equal(-1)
+	assert_int(renderer.overlay_layer.get_cell_source_id(renderer.cell_for(Vector2i(10, 10)))).is_equal(-1)
 
 
 # AC-2: clear_overlay empties the overlay layer entirely.
@@ -88,14 +88,14 @@ func test_second_set_overlay_replaces_first_no_stale_cells() -> void:
 	var used_cells := renderer.overlay_layer.get_used_cells()
 	assert_int(used_cells.size()).is_equal(second_tiles.size())
 	for tile in second_tiles:
-		assert_array(used_cells).contains([tile])
-		assert_int(renderer.overlay_layer.get_cell_source_id(tile)).is_equal(
+		assert_array(used_cells).contains([renderer.cell_for(tile)])
+		assert_int(renderer.overlay_layer.get_cell_source_id(renderer.cell_for(tile))).is_equal(
 			BoardRenderer.OverlayClass.MOVE_OVER_CAP
 		)
 
 	# None of the first call's tiles remain populated.
 	for tile in first_tiles:
-		assert_int(renderer.overlay_layer.get_cell_source_id(tile)).is_equal(-1)
+		assert_int(renderer.overlay_layer.get_cell_source_id(renderer.cell_for(tile))).is_equal(-1)
 
 
 # AC-3 edge case: set_overlay() with an empty Array[Vector2i] clears

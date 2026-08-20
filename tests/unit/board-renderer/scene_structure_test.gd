@@ -92,65 +92,48 @@ func test_floor_and_overlay_tilesets_use_isometric_shape_and_matching_dimensions
 	assert_object(overlay_tile_set).is_not_null()
 	assert_int(floor_tile_set.tile_shape).is_equal(TileSet.TILE_SHAPE_ISOMETRIC)
 	assert_int(overlay_tile_set.tile_shape).is_equal(TileSet.TILE_SHAPE_ISOMETRIC)
+	# Story 006 (AC-7): both TileSets moved to the 2x TEXTURE size, with the layer
+	# nodes scaled back down — the art ships at 2x. They must still be IDENTICAL to
+	# each other (ADR-0013 §3's floor/overlay alignment mechanism), and the
+	# ON-SCREEN cell must still be TILE_WIDTH_PX x TILE_HEIGHT_PX.
 	assert_vector(floor_tile_set.tile_size).is_equal(overlay_tile_set.tile_size)
-	assert_vector(floor_tile_set.tile_size).is_equal(
-		Vector2i(int(BoardRenderer.TILE_WIDTH_PX), int(BoardRenderer.TILE_HEIGHT_PX))
+	assert_vector(floor_tile_set.tile_size).is_equal(BoardRenderer.TILE_TEXTURE_SIZE)
+	assert_vector(floor_tile_set.tile_size).is_equal(Vector2i(256, 128))
+	assert_float(renderer.floor_layer.scale.x).is_equal_approx(BoardRenderer.TILE_LAYER_SCALE, 0.0001)
+	assert_float(renderer.overlay_layer.scale.x).is_equal_approx(BoardRenderer.TILE_LAYER_SCALE, 0.0001)
+	# The effective on-screen cell is unchanged at 128x64.
+	assert_float(floor_tile_set.tile_size.x * renderer.floor_layer.scale.x).is_equal_approx(
+		BoardRenderer.TILE_WIDTH_PX, 0.0001
+	)
+	assert_float(floor_tile_set.tile_size.y * renderer.floor_layer.scale.y).is_equal_approx(
+		BoardRenderer.TILE_HEIGHT_PX, 0.0001
 	)
 
 
 # AC-4 (regression guard): a child under OccupantLayer that does not set its
 # own z_index must not carry a conflicting z_index — it must stay at the
 # engine default (0), letting it participate in the parent's Y-sort group
-# rather than fighting it. Story 002's own placeholder fixtures are exactly
-# such children, so this also confirms _build_placeholder_occupants() (the
-# temporary, story-002-only fixture builder) obeys the guardrail it exists
-# to demonstrate.
+# rather than fighting it.
+#
+# Story 006 note: this used to guard Story 002's placeholder fixtures, which are
+# gone. It now guards the REAL occupants — the Cover props paint_terrain() adds —
+# which is a stronger guard, since those are shipping nodes rather than fixtures.
 func test_occupant_layer_children_do_not_set_conflicting_z_index() -> void:
-	# Arrange / Act
+	# Arrange
 	var renderer: BoardRenderer = auto_free(BoardRenderer.new())
 	add_child(renderer)
+	var grid := GridState.new()
+	grid.width = 2
+	grid.height = 1
+	grid.terrain = PackedByteArray([GridState.Terrain.PLAIN, GridState.Terrain.COVER])
+	grid.occupancy = PackedInt32Array([GridState.EMPTY_OCCUPANT, GridState.EMPTY_OCCUPANT])
 
-	# Assert — at least one placeholder fixture exists to guard (a Y-sort
-	# group with nothing in it proves nothing about this regression).
+	# Act
+	renderer.paint_terrain(grid)
+
+	# Assert — at least one real occupant exists to guard (a Y-sort group with
+	# nothing in it proves nothing about this regression).
 	assert_int(renderer.occupant_layer.get_child_count()).is_greater(0)
 	for child in renderer.occupant_layer.get_children():
 		assert_bool(child is Node2D).is_true()
 		assert_int(child.z_index).is_equal(0)
-
-
-# AC-4 companion: Story 002's story text calls out 2+ unit placeholders and
-# 1 tall-prop placeholder specifically — confirm the fixture count/shape so
-# a future refactor of _build_placeholder_occupants() can't silently drop
-# the Y-sort-proving fixtures below the story's stated minimum.
-func test_occupant_layer_has_at_least_two_units_and_one_tall_prop_placeholder() -> void:
-	# Arrange / Act
-	var renderer: BoardRenderer = auto_free(BoardRenderer.new())
-	add_child(renderer)
-
-	# Assert
-	var children := renderer.occupant_layer.get_children()
-	assert_int(children.size()).is_greater_equal(3)
-
-	var max_height := 0.0
-	var heights: Array[float] = []
-	for child: Node in children:
-		assert_bool(child is Polygon2D).is_true()
-		var polygon: Polygon2D = child
-		var min_y := 0.0
-		var max_y := 0.0
-		for point: Vector2 in polygon.polygon:
-			min_y = minf(min_y, point.y)
-			max_y = maxf(max_y, point.y)
-		var height := max_y - min_y
-		heights.append(height)
-		max_height = maxf(max_height, height)
-
-	# At least one placeholder ("the tall prop") must be taller than the
-	# others — a flat set of identically-sized placeholders would not
-	# actually exercise vertical overhang (ADR-0013 §2/art bible §8.8).
-	var tall_count := 0
-	for h: float in heights:
-		if h == max_height:
-			tall_count += 1
-	assert_int(tall_count).is_greater_equal(1)
-	assert_int(heights.size() - tall_count).is_greater_equal(2)

@@ -1,12 +1,12 @@
 # Story 006: Entity Sprite Renderer & Live `GameState.entities()` → Board Feed
 
 > **Epic**: Board Renderer
-> **Status**: Not Started
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: Integration
 > **Estimate**: L (2 days)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: 2026-08-19
+> **Last Updated**: 2026-08-19 (implemented)
 
 ## Context
 
@@ -85,7 +85,18 @@ resolves `neutral` textures · **missing texture errors explicitly, never render
 
 ## Test Evidence
 
-*(to be filled by /story-done — integration test result + smoke check)*
+**Automated** — `tests/integration/board-renderer/entity_sprite_feed_test.gd`, 29 tests, all
+passing. Full suite **888/888, 0 failures, 0 orphans** (was 860 before this story; +28 net).
+
+**Windowed visual confirmation** (the headless dummy rasteriser cannot render):
+- Board boots clean, zero errors in the log; floor renders as a correct 12×10 iso diamond with both
+  HQs registered on it.
+- Rush HQ (orange) and Boom HQ (cyan) resolve their faction hues correctly.
+- A produced Scout renders in Rush orange at correct ground contact and Y-sorts **in front of** the
+  HQ from a nearer row. AP 10→9 and Credits 10→8 on the same commit — the dual cost reads correctly
+  alongside the new art.
+
+Screenshots are not yet filed as formal evidence docs — that is S5-07's advisory sign-off pass.
 
 ## Dependencies
 
@@ -94,4 +105,45 @@ resolves `neutral` textures · **missing texture errors explicitly, never render
 
 ## Completion Notes
 
-*(to be filled on completion)*
+**All 11 acceptance criteria met**, with two findings recorded rather than absorbed.
+
+### Shipped
+- `src/ui/board_renderer/entity_sprite_catalog.gd` — pure §8.2 path resolver (faction/type/facing/
+  state tokens). Faction is compared **by reference** against the `Factions` registry because
+  `FactionDef` is still ADR-0012's stub and carries no id field.
+- `src/ui/board_renderer/entity_sprite_feed.gd` — the live feed. Owns one `Sprite2D` per entity,
+  reconciles against each snapshot, tracks facing (presentation-only state with no home in
+  `EntityState`), and authors pick regions from real sprite bounds.
+- `board_renderer.gd` — 2× tile sizing, real terrain painting (floor cells + Y-sorted Cover props),
+  `cell_for()`; Story 002's placeholder fixtures deleted.
+- `vertical_slice_root.gd` — placeholder `_draw` marker diamonds deleted; wired to the feed.
+- `project.godot` — clear colour set to the void anchor `#0A0E17`, since Impassable tiles are
+  deliberately left unpainted and the background IS the void art.
+
+### Finding 1 — engine iso cells are not grid tiles (fixed, ADR amended)
+`set_cell(tile)` drew the board **up to 1408px** away from the sprites: Redot's isometric cell
+layout uses a different basis than the hand-rolled dimetric transform. This was latent since Story
+003 — it hit the overlay layer too, and that layer's alignment evidence doc was owed and never
+filed. Fixed with `BoardRenderer.cell_for()`; ADR-0013 carries an amendment and the control
+manifest has three new rules. Regression cover asserts all 120 tiles at 0.0px error.
+
+### Finding 2 — AC-10 is only half-real until S5-06
+`GameState.destroy_entity()` erases the entity in the same frame its hp hits zero, so a destroyed
+entity never reaches a feed snapshot. The resolver returns the correct `destroyed_01`/`_destroyed`
+path (AC-10 met at the resolver level and tested), but **nothing puts destroyed art on screen**
+until S5-06 adds the death-echo hold for §8.5's 2–4 frame beat. S5-06 is therefore load-bearing for
+AC-10, not the polish item the sprint plan treats it as.
+
+### Also closed
+The ADR-0013 §4 occupant-clickable-region authoring gap (vertical-slice build-seam S3-05) — regions
+now come from real sprite bounds **merged with the tile footprint**. The merge is required: a sprite
+is anchored at its ground-contact point so its rect sits entirely above it, and `Rect2.has_point`
+excludes the bottom edge, which would have made a unit's own tile unclickable.
+
+### Known gaps (not defects)
+- **Art exists for only 5 of 9 entity types.** Sniper, Defensive Structure, Economy Outpost and
+  Research Lab have none; any reaching the board gets a `push_error` plus a loud magenta placeholder
+  rather than a silent blank.
+- **New-unit default facing is `e`**, an arbitrary pick — a unit produced onto the board has no
+  travel to take a sign from. Whether a fresh unit should face the opponent instead is a feel call
+  for S5-03, not a correctness one.

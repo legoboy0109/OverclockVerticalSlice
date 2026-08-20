@@ -23,22 +23,22 @@
 ##
 ## [b]Known stubs (flagged, not hidden)[/b] — these are unbuilt/blocked seams, not
 ## part of this harness:
-## [br]• [b]Unit/HQ sprites[/b]: [BoardRenderer] renders only the floor + overlay
-##   TileMapLayers — there is no live-entity sprite renderer yet (the
-##   [code]GameState.entities()[/code] → board feed is unowned). Entities are drawn
-##   here as minimal owner-coloured placeholder markers ([method _draw]) purely so
-##   the board is not empty; replace with the real entity renderer when it lands.
+## [br]• [b]Unit/HQ sprites[/b]: ✅ BUILT (Story 006 / S5-01, scope §8 build-seam c
+##   closed). [EntitySpriteFeed] renders one real [Sprite2D] per live entity into
+##   the board's Y-sorted occupant layer, and [method BoardRenderer.paint_terrain]
+##   paints the floor + Cover props. This scene no longer draws entities itself.
 ## [br]• [b]Click-to-select[/b] (mouse): WIRED (scope §8 seam b closed). Left-click
 ##   routes through [method select_at_mouse] → [method CommandInterface.route_click]
 ##   → [method BoardRenderer.pick_at] against the occupant pick-regions this scene
 ##   authors from the live entities ([method _refresh_occupant_pick_regions]) — the
 ##   ADR-0013 §4 CAI boundary (never [code]screen_to_grid[/code] for routing). The
-##   regions are placeholder-era (sized to the tile diamond, matching the drawn
-##   markers); the real entity renderer (S4-03) re-authors them from sprite bounds.
+##   regions are authored from the ACTUAL drawn sprite bounds by
+##   [method EntitySpriteFeed.pick_regions] (Story 006 closed the S3-05 seam).
 ##   Click-to-MOVE (an action from a click into an open preview) stays Story 007
 ##   scope — this closes selection only. The keyboard cursor path
 ##   ([method select_at_cursor]) remains as the gamepad/keyboard equivalent.
-## [br]• [b]Art[/b]: placeholder tinted diamonds until the art/TileSet pass.
+## [br]• [b]Art[/b]: real sprites + terrain as of 2026-08-19. Still owed: the glow
+##   shader (S5-02), move/attack/hit transforms and the destroyed beat (S5-06).
 ## [br]• Camera framing/zoom is provisional (final feel = `/ux-design`).
 class_name VerticalSliceRoot
 extends Node2D
@@ -70,6 +70,11 @@ const CAMERA_ZOOM_STEP: float = 1.12
 var _state: GameState = null
 var _reader: GameStateReader = null
 var _board: BoardRenderer = null
+
+## The live [method GameState.entities] -> sprite feed (Story 006 / S5-01). Owns
+## every entity [Sprite2D] under the board's occupant layer, and is also the source
+## of the board's occupant pick-regions (see [method _refresh_occupant_pick_regions]).
+var _feed: EntitySpriteFeed = null
 var _camera: Camera2D = null
 ## The whole-board fit zoom (lower bound for wheel zoom-out); set by _fit_camera_to_board.
 var _camera_fit_zoom: float = 1.0
@@ -122,7 +127,7 @@ func _ready() -> void:
 	_build_status_overlay()
 	_ai_driver = AITurnDriver.new()
 	add_child(_ai_driver)
-	# Repaint the placeholder markers on every commit (an AI turn drives many).
+	# Re-sync sprites + pick regions on every commit (an AI turn drives many).
 	_reader.subscribe_action_applied(_on_action_applied)
 	# If the match ever opens on the AI's side, hand off immediately.
 	_drive_ai_turns()
@@ -175,14 +180,15 @@ func _build_match() -> void:
 
 func _build_board_and_camera() -> void:
 	_board = BoardRenderer.new()
-	add_child(_board) # _ready() seeds the board's y-sort DEMO occupants (Story 002).
-	# Those 2 placeholder units + tall prop are br-002 fixtures, not real entities —
-	# strip them so they don't sit as coloured blobs mid-board (the slice draws live
-	# entities via its own _draw; the real entity renderer is an unbuilt seam).
-	if _board.occupant_layer != null:
-		for demo: Node in _board.occupant_layer.get_children():
-			_board.occupant_layer.remove_child(demo)
-			demo.queue_free()
+	add_child(_board)
+	# Static board first (floor cells + Y-sorted Cover props), then the live entity
+	# feed into the same occupant layer. Story 002's placeholder fixtures and this
+	# scene's own _draw marker diamonds are both gone — this is the real art.
+	_board.paint_terrain(_state.grid)
+	_feed = EntitySpriteFeed.new(_board, [
+		_state.per_player[LOCAL_PLAYER].faction,
+		_state.per_player[AI_PLAYER].faction,
+	])
 
 	_camera = Camera2D.new()
 	add_child(_camera)
@@ -616,30 +622,13 @@ func select_at_board_point(board_pos: Vector2) -> bool:
 ## re-authors these from actual sprite bounds. Refreshed on every commit
 ## ([method _on_action_applied]) since entities move, spawn, and die.
 func _refresh_occupant_pick_regions() -> void:
-	if _board == null or _reader == null:
+	if _board == null or _reader == null or _feed == null:
 		return
-	var entities: Array[EntityState] = _reader.entities()
-	entities.sort_custom(_pick_region_paint_order)
-	var half := Vector2(BoardRenderer.TILE_WIDTH_PX, BoardRenderer.TILE_HEIGHT_PX) * 0.5
-	var regions: Array[BoardRenderer.OccupantPickRegion] = []
-	for entity: EntityState in entities:
-		var center: Vector2 = _board.grid_to_screen(entity.position)
-		var region := BoardRenderer.OccupantPickRegion.new()
-		region.rect = Rect2(center - half, half * 2.0)
-		region.entity_id = entity.entity_id
-		region.tile = entity.position
-		regions.append(region)
-	_board.occupant_pick_regions = regions
-
-
-## Back-to-front paint order for the pick-regions: ascending screen Y (the Y-sort
-## order), entity_id breaking exact-Y ties so the authored order is deterministic.
-func _pick_region_paint_order(a: EntityState, b: EntityState) -> bool:
-	var ay: float = _board.grid_to_screen(a.position).y
-	var by: float = _board.grid_to_screen(b.position).y
-	if ay == by:
-		return a.entity_id < b.entity_id
-	return ay < by
+	# Sync the sprites FIRST, then author the click targets from their actual drawn
+	# bounds — the regions must describe what is on screen right now, and a sprite
+	# is wider/taller than the tile diamond the placeholder markers used.
+	_feed.sync(_reader.entities())
+	_board.occupant_pick_regions = _feed.pick_regions()
 
 
 ## The cursor's current grid tile (for the test + the [method _draw] highlight).
@@ -792,27 +781,21 @@ func _tiles_for_cost(unit: UnitState, ap_cost: int) -> int:
 	return 1
 
 
-# --- Placeholder entity rendering (STUB — see class doc) ---------------------
+# --- Board-space affordance drawing (range preview + cursor) -----------------
 
-## Draws a minimal owner-coloured marker at each live entity's tile — a stand-in
-## for the not-yet-built entity-sprite renderer, so the board is not blank. This
-## is deliberately crude (a filled diamond per entity); delete it when the real
-## renderer lands.
+## Draws the selected unit's move/attack range and the keyboard cursor. Entity
+## sprites are NOT drawn here — [EntitySpriteFeed] renders those as real nodes in
+## the board's Y-sort group (Story 006). What remains is only the immediate-mode
+## affordance layer: range highlight underneath, cursor outline on top.
 func _draw() -> void:
 	if _board == null or _reader == null:
 		return
 	# Under the entity markers: the selected unit's move/attack range, so the player
 	# can SEE where a unit can go (short-range units otherwise look unresponsive).
 	_draw_selection_overlay()
-	for entity: EntityState in _reader.entities():
-		var center: Vector2 = _board.grid_to_screen(entity.position)
-		var col: Color = Color(0.2, 0.7, 1.0) if entity.owner == LOCAL_PLAYER else Color(1.0, 0.4, 0.3)
-		var r: float = 10.0
-		var diamond := PackedVector2Array([
-			center + Vector2(0, -r), center + Vector2(r, 0),
-			center + Vector2(0, r), center + Vector2(-r, 0),
-		])
-		draw_colored_polygon(diamond, col)
+	# Entities themselves are NOT drawn here any more — EntitySpriteFeed owns one
+	# real Sprite2D per entity under the board's Y-sorted occupant layer (Story 006).
+	# Drawing them here too would paint unsorted markers on top of the sprites.
 
 	# The keyboard cursor — a hollow diamond outline at the cursor tile.
 	if _cursor != null:
