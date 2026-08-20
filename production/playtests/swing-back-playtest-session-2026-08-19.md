@@ -11,9 +11,12 @@
 
 ## Session Info
 - **Date(s)**: 2026-08-19
-- **Build / commit**: `39767de` — two-pool economy + dual HUD counters, placeholder-diamond board
-  (S5-01 art wiring deliberately not yet done; this playtest is art-independent)
-- **Test suite at time of play**: 860/860 passing, 0 failures, 0 orphans
+- **Build / commit**: `76fe01e` — two-pool economy + dual HUD counters, **with the real board art
+  and §8.9 glow live** (S5-01 + S5-02 landed after this session file was opened). The protocol calls
+  for `aec78bb` "or later"; this is later. S5-04 is art-independent, so the art neither helps nor
+  hinders the tempo/comeback questions — but the board now looks like the game, which makes the
+  Analysis C readability questions meaningful rather than hypothetical.
+- **Test suite at time of play**: 909/909 passing, 0 failures, 0 orphans
 - **Tester(s)**: user (game-designer) — self-test
 - **Platform / input**: PC (Linux) — KB+M, windowed
 - **Total games played**: [n]  ·  **Close**: [n]  ·  **Decided**: [n]
