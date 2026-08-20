@@ -9,9 +9,10 @@ Generated: 2026-08-19
 | Tasks | 10 | 4 in-window (5 incl. post-window art) | −6 |
 | Completion Rate | — | **40%** in-window · 50% incl. art | — |
 | Must-Have tasks | 6 | **1** in-window (S4-01) | −5 |
-| Effort Days planned | 8 available | **10.5 of tasks planned** | **+2.5 (+31%) before work started** |
+| Committed scope (must + should) | 8 available | **9.0** (must 7 + should 2) | **+1.0 (+12.5%) before work started** |
+| Full task list | 10 total days | **10.5** (incl. 1.5 nice-to-have) | +0.5 (+5%) |
 | Unplanned work added | 0 | AP→AP+Credits pivot, Phases 1–6 (~4 days) | +4 |
-| Effective load vs capacity | 8 | ~14.5 | **+81%** |
+| Committed load incl. unplanned | 8 available | **13.0** | **+62%** |
 | Commits (in window) | — | 15 | — |
 | Test suite | — | 830 → 860 passing | +30 |
 
@@ -54,10 +55,13 @@ running.
 
 - **The human-gated track scored 0/4 for the second consecutive sprint**, and Sprint 3's fix for
   exactly this was already in place (see Follow-Up below). This is the sprint's defining failure.
-- **The plan was over-committed before it began**: 10.5 days of tasks against 8 available (+31%).
-  Even with zero disruption, the Must-Have list could not have fit.
-- **~4 days of unplanned pivot work were absorbed without descoping anything.** No task was cut, no
-  re-plan was issued, and the sprint plan quietly became fiction rather than being corrected.
+- **The plan was over-committed before it began.** Measured consistently — committed scope
+  (must + should) against the 8 *available* days — Sprint 4 committed **9.0 (+12.5%)**, and its
+  full list of 10.5 exceeded even the 10-day total. Nice-to-haves ride the buffer and are not
+  commitments, which is why the committed figure is the one that matters.
+- **~4 days of unplanned pivot work were absorbed without descoping anything**, taking committed
+  load to **13.0 against 8 available (+62%)**. No task was cut, no re-plan was issued, and the
+  sprint plan quietly became fiction rather than being corrected.
 - **S4-02's 3-day art estimate modelled the wrong kind of work.** It was estimated as a production
   task; it behaved as an iterative art-direction loop — roughly seven user decisions, two spec
   amendments, and 39 generations on infantry alone. It finished 7 days past the window.
@@ -122,7 +126,7 @@ Three items have now been carried twice. Two of the three were **never technical
 | # | Action | Owner | Priority | Deadline |
 |---|--------|-------|----------|----------|
 | 1 | **Book a specific play session for S5-04 (swing-back) before any S5-01 code begins.** A calendar commitment, not a priority label — the label has failed three sprints running. It needs no art and runs on the current build today | user (game-designer) | **High** | S5 day 1–2 |
-| 2 | **Never plan above stated capacity.** Sprint 4 planned 10.5 days against 8 available. Sprint 5 is planned at exactly 8.0 (must 5 + should 3) — hold that line | producer | High | S5 planning ✅ already applied |
+| 2 | **Never commit above available days** — measured as **must + should vs the 8 available days**, with nice-to-haves riding the 2-day buffer rather than counting as commitments. Sprint 4 committed 9.0 against 8 (+12.5%). Sprint 5 commits exactly 8.0 (must 5 + should 3) — hold that line | producer | High | S5 planning ✅ already applied |
 | 3 | **Mid-sprint design changes go to a post-gate backlog.** Accepting one mid-sprint requires an explicit re-plan that descopes something and records the trade. The pivot was absorbed silently and the plan became fiction | producer + creative-director | High | S5 kickoff |
 | 4 | **Estimate human-gated art as an approval loop, not a production task.** Model the number of decision rounds, and treat calendar cost as distinct from effort cost | art-director + producer | Med | next art estimate |
 
@@ -134,7 +138,7 @@ Three items have now been carried twice. Two of the three were **never technical
   cause anyone to sit down and play. Sprint 5 should not be considered planned until a session
   exists for S5-04.
 - **Unplanned work must trade against planned scope, visibly.** Absorbing ~4 days without cutting
-  anything is what turned a 31%-over plan into an 81%-over one. If something comes in, something
+  anything is what turned a 12.5%-over plan into a 62%-over one. If something comes in, something
   goes out, and the swap gets recorded.
 - **Keep investing in regenerable pipelines.** The art tooling turned a one-off asset drop into a
   system where any hue, facing, mask, state or tile can be rebuilt from a master by re-running a

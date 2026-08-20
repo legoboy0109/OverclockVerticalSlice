@@ -39,8 +39,8 @@ verdict.
 
 | # | Commitment | Owner | Status |
 |---|---|---|---|
-| 2 | **Never plan above stated capacity.** Sprint 4 planned 10.5 days against 8 available (+31%) before any disruption | producer | ✅ **applied** — Sprint 5 is planned at exactly 8.0 (must 5 + should 3) |
-| 3 | **Mid-sprint design changes go to a post-gate backlog.** Accepting one mid-sprint requires an explicit re-plan that **descopes something and records the trade**. Sprint 4 absorbed ~4 days of economy-pivot work without cutting anything, taking effective load to ~81% over capacity | producer + creative-director | ⬜ enforce at kickoff |
+| 2 | **Never commit above available days.** The measure is **must + should vs the 8 *available* days**; nice-to-haves ride the 2-day buffer and are not commitments. Sprint 4 committed **9.0** (must 7 + should 2) against 8 — **+12.5% before any disruption** — and its full list of 10.5 exceeded even the 10-day total | producer | ✅ **applied** — Sprint 5 commits exactly **8.0** (must 5 + should 3) against 8 available; its 1.0 of nice-to-haves rides the buffer, for 9.0 of 10 total |
+| 3 | **Mid-sprint design changes go to a post-gate backlog.** Accepting one mid-sprint requires an explicit re-plan that **descopes something and records the trade**. Sprint 4 absorbed ~4 days of economy-pivot work without cutting anything, taking committed load to **13.0 against 8 available (+62%)** | producer + creative-director | ⬜ enforce at kickoff |
 | 4 | **Estimate human-gated art as an approval loop, not a production task.** Model decision rounds; treat calendar cost as distinct from effort cost. S4-02 was ~3 days of effort spread over 21 calendar days | art-director + producer | ⬜ applies to S5-10 and any art follow-up |
 
 > **Why #3 has teeth this sprint:** the AP+Credits pivot is live and *unvalidated by play*. The
