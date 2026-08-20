@@ -9,58 +9,63 @@
 #   done           ↔  Complete
 #   blocked        ↔  Blocked
 #
-# Sprint 4 is the Vertical Slice VALIDATION opener. Sprint 3 (VS Build, 26/26 in-slice
-# + hud-008 bonus) is archived in production/sprints/sprint-3.md + retro-sprint-3. The
-# Pre-Prod → Production gate closed at CONCERNS (build ready, playtests + REPORT pending);
-# this sprint runs art → playtests → REPORT verdict → re-gate. ★ = human-gated track.
+# Sprint 5 continues the Vertical Slice VALIDATION. Sprint 4 (2026-07-29..08-12) closed
+# 6/10 — its window was consumed by an unplanned AP→AP+Credits economy pivot (Phases 1-6,
+# committed 08-05..08), which displaced the whole validation half; S4-02 art then completed
+# 08-19, after the window. Close-out table is in production/sprints/sprint-5.md.
+# ★ = human-gated. The validation half has now rolled over TWICE — S5-04 is
+# art-independent and must start day 1 in parallel, not queued behind the renderer.
 
-sprint: 4
-goal: "Validate the Vertical Slice — representative art, iso-legibility + swing-back playtests, and the PROCEED/PIVOT/KILL REPORT — to clear the Pre-Production → Production gate (left at CONCERNS in Sprint 3)."
-start: "2026-07-29"
-end: "2026-08-12"
-generated: "2026-07-29"
-updated: "2026-07-29"
+sprint: 5
+goal: "Wire the completed art into the board, run the iso-legibility + swing-back playtests, and land the PROCEED/PIVOT/KILL verdict that clears the Pre-Production → Production gate."
+start: "2026-08-19"
+end: "2026-09-02"
+generated: "2026-08-19"
+updated: "2026-08-19"
 
 stories:
   # --- Must Have (critical path to clear the gate) ---
-  - id: "s4-01"
-    name: "De-risk spikes: Boom-cyan hue side-by-side + glow-shader 2D/uniform (carryover s3-08)"
+  - id: "s5-01"
+    name: "Entity sprite renderer + live entities()→board feed (carryover S4-03)"
+    file: "design/assets/specs/vs-entities-assets.md"
+    priority: must-have
+    status: ready-for-dev
+    owner: ""
+    estimate_days: 2
+    blocker: ""
+    completed: ""
+    # Unblocked 2026-08-19: art landed. Load contract is in assets/art/README.md —
+    # TileSet.tile_size 256x128 with layer scale 0.5 (textures are 2x; TILE_WIDTH_PX/
+    # TILE_HEIGHT_PX stay the on-screen 128x64); cover = floor cell + Y-sorted prop,
+    # NOT one TileMapLayer cell; bottom-centre = ground-contact pivot; facing n→e, s→w.
+    # Faction pins Rush/Boom already landed as a precondition.
+
+  - id: "s5-02"
+    name: "Glow shader wiring — §8.9 emission mask + per-instance uniforms"
     file: "design/art/art-bible.md"
     priority: must-have
-    status: done
+    status: backlog
     owner: ""
-    estimate_days: 0.5
-    blocker: ""
-    completed: "2026-07-29"  # Both watch-items RESOLVED in art-bible §4.2/§8.9. Hue: Boom #22C7F0 LOCKED (worst-case max-elev ΔE2000 51.8 / WCAG 5.19:1 / grayΔ104). Shader: 2D CanvasItem per-instance approach confirmed (engine-ref + headless smoke); windowed one-unit render residual → S4-07. Repro spike: prototypes/s4-01-art-spike/
-  - id: "s4-02"
-    name: "★ Representative Neon Retro-Future art — 5 entities + 2 terrain tiles (carryover s3-06)"
-    file: "design/assets/entity-inventory.md"
-    priority: must-have
-    status: in-progress  # 2026-07-29: /asset-spec full mode → design/assets/specs/vs-entities-assets.md (ASSET-001..007) + asset-manifest.md. 7 assets specced (visual + AI-gen prompts + tech constraints), 3 hue variants each. REMAINING = actual art production (human/AI-gen) + import under assets/. Follow-up: wire VS faction pins Rush/Boom for ownership-by-hue (S4-03).
-    owner: ""
-    estimate_days: 3
-    blocker: ""
+    estimate_days: 1
+    blocker: "s5-01"
     completed: ""
-  - id: "s4-03"
-    name: "Entity sprite renderer + live entities()→board feed (replace placeholder diamonds; scope §8 seam c)"
-    file: "src/game/vertical_slice_root.gd"
-    priority: must-have
-    status: backlog  # 2026-07-29: faction-pin PRECONDITION landed — VS pins Rush/Boom (empty-delta parity; ADR-0012 §2 registry RUSH/BOOM created), full suite 830/830. Entity sprite renderer + live entities()→board feed still await S4-02 art.
-    owner: ""
-    estimate_days: 1.5
-    blocker: "s4-02"
-    completed: ""
-  - id: "s4-04"
-    name: "★ Iso-legibility playtest (Pillar-3 hard gate) (carryover s3-09)"
-    file: "production/playtests/"
+    # 8 glow masks already shipped (one per asset+facing, hue-agnostic). Drives
+    # idle-AP breathe vs AP-spent clamp — a Pillar-1 read. pulse_intensity: breathe
+    # 0.25→0.85, clamp 0.08, attack flare 1.0 decaying, destroyed 0. state_timer from
+    # GDScript, never the shader TIME built-in (must freeze with the turn pause).
+
+  - id: "s5-03"
+    name: "★ Iso-legibility playtest (Pillar-3 hard gate) (carryover S4-04)"
+    file: "production/playtests/iso-legibility-playtest-2026-07-29.md"
     priority: must-have
     status: backlog
     owner: ""
     estimate_days: 0.5
-    blocker: "s4-03"
+    blocker: "s5-01, s5-02"
     completed: ""
-  - id: "s4-05"
-    name: "★ Swing-back playtest — tempo/comeback (testable on current build) (carryover s3-10)"
+
+  - id: "s5-04"
+    name: "★ Swing-back playtest — tempo/comeback, pivot-aware (carryover S4-05)"
     file: "production/playtests/"
     priority: must-have
     status: ready-for-dev
@@ -68,52 +73,76 @@ stories:
     estimate_days: 1
     blocker: ""
     completed: ""
-  - id: "s4-06"
-    name: "VS REPORT + PROCEED/PIVOT/KILL verdict + re-run /gate-check pre-production (carryover s3-11)"
-    file: "prototypes/overclock-vertical-slice/REPORT.md"
+    # ART-INDEPENDENT and runnable on the current build TODAY. Start day 1 in parallel.
+    # Queueing this behind the renderer is what caused both prior rollovers.
+
+  - id: "s5-05"
+    name: "VS REPORT + PROCEED/PIVOT/KILL verdict + re-run /gate-check (carryover S4-06)"
+    file: "production/gate-checks/"
     priority: must-have
     status: backlog
     owner: ""
     estimate_days: 0.5
-    blocker: "s4-04"
+    blocker: "s5-03, s5-04"
     completed: ""
 
   # --- Should Have ---
-  - id: "s4-07"
-    name: "★ Advisory Visual/Feel sign-offs (BR-002/003/005, CAI-006, HUD-004/005/007) — windowed"
+  - id: "s5-06"
+    name: "Unit state transforms — move lean, attack lunge, hit recoil, destroyed cross-fade"
+    file: "design/art/art-bible.md"
+    priority: should-have
+    status: backlog
+    owner: ""
+    estimate_days: 1
+    blocker: "s5-02"
+    completed: ""
+    # §8.5's move/attack/hit are renderer transforms, NOT art — no textures owed.
+    # destroyed_01 textures already shipped; cross-fade idle_01→destroyed_01, pulse→0.
+
+  - id: "s5-07"
+    name: "★ Advisory Visual/Feel sign-offs — windowed screenshots (carryover S4-07)"
     file: "production/qa/evidence/"
     priority: should-have
     status: backlog
     owner: ""
     estimate_days: 1
-    blocker: "s4-02"
+    blocker: "s5-01"
     completed: ""
-  - id: "s4-08"
-    name: "Occupant pick-region authoring + mouse click-select (scope §8 seam b)"
-    file: "src/ui/board_renderer/board_renderer.gd"
+    # Also clears the S4-01 residual: windowed one-unit glow render in the live
+    # rasteriser (the headless dummy rasteriser cannot render).
+
+  - id: "s5-08"
+    name: "Colourblind ownership decision — non-hue markers or documented accept"
+    file: "design/art/art-bible.md"
     priority: should-have
-    status: done
+    status: backlog
     owner: ""
     estimate_days: 1
-    blocker: ""
-    completed: "2026-08-05"  # Implemented against placeholders (decoupled from s4-03 per user call). Added CommandInterface.set_renderer passthrough; slice injects the board as click renderer + authors occupant_pick_regions per live entity (back-to-front Y-sort order), refreshed on every commit; left-click → select_at_mouse → route_click → pick_at (ADR-0013 §4 CAI boundary, never screen_to_grid). +3 integration tests; full suite 833/833, main scene boots clean. Placeholder-era regions sized to the tile diamond; S4-03 re-authors from real sprite bounds.
+    blocker: "s5-03"
+    completed: ""
+    # Rush vs Boom grayscale separation MEASURED at Δ34/255 (13%) after the luma-scaling
+    # fix — reads on structures, marginal on units. Ceiling: the locked anchors differ by
+    # only 45 luma, so no remap improves it without breaking the S4-01 palette lock.
 
   # --- Nice to Have ---
-  - id: "s4-09"
-    name: "Follow-ups: ap_counter →→ASCII; enforce pass_threshold in AI.choose_action"
-    file: "src/ui/game_hud/ap_counter_widget.gd"
+  - id: "s5-09"
+    name: "Wear-variant placement pass in the VS map"
+    file: "design/gdd/grid-terrain.md"
     priority: nice-to-have
-    status: done
+    status: backlog
+    owner: ""
+    estimate_days: 0.5
+    blocker: "s5-01"
+    completed: ""
+    # Kit shipped: tile_plain_clean/cracked/scorched + tile_cover_clean/chipped-corner.
+    # Place per §6.4 density ceiling and §6.5 asymmetry, not uniform scatter.
+
+  - id: "s5-10"
+    name: "Structure damaged tier (only idle + destroyed exist)"
+    file: "design/assets/specs/vs-entities-assets.md"
+    priority: nice-to-have
+    status: backlog
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: "2026-07-29"  # ap_counter fully ASCII; pass_threshold enforced in choose_action (config 0.16/0.20 > 0.15 by design); +4 tests, full suite 830/830
-  - id: "s4-10"
-    name: "HUD chrome /ux-design pass — finalize slice HUD + fold status overlay into a proper control"
-    file: "design/ux/hud.md"
-    priority: nice-to-have
-    status: done
-    owner: ""
-    estimate_days: 1
-    blocker: ""
-    completed: "2026-07-29"  # hud.md extended: Element 10 (Command Readout + No-Op Toast + Input Hint Bar folds the slice overlay) + Chrome-Finalization anchor table (resolves game_hud.gd sign-off) + IA rows 16-18 + 4 ACs. /ux-review hud → APPROVED (0 blocking). Code fold = follow-up dev story (OQ #8).
+    completed: ""
