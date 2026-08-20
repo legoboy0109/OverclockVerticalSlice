@@ -1,13 +1,20 @@
 # Asset Manifest
 
-> Last updated: 2026-08-19 (infantry session — ASSET-002/003/004 base looks approved)
+> Last updated: 2026-08-19 (roster-completion session — ASSET-008..011 authored and shipped)
 > Master index of every specced game asset. IDs are sequential across the whole project.
 
 ## Progress Summary
 
 | Total | Needed | In Progress | Done | Approved |
 |-------|--------|-------------|------|----------|
-| 7 | 0 | 1 | 6 | 0 |
+| 11 | 0 | 1 | 10 | 0 |
+
+> ✅ **The VS roster now has NO missing art** (2026-08-19). Every buildable structure and
+> producible unit resolves a real texture in all three hues plus a destroyed state and a glow
+> mask. Regression guards live in `entity_sprite_feed_test.gd`
+> (`test_every_vs_type_now_has_shipped_art`) and `glow_uniform_state_test.gd`
+> (`test_every_vs_type_now_has_a_shipped_glow_mask`) — a roster addition that outruns the art
+> now fails the suite instead of shipping a magenta placeholder onto the board.
 
 > **"Done (idle)"** = base look approved, cleaned, all 3 hues, facings, and placed in
 > `assets/art/` with import sidecars — but **`idle` frame 01 only**; the §8.5 state sets
@@ -50,6 +57,11 @@ ownership now reads on *structures* (large trim area) and is still **marginal on
 Role silhouettes separate fine without hue; army ownership does not. The art bible's deferred
 **non-hue ownership markers** (trim pattern / emblem / silhouette-family trait) remain the actual
 fix — this is the measured number for that work.
+
+| ASSET-008 | Sniper | Unit | rush/boom/neutral | Done (idle) | **Base look approved 2026-08-19: `art-source/generated/asset-008-sniper/sniper_rush_r6_c1.png`** (seed 1599279841). Was "deferred" in the spec until the renderer made its absence visible. Ships at **h=156**, the tallest infantry — §3.1 puts it opposite the Scout on the posture axis, and that ratio is the primary thumbnail read. ⚠ Value-corrected in post: the raw generation came out at luma 0.253 against the roster's 0.355, i.e. the "units must be LIGHTER than the stage" defect the infantry session documented, hit again |
+| ASSET-009 | Economy Outpost | Structure | rush/boom/neutral | Done (idle) | **Base look approved 2026-08-19: `econ_rush_r5_c2.png`** (seed 2305656182). §3.2 identifier: low + wide, horizontal emphasis, collector forms. Took **5 rounds** — "solar array / collector panels" reliably summons a whole city block (the same failure `factory` has); the singular `bunker` noun plus angled intake vanes is what converged |
+| ASSET-010 | Defensive Structure | Structure | rush/boom/neutral | Done (idle) | **Base look approved 2026-08-19: `def_rush_r2_c2.png`** (seed 3933358768). §3.2 identifier: compact/thick/symmetrical with one dominant elevated emplacement breaking the top. Cleanest convergence of the four — **2 rounds** |
+| ASSET-011 | Research Lab | Structure | rush/boom/neutral | Done (idle) | **Base look approved 2026-08-19: `lab_rush_r6_c2.png`** (seed 4290549827). §3.2 identifier: tall-thin mast on a small base, the most delicate silhouette. Took **6 rounds** — and the fix was a NOUN swap, not adjectives: the shared scaffold says `bunker`, which is squat and monolithic by definition and beat every "tall thin delicate" adjective for five rounds. `antenna tower structure` converged on the next round. See generation-prompts.md rule 12 |
 
 **★ ASSET-007 cover (2026-08-19):** ships as **two layers**, not one tile — "one PNG = one
 `TileMapLayer` cell" **breaks for cover**, which the spec says to flag to S4-03. Floor = the plain

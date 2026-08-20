@@ -47,6 +47,38 @@ verdict.
 > temptation to keep tuning it before the verdict is exactly the failure mode — S5-04 is what tells
 > us whether it works. **Freeze design changes until the verdict lands.**
 
+## ⚠ Mid-sprint scope accepted 2026-08-19 — recorded trade (retro action 3)
+
+Retro action 3 requires that anything accepted mid-sprint records an explicit descope trade rather
+than being absorbed silently. This is that record.
+
+**Accepted:** completing the missing entity art — Sniper, Economy Outpost, Defensive Structure and
+Research Lab (ASSET-008..011). All four are reachable in the slice (three are on the build bar; the
+Production Outpost produces Sniper), so they appeared during the S5-04 session as magenta
+missing-art placeholders and were distracting enough to interfere with judging tempo.
+
+**Also accepted:** fitting structures to their real one-tile footprint. Small, and a legibility fix
+rather than a preference — a silhouette covering tiles it does not occupy misleads about blocking
+and range.
+
+**Cost:** ~1 day. 39 SDXL generations across 6 rounds, plus value correction, hue variants, facings,
+destroyed states, glow masks, specs and manifest updates.
+
+**Trade — RECOMMENDED, needs the producer's confirmation:** drop the two nice-to-haves,
+**S5-09** (wear-variant placement pass) and **S5-10** (structure damaged tier), totalling **1.0
+day**. That is precisely the buffer this consumed, and neither gates the PROCEED/PIVOT/KILL verdict.
+Note S5-10 grew rather than shrank — there are now five structures owed a damaged tier, not two —
+which is further reason to schedule it deliberately after the gate rather than squeeze it in.
+
+**What this does NOT change:** the must-have critical path. S5-01 and S5-02 are done; S5-03/04/05
+remain the gate and remain human-gated.
+
+> **Honest note for the retro.** Retro action 4 says to estimate human-gated art as an *approval
+> loop*, not a production task. This round is evidence for that: the Defensive Structure converged
+> in 2 rounds, the Research Lab took 6 — and 5 of those 6 were spent fighting the wrong noun in a
+> shared prompt scaffold, not iterating on the design. That failure mode is now written up as
+> generation-prompts.md rule 12 so the next asset does not pay for it again.
+
 ## Tasks
 
 ### Must Have (Critical Path — clear the gate)

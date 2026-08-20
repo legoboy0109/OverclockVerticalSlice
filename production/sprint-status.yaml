@@ -26,7 +26,12 @@ goal: "Wire the completed art into the board, run the iso-legibility + swing-bac
 start: "2026-08-19"
 end: "2026-09-02"
 generated: "2026-08-19"
-updated: "2026-08-19"  # s5-04 session opened; day-1 gate satisfied
+updated: "2026-08-19"  # s5-01+s5-02 done; ASSET-008..011 shipped (roster art complete)
+# ⚠ MID-SPRINT SCOPE ACCEPTED 2026-08-19 (~1 day): the four missing entity assets
+# (Sniper, Economy Outpost, Defensive Structure, Research Lab) plus the structure
+# one-tile footprint fix. Surfaced by the user during the s5-04 session. Recorded
+# trade + recommended descope (s5-09 + s5-10, 1.0d of nice-to-haves) is in
+# production/sprints/sprint-5.md § Mid-sprint scope accepted — retro action 3.
 # QA plan: production/qa/qa-plan-sprint-5-2026-08-19.md (2026-08-19).
 # Story files authored for s5-01/s5-02 only — the other eight are verification,
 # decision or process work and intentionally have no story file.
@@ -178,6 +183,8 @@ stories:
     file: "design/assets/specs/vs-entities-assets.md"
     priority: nice-to-have
     status: backlog
+    # ⚠ GREW 2026-08-19: five structures now owe a damaged tier, not two. Recommended
+    # for descope (see the sprint file's mid-sprint scope record).
     owner: ""
     estimate_days: 0.5
     blocker: ""

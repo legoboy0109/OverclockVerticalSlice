@@ -61,10 +61,10 @@ ART = os.path.join(ROOT, "assets", "art")
 # (subdir, rush filename, mask filename) -- one mask per asset+facing, hue-agnostic
 TARGETS = [
     ("units", f"unit_{a}_rush_{f}_idle_01.png", f"unit_{a}_{f}_idle_01_glow.png")
-    for a in ("scout", "trooper", "heavy") for f in ("e", "w")
+    for a in ("scout", "trooper", "heavy", "sniper") for f in ("e", "w")
 ] + [
     ("structures", f"struct_{n}_rush_idle.png", f"struct_{n}_idle_glow.png")
-    for n in ("hq", "production_outpost")
+    for n in ("hq", "production_outpost", "economy_outpost", "defensive_structure", "research_lab")
 ]
 
 

@@ -462,18 +462,47 @@ func test_entities_at_grid_extremes_place_without_error() -> void:
 
 
 func test_unshipped_type_resolves_a_path_that_does_not_exist_rather_than_blank() -> void:
-	# Arrange — Sniper, Defensive Structure, Economy Outpost and Research Lab have
-	# NO shipped art as of 2026-08-19. The contract is that this is an explicit,
-	# detectable miss, never a silently blank sprite.
-	var sniper := _make_unit(1, 0, Vector2i.ZERO, UnitTypes.SNIPER)
+	# Arrange — every VS type has shipped art as of 2026-08-19, so this uses a
+	# FABRICATED type rather than naming a real one. That is deliberate: an earlier
+	# version asserted "Sniper has no art", which silently became false the moment
+	# the art landed. The contract under test is the mechanism — an unknown type
+	# yields a well-formed path with no file behind it, which EntitySpriteFeed turns
+	# into a push_error plus a loud placeholder, never a silently blank sprite.
+	var phantom_type := UnitTypeDef.new()
+	phantom_type.display_name = "Phantom Walker"
+	var phantom := _make_unit(1, 0, Vector2i.ZERO, phantom_type)
 
 	# Act
-	var path := EntitySpriteCatalog.texture_path(sniper, Factions.RUSH, "e")
+	var path := EntitySpriteCatalog.texture_path(phantom, Factions.RUSH, "e")
 
-	# Assert — a well-formed path that simply has no file behind it, which is what
-	# EntitySpriteFeed._texture_for turns into a push_error + magenta placeholder.
-	assert_str(path).is_equal("res://assets/art/units/unit_sniper_rush_e_idle_01.png")
+	# Assert
+	assert_str(path).is_equal("res://assets/art/units/unit_phantom_walker_rush_e_idle_01.png")
 	assert_bool(ResourceLoader.exists(path)).is_false()
+
+
+func test_every_vs_type_now_has_shipped_art() -> void:
+	# Arrange — the coverage guard that replaces the old "Sniper is missing" test.
+	# All four previously-unshipped types landed 2026-08-19; this fails loudly if a
+	# roster addition ever outruns the art again.
+	var entities: Array[EntityState] = [
+		_make_unit(1, 0, Vector2i(0, 0), UnitTypes.SCOUT),
+		_make_unit(2, 0, Vector2i(1, 0), UnitTypes.TROOPER),
+		_make_unit(3, 0, Vector2i(2, 0), UnitTypes.HEAVY),
+		_make_unit(4, 0, Vector2i(3, 0), UnitTypes.SNIPER),
+		_make_structure(5, 0, Vector2i(4, 0), StructureTypes.HQ),
+		_make_structure(6, 0, Vector2i(5, 0), StructureTypes.PRODUCTION_OUTPOST),
+		_make_structure(7, 0, Vector2i(6, 0), StructureTypes.ECONOMY_OUTPOST),
+		_make_structure(8, 0, Vector2i(7, 0), StructureTypes.DEFENSIVE_STRUCTURE),
+		_make_structure(9, 0, Vector2i(8, 0), StructureTypes.RESEARCH_LAB),
+	]
+
+	# Act / Assert — idle and destroyed, in every faction hue.
+	for entity: EntityState in entities:
+		for faction: FactionDef in [Factions.RUSH, Factions.BOOM, Factions.NEUTRAL]:
+			var idle: String = EntitySpriteCatalog.texture_path(entity, faction, "e")
+			assert_bool(ResourceLoader.exists(idle)).override_failure_message(
+				"missing art: %s" % idle
+			).is_true()
 
 
 func test_pick_regions_are_authored_from_sprite_bounds_back_to_front() -> void:

@@ -467,3 +467,111 @@ breaks for Cover). No glow/hue. Shares the terrain-variant-kit atlas with Plain.
    (Scout lean/locomotion + Heavy weapon-mount are the risk cases).
 4. **Atlas budget** — HQ + Heavy are the 2048²-ceiling pressure points; decide 2048² vs 4096
    escalation once author-res is fixed (§8.7 rule 4).
+
+---
+
+## ASSET-008 — Sniper (`unit_sniper`)
+
+| Field | Value |
+|-------|-------|
+| Category | Unit (infantry, directional) |
+| Dimensions | **~78px on-screen HEIGHT** — the tallest infantry; ships h=156 @2×. Sized by height: §3.1 places it opposite the Scout on the posture axis, and that ratio is the primary thumbnail read |
+| Format | PNG 8-bit+alpha; lossless; mipmaps off |
+| Naming | `unit_sniper_[faction]_[facing]_[state]_[frame].png` |
+| Facings | `e` authored, `w` = h-flip; `n`→`e`, `s`→`w` |
+| Hue variants | 3 (rush / boom / neutral) — accent recolor from the rush master |
+
+**Visual Description:** Tall, vertical, planted — built to anchor (§3.1). Narrowest footprint of
+the roster, thin slab torso, narrow shoulders, long thin braced legs. A **single dominant linear
+protrusion** — a rail cannon barrel — is the confirming detail, running the full height of the
+silhouette. Unit armour `#6E7C99` (§ rule 5: actors light, stage dark), accent blocks on chest and
+pauldrons only.
+
+**Art-Bible Anchors:** §3.1 (posture axis, Scout↔Sniper collision resolution), §5.1 (chunky
+infantry proportions), §5.4, §8.4. *§5.2 Mass-Distribution-Bias deferred — hue-only per VS scope.*
+
+**Generation Prompt:** see `generation-prompts.md` → *ASSET-008 · Sniper — APPROVED*.
+
+**States (§8.5):** idle ✅ · destroyed ✅ (derived) · move/attack/hit are **renderer transforms**,
+no textures owed (S5-06).
+
+**Flags:** the raw generation landed at luma 0.253 against the roster's 0.355 — the same
+"units must be lighter than the stage" defect the infantry session found. Value-corrected in post.
+
+---
+
+## ASSET-009 — Economy Outpost (`struct_economy_outpost`)
+
+| Field | Value |
+|-------|-------|
+| Category | Structure (static, non-directional) |
+| Dimensions | **One-tile footprint**; ships w=256 @2× of the 128px tile |
+| Format | PNG 8-bit+alpha; lossless; mipmaps off |
+| Naming | `struct_economy_outpost_[faction]_[state].png` |
+| Facings | N/A (static) |
+| Hue variants | 3 — re-hue, same geometry |
+
+**Visual Description:** §3.2's passive income node — **small footprint, low and wide, horizontal
+emphasis**, with open collector forms. Realised as angled intake vanes tilted up from the roof of a
+single low monolithic mass. Quiet, productive, unglamorous; the least dramatic silhouette on the
+board, which is the point.
+
+**Art-Bible Anchors:** §3.2 (Economy Outpost row + the Scout anti-collision guardrail — base-plate
+grammar is what keeps this low-wide form from reading as a Scout), §4.1, §6.2.
+
+**Generation Prompt:** see `generation-prompts.md` → *ASSET-009*.
+
+**States (§8.5):** idle ✅ · destroyed ✅ (derived) · damaged tier not authored (S5-10).
+
+---
+
+## ASSET-010 — Defensive Structure (`struct_defensive_structure`)
+
+| Field | Value |
+|-------|-------|
+| Category | Structure (static, non-directional) |
+| Dimensions | **One-tile footprint**; ships w=256 @2× |
+| Format | PNG 8-bit+alpha; lossless; mipmaps off |
+| Naming | `struct_defensive_structure_[faction]_[state].png` |
+| Facings | N/A (static) |
+| Hue variants | 3 — re-hue, same geometry |
+
+**Visual Description:** §3.2's turret / bulwark — **compact, thick, symmetrical, with a single
+dominant elevated hardpoint breaking the top**. Braced, hostile, guarded. It is the only structure
+that reads as *armed*, which is the whole silhouette job: this is the one a player must recognise
+before walking into its range (attack 4, range 2, counterattacks).
+
+**Art-Bible Anchors:** §3.2 (Defensive Structure row), §4.1, §6.2.
+
+**Generation Prompt:** see `generation-prompts.md` → *ASSET-010*.
+
+**States (§8.5):** idle ✅ · destroyed ✅ (derived) · damaged tier not authored (S5-10).
+
+---
+
+## ASSET-011 — Research Lab (`struct_research_lab`)
+
+| Field | Value |
+|-------|-------|
+| Category | Structure (static, non-directional) |
+| Dimensions | **One-tile base footprint**, tall mast overhanging vertically; ships w=256 @2× |
+| Format | PNG 8-bit+alpha; lossless; mipmaps off |
+| Naming | `struct_research_lab_[faction]_[state].png` |
+| Facings | N/A (static) |
+| Hue variants | 3 — re-hue, same geometry |
+
+**Visual Description:** §3.2's tech node — **a tall-thin vertical mast on a small base, the most
+delicate structure silhouette**. Cerebral, fragile-valuable; it should look like the thing you
+regret losing rather than the thing you fight over.
+
+> **Anti-collision (§3.2):** the Lab's tall-thin mast is the one silhouette that could echo the
+> Sniper's vertical barrel. The firewall is the **base-plate + tile-filling footprint** — the Lab is
+> grounded and static, the Sniper floats within its tile with margin. Verified in grayscale at board
+> scale alongside the full roster.
+
+**Art-Bible Anchors:** §3.2 (Research Lab row + the Sniper anti-collision guardrail), §4.1, §6.2.
+
+**Generation Prompt:** see `generation-prompts.md` → *ASSET-011*. ⚠ This is the one asset whose
+NOUN differs from the shared structure scaffold — see generation-prompts rule 12.
+
+**States (§8.5):** idle ✅ · destroyed ✅ (derived) · damaged tier not authored (S5-10).

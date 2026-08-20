@@ -93,6 +93,33 @@ and trim that vanish at 256px on the board.
     actual bar (§3.5 identifiable by outline alone) and it is the test that caught both the value
     defect and the role-separation failure.
 
+### ⛔ Structure-specific rule (2026-08-19, roster-completion session)
+
+12. **The scaffold's NOUN outranks every shape adjective — including for structures.**
+    Rule 9 established this for units; it applies just as hard here, and cost five wasted
+    rounds. The shared structure scaffold opens `dark sci-fi bunker building`, and `bunker`
+    means *squat and monolithic*. The Research Lab's whole §3.2 identity is "tall-thin
+    vertical mast on a small base, the most delicate structure silhouette" — the exact
+    opposite. Five rounds of `very tall`, `very thin`, `slender`, `needle-like`,
+    `delicate`, `much taller than wide` never moved it off a squat box. Swapping the noun to
+    `dark sci-fi antenna tower structure` produced the correct silhouette **on the next
+    round**. If an asset's silhouette fights the scaffold's noun, change the noun; do not
+    stack adjectives against it.
+
+13. **`solar array` / `collector panels` summons a city block**, the same way `factory` does
+    (rule 6) — 3/3 districts, compounds and rooftop farms. The Economy Outpost's §3.2
+    "collector forms" read had to be expressed as part of one monolithic mass —
+    `angled intake vanes tilted up from its roof` on a `bunker` — rather than as an array.
+
+14. **Value-correct in post; do not chase it in the prompt.** Three of four new assets landed
+    outside their family's luma band (structures at 0.25–0.29 against the shipped 0.215; the
+    Sniper at 0.253 against the roster's 0.355 — the "actors light, stage dark" defect from
+    rule 5, hit again). A single measured multiply per asset fixed all four exactly. The
+    measurement that matters is **opaque-only mean luma**: measuring with transparent pixels
+    included compares alpha coverage, not value, and will mislead you.
+
+---
+
 ---
 
 ## ASSET-001 · HQ (structure) — 3 hue variants
@@ -306,3 +333,45 @@ the shape words swapped** — and describing the aperture without naming what co
 > Cover ships as **two composited layers** at build time — a flush floor cell + a **Y-sorted prop**
 > for the raised mass (§8.8). Generate the cover mass with clear space around its base so it can be
 > cut from the floor cleanly.
+
+---
+
+## ASSET-008..011 · Roster completion (2026-08-19) — ⚑⚑ APPROVED RECIPES
+
+These four were the last VS types with no art. They were generated after the S5-01 renderer
+made their absence visible on the board as magenta placeholders.
+
+**Shared structure scaffold** (unchanged from the Production Outpost round-5 recipe — only the
+shape words differ, per rule 12's warning about the noun):
+
+`isometric game asset sprite of a dark sci-fi <NOUN>, entire structure fully visible in frame, wide empty margin around the building, small centered building viewed from a distance, plain flat solid light grey studio background, dark navy-black #1B2130 matte plating, <SHAPE>, standing on a wide flat rectilinear base-plate, the base-plate is dark navy-black matte metal, stacked rectangular blocks, thin hot orange-red #FF5A2E emissive trim lines along the structure edges and base-plate rim, flat cel shading, flat color fields, 2:1 dimetric projection, large simple panel shapes, hard clean edges, minimalist geometric design, TRON aesthetic, single isolated game building asset, nothing else in the image`
+
+### ⚑⚑ ASSET-009 · Economy Outpost — APPROVED (seed 2305656182, r5_c2)
+- **NOUN:** `bunker building`
+- **SHAPE:** `a single very low wide flat armored bunker, one solid monolithic mass much wider than tall, two large flat angled intake vanes tilted up from its roof like wedge fins, very low flat profile, strong horizontal emphasis`
+- **Extra negatives:** `tall spire, tower, antenna, mast, gun, turret, cannon, open roof, city district, solar farm, panel farm, trees, grass, green ground, stairs, ramp`
+- 5 rounds. See rule 13.
+
+### ⚑⚑ ASSET-010 · Defensive Structure — APPROVED (seed 3933358768, r2_c2)
+- **NOUN:** `bunker building`
+- **SHAPE:** `a compact thick squat symmetrical armored bunker with heavy sloped walls, one single large gun turret mounted on the centre of the roof, the turret has one long thick cannon barrel pointing outward and upward, the turret clearly breaks the flat roofline, braced and fortified`
+- **Extra negatives:** `tall central spire, tower, antenna, mast, collector panel, solar panel, dish, unarmed building, plain roof, empty roof`
+- 2 rounds — the cleanest convergence of the four. The `bunker` noun and this silhouette agree.
+
+### ⚑⚑ ASSET-011 · Research Lab — APPROVED (seed 4290549827, r6_c2)
+- **NOUN:** ⚠ `antenna tower structure` — **NOT `bunker`**. This is rule 12's whole point.
+- **SHAPE:** `one single very tall very thin vertical mast rising high above a very small square base, slender needle-like silhouette, much taller than it is wide, delicate and lightweight, thin narrow profile`
+- **Extra negatives:** `gun, turret, cannon, collector panel, solar panel, wide building, bulky mass, white building, walled compound, blueprint, linework, sketch lines, trees, grass, green ground, squat, bunker, compound, multiple buildings`
+- 6 rounds, 5 of them wasted fighting the noun.
+
+### ⚑⚑ ASSET-008 · Sniper — APPROVED (seed 1599279841, r6_c1)
+Uses the infantry scaffold with one addition to the head — `grey arms and grey legs and grey
+helmet` — because early rounds went near-fully orange, and rule 7 forbids fixing that by
+negating the hue. Accent coverage is bounded on the positive side instead.
+
+- **SHAPE:** `very tall and very narrow armored body, thin slab torso, narrow shoulders, long thin legs planted and braced, tall thin vertical silhouette much taller than wide, one single extremely long thin rail cannon barrel mounted vertically on its back rising far above its head, the barrel is the tallest part of the silhouette`
+- **Extra negatives:** the infantry set plus `two figures, pair, front view and back view, bulky mech, mecha, heavy armor, wide shoulders, broad chest, squat build, orange legs, orange arms, orange helmet`
+- **⚠ "figure" reintroduces model sheets.** R1 used `tall narrow upright figure` and produced
+  3/3 two-view turnarounds despite the full anti-sheet negative block. Dropping the word and
+  describing the body plan directly (`very tall and very narrow armored body`) fixed it — the
+  same shape as rule 6's `soldier` → `armored sentinel` finding.

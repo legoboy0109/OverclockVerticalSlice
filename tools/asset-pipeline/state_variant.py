@@ -64,14 +64,14 @@ def destroyed(path: str, sat_keep: float = SAT_KEEP,
 
 def _targets() -> list[tuple[str, str]]:
     jobs = []
-    for a in ("scout", "trooper", "heavy"):
+    for a in ("scout", "trooper", "heavy", "sniper"):
         for hue in ("rush", "boom", "neutral"):
             for f in ("e", "w"):
                 jobs.append((os.path.join(ART, "units",
                                           f"unit_{a}_{hue}_{f}_idle_01.png"),
                              os.path.join(ART, "units",
                                           f"unit_{a}_{hue}_{f}_destroyed_01.png")))
-    for n in ("hq", "production_outpost"):
+    for n in ("hq", "production_outpost", "economy_outpost", "defensive_structure", "research_lab"):
         for hue in ("rush", "boom", "neutral"):
             jobs.append((os.path.join(ART, "structures", f"struct_{n}_{hue}_idle.png"),
                          os.path.join(ART, "structures",

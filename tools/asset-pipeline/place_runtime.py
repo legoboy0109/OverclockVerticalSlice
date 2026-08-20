@@ -61,11 +61,21 @@ UNITS = (
     ("scout",   "w", 148),
     ("trooper", "h", 130),
     ("heavy",   "h", 148),
+    # Sniper pins HEIGHT and ships the tallest of the roster: §3.1 puts it at the
+    # opposite end of the posture axis from the Scout (tall+vertical vs low+horizontal),
+    # and that ratio is the primary thumbnail read.
+    ("sniper",  "h", 156),
 )
 # (runtime name, master stem, axis, shipped px)
 STRUCTURES = (
     ("hq",                 "hq_%s_r7_c2_clean.png",      "w", 512),
     ("production_outpost", "outpost_%s_r5_c3_clean.png", "w", 384),
+    # The three one-tile structures ship at 256 = 2x the 128px on-screen tile width.
+    # The renderer fits every structure to one tile anyway
+    # (EntitySpriteFeed.STRUCTURE_TARGET_WIDTH_PX), so this only sets source detail.
+    ("economy_outpost",    "econ_%s_r5_c2_clean.png",    "w", 256),
+    ("defensive_structure","def_%s_r2_c2_clean.png",     "w", 256),
+    ("research_lab",       "lab_%s_r6_c2_clean.png",     "w", 256),
 )
 
 

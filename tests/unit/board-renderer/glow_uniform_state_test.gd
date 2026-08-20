@@ -52,6 +52,23 @@ func test_unknown_faction_falls_back_to_the_neutral_hue() -> void:
 
 # --- AC-2: mask paths carry no faction token --------------------------------
 
+func test_every_vs_type_now_has_a_shipped_glow_mask() -> void:
+	# Arrange / Act / Assert — masks are hue-agnostic, so one per unit facing and one
+	# per structure covers the roster. Coverage guard for the 2026-08-19 art round.
+	for archetype: String in ["scout", "trooper", "heavy", "sniper"]:
+		for facing: String in ["e", "w"]:
+			var path := "res://assets/art/units/unit_%s_%s_idle_01_glow.png" % [archetype, facing]
+			assert_bool(ResourceLoader.exists(path)).override_failure_message(
+				"missing glow mask: %s" % path
+			).is_true()
+	for name: String in ["hq", "production_outpost", "economy_outpost",
+			"defensive_structure", "research_lab"]:
+		var path := "res://assets/art/structures/struct_%s_idle_glow.png" % name
+		assert_bool(ResourceLoader.exists(path)).override_failure_message(
+			"missing glow mask: %s" % path
+		).is_true()
+
+
 func test_unit_mask_path_drops_the_faction_token() -> void:
 	# Arrange
 	var scout := _make_unit(1, 0, Vector2i.ZERO, UnitTypes.SCOUT)
@@ -357,10 +374,14 @@ func test_destroyed_actor_loses_its_glow_overlay_entirely() -> void:
 
 
 func test_unshipped_type_gets_no_glow_overlay_rather_than_a_broken_one() -> void:
-	# Arrange — Sniper has no art and no mask.
+	# Arrange — a FABRICATED type, not a real one: every VS type has shipped art and
+	# a mask as of 2026-08-19, and naming a real type here silently rots the moment
+	# its art lands (which is exactly what happened to the Sniper).
 	var renderer := _make_renderer()
 	var feed := EntitySpriteFeed.new(renderer, FACTIONS)
-	var entities: Array[EntityState] = [_make_unit(1, 0, Vector2i(1, 1), UnitTypes.SNIPER)]
+	var phantom_type := UnitTypeDef.new()
+	phantom_type.display_name = "Phantom Walker"
+	var entities: Array[EntityState] = [_make_unit(1, 0, Vector2i(1, 1), phantom_type)]
 
 	# Act
 	feed.sync(entities)
