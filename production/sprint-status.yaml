@@ -22,12 +22,15 @@ start: "2026-08-19"
 end: "2026-09-02"
 generated: "2026-08-19"
 updated: "2026-08-19"
+# QA plan: production/qa/qa-plan-sprint-5-2026-08-19.md (2026-08-19).
+# Story files authored for s5-01/s5-02 only — the other eight are verification,
+# decision or process work and intentionally have no story file.
 
 stories:
   # --- Must Have (critical path to clear the gate) ---
   - id: "s5-01"
     name: "Entity sprite renderer + live entities()→board feed (carryover S4-03)"
-    file: "design/assets/specs/vs-entities-assets.md"
+    file: "production/epics/board-renderer/story-006-entity-sprite-feed.md"
     priority: must-have
     status: ready-for-dev
     owner: ""
@@ -42,7 +45,7 @@ stories:
 
   - id: "s5-02"
     name: "Glow shader wiring — §8.9 emission mask + per-instance uniforms"
-    file: "design/art/art-bible.md"
+    file: "production/epics/board-renderer/story-007-glow-shader-wiring.md"
     priority: must-have
     status: backlog
     owner: ""
