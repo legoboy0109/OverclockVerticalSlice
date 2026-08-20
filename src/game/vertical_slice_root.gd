@@ -189,6 +189,13 @@ func _build_board_and_camera() -> void:
 		_state.per_player[LOCAL_PLAYER].faction,
 		_state.per_player[AI_PLAYER].faction,
 	])
+	# Glow breathes while an actor's owner still has AP, and clamps at 0 AP — art
+	# bible §8.5/§2.6 read literally. ★ Whether a PER-UNIT read (a unit that has
+	# already acted clamps while its idle squadmates breathe) is the better Pillar-1
+	# signal is an open legibility question for S5-03; swapping it is a one-line
+	# change here (see EntitySpriteFeed.actionable_predicate).
+	_feed.actionable_predicate = func(entity: EntityState) -> bool:
+		return _reader.current_ap(entity.owner) > 0
 
 	_camera = Camera2D.new()
 	add_child(_camera)
@@ -493,6 +500,18 @@ func _drive_ai_turns() -> void:
 ## keys reuse the built-in [code]ui_*[/code] actions; the letter/Tab keys are read
 ## by keycode. Dedicated, rebindable InputMap actions for all of these are a
 ## follow-up (the cai-005 InputMap-wiring tech-debt).
+## Advances the board glow clock (§8.9). One shared-uniform write per frame for the
+## whole board — the per-actor uniforms are event-driven and untouched here.
+##
+## The glow deliberately keeps breathing during the AI's paced turn: it signals
+## "this actor still has AP", which stays true and legible while the opponent moves.
+## [member EntitySpriteFeed.glow_paused] is the hook if a real pause screen ever
+## needs it frozen.
+func _process(delta: float) -> void:
+	if _feed != null:
+		_feed.advance_glow(delta)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"ui_up"):
 		move_cursor(Vector2i.UP)

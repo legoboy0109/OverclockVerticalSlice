@@ -60,11 +60,22 @@ stories:
     name: "Glow shader wiring — §8.9 emission mask + per-instance uniforms"
     file: "production/epics/board-renderer/story-007-glow-shader-wiring.md"
     priority: must-have
-    status: ready-for-dev
-    owner: ""
+    status: done
+    owner: "godot-shader-specialist"
     estimate_days: 1
     blocker: ""
-    completed: ""
+    completed: "2026-08-19"
+    # DONE 2026-08-19. Suite 909/909. Windowed: shader compiles, breathe cycles at
+    # ~3.0s, emission reads as neon trim not a blown panel. Per-instance hue PROVEN
+    # to render (Rush saturation rose; Boom gained G+B with R unchanged) — this also
+    # clears the S4-01 windowed residual the art bible listed as owed.
+    # ⚠ Windowed-only bug: emission was in rgb AND alpha, and Godot additive blend is
+    # dst + rgb*a, so it was SQUARED — glow all but invisible (54 changed px/frame).
+    # The headless suite passed throughout: instance uniforms STORE headlessly whether
+    # or not they RENDER. Alpha is pinned to 1.0 now.
+    # ★ S5-03 decides: breathe/clamp currently follows the OWNING PLAYER's AP pool
+    # (spec-literal, dims a whole army at once) vs per-unit actionability (more
+    # tactical info, one-line change via EntitySpriteFeed.actionable_predicate).
     # UNBLOCKED 2026-08-19 — s5-01 done. Sprites are one Sprite2D per entity under
     # OccupantLayer, owned by EntitySpriteFeed; that is where the ShaderMaterial goes.
     # 8 glow masks already shipped (one per asset+facing, hue-agnostic). Drives
@@ -76,11 +87,15 @@ stories:
     name: "★ Iso-legibility playtest (Pillar-3 hard gate) (carryover S4-04)"
     file: "production/playtests/iso-legibility-playtest-2026-07-29.md"
     priority: must-have
-    status: backlog
+    status: ready-for-dev
     owner: ""
     estimate_days: 0.5
-    blocker: "s5-01, s5-02"
+    blocker: ""
     completed: ""
+    # UNBLOCKED 2026-08-19 — s5-01 + s5-02 both done; the board now renders real art
+    # with glow live, which is what this gate judges. Protocol:
+    # production/playtests/iso-legibility-playtest-2026-07-29.md
+    # ★ Also carries the s5-02 open question (army-wide vs per-unit AP glow read).
 
   - id: "s5-04"
     name: "★ Swing-back playtest — tempo/comeback, pivot-aware (carryover S4-05)"

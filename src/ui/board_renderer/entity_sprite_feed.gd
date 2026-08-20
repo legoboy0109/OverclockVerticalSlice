@@ -82,6 +82,54 @@ var _positions: Dictionary = {}
 ## reused so a board full of unshipped types cannot bake one image per entity.
 var _placeholder: ImageTexture = null
 
+## The ONE [ShaderMaterial] every actor's glow overlay shares (Story 007, §8.7
+## rule 2). Per-actor variation lives entirely in instance uniforms, never in a
+## second material — a material per actor would break batching.
+var _glow_material: ShaderMaterial = null
+
+## Live [code]entity_id -> glow overlay Sprite2D[/code] map. Each overlay is a CHILD
+## of that entity's base sprite, so it inherits position and draws immediately after
+## its parent (i.e. on top) with no depth bookkeeping of its own.
+var _glow_nodes: Dictionary = {}
+
+## Live [code]entity_id -> last written glow state[/code], as
+## [code][mode, pulse_base][/code]. The gate that makes glow EVENT-DRIVEN (AC-6):
+## instance uniforms are rewritten only when an actor's state actually changes, not
+## every frame. The time-varying part (breathe, flare decay) is the shader's job,
+## fed by the single shared [member _state_timer] write.
+var _glow_states: Dictionary = {}
+
+## Live [code]entity_id -> has_attacked as last seen[/code]. The edge detector that
+## fires the attack flare — see [method _refresh_glow] for why the flare is derived
+## from state rather than from an event.
+var _attacked: Dictionary = {}
+
+## The presentation clock driving breathe and flare decay, advanced by
+## [method advance_glow]. [b]Never the shader TIME built-in[/b] — glow must freeze
+## with the turn-based pause (§8.9, AC-5).
+var _state_timer: float = 0.0
+
+## When true, [method advance_glow] ignores its delta and the glow holds its current
+## frame. Set from whatever owns pause; the feed itself has no opinion on when the
+## game is paused.
+var glow_paused: bool = false
+
+## Optional predicate [code]func(entity: EntityState) -> bool[/code] answering "can
+## this actor still act?", which selects breathe vs the AP-spent clamp. Injected
+## rather than read off [GameState] so the feed stays testable with plain data.
+##
+## [b]Default (null) breathes everything[/b] — an un-wired board glows rather than
+## sitting inert, which fails visibly instead of looking like a dead shader.
+##
+## ★ [b]Design read, flagged for S5-03:[/b] the vertical slice wires this to the
+## OWNING PLAYER's AP pool, which is art-bible §8.5/§2.6 read literally ("AP
+## available" / "0 AP") and dims a player's whole army at once. The alternative —
+## per-unit actionability, so a unit that has already moved and attacked clamps
+## while its idle squadmates keep breathing — carries strictly more tactical
+## information and is a one-line change here. Which one reads better is a legibility
+## call for the S5-03 session, not an implementation detail.
+var actionable_predicate: Callable = Callable()
+
 
 ## Binds this feed to [param board]'s occupant layer, with [param factions] indexed
 ## by player. Adds nothing to the tree until the first [method sync].
@@ -134,6 +182,7 @@ func _refresh_entity(entity: EntityState) -> void:
 	var size: Vector2 = texture.get_size()
 	sprite.offset = Vector2(-size.x * 0.5, -size.y)
 	sprite.position = _board.grid_to_screen(entity.position)
+	_refresh_glow(entity, sprite, facing)
 
 
 ## Derives, stores and returns [param entity]'s current facing. An entity seen for
@@ -199,6 +248,9 @@ func _free_departed(seen: Dictionary) -> void:
 		_nodes.erase(id)
 		_facings.erase(id)
 		_positions.erase(id)
+		_glow_nodes.erase(id)   # freed with its parent sprite below
+		_glow_states.erase(id)
+		_attacked.erase(id)
 		if is_instance_valid(sprite):
 			if sprite.get_parent() != null:
 				sprite.get_parent().remove_child(sprite)
@@ -265,6 +317,149 @@ func _paint_order(a: int, b: int) -> bool:
 	if sprite_a.position.y == sprite_b.position.y:
 		return a < b
 	return sprite_a.position.y < sprite_b.position.y
+
+
+## Advances the glow clock by [param delta] seconds, driving breathe and flare
+## decay. Call once per frame from whatever owns the board.
+##
+## [b]This is the ONLY per-frame glow work[/b] — one shared-uniform write for the
+## whole board. Per-actor uniforms are touched only when an actor's state changes
+## ([method _refresh_glow]), which is what AC-6's "event-driven, not polled" means.
+##
+## A no-op while [member glow_paused], so the glow freezes with the turn-based pause
+## rather than drifting on underneath it (AC-5).
+func advance_glow(delta: float) -> void:
+	if glow_paused or _glow_material == null:
+		return
+	_state_timer += delta
+	_glow_material.set_shader_parameter(&"state_timer", _state_timer)
+
+
+## The current glow clock, in seconds. Exposed for tests and for anything that needs
+## to stamp a flare start.
+func state_timer() -> float:
+	return _state_timer
+
+
+## Triggers the attack flare on [param entity_id] — peak emission decaying back onto
+## the actor's resting level (§2.2). A no-op for an entity with no glow overlay.
+##
+## S5-06 owns the body lunge this is meant to sync with; this story owns only the
+## light.
+func flare(entity_id: int) -> void:
+	var glow: Sprite2D = _glow_nodes.get(entity_id)
+	if glow == null or not is_instance_valid(glow):
+		return
+	glow.set_instance_shader_parameter(&"glow_mode", float(EntityGlow.Mode.FLARE))
+	glow.set_instance_shader_parameter(&"flare_start", _state_timer)
+	# Record the flare so the next ordinary state refresh does not treat the actor as
+	# unchanged and leave it stuck flaring.
+	_glow_states[entity_id] = [EntityGlow.Mode.FLARE, _resting_pulse_for(entity_id)]
+
+
+## Creates or updates [param entity]'s additive glow overlay as a child of
+## [param sprite].
+##
+## The overlay is a separate [Sprite2D] rather than a second texture on the base
+## sprite because a shared [ShaderMaterial] cannot carry a per-actor mask — Godot's
+## instance uniforms are scalars and vectors, never samplers. Making the mask the
+## overlay's own [code]TEXTURE[/code] keeps one material for the whole board, which
+## is the batch-safe requirement, and uses only the shader surface the S4-01 spike
+## already confirmed on this engine.
+##
+## Uniforms are written only when the actor's [enum EntityGlow.Mode] or resting level
+## actually changes (AC-6).
+func _refresh_glow(entity: EntityState, sprite: Sprite2D, facing: String) -> void:
+	var id: int = entity.entity_id
+	var path: String = EntityGlow.mask_path(entity, facing)
+	if path.is_empty() or not ResourceLoader.exists(path):
+		# No mask authored for this actor (every unshipped type, and every destroyed
+		# state — a dead actor emits nothing, so it is never owed one). Not an error.
+		_remove_glow(id)
+		return
+	if _glow_material == null:
+		_glow_material = EntityGlow.make_material()
+		_glow_material.set_shader_parameter(&"state_timer", _state_timer)
+
+	var glow: Sprite2D = _glow_nodes.get(id)
+	if glow == null:
+		glow = Sprite2D.new()
+		glow.name = "Glow"
+		glow.centered = false
+		glow.material = _glow_material
+		_glow_nodes[id] = glow
+		sprite.add_child(glow)
+		# Hue never changes for a live entity, so it is written once here rather than
+		# on every refresh.
+		glow.set_instance_shader_parameter(
+			&"faction_hue", EntityGlow.hue_for(_faction_for(entity.owner))
+		)
+	# The mask matches its sprite pixel-for-pixel, so it shares the parent's local
+	# frame exactly — same offset, no scale of its own (the parent already carries
+	# the 2x-art scale).
+	glow.texture = load(path)
+	glow.offset = sprite.offset
+
+	var destroyed: bool = EntitySpriteCatalog.state_token(entity) == EntitySpriteCatalog.STATE_DESTROYED
+	var pulse_base: float = EntityGlow.resting_pulse(destroyed)
+	glow.set_instance_shader_parameter(&"pulse_base", pulse_base)
+
+	# An attack is detected from STATE, not from an event: no event carries an
+	# attacker id (ADR-0004's schema has no attack event at all), and adding one is a
+	# core-layer change well outside this story. Watching has_attacked flip false->true
+	# catches the AI's attacks as well as the player's, which a call-site hook in the
+	# slice would not. The start-of-turn reset flips it true->false and correctly does
+	# not flare.
+	var attacked: bool = _has_attacked(entity)
+	var attacked_before: bool = _attacked.get(id, false)
+	_attacked[id] = attacked
+	if attacked and not attacked_before and not destroyed:
+		glow.set_instance_shader_parameter(&"glow_mode", float(EntityGlow.Mode.FLARE))
+		glow.set_instance_shader_parameter(&"flare_start", _state_timer)
+		_glow_states[id] = [EntityGlow.Mode.FLARE, pulse_base]
+		return
+
+	var mode: EntityGlow.Mode = EntityGlow.mode_for(destroyed, _is_actionable(entity))
+	var previous: Array = _glow_states.get(id, [])
+	if previous.size() == 2 and previous[0] == mode and is_equal_approx(previous[1], pulse_base):
+		return   # unchanged — do not touch the uniforms (AC-6)
+	glow.set_instance_shader_parameter(&"glow_mode", float(mode))
+	_glow_states[id] = [mode, pulse_base]
+
+
+## Whether [param entity] has attacked this turn. Both [UnitState] and
+## [StructureState] carry the flag; a bare [EntityState] never attacks.
+static func _has_attacked(entity: EntityState) -> bool:
+	if entity is UnitState:
+		return (entity as UnitState).has_attacked
+	if entity is StructureState:
+		return (entity as StructureState).has_attacked
+	return false
+
+
+## Whether [param entity] can still act, per [member actionable_predicate]. An
+## unwired predicate breathes (see that member's doc comment).
+func _is_actionable(entity: EntityState) -> bool:
+	if not actionable_predicate.is_valid():
+		return true
+	return bool(actionable_predicate.call(entity))
+
+
+## The resting level currently recorded for [param entity_id], or the live default.
+func _resting_pulse_for(entity_id: int) -> float:
+	var previous: Array = _glow_states.get(entity_id, [])
+	return previous[1] if previous.size() == 2 else EntityGlow.SPENT_CLAMP
+
+
+## Drops [param entity_id]'s glow overlay, for an actor that has no authored mask.
+func _remove_glow(entity_id: int) -> void:
+	var glow: Sprite2D = _glow_nodes.get(entity_id)
+	_glow_nodes.erase(entity_id)
+	_glow_states.erase(entity_id)
+	if glow != null and is_instance_valid(glow):
+		if glow.get_parent() != null:
+			glow.get_parent().remove_child(glow)
+		glow.queue_free()
 
 
 ## Builds (once) and returns the shared missing-art placeholder — a flat magenta

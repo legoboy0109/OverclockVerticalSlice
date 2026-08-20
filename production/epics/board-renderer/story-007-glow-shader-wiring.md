@@ -1,12 +1,12 @@
 # Story 007: Glow Shader Wiring — §8.9 Emission Mask & Per-Instance Uniforms
 
 > **Epic**: Board Renderer
-> **Status**: Not Started
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: Visual/Feel *(secondary: Integration — the state→uniform mapping is automatable)*
 > **Estimate**: M (1 day)
 > **Manifest Version**: 2026-07-27
-> **Last Updated**: 2026-08-19
+> **Last Updated**: 2026-08-19 (implemented)
 
 ## Context
 
@@ -79,7 +79,32 @@ windowed under S5-07.*
 
 ## Test Evidence
 
-*(to be filled by /story-done — unit test result + windowed screenshot)*
+**Automated** — `tests/unit/board-renderer/glow_uniform_state_test.gd`, 20 tests, all passing.
+Full suite **909/909, 0 failures, 0 orphans**.
+
+**Windowed, in the live rasteriser** (this also clears the S4-01 residual the art bible listed as
+owed — the headless dummy rasteriser cannot render):
+
+| Check | Result |
+|---|---|
+| Shader compiles in the real rasteriser | ✅ clean boot, zero shader errors |
+| Emission reads as neon trim, not a blown-out panel (AC-7) | ✅ rims luminous, panel shapes intact |
+| Breathe actually animates | ✅ measured cycle over ~3.0s, matching `BREATHE_PERIOD_SEC` |
+| Per-instance `faction_hue` renders (AC-1) | ✅ see below |
+
+**Proof that per-instance uniforms render, not just store.** The base art is already
+faction-coloured, so "the glow looks orange" proves nothing on its own — if instance uniforms were
+silently ignored the shader would add its **white** default and *desaturate* the trim. Measured
+against the pre-glow frame:
+- Rush trim mean saturation **rose** 0.252 → 0.261 — orange is being added, not white.
+- Boom trim gained green and blue with red **exactly unchanged** (0.144603 → 0.144603) — i.e. cyan.
+
+Two actors sharing one material therefore render different hues, which is AC-1's whole point.
+
+**Measured Pillar-1 delta, for S5-03 to judge** (crop-mean luminance above the pre-glow baseline):
+breathe peak ≈ **+0.0027**, breathe trough ≈ **+0.0008**, AP-spent clamp ≈ **+0.00025**. The clamp
+is roughly 3× dimmer than even the breathe trough. Whether that reads *across the board at playing
+distance* is a human call, not a measurable one — that is exactly S5-03's job.
 
 ## Dependencies
 
@@ -88,4 +113,52 @@ windowed under S5-07.*
 
 ## Completion Notes
 
-*(to be filled on completion)*
+**All 7 acceptance criteria met.**
+
+### Shipped
+- `src/ui/board_renderer/glow.gdshader` — additive canvas_item shader. Shape only; every number
+  arrives as a uniform.
+- `src/ui/board_renderer/entity_glow.gd` — the single source of truth for the curve, the locked hue
+  anchors, and mask-path resolution. `pulse_for()` mirrors the shader arithmetic so the envelope is
+  assertable headlessly.
+- `entity_sprite_feed.gd` — one glow overlay child per actor, sharing one `ShaderMaterial`.
+- `vertical_slice_root.gd` — advances the glow clock; wires the AP predicate.
+
+### Design decision: the glow overlay is a child sprite, not a second texture
+Godot instance uniforms are scalars and vectors, **never samplers**, so a shared `ShaderMaterial`
+cannot carry a per-actor mask. Making the mask the overlay's own `TEXTURE` keeps exactly one
+material for the whole board — the batch-safe §8.7-rule-2 requirement — and uses only the shader
+surface the S4-01 spike already confirmed. Cost is one extra node per actor, which is nothing at
+this scale. A single-node `CanvasTexture` variant (mask in the specular slot) would work but adds
+unverified engine surface for no practical gain.
+
+### Bug found and fixed during windowed verification
+The first implementation put the emission in **both** rgb and alpha. Godot's additive canvas blend
+is `dst + src.rgb * src.a`, so that **squared** the emission and the glow all but vanished —
+measured at **54 changed pixels across the entire frame**. Alpha is now pinned to 1.0 with the mask
+zeroing rgb outside the trim, and the shader carries a comment saying so, because it looks like a
+harmless line to "tidy".
+
+This is worth noting as process: the headless suite passed the whole time. Instance uniforms
+*store* correctly headlessly whether or not they *render*, which is precisely the false-positive the
+art bible's "engine-verify before this becomes load-bearing" warning existed to catch.
+
+### Attack flare is derived from state, not from an event
+No event carries an attacker id — ADR-0004's schema has no attack event at all, and adding one is a
+core-layer change well outside this story. The feed watches `has_attacked` flip false→true, which
+catches **the AI's attacks as well as the player's**; a hook at the slice's own call site would only
+have caught the player's. The start-of-turn reset flips it the other way and correctly does not
+flare.
+
+### ★ Open design question for S5-03
+Breathe-vs-clamp is currently driven by the **owning player's AP pool** — art bible §8.5/§2.6 read
+literally ("AP available" / "0 AP"), which dims a player's whole army at once. The alternative is
+**per-unit actionability**: a unit that has already moved and attacked clamps while its idle
+squadmates keep breathing. That carries strictly more tactical information and is a one-line change
+(`EntitySpriteFeed.actionable_predicate`). Left spec-literal rather than silently improved on;
+S5-03 should decide.
+
+### Not owed here
+`BREATHE_PERIOD_SEC` (3.0) and `FLARE_DECAY_SEC` (0.45) are unpinned feel values. The flare in
+particular should be tuned **together with S5-06's attack lunge**, since the light is meant to sync
+to the motion.
