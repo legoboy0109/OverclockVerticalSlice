@@ -552,3 +552,62 @@ func test_overlay_cells_land_on_the_same_anchors_as_floor_cells() -> void:
 		assert_int(renderer.overlay_layer.get_cell_source_id(cell)).is_equal(
 			BoardRenderer.OverlayClass.MOVE_IN_CAP
 		)
+
+
+# --- Structure footprint (user decision 2026-08-19) --------------------------
+
+func test_structures_are_fitted_to_their_one_tile_footprint() -> void:
+	# Arrange — the asset spec authored HQ/Outpost to a "multi-tile footprint" the
+	# simulation never gave them: a structure occupies exactly one tile. Drawn at the
+	# unit scale the HQ landed two tiles wide, and a silhouette covering tiles it does
+	# not occupy misleads about blocking and range.
+	var renderer := _make_renderer()
+	var feed := _make_feed(renderer)
+	var entities: Array[EntityState] = [
+		_make_structure(1, 0, Vector2i(2, 2), StructureTypes.HQ),
+		_make_structure(2, 1, Vector2i(5, 5), StructureTypes.PRODUCTION_OUTPOST),
+	]
+
+	# Act
+	feed.sync(entities)
+
+	# Assert — both land at exactly one tile wide, despite shipping at different
+	# source sizes (512 vs 384).
+	for sprite: Node in _entity_sprites(renderer):
+		var drawn_width: float = (sprite as Sprite2D).texture.get_size().x * (sprite as Sprite2D).scale.x
+		assert_float(drawn_width).is_equal_approx(BoardRenderer.TILE_WIDTH_PX, 0.01)
+		# Uniform scale — a non-uniform fit would distort the art.
+		assert_float((sprite as Sprite2D).scale.x).is_equal_approx((sprite as Sprite2D).scale.y, 0.0001)
+
+
+func test_units_keep_the_flat_two_times_art_scale() -> void:
+	# Arrange — only structures are footprint-fitted; units ship authored to their
+	# on-screen size already (art-bible §8.3).
+	var renderer := _make_renderer()
+	var feed := _make_feed(renderer)
+	var entities: Array[EntityState] = [_make_unit(1, 0, Vector2i(1, 1), UnitTypes.SCOUT)]
+
+	# Act
+	feed.sync(entities)
+
+	# Assert
+	assert_float((_entity_sprites(renderer)[0] as Sprite2D).scale.x).is_equal_approx(0.5, 0.0001)
+
+
+func test_structure_pivot_stays_at_ground_contact_after_the_footprint_fit() -> void:
+	# Arrange — the fit changes scale, and offset is applied pre-scale, so this is the
+	# regression that would catch the two going out of step.
+	var renderer := _make_renderer()
+	var feed := _make_feed(renderer)
+	var tile := Vector2i(4, 6)
+	var entities: Array[EntityState] = [_make_structure(1, 0, tile, StructureTypes.HQ)]
+
+	# Act
+	feed.sync(entities)
+
+	# Assert
+	var sprite: Sprite2D = _entity_sprites(renderer)[0]
+	var top_left: Vector2 = sprite.position + sprite.offset * sprite.scale
+	var drawn: Vector2 = sprite.texture.get_size() * sprite.scale
+	var bottom_centre := Vector2(top_left.x + drawn.x * 0.5, top_left.y + drawn.y)
+	assert_vector(bottom_centre).is_equal_approx(renderer.grid_to_screen(tile), Vector2(0.01, 0.01))

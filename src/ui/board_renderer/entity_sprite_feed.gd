@@ -54,6 +54,28 @@ const MISSING_TEXTURE_TINT: Color = Color(1.0, 0.0, 1.0, 0.9)
 ## pre-[constant TEXTURE_SCALE]), so it draws at roughly one on-screen tile.
 const MISSING_TEXTURE_SIZE: Vector2i = Vector2i(128, 128)
 
+## Target on-screen WIDTH for a structure sprite, in pixels.
+##
+## [b]Why structures are not simply drawn at [constant TEXTURE_SCALE] like units.[/b]
+## The asset spec authored HQ and Production Outpost to a "multi-tile footprint"
+## (`vs-entities-assets.md` ASSET-001/ASSET-003), but the simulation gives every
+## structure exactly ONE tile — [member StructureState.position] is a single
+## [Vector2i] and `base-production.md` says it occupies "the tile", singular. Drawn
+## at the unit scale, the HQ's 512px art lands at 256px: two tiles wide and nearly
+## four tall, standing on one 128x64 tile.
+##
+## That is not just ugly — a silhouette covering tiles it does not occupy misleads
+## about what is blocked and what is in range. Structures are therefore fitted to
+## their real footprint: uniform scale, driven by width, so a one-tile object looks
+## like a one-tile object. Height is left to follow, which keeps the HQ around two
+## tiles tall and still reading as a landmark (vertical overhang is expected in this
+## projection — ADR-0013 §2/art-bible §8.8 — horizontal overhang is what misleads).
+##
+## [b]Decision: user, 2026-08-19[/b], after seeing it in the S5-04 session. The
+## alternative — giving structures a genuine multi-tile footprint in [GridState] —
+## was considered and rejected as an ADR-0005-scale change mid-sprint.
+const STRUCTURE_TARGET_WIDTH_PX: float = BoardRenderer.TILE_WIDTH_PX
+
 ## The board whose [member BoardRenderer.occupant_layer] this feed populates, and
 ## whose [method BoardRenderer.grid_to_screen] is the one placement anchor.
 var _board: BoardRenderer
@@ -173,13 +195,16 @@ func _refresh_entity(entity: EntityState) -> void:
 		# bottom-centre; Sprite2D's default centring anchors the bbox CENTRE,
 		# which art-bible §8.4 forbids as a Y-sort key.
 		sprite.centered = false
-		sprite.scale = Vector2.ONE / TEXTURE_SCALE
 		# NO z_index is ever set here — see the class doc comment.
 		_nodes[id] = sprite
 		_board.occupant_layer.add_child(sprite)
 	var texture: Texture2D = _texture_for(entity, facing)
 	sprite.texture = texture
 	var size: Vector2 = texture.get_size()
+	# Scale is re-derived per texture, not set once at creation: sprites are trimmed
+	# to their opaque bounds so every asset differs, and a structure is fitted to its
+	# one-tile footprint rather than to the flat 2x art scale.
+	sprite.scale = _scale_for(entity, size)
 	sprite.offset = Vector2(-size.x * 0.5, -size.y)
 	sprite.position = _board.grid_to_screen(entity.position)
 	_refresh_glow(entity, sprite, facing)
@@ -425,6 +450,18 @@ func _refresh_glow(entity: EntityState, sprite: Sprite2D, facing: String) -> voi
 		return   # unchanged — do not touch the uniforms (AC-6)
 	glow.set_instance_shader_parameter(&"glow_mode", float(mode))
 	_glow_states[id] = [mode, pulse_base]
+
+
+## The draw scale for [param entity] whose texture measures [param texture_size].
+##
+## Units draw at the flat art scale — textures ship at [constant TEXTURE_SCALE] their
+## on-screen size (art-bible §8.3). Structures are instead fitted to
+## [constant STRUCTURE_TARGET_WIDTH_PX], their real one-tile footprint; see that
+## constant for why the two differ.
+static func _scale_for(entity: EntityState, texture_size: Vector2) -> Vector2:
+	if entity is StructureState and texture_size.x > 0.0:
+		return Vector2.ONE * (STRUCTURE_TARGET_WIDTH_PX / texture_size.x)
+	return Vector2.ONE / TEXTURE_SCALE
 
 
 ## Whether [param entity] has attacked this turn. Both [UnitState] and
