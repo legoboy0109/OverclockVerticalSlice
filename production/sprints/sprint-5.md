@@ -16,6 +16,37 @@ PROCEED / PIVOT / KILL verdict that clears the Pre-Production → Production gat
 > on the current build **today** — start it on day 1, in parallel, rather than
 > queueing it behind the renderer. That queueing is what caused both rollovers.
 
+## ⛔ Process commitments (from the Sprint 4 retrospective)
+
+Source: `production/retrospectives/retro-sprint-4-2026-08-19.md`. These are carried here, not left
+in a retro file, because **Sprint 3's equivalent fix died exactly that way** — it was written down,
+faithfully implemented as a *label*, and the human-gated track still scored 0/4.
+
+### ★ Day-1 gate: this sprint is not started until S5-04 has a booked session
+
+**S5-04 needs no art and runs on the current build today.** It has been unblocked for three sprints
+and has never run. A priority label has now failed three times, so the commitment is a **calendar
+slot, not a flag**:
+
+- [ ] **A specific play session for S5-04 is booked before any S5-01 code is written.** Owner: user
+      (game-designer). Deadline: **S5 day 1–2.**
+
+If that box is unchecked, the most likely outcome of Sprint 5 is a third rollover of the same two
+playtests — which are the only things standing between this project and its PROCEED/PIVOT/KILL
+verdict.
+
+### Standing rules for this sprint
+
+| # | Commitment | Owner | Status |
+|---|---|---|---|
+| 2 | **Never plan above stated capacity.** Sprint 4 planned 10.5 days against 8 available (+31%) before any disruption | producer | ✅ **applied** — Sprint 5 is planned at exactly 8.0 (must 5 + should 3) |
+| 3 | **Mid-sprint design changes go to a post-gate backlog.** Accepting one mid-sprint requires an explicit re-plan that **descopes something and records the trade**. Sprint 4 absorbed ~4 days of economy-pivot work without cutting anything, taking effective load to ~81% over capacity | producer + creative-director | ⬜ enforce at kickoff |
+| 4 | **Estimate human-gated art as an approval loop, not a production task.** Model decision rounds; treat calendar cost as distinct from effort cost. S4-02 was ~3 days of effort spread over 21 calendar days | art-director + producer | ⬜ applies to S5-10 and any art follow-up |
+
+> **Why #3 has teeth this sprint:** the AP+Credits pivot is live and *unvalidated by play*. The
+> temptation to keep tuning it before the verdict is exactly the failure mode — S5-04 is what tells
+> us whether it works. **Freeze design changes until the verdict lands.**
+
 ## Tasks
 
 ### Must Have (Critical Path — clear the gate)
@@ -63,6 +94,10 @@ PROCEED / PIVOT / KILL verdict that clears the Pre-Production → Production gat
 - S5-07 needs a **windowed** (not headless) session — the dummy rasteriser cannot render.
 
 ## Definition of Done for this Sprint
+- [ ] **Day-1 gate honoured** — an S5-04 session was booked *before* S5-01 code began
+      (retro action 1; this is the commitment Sprint 4 failed)
+- [ ] **No unplanned work absorbed silently** — anything accepted mid-sprint has a recorded
+      descope trade (retro action 3)
 - [ ] All Must Have tasks completed
 - [ ] All tasks pass acceptance criteria
 - [ ] QA plan exists (`production/qa/qa-plan-sprint-5.md`)

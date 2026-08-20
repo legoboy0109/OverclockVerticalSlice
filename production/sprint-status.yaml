@@ -15,6 +15,11 @@
 # 08-19, after the window. Close-out table is in production/sprints/sprint-5.md.
 # ★ = human-gated. The validation half has now rolled over TWICE — S5-04 is
 # art-independent and must start day 1 in parallel, not queued behind the renderer.
+#
+# ⛔ DAY-1 GATE (Sprint 4 retro, action 1): this sprint is not started until a specific
+# play session for s5-04 is BOOKED. A priority label has failed three sprints running.
+# Process commitments: production/sprints/sprint-5.md § Process commitments.
+# Retro: production/retrospectives/retro-sprint-4-2026-08-19.md
 
 sprint: 5
 goal: "Wire the completed art into the board, run the iso-legibility + swing-back playtests, and land the PROCEED/PIVOT/KILL verdict that clears the Pre-Production → Production gate."
@@ -78,6 +83,8 @@ stories:
     completed: ""
     # ART-INDEPENDENT and runnable on the current build TODAY. Start day 1 in parallel.
     # Queueing this behind the renderer is what caused both prior rollovers.
+    # ⛔ DAY-1 GATE: a specific session must be BOOKED before any s5-01 code is written
+    # (Sprint 4 retro action 1). Unblocked for three sprints; never run.
 
   - id: "s5-05"
     name: "VS REPORT + PROCEED/PIVOT/KILL verdict + re-run /gate-check (carryover S4-06)"
