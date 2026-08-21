@@ -172,16 +172,37 @@ stories:
 
   - id: "s5-08"
     name: "Colourblind ownership decision — non-hue markers or documented accept"
-    file: "design/art/art-bible.md"
+    file: "production/qa/evidence/s5-08-colourblind-ownership-brief.md"
     priority: should-have
-    status: backlog
-    owner: ""
+    status: ready-for-dev
+    owner: "user (design-direction call)"
     estimate_days: 1
-    blocker: "s5-03"
+    blocker: ""
     completed: ""
-    # Rush vs Boom grayscale separation MEASURED at Δ34/255 (13%) after the luma-scaling
-    # fix — reads on structures, marginal on units. Ceiling: the locked anchors differ by
-    # only 45 luma, so no remap improves it without breaking the S4-01 palette lock.
+    # ★ OPTIONS PREPPED 2026-08-20 — brief written, awaiting the user's call. Four options
+    # (A accept+correct docs / B markers roster-wide / C markers on structures only /
+    # D raise structure accent coverage), recommendation D+A with C as post-gate debt.
+    # ⚠ UNBLOCKED from s5-03: the questions turned out to be measurable, not dependent on
+    # the legibility session's subjective read.
+    # ⚠⚠ THE SPRINT NOTE'S FRAMING WAS BACKWARDS. It said "Δ34/255 (13%) — reads on
+    # structures, marginal on units." Δ34 is the PEAK on the brightest trim pixels, not
+    # what a player perceives. Measured on the shipped art:
+    #   * UNITS ARE THE STRONG CASE — 26-82% accent coverage, ΔE 60-76 under deuteranopia.
+    #   * STRUCTURES ARE THE WEAK CASE — 5-22% coverage. Defensive Structure is ΔE 2.3
+    #     whole-silhouette WITH NORMAL COLOUR VISION: Rush and Boom look near-identical to
+    #     EVERYONE. That is an ownership bug, not an accessibility one.
+    #   * Rush #FF5A2E vs Boom #22C7F0 is a near-ideal dichromat pair (blue-vs-yellow axis,
+    #     the axis red-green colourblind players retain). Passes deutan/protan/tritan — so
+    #     the Standard-tier commitment IS met, just not for the reason the docs give.
+    #   * Full desaturation destroys ownership entirely (ΔE 0.3-5.9). Monochromacy is
+    #     ~1 in 30,000 vs ~1 in 12 men for red-green.
+    # ⚠⚠ DOC DRIFT FOUND (this brief IS the re-audit accessibility-requirements.md line 190
+    # scheduled for "once UI implementation exists"): all 26 Rush/Boom sprite pairs are
+    # PIXEL-IDENTICAL in silhouette. §5.2 Mass Distribution Bias — cited as LOCKED, as the
+    # "mandatory non-hue backup", and as the reason the accessibility audit marks faction
+    # identity Resolved — was never implemented. §8.7's "distinct art, not palette-swaps"
+    # is also false: they are exactly palette-swaps. Three docs need correcting whichever
+    # option is chosen.
 
   # --- Nice to Have ---
   - id: "s5-09"
