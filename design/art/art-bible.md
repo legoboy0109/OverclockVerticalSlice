@@ -334,6 +334,40 @@ A later production phase (out of VS scope, its own production structure) is expe
 
 This is the mechanism that satisfies §1 Principle 2 ("Ownership Legible Beyond Hue") for units specifically. A human body can't be "raked" or "swept" the way a vehicle chassis can — so faction identity on infantry lives in **kit and armor-profile silhouette**, not chassis geometry. The trick that makes this body-plan-agnostic: define each faction's marker as a **mass-distribution principle**, not a humanoid-specific shape, so the same principle re-renders correctly on a tank or mech later without redesign.
 
+> ### ⚠ IMPLEMENTATION STATUS — 2026-08-20 (S5-08): NOT BUILT IN THE VERTICAL SLICE
+>
+> **Mass Distribution Bias is a Full Vision commitment, not a shipped fact.** The principle below
+> stands as the standing requirement; this note records an accepted, measured deviation for the
+> Vertical Slice so the document stops asserting something the art does not do.
+>
+> **What shipped instead.** All **26** Rush/Boom sprite pairs in `assets/art/` are **pixel-identical
+> in silhouette** — faction variants are produced by recolouring one approved master per entity
+> (`tools/asset-pipeline/recolor.py`), so the shapes cannot differ. VS faction identity is carried
+> by **hue alone**.
+>
+> **Why that was accepted.** Measurement on the shipped art (see
+> `production/qa/evidence/s5-08-colourblind-ownership-brief.md`) found the locked hue pair does the
+> job on its own for every colourblind mode the project's Standard accessibility tier names. Rush
+> `#FF5A2E` against Boom `#22C7F0` sits on the blue-versus-yellow axis — the axis red-green
+> colourblind vision *retains* — separating at **ΔE 60–76 (deuteranopia)** and **ΔE 27–45
+> (protanopia, the hardest case)** across the unit roster. Tritanopia is the mode where the pair
+> separates *best*. The S4-01 hue lock therefore satisfies P2's practical intent, though its stated
+> justification at the time was stage-tile contrast, not dichromat separation.
+>
+> **What is genuinely lost, and is now Full Vision debt.**
+> - **Full desaturation destroys ownership completely** (ΔE 0.3–7.2). §5.3's claim that the backup
+>   "survives colorblind vision and full desaturation" is false as shipped — there is no shape
+>   channel to survive on. This affects monochromacy (~1 in 30,000, against ~1 in 12 men for
+>   red-green deficiency) and grayscale broadcast capture.
+> - **The Neutral-vs-Neutral mirror has no ownership signal at all**, exactly as §4.2 predicted it
+>   would if the markers did not exist. The VS ships Rush-vs-Boom, so this does not bite yet.
+> - **There is no redundancy** if the hue channel is ever degraded by lighting, calibration or
+>   glow-blur — which is the risk §4.4's table names.
+>
+> **Do not mark P2 resolved on the strength of this note.** It records why shipping without the
+> marker was acceptable *for the Vertical Slice*, not that the marker is unnecessary. Any faction
+> beyond Rush/Boom, any Neutral mirror, and any monochromacy claim re-opens it.
+
 **Named principle: Mass Distribution Bias.** Every faction's non-hue marker is where a unit's *silhouette mass sits* relative to its direction of travel/action — forward-light vs. rear/body-loaded vs. neutral-even. This single continuum is expressible on any body plan: a soldier's kit-load silhouette, a vehicle's hull/turret-mass balance, a mech's chassis/backpack silhouette. Faction hue (§4.2) still carries primary ownership; Mass Distribution Bias is the secondary, hue-independent confirmation, exactly as §1 P2 requires.
 
 | Faction | Named kit family | Infantry silhouette trait (now) | Vehicle/mech translation (later) | Emotional/thematic tie |
@@ -351,7 +385,7 @@ This is the mechanism that satisfies §1 Principle 2 ("Ownership Legible Beyond 
 No single signal is allowed to be a single point of failure (colorblind vision, grayscale broadcast capture, fog/overlay occlusion all must degrade gracefully). Signals are layered in priority order, each independently sufficient to *narrow* the read even if a higher-priority signal is unavailable:
 
 1. **Hue (fastest, primary — §4.2).** Rush orange-red vs. Boom cyan-azure vs. Neutral achromatic. Read first, in normal play, at full color fidelity.
-2. **Mass Distribution Bias (§5.2 — the mandatory non-hue backup).** Forward-light (Rush) vs. rear-loaded (Boom) vs. neutral-even (Neutral) silhouette. Survives colorblind vision and full desaturation, since it is a shape fact, not a color fact.
+2. **Mass Distribution Bias (§5.2 — the mandatory non-hue backup).** Forward-light (Rush) vs. rear-loaded (Boom) vs. neutral-even (Neutral) silhouette. Survives colorblind vision and full desaturation, since it is a shape fact, not a color fact. **⚠ NOT BUILT IN THE VS (2026-08-20, S5-08)** — faction silhouettes are pixel-identical, so this layer does not exist yet and ownership does **not** survive full desaturation. The three named dichromacies are nonetheless covered by hue alone (measured). See §5.2's implementation-status note before relying on this row.
 3. **Board position / turn-context convention.** Standard tactics-genre spatial conventions (each player's forces read from their controlled structures/deploy zone outward; the active player's units carry the §2.1 breathe/idle glow, the opponent's do not during the player's own planning phase) provide a tertiary, situational confirmation — useful exactly when a unit is small, partially occluded, or mid-animation and neither hue nor silhouette is fully legible in that instant.
 
 Because hue and Mass Distribution Bias are independent channels (one chromatic, one geometric), losing either one in isolation (colorblindness removes reliable hue distinction; heavy occlusion or extreme zoom-out can blur silhouette nuance) still leaves a working signal from the other, with position/context as a fallback tiebreak. No degraded viewing condition is allowed to make faction identity fully unreadable — this is the same discipline §4.4's colorblind-safety table applies to the palette, extended to the shape layer.
@@ -543,6 +577,14 @@ Target < 500 draw calls; the 14×16 board itself lands at **~5–10** (one `Tile
 2. **A unique `ShaderMaterial` resource per unit breaks 2D batching** — vary per-unit glow (hue, pulse phase, AP-state) via `instance_shader_parameters` on **one shared material**, not per-unit material resources.
 3. Faction variants must not force a texture-swap batch break — keep them within shared atlas pages.
 4. Atlas page ceiling **2048×2048**; 4096 is an escalation, not a default.
+
+**⚠ Faction-art reconciliation — SUPERSEDED IN PRACTICE (2026-08-20, S5-08).** The paragraph below
+describes the intended pipeline; the VS did **not** build it. Faction variants are recolours of one
+master per entity, so unit art is **1×** a single-faction estimate, not ~3×, and all faction variants
+of a role share one silhouette and one atlas footprint. The draw-call and VRAM conclusions still
+hold (they were the conservative case). What does *not* hold is "distinct art, not palette-swaps" —
+they are exactly palette-swaps. See §5.2's implementation-status note. Read the following as the
+Full Vision target.
 
 **Faction-art reconciliation (LOCKED — accept distinct-silhouette art):** §5.2 makes faction identity a *silhouette* difference (Mass Distribution Bias: Rush forward-light / Boom rear-loaded / Neutral even), so faction units are **distinct art, not palette-swaps of one base** — 3 faction silhouettes × 4 roles. Unit art is therefore ~**3×** a single-faction estimate and spans a few atlas pages rather than one. This is accepted as the cost of the strongest Pillar-4 visual expression; it stays comfortably under the draw-call budget (all faction variants share one shader/material via per-instance uniforms), and Lossless VRAM footprint at single-digit 2048² page counts is trivial on any modern GPU. The shader still applies each faction's single hue + drives glow-state; it does not collapse the silhouettes. *(If art scope later needs cutting, the fallback is §5's rejected option — shared silhouette + a small per-faction emblem marker — which would require a §5 edit.)*
 
