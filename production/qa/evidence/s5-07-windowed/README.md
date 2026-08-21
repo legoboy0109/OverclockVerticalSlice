@@ -14,7 +14,30 @@ Re-run with: `./redot tools/CaptureEvidence.tscn --disable-vsync`
 
 ---
 
-## ★★ FINDING 1 — the Pillar-1 "can this actor still act?" read barely exists
+> ## ✅ BOTH FINDINGS FIXED 2026-08-21 — re-captured and re-measured
+>
+> The user authorised the darken-multiply fix (Story 010). Frames in this directory
+> are the **post-fix** capture; the before-numbers below are retained because they
+> are what justified the change.
+>
+> | | before | after | |
+> |---|---:|---:|---|
+> | Pillar-1, breathe **peak** | 12.5/255 | **24.4/255** | on the actors, not a 2% rim |
+> | Pillar-1, breathe **trough** | 3.3/255 | **20.1/255** | **6.1× — the big one** |
+> | Pixels carrying the signal | 4,904 | **18,709** | 3.8× the area |
+> | Destroyed dimming | 8.9/255 (3.5%) | **40.2/255 (35%)** | 4.5× |
+>
+> **The most important change is not the peak number — it is that the signal stopped
+> depending on breathe phase.** Before, it swung 12.5 → 3.3 across every 3-second
+> cycle, so whether a player could tell a spent unit from a live one depended on
+> *when they happened to look*. Now it is 24.4 → 20.1: essentially phase-independent.
+>
+> Verified visually as well as numerically: silhouettes still read against the
+> terrain (the §3.5/P3 constraint held), faction hue still reads, and the ownership
+> decals stay at full brightness because they live on their own layer — ownership
+> does not dim with the actor.
+
+## ★★ FINDING 1 (FIXED) — the Pillar-1 "can this actor still act?" read barely existed
 
 **Measured on the neon trim, best case to worst case:**
 
@@ -37,7 +60,7 @@ trough, where the difference is ~1%.
 
 Frames: `02-glow-ap-available-peak` · `02b-glow-ap-available-trough` · `03-glow-ap-spent`
 
-## ★★ FINDING 2 — a destroyed unit does not visibly power down
+## ★★ FINDING 2 (FIXED) — a destroyed unit did not visibly power down
 
 §8.5 locks the destroyed beat as a "power-down/collapse". Measured on the dying
 unit's own pixels:
@@ -71,9 +94,17 @@ down* — desaturate and darken the whole actor — rather than only ceasing to 
 That is the genre-standard "greyed out = has acted" read, and it is an art-direction
 change, not a code tweak.
 
-> **Deliberately NOT fixed here.** The sprint's process commitment freezes design
-> changes until the PROCEED/PIVOT/KILL verdict lands (Sprint 4 retro action 3). This
-> is filed as input for **S5-03** and **S5-05**, which is where it belongs.
+> **FIXED 2026-08-21 on the user's instruction** (Story 010), after being filed as a
+> freeze item. The trade this incurred against the freeze is recorded in
+> `production/sprints/sprint-5.md`, per retro action 3.
+>
+> **The fix is bounded by the palette, not by taste.** `SPENT_BODY_TINT` is 0.72
+> because art bible §3.5/P3 makes units deliberately lighter than the stage — armour
+> luma 123 against a max-elevation tile at 63. Darkening past ~0.72 collapses that
+> margin below ~25 and units start sinking into the terrain, which is exactly the
+> "units vanish into the board" defect the S4-02 art pass already had to fix once.
+> A unit test now asserts that floor against the locked palette values, so a future
+> retune cannot quietly re-create it.
 
 ---
 
@@ -115,6 +146,22 @@ flagging it as a legibility question for the human session.
   in `.agent/notes.md`. One of them produced a frame that looked exactly like an
   S5-06 rendering bug and was not. If a future capture disagrees with a green headless
   suite, suspect the harness first and verify with a headless probe.
+
+## ★ NEW open question for S5-03 — this fix gave an old question teeth
+
+Story 007 flagged that breathe-vs-clamp follows the **owning player's AP pool**
+(spec-literal per §8.5/§2.6), which dims that player's *whole army at once*, versus
+**per-unit actionability**, where a unit that has already acted dims while its
+squadmates stay live. With the old 3–12/255 signal the choice barely mattered.
+
+**It matters now.** At 20–24/255 across every actor, running a player out of AP
+visibly darkens their entire army and both structures in one step — a dramatic
+whole-board change at every end of turn. That may read as excellent turn-boundary
+feedback, or as the board going flat. It is a one-line change either way
+(`EntitySpriteFeed.actionable_predicate`), and it is a human call.
+
+Structures dim along with units under the current predicate. Worth deciding whether
+that is right: a structure is not "spent" in the sense a unit is.
 
 ## Sign-off
 

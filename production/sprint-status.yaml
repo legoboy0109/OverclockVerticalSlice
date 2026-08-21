@@ -184,8 +184,16 @@ stories:
     #    Retuning BREATHE_MIN/SPENT_CLAMP will not move the ceiling. The fix is to
     #    MULTIPLY the sprite down (desaturate/darken) for spent+destroyed — genre
     #    standard, and an ART-DIRECTION change, not a code tweak.
-    #    ⛔ NOT FIXED — design freeze until the verdict (retro action 3). Input to
-    #    s5-03 and s5-05.
+    #    ✅ FIXED 2026-08-21 on the user's instruction — Story 010 (body state tint).
+    #    AP-spent and destroyed now MULTIPLY the body down instead of only ceasing to
+    #    emit. Re-measured in the real rasteriser: Pillar-1 peak 12.5 -> 24.4/255,
+    #    TROUGH 3.3 -> 20.1/255 (6.1x), signal area 4904 -> 18709 px, destroyed
+    #    dimming 8.9 -> 40.2/255 (4.5x). ★ The headline is that the read stopped
+    #    depending on breathe phase: it swung 12.5->3.3 every 3s cycle before, now
+    #    24.4->20.1. Trade recorded in sprint-5.md per retro action 3.
+    #    ★ SPENT_BODY_TINT 0.72 is a PALETTE FLOOR, not taste: below ~0.72 units sink
+    #    into the max-elevation tile and break §1 outline-alone — the same defect S4-02
+    #    already fixed once. A test asserts it against the locked values.
     # ✅ PASSES: glow reads as neon trim not a blown panel; move lean / attack lunge /
     #    hit recoil all visible; ownership decals render and stay legible THROUGH an
     #    overlay; marker policy ALL vs STRUCTURES_ONLY differs by 4316 px; shader

@@ -288,6 +288,11 @@ func _refresh_entity(entity: EntityState) -> void:
 	sprite.position = _board.grid_to_screen(entity.position) + _offset_for(id)
 	_last_entity[id] = entity
 	_refresh_marker(entity)
+	# Applied HERE and not inside _refresh_glow: that method early-returns for any
+	# actor with no authored emission mask, and the body read must not depend on
+	# whether a mask happens to exist. It is also gated behind an unchanged-state
+	# check in there, which would skip it.
+	_refresh_body_tint(entity, sprite)
 	_refresh_glow(entity, sprite, facing)
 
 
@@ -465,6 +470,50 @@ func flare(entity_id: int) -> void:
 	_glow_states[entity_id] = [EntityGlow.Mode.FLARE, _resting_pulse_for(entity_id)]
 
 
+# --- Body state tint (Story 010 / S5-07 finding) -----------------------------
+
+## Sets [param sprite]'s body multiply for [param entity]'s current state — full
+## brightness while it can act, [constant EntityGlow.SPENT_BODY_TINT] once it cannot.
+##
+## [b]This is the state read.[/b] The S5-07 windowed pass measured the glow-only
+## version at 12.5/255 on the trim at its best moment, 3.3/255 at its worst, over
+## 0.67% of the frame — because the emission shader only ADDS light and cannot dim a
+## sprite that is already brightly painted. Multiplying the body moves the same
+## signal onto the whole silhouette; the win is area far more than contrast.
+##
+## A no-op for an actor mid-death-echo: [method power_down] owns the tint from that
+## point on and is tweening it, so an ordinary sync must not stamp over it.
+func _refresh_body_tint(entity: EntityState, sprite: Sprite2D) -> void:
+	if _dying.has(entity.entity_id):
+		return
+	var destroyed: bool = EntitySpriteCatalog.state_token(entity) == EntitySpriteCatalog.STATE_DESTROYED
+	_set_body_tint(sprite, EntityGlow.body_tint_for(destroyed, _is_actionable(entity)))
+
+
+## Writes a grey multiply into [param sprite]'s [member CanvasItem.self_modulate]
+## while [b]preserving its alpha[/b].
+##
+## Two independent things share this property and must not clobber each other: RGB
+## carries the state tint (here), alpha carries the death-echo cross-fade
+## ([method power_down]). Assigning a whole Color would reset whichever one the
+## caller was not thinking about.
+##
+## [b]self_modulate, never modulate[/b]: modulate is inherited by children, so it
+## would drag the glow overlay and the wreck down with the body. The glow already
+## carries its own state via `pulse_base`, and dimming it twice would double-count.
+static func _set_body_tint(sprite: Sprite2D, tint: float) -> void:
+	sprite.self_modulate = Color(tint, tint, tint, sprite.self_modulate.a)
+
+
+## The tween target for [method power_down]'s body darkening. Offset-first argument
+## order, matching [method _set_offset] — [method Tween.tween_method] passes the
+## interpolated value first and the bound id after it.
+func _set_body_tint_for(tint: float, entity_id: int) -> void:
+	var sprite: Sprite2D = _nodes.get(entity_id)
+	if sprite != null and is_instance_valid(sprite):
+		_set_body_tint(sprite, tint)
+
+
 # --- Ownership markers (Story 009 / S5-08) -----------------------------------
 
 ## Creates or repositions [param entity]'s faction ownership decal on
@@ -635,6 +684,16 @@ func power_down(entity_id: int) -> void:
 			EntityTransforms.DEATH_ECHO_SEC * EntityTransforms.DEATH_GLOW_FRACTION
 		)
 
+	# The body DARKENS as it dies, not just fades. Fading alone left a destroyed
+	# actor measurably as bright as a live one (8.9/255, 3.5% — S5-07 finding 2):
+	# ceasing to emit cannot power an actor down while its base art stays fully
+	# painted. Tweened rather than snapped, because this one IS the beat.
+	tween.tween_method(
+		_set_body_tint_for.bind(entity_id),
+		sprite.self_modulate.r, EntityGlow.DESTROYED_BODY_TINT,
+		EntityTransforms.DEATH_ECHO_SEC
+	)
+
 	# self_modulate, never modulate: modulate would drag the glow child down with
 	# the body on the same curve, and the light is supposed to lead.
 	var wreck: Sprite2D = _build_wreck(entity_id, sprite)
@@ -688,7 +747,13 @@ func _build_wreck(entity_id: int, sprite: Sprite2D) -> Sprite2D:
 	wreck.texture = load(path)
 	var size: Vector2 = wreck.texture.get_size()
 	wreck.offset = Vector2(-size.x * 0.5, -size.y)
-	wreck.self_modulate.a = 0.0
+	# Starts transparent (so it can fade IN over the body) and already DARK — the
+	# wreck is the dead thing, and it should never appear at live brightness even
+	# for a frame. Alpha is animated; the rgb multiply is not.
+	wreck.self_modulate = Color(
+		EntityGlow.DESTROYED_BODY_TINT, EntityGlow.DESTROYED_BODY_TINT,
+		EntityGlow.DESTROYED_BODY_TINT, 0.0
+	)
 	# NO z_index here either (ADR-0013 section 2) — it draws after its parent by
 	# virtue of being a child, which is exactly the "on top" this needs.
 	sprite.add_child(wreck)

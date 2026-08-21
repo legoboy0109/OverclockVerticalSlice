@@ -79,6 +79,41 @@ remain the gate and remain human-gated.
 > shared prompt scaffold, not iterating on the design. That failure mode is now written up as
 > generation-prompts.md rule 12 so the next asset does not pay for it again.
 
+## ⚠ Mid-sprint scope accepted 2026-08-21 — recorded trade (retro action 3)
+
+Second such acceptance this sprint. Recording it rather than absorbing it silently, which
+is what retro action 3 exists to force.
+
+**Accepted:** the **body state tint** (Story 010) — making AP-spent and destroyed actors
+multiply down rather than merely stop emitting.
+
+**Why it was accepted despite the design freeze.** The freeze was written to stop the
+economy pivot being re-tuned before the verdict. This is a different case: S5-07's windowed
+captures *measured* a stated pillar's primary visual expression at **12.5/255 at best and
+3.3/255 at worst**, over 0.67% of the frame — i.e. Pillar 1 was effectively not being
+communicated at all. Going into the S5-03 legibility gate with a known-broken Pillar-1 read
+would have made that session judge the wrong build, and the verdict is what the whole
+sprint exists to produce. **User authorised it explicitly.**
+
+**Cost:** ~0.5 day. One constant set, one `self_modulate` write per actor, 8 tests, a
+re-capture and a re-measurement.
+
+**Trade:** absorbed by **S5-07's own estimate**. S5-07 was budgeted at 1.0 day as a
+screenshot-and-sign-off task; the capture harness plus both fixes came in around that,
+because the harness turned out to be reusable rather than one-off. **No further descope is
+required** — S5-09 and S5-10 were already recommended for descope under the 2026-08-19
+trade and remain so.
+
+**What this does NOT change:** the must-have critical path. S5-03, S5-04 and S5-05 remain
+the gate and remain human-gated. No new design work is authorised by this precedent —
+the freeze still holds for anything not backed by a measured defect.
+
+> **For the retro.** Both mid-sprint acceptances this sprint came from *verification work
+> finding real defects*, not from scope drift. That is the system working. The pattern
+> worth noting is that both defects had been invisible for months behind a green headless
+> suite, and both surfaced within hours of building a tool that could actually look at the
+> screen.
+
 ## Tasks
 
 ### Must Have (Critical Path — clear the gate)

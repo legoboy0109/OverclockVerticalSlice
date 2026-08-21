@@ -55,8 +55,43 @@ const BREATHE_MAX: float = 0.85
 ## false urgency. Retune from the S5-03 legibility session, not from taste.
 const BREATHE_PERIOD_SEC: float = 3.0
 
+## Full brightness — an actor with AP available is drawn as authored.
+## See [constant SPENT_BODY_TINT] for why this constant exists at all.
+const LIVE_BODY_TINT: float = 1.0
+
+## [b]The body multiply for an AP-spent actor[/b] — the other half of the state read,
+## added 2026-08-21 after the S5-07 windowed pass measured the glow-only version at
+## 12.5/255 on the trim at its BEST moment and 3.3/255 at its worst, across 0.67% of
+## the frame. See `production/qa/evidence/s5-07-windowed/README.md`.
+##
+## [b]Why the glow alone could never carry this.[/b] The emission shader only ever
+## ADDS light on top of already-bright accent art. Ceasing to emit cannot make an
+## actor look spent while its base sprite stays fully saturated, so the whole
+## available signal was the emission range — small, and confined to a thin rim.
+## Multiplying the body down instead moves the signal onto 100% of the silhouette.
+## The win is mostly AREA, not contrast.
+##
+## [b]0.72 is a floor, not a taste value.[/b] Art bible §3.5/P3 makes units
+## deliberately LIGHTER than the stage — armour `#6E7C99` (luma 123) against a
+## max-elevation tile `#33405A` (luma 63). Darkening past ~0.72 collapses that
+## margin below ~25 and the unit starts sinking into the terrain, which is precisely
+## the "units vanish into the board" defect the S4-02 art pass already had to fix
+## once. Do not lower this without re-checking against the max-elevation tile, and
+## do not assume the terrain palette is fixed — if the stage ever brightens, this
+## floor rises with it.
+const SPENT_BODY_TINT: float = 0.72
+
+## The body multiply reached at the end of §8.5's destroyed beat. Free to go darker
+## than [constant SPENT_BODY_TINT] because a destroyed actor is leaving the board —
+## nothing downstream needs to identify its silhouette against the terrain.
+const DESTROYED_BODY_TINT: float = 0.50
+
 ## The AP-spent clamp (§8.9): visibly present but clearly inert. Not zero — a fully
 ## dark unit reads as destroyed, which is a different state entirely.
+##
+## [b]Retained, and still doing work.[/b] The body multiply above carries the state
+## read now, but the glow clamp is what keeps the two states distinguishable at the
+## TRIM: a spent actor's rim goes quiet while a live one breathes.
 const SPENT_CLAMP: float = 0.08
 
 ## Attack-flare peak (§8.9/§2.2). The only spike in the vocabulary.
@@ -150,6 +185,17 @@ static func mode_for(is_destroyed: bool, is_actionable: bool) -> Mode:
 	if is_destroyed:
 		return Mode.STATIC
 	return Mode.BREATHE if is_actionable else Mode.STATIC
+
+
+## The body multiply an actor should be drawn at, given whether it is destroyed and
+## whether it can still act. The body counterpart to [method mode_for].
+##
+## Death outranks everything, exactly as in [method mode_for] — a destroyed actor
+## takes [constant DESTROYED_BODY_TINT] whether or not its owner still had AP.
+static func body_tint_for(is_destroyed: bool, is_actionable: bool) -> float:
+	if is_destroyed:
+		return DESTROYED_BODY_TINT
+	return LIVE_BODY_TINT if is_actionable else SPENT_BODY_TINT
 
 
 ## [b]Reference implementation of the shader's curve[/b] — mirrors `glow.gdshader`'s
