@@ -197,8 +197,11 @@ faction colour on 5% of its body now gets a full-strength ownership tell.
 **Residual, unchanged:** the *silhouette* form of Mass Distribution Bias is still unbuilt and is
 still Full Vision work. The sprites remain pixel-identical between factions.
 
-**Open for S5-03:** `marker_policy` defaults to ALL; STRUCTURES_ONLY is a knob away if a full board
-of decals reads as clutter.
+**Scope decided 2026-08-21:** `marker_policy` ships as **STRUCTURES_ONLY**. The render comparison
+showed `ALL` putting a decal under every unit's feet, competing with the actors (§3.5) for no
+measured gain — units already separate at ΔE 60–76 under deuteranopia unaided. The decal now sits
+only where the weakness was measured. Accepted consequence: a unit-only read is hue-carried and
+does not survive full desaturation; `ALL` restores the board-wide channel if that is ever needed.
 
 ---
 

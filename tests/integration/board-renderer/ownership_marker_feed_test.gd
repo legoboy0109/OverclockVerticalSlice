@@ -32,6 +32,17 @@ func _make_feed(renderer: BoardRenderer) -> EntitySpriteFeed:
 	return EntitySpriteFeed.new(renderer, FACTIONS)
 
 
+# A feed with the board-wide policy, for the tests that assert decal MECHANICS
+# (placement, texture, parenting, teardown) using units as the convenient fixture.
+# The shipped default is STRUCTURES_ONLY (2026-08-21 user decision), which those
+# tests would otherwise trip over — they are about how a decal behaves, not about
+# which entities get one. Scope itself is covered by the policy tests below.
+func _make_feed_all(renderer: BoardRenderer) -> EntitySpriteFeed:
+	var feed := EntitySpriteFeed.new(renderer, FACTIONS)
+	feed.marker_policy = EntitySpriteFeed.MarkerPolicy.ALL
+	return feed
+
+
 func _make_unit(id: int, owner: int, tile: Vector2i, type: UnitTypeDef, hp: int = 10) -> UnitState:
 	var unit := UnitState.new()
 	unit.entity_id = id
@@ -60,7 +71,7 @@ func _markers(renderer: BoardRenderer) -> Array[Node]:
 
 func test_sync_places_one_decal_per_entity_on_the_marker_layer() -> void:
 	var renderer := _make_renderer()
-	var feed := _make_feed(renderer)
+	var feed := _make_feed_all(renderer)
 	feed.sync([
 		_make_unit(1, 0, Vector2i(2, 2), UnitTypes.SCOUT),
 		_make_unit(2, 1, Vector2i(4, 3), UnitTypes.TROOPER),
@@ -76,7 +87,7 @@ func test_decal_carries_the_owning_factions_texture() -> void:
 	# The two players are Rush and Boom, so their decals must not share an image —
 	# this is the ownership signal itself.
 	var renderer := _make_renderer()
-	var feed := _make_feed(renderer)
+	var feed := _make_feed_all(renderer)
 	feed.sync([
 		_make_unit(1, 0, Vector2i(2, 2), UnitTypes.SCOUT),
 		_make_unit(2, 1, Vector2i(4, 3), UnitTypes.SCOUT),
@@ -93,7 +104,7 @@ func test_decal_carries_the_owning_factions_texture() -> void:
 
 func test_decal_sits_at_the_tile_centre_and_follows_a_move() -> void:
 	var renderer := _make_renderer()
-	var feed := _make_feed(renderer)
+	var feed := _make_feed_all(renderer)
 	var unit := _make_unit(1, 0, Vector2i(2, 2), UnitTypes.SCOUT)
 	feed.sync([unit] as Array[EntityState])
 	var marker: Sprite2D = renderer.marker_layer.get_node("Marker1") as Sprite2D
@@ -110,7 +121,7 @@ func test_decal_is_a_sibling_in_the_marker_layer_not_a_child_of_the_body() -> vo
 	# It also has to draw UNDER its entity, which a child cannot do without a
 	# z_index that ADR-0013 §2 forbids.
 	var renderer := _make_renderer()
-	var feed := _make_feed(renderer)
+	var feed := _make_feed_all(renderer)
 	feed.sync([_make_unit(1, 0, Vector2i(2, 2), UnitTypes.SCOUT)] as Array[EntityState])
 
 	var marker: Node = renderer.marker_layer.get_node("Marker1")
@@ -123,7 +134,7 @@ func test_no_decal_sets_a_conflicting_z_index() -> void:
 	# The LAYER carries the band; a child setting its own would be the exact escape
 	# ADR-0013 §2's guardrail forbids.
 	var renderer := _make_renderer()
-	var feed := _make_feed(renderer)
+	var feed := _make_feed_all(renderer)
 	feed.sync([
 		_make_unit(1, 0, Vector2i(2, 2), UnitTypes.SCOUT),
 		_make_structure(3, 1, Vector2i(0, 0), StructureTypes.HQ),
@@ -143,12 +154,15 @@ func test_marker_layer_draws_under_occupants_and_over_overlays() -> void:
 
 # --- Scope knob ------------------------------------------------------------------
 
-func test_structures_only_policy_decals_structures_and_not_units() -> void:
-	# The S5-03 clutter knob: units already carry ownership strongly by hue, so a
-	# decal under every one of them may buy little.
+func test_structures_only_is_the_default_and_decals_structures_not_units() -> void:
+	# THE SHIPPED DEFAULT (user decision 2026-08-21). Units already carry ownership
+	# strongly on their own (26-82% accent coverage, dE 60-76 deuteranopia); the
+	# measured weakness was entirely structural, so the decal goes where the problem
+	# is rather than under everything. Asserted WITHOUT setting the policy, so a
+	# silent change to the default fails here.
 	var renderer := _make_renderer()
 	var feed := _make_feed(renderer)
-	feed.marker_policy = EntitySpriteFeed.MarkerPolicy.STRUCTURES_ONLY
+	assert_int(feed.marker_policy).is_equal(EntitySpriteFeed.MarkerPolicy.STRUCTURES_ONLY)
 	feed.sync([
 		_make_unit(1, 0, Vector2i(2, 2), UnitTypes.SCOUT),
 		_make_structure(3, 0, Vector2i(0, 0), StructureTypes.HQ),
@@ -163,7 +177,7 @@ func test_structures_only_policy_decals_structures_and_not_units() -> void:
 
 func test_none_policy_draws_no_decals_and_drops_existing_ones() -> void:
 	var renderer := _make_renderer()
-	var feed := _make_feed(renderer)
+	var feed := _make_feed_all(renderer)
 	var entities: Array[EntityState] = [_make_unit(1, 0, Vector2i(2, 2), UnitTypes.SCOUT)]
 	feed.sync(entities)
 	assert_int(_markers(renderer).size()).is_equal(1)
@@ -177,7 +191,7 @@ func test_none_policy_draws_no_decals_and_drops_existing_ones() -> void:
 
 func test_departed_entity_takes_its_decal_with_it() -> void:
 	var renderer := _make_renderer()
-	var feed := _make_feed(renderer)
+	var feed := _make_feed_all(renderer)
 	var stays := _make_unit(1, 0, Vector2i(2, 2), UnitTypes.SCOUT)
 	var goes := _make_unit(2, 1, Vector2i(4, 3), UnitTypes.SCOUT)
 	feed.sync([stays, goes] as Array[EntityState])

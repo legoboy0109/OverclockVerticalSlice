@@ -374,6 +374,13 @@ This is the mechanism that satisfies §1 Principle 2 ("Ownership Legible Beyond 
 > deliver. It also fixes the Neutral-vs-Neutral mirror and the weak-structure case in the same
 > stroke, because the decal is the same size whatever it stands under.
 >
+> **★ Scope set 2026-08-21: structures only.** The decal is drawn under structures, not under every
+> entity — `ALL` put one beneath each unit's own feet, competing with the actors against §3.5, and
+> units were never the weak case (26–82% accent coverage, ΔE 60–76 deuteranopia unaided). So the
+> non-hue channel is carried by the **structures that anchor every position on the board**, and a
+> unit-only read remains hue-carried and does **not** survive full desaturation. That is an accepted
+> trade, not an oversight; `EntitySpriteFeed.marker_policy = ALL` restores the board-wide channel.
+>
 > So P2 is **satisfied as a channel**, by a mechanism §5.2 did not anticipate. What remains
 > unbuilt is specifically the **silhouette** expression of the bias — the sprites are still
 > pixel-identical between factions, and Mass Distribution Bias as a *body-shape* rule is still

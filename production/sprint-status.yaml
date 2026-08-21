@@ -198,9 +198,13 @@ stories:
     # ⚠ ADR-0013 AMENDED — a fourth render layer (MarkerLayer z_index 2), pushing
     # OccupantLayer 2 -> 3. Not a child sprite: a child inherits S5-06's motion transforms
     # and cannot draw under its parent without a z_index the ADR forbids.
-    # ★ OPEN FOR S5-03: marker_policy defaults to ALL. Units already read strongly by hue,
-    # and §3.5 forbids competing with the actors, so a decal under every unit may be
-    # clutter — STRUCTURES_ONLY is one line away. Human call, hence a knob.
+    # ✅ POLICY DECIDED 2026-08-21 (user, off the render sheet): marker_policy ships as
+    # STRUCTURES_ONLY. ALL put a decal under every unit's feet, competing with the actors
+    # (§3.5) for no measured gain — units separate at ΔE 60-76 deuteranopia unaided. The
+    # decal now sits only where the weakness was measured. Accepted consequence: a
+    # unit-only read is hue-carried and does not survive full desaturation; ALL restores
+    # the board-wide channel and is one assignment away. Suite 954/954 after the switch;
+    # the default is asserted WITHOUT being set, so a silent change fails the suite.
     # ⚠ UNBLOCKED from s5-03: the questions turned out to be measurable, not dependent on
     # the legibility session's subjective read.
     # ⚠⚠ THE SPRINT NOTE'S FRAMING WAS BACKWARDS. It said "Δ34/255 (13%) — reads on

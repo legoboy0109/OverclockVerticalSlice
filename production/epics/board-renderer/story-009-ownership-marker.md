@@ -55,6 +55,7 @@ no per-entity masks, and structure plating is 74–94% *cool*-hued, so relaxing 
 7. **Adjacent decals never touch**, so a run of owned tiles cannot fuse into a line that reads as
    terrain.
 8. **Scope is a knob**, not a hardcode — `ALL` / `STRUCTURES_ONLY` / `NONE`.
+   Default: **`STRUCTURES_ONLY`** (decided 2026-08-21, see Completion Notes).
 
 ## Implementation Notes
 
@@ -110,6 +111,8 @@ too busy. That is S5-03 / S5-07.*
 ## Test Evidence
 
 **Automated** — 18 new tests, all passing. Full suite **954/954, 0 failures, 0 orphans** (was 936).
+The default-policy test asserts the shipped value *without setting it*, so a silent change to the
+default fails the suite rather than quietly altering the board.
 Slice boots clean, exit 0.
 
 **Rendered** — the three markers were exported from the live `OwnershipMarker` code and composited
@@ -137,10 +140,18 @@ even ring, unmistakable with zero colour information. Alignment against the real
 - Art bible §5.2/§5.3/§8.7 and `accessibility-requirements.md` — corrected, then updated again once
   the channel existed.
 
-### ★ Open for the S5-03 session
-`marker_policy` defaults to **ALL**, which is what delivers the non-hue channel board-wide and
-fixes the Neutral mirror. But units already carry ownership strongly by hue on their own, and §3.5
-forbids anything competing with the actors for the eye — a decal under every unit may be clutter
-buying little. **STRUCTURES_ONLY** targets exactly the entities the measurement found weak. Which
-reads better on a full board is a human call, which is why it is a knob and not a decision baked
-into the renderer.
+### ✅ Policy decided 2026-08-21 — `STRUCTURES_ONLY`
+Shipped initially as `ALL` with the scope left open. The user settled it off the render sheet
+(`production/qa/evidence/s5-08-marker-render/marker-policy-all-vs-structures-only.png`): six
+entities on a small patch was enough to show that under `ALL` the decals sit directly beneath the
+units' own feet and compete with them, which §3.5 forbids — and units were never the problem, at
+26–82% accent coverage and ΔE 60–76 deuteranopia on their own. `STRUCTURES_ONLY` puts the decal
+exactly where the measurement found the weakness and leaves the rest of the board clean.
+
+**Accepted consequence, recorded:** under this policy a unit-only read is hue-carried and does not
+survive full desaturation. §1 P2's non-hue channel exists on the board — on the structures that
+anchor every position, and on the Neutral mirror's own anchors — but not under every actor on it.
+`ALL` restores it board-wide and is one assignment away if a monochromacy claim is ever made in
+earnest.
+
+AC-8 (scope is a knob, not a hardcode) is what made this a one-line decision rather than a rework.

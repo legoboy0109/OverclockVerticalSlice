@@ -188,25 +188,34 @@ var _marker_nodes: Dictionary = {}
 
 ## Which entities get an ownership decal (Story 009 / S5-08).
 enum MarkerPolicy {
-	ALL, ## Every entity. Delivers the non-hue channel board-wide.
-	STRUCTURES_ONLY, ## Structures only — the entities the S5-08 measurement found weak.
+	ALL, ## Every entity. Delivers the non-hue channel board-wide, at more board clutter.
+	STRUCTURES_ONLY, ## [b]The default.[/b] Structures only — the entities the S5-08 measurement found weak.
 	NONE, ## Hue-only ownership, the pre-S5-08 behaviour.
 }
 
 ## How widely ownership decals are drawn. Changing it takes effect on the next
 ## [method sync].
 ##
-## ★ [b]Open for the S5-03 session.[/b] Defaults to [constant MarkerPolicy.ALL],
-## which is what actually delivers art-bible §1 P2's non-hue channel across the
-## board and fixes the Neutral-vs-Neutral mirror. But units already carry ownership
-## strongly by hue on their own (26–82% accent coverage, ΔE 60–76 deuteranopia —
-## `s5-08-colourblind-ownership-brief.md`), so a decal under every unit may be
-## clutter buying little, and §3.5 is explicit that nothing may compete with the
-## actors for the eye. [constant MarkerPolicy.STRUCTURES_ONLY] targets exactly the
-## entities the measurement found weak. Which reads better on a full board is a
-## legibility call for a human, not a number — hence a knob rather than a decision
-## baked in here.
-var marker_policy: MarkerPolicy = MarkerPolicy.ALL
+## [b]Defaults to [constant MarkerPolicy.STRUCTURES_ONLY] — user decision,
+## 2026-08-21[/b], made off the Story 009 render sheet
+## (`production/qa/evidence/s5-08-marker-render/`).
+##
+## The reasoning, recorded so it is not re-litigated: the decal is aimed at a
+## measured problem, and that problem is entirely structural. Units already carry
+## ownership strongly on their own — 26–82% faction-accent coverage, ΔE 60–76 under
+## deuteranopia — while structures sit at 5–22%, with the Defensive Structure at
+## ΔE 2.3 across its whole silhouette even in normal colour vision
+## (`s5-08-colourblind-ownership-brief.md`). Putting a decal under every unit as
+## well spends board clutter where nothing was broken, and art-bible §3.5 is
+## explicit that nothing may compete with the actors for the eye.
+##
+## ★ [b]Known consequence, deliberately accepted.[/b] Under this policy units carry
+## ownership by hue ALONE, so a unit-only read does not survive full desaturation —
+## §1 P2's non-hue channel exists on the board, but not under every actor on it.
+## Structures, the Neutral-vs-Neutral mirror's own anchors, and the weak-ownership
+## case are all covered. Switching to [constant MarkerPolicy.ALL] restores the
+## board-wide channel if a monochromacy claim is ever made in earnest.
+var marker_policy: MarkerPolicy = MarkerPolicy.STRUCTURES_ONLY
 
 ## Live [code]entity_id -> the EntityState last seen for it[/code]. Retained solely
 ## so [method power_down] can still resolve a destroyed actor's texture and faction

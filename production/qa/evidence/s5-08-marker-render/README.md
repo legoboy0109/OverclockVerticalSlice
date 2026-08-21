@@ -27,9 +27,28 @@ decals. Confirms two things that would be defects if wrong:
 - **Adjacent decals do not touch** (`BAND_OUTER` 0.92). A continuous line running across several
   owned tiles would read as terrain rather than as ownership.
 
+## `marker-policy-all-vs-structures-only.png`
+
+The comparison the policy decision was made from. **Top: `ALL`** (the original default).
+**Bottom: `STRUCTURES_ONLY`** (the shipped default, chosen 2026-08-21).
+
+Six entities on a small patch is enough to show it. Under `ALL` the decals under the units sit
+directly beneath the units' own feet and compete with them — art-bible §3.5 forbids exactly that,
+and the units were never the problem: they carry ownership at 26–82% accent coverage and ΔE 60–76
+under deuteranopia on their own. Under `STRUCTURES_ONLY` the board reads cleanly and the two
+structures — the entities the measurement actually found weak — still declare their owner
+unambiguously.
+
+**Accepted consequence:** under this policy a unit-only read is hue-carried and does not survive
+full desaturation. The non-hue channel exists on the board, but not under every actor on it.
+`ALL` restores it board-wide if a monochromacy claim is ever made in earnest.
+
 ## What this does NOT establish
 
-Whether the decals read **at playing distance**, and whether a full board of them is too busy for
-§3.5's hierarchy. Both are human calls and both are owed to **S5-03** (legibility) and **S5-07**
-(windowed sign-off). `EntitySpriteFeed.marker_policy` is the knob if the answer is "too busy" —
-`STRUCTURES_ONLY` keeps the decal exactly where the measurement said it was needed.
+Whether the decals read **at playing distance** in the live rasteriser. That is a human call owed
+to **S5-03** (legibility) and **S5-07** (windowed sign-off). The clutter question these sheets were
+made to answer has been settled — see the policy comparison above.
+
+Note also that these are composited previews: the marker geometry is exported from the live
+`OwnershipMarker` code, but the board around it is assembled in the render script, not screenshotted
+from the running game. A windowed capture is still owed under S5-07.
