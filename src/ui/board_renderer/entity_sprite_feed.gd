@@ -152,6 +152,36 @@ var glow_paused: bool = false
 ## call for the S5-03 session, not an implementation detail.
 var actionable_predicate: Callable = Callable()
 
+## Live [code]entity_id -> Vector2[/code] transform offset in board pixels, the
+## displacement half of §8.5's motion states (Story 008 / S5-06).
+##
+## [b]Why an offset instead of tweening [member Node2D.position] directly.[/b]
+## [method _refresh_entity] rewrites every tracked sprite's position on every
+## [method sync], and a sync fires after every applied action — including actions
+## that land mid-tween (the AI commits on a pacing timer). A tween writing
+## position directly would be silently stomped, or would stomp the board, half the
+## time. Composing [code]grid_to_screen(tile) + offset[/code] instead makes the two
+## writers independent: sync owns the tile, the tween owns the offset, and neither
+## can clobber the other.
+var _offsets: Dictionary = {}
+
+## Live [code]entity_id -> Tween[/code] for the in-flight motion tween, at most one
+## per entity. A new motion kills the previous one so a rapid move-then-attack
+## cannot leave two tweens fighting over the same offset. Created off the SPRITE
+## node ([method Node.create_tween]), so freeing the sprite kills its tween.
+var _tweens: Dictionary = {}
+
+## Ids currently playing §8.5's destroyed beat: gone from the simulation, still on
+## screen. [b]The death echo[/b] — see [method power_down] for the whole mechanism
+## and why it exists.
+var _dying: Dictionary = {}
+
+## Live [code]entity_id -> the EntityState last seen for it[/code]. Retained solely
+## so [method power_down] can still resolve a destroyed actor's texture and faction
+## AFTER [method GameState.destroy_entity] has erased it from
+## [code]entities_by_id[/code] — by then there is nothing left to ask.
+var _last_entity: Dictionary = {}
+
 
 ## Binds this feed to [param board]'s occupant layer, with [param factions] indexed
 ## by player. Adds nothing to the tree until the first [method sync].
@@ -186,6 +216,12 @@ func sync(entities: Array[EntityState]) -> void:
 ## [method BoardRenderer.grid_to_screen] with no extra offset.
 func _refresh_entity(entity: EntityState) -> void:
 	var id: int = entity.entity_id
+	# A live entity arriving on an id that is mid-death-echo means the simulation
+	# has recycled the id inside the beat. Vanishingly unlikely at 0.35s, but the
+	# failure mode if it ever happened would be a new unit wearing a corpse's
+	# fade-out, so end the echo now and rebuild clean.
+	if _dying.has(id):
+		_finish_death(id)
 	var facing: String = _update_facing(entity)
 	var sprite: Sprite2D = _nodes.get(id)
 	if sprite == null:
@@ -206,7 +242,10 @@ func _refresh_entity(entity: EntityState) -> void:
 	# one-tile footprint rather than to the flat 2x art scale.
 	sprite.scale = _scale_for(entity, size)
 	sprite.offset = Vector2(-size.x * 0.5, -size.y)
-	sprite.position = _board.grid_to_screen(entity.position)
+	# Composed, not assigned: an in-flight §8.5 motion tween owns the offset term
+	# and this sync owns the tile term. See [member _offsets].
+	sprite.position = _board.grid_to_screen(entity.position) + _offset_for(id)
+	_last_entity[id] = entity
 	_refresh_glow(entity, sprite, facing)
 
 
@@ -269,17 +308,14 @@ func _free_departed(seen: Dictionary) -> void:
 		if not seen.has(id):
 			departed.append(id)
 	for id: int in departed:
-		var sprite: Sprite2D = _nodes[id]
-		_nodes.erase(id)
-		_facings.erase(id)
-		_positions.erase(id)
-		_glow_nodes.erase(id)   # freed with its parent sprite below
-		_glow_states.erase(id)
-		_attacked.erase(id)
-		if is_instance_valid(sprite):
-			if sprite.get_parent() != null:
-				sprite.get_parent().remove_child(sprite)
-			sprite.queue_free()
+		# The death echo's whole job: an id playing §8.5's destroyed beat is absent
+		# from the feed BY DEFINITION (destroy_entity erased it), so without this
+		# guard it would be freed here on the very sync that reveals its death and
+		# the beat could never play. [method _finish_death] frees it when the beat
+		# ends instead.
+		if _dying.has(id):
+			continue
+		_forget(id)
 
 
 ## Authors [BoardRenderer.OccupantPickRegion]s from the ACTUAL drawn sprite bounds
@@ -317,6 +353,11 @@ func pick_regions() -> Array[BoardRenderer.OccupantPickRegion]:
 	for id: int in ids:
 		var sprite: Sprite2D = _nodes[id]
 		if not is_instance_valid(sprite) or sprite.texture == null:
+			continue
+		# A destroyed actor mid-echo is a visual afterimage, not an occupant: it
+		# holds no tile and cannot be selected or targeted. Leaving it clickable
+		# would let a player pick an entity the simulation has already erased.
+		if _dying.has(id):
 			continue
 		var region := BoardRenderer.OccupantPickRegion.new()
 		var sprite_rect := Rect2(
@@ -382,6 +423,284 @@ func flare(entity_id: int) -> void:
 	_glow_states[entity_id] = [EntityGlow.Mode.FLARE, _resting_pulse_for(entity_id)]
 
 
+# --- §8.5 state transforms (Story 008 / S5-06) -------------------------------
+
+## Tips [param entity_id] into a move, per §8.5's directional lean.
+## [param screen_delta] is the travel in board pixels; a move with no horizontal
+## component leans nowhere (see [method EntityTransforms.lean_angle]).
+##
+## Rotation, not displacement — the sprite is anchored at its ground-contact
+## point, so this pivots at the feet and the actor genuinely tips. A no-op for an
+## untracked or dying entity.
+func lean(entity_id: int, screen_delta: Vector2) -> void:
+	var sprite: Sprite2D = _live_sprite(entity_id)
+	if sprite == null:
+		return
+	var angle: float = EntityTransforms.lean_angle(screen_delta)
+	if is_zero_approx(angle):
+		return
+	var tween: Tween = _begin_tween(entity_id, sprite)
+	tween.tween_property(sprite, ^"rotation", angle, EntityTransforms.LEAN_OUT_SEC) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(sprite, ^"rotation", 0.0, EntityTransforms.LEAN_SETTLE_SEC) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+
+
+## Shoves [param attacker_id] toward [param target_id] and back — §8.5's attack,
+## "snappy, synced to the §2.2 flare spike". The caller fires [method flare] on
+## the same frame so the body and the light spike together.
+##
+## A no-op for an untracked or dying attacker, or when the two occupy the same
+## point (which the simulation never produces).
+func lunge(attacker_id: int, target_id: int) -> void:
+	var sprite: Sprite2D = _live_sprite(attacker_id)
+	if sprite == null:
+		return
+	var shove: Vector2 = EntityTransforms.nudge(
+		_base_position(attacker_id), _base_position(target_id),
+		EntityTransforms.LUNGE_DISTANCE_PX
+	)
+	if shove.is_zero_approx():
+		return
+	_offset_tween(
+		attacker_id, sprite, shove,
+		EntityTransforms.LUNGE_OUT_SEC, EntityTransforms.LUNGE_BACK_SEC
+	)
+
+
+## Rocks [param target_id] away from [param attacker_id] and back — §8.5's brief
+## "plating absorbs impact" recoil. Deliberately a smaller, faster-out,
+## slower-back motion than [method lunge]; see [constant
+## EntityTransforms.RECOIL_DISTANCE_PX].
+##
+## [b]Fires on every hit that lands, including a lethal one.[/b] A lethal hit's
+## recoil is immediately overridden by [method power_down] (which kills the
+## in-flight tween), so a killing blow reads as a power-down rather than a rock
+## back — which is the §8.5 intent, and is why the caller dispatches deaths
+## before damage.
+func recoil(target_id: int, attacker_id: int) -> void:
+	var sprite: Sprite2D = _live_sprite(target_id)
+	if sprite == null:
+		return
+	# Arguments reversed against [method lunge]: away from the attacker, not toward.
+	var rock: Vector2 = EntityTransforms.nudge(
+		_base_position(attacker_id), _base_position(target_id),
+		EntityTransforms.RECOIL_DISTANCE_PX
+	)
+	if rock.is_zero_approx():
+		return
+	_offset_tween(
+		target_id, sprite, rock,
+		EntityTransforms.RECOIL_OUT_SEC, EntityTransforms.RECOIL_BACK_SEC
+	)
+
+
+## Starts §8.5's destroyed beat on [param entity_id] — [b]the death echo[/b].
+##
+## [b]Why an echo is needed at all.[/b] [method GameState.destroy_entity] erases
+## an entity from [code]entities_by_id[/code] in the same frame its hp hits zero,
+## so a destroyed actor never appears in a [method sync] snapshot — it simply
+## vanishes mid-board. §8.5 locks a 2-4 frame power-down that there is, by
+## construction, nothing left on screen to play it on. This method is the fix
+## flagged as owed by Story 006 (see [constant
+## EntitySpriteCatalog.STATE_DESTROYED], "nothing puts it on screen until S5-06"):
+## the id is marked dying, which exempts its node from [method _free_departed],
+## and the node is freed by [method _finish_death] once the beat has run.
+##
+## [b]Call this BEFORE the [method sync] that reveals the death[/b], from the
+## events of the action that caused it. Called after, the node is already gone.
+##
+## The beat itself: the destroyed art cross-fades in over the idle art while the
+## glow falls to zero, light first and body after ([constant
+## EntityTransforms.DEATH_GLOW_FRACTION]) — a shutdown, not an explosion. An
+## actor with no destroyed art authored simply fades out, which still reads as a
+## power-down and never leaves a live-looking sprite behind.
+func power_down(entity_id: int) -> void:
+	var sprite: Sprite2D = _nodes.get(entity_id)
+	if sprite == null or not is_instance_valid(sprite) or _dying.has(entity_id):
+		return
+	_dying[entity_id] = true
+	_kill_tween(entity_id)   # a lethal hit's recoil loses to its own power-down.
+	var tween: Tween = sprite.create_tween()
+	_tweens[entity_id] = tween
+	tween.set_parallel(true)
+
+	# The light dies first and faster than the body (§8.5 pulse_intensity -> 0).
+	var glow: Sprite2D = _glow_nodes.get(entity_id)
+	if glow != null and is_instance_valid(glow):
+		glow.set_instance_shader_parameter(&"glow_mode", float(EntityGlow.Mode.STATIC))
+		tween.tween_method(
+			_set_glow_pulse.bind(entity_id), _resting_pulse_for(entity_id), 0.0,
+			EntityTransforms.DEATH_ECHO_SEC * EntityTransforms.DEATH_GLOW_FRACTION
+		)
+
+	# self_modulate, never modulate: modulate would drag the glow child down with
+	# the body on the same curve, and the light is supposed to lead.
+	var wreck: Sprite2D = _build_wreck(entity_id, sprite)
+	if wreck != null:
+		tween.tween_property(wreck, ^"self_modulate:a", 1.0, EntityTransforms.DEATH_ECHO_SEC)
+		tween.tween_property(sprite, ^"self_modulate:a", 0.0, EntityTransforms.DEATH_ECHO_SEC)
+	else:
+		# No destroyed art for this type — fade the body out rather than cutting it,
+		# so the loss still reads as a shutdown.
+		tween.tween_property(sprite, ^"self_modulate:a", 0.0, EntityTransforms.DEATH_ECHO_SEC)
+	tween.chain().tween_callback(_finish_death.bind(entity_id))
+
+
+## Whether [param entity_id] is mid-death-echo — on screen but erased from the
+## simulation. Exposed for tests and for anything that must not treat an
+## afterimage as a live occupant.
+func is_dying(entity_id: int) -> bool:
+	return _dying.has(entity_id)
+
+
+## Builds the destroyed-art overlay for [param entity_id] as a transparent child of
+## [param sprite], or returns [code]null[/code] if no destroyed texture is
+## authored for it.
+##
+## A CHILD rather than a texture swap because the two stills must be on screen
+## together to cross-fade. It copies the parent's local frame exactly — the two
+## states are authored to the same trimmed bounds and pivot, so the wreck stands
+## where the body stood.
+func _build_wreck(entity_id: int, sprite: Sprite2D) -> Sprite2D:
+	var entity: EntityState = _last_entity.get(entity_id)
+	if entity == null:
+		return null
+	var facing: String = _facings.get(entity_id, EntitySpriteCatalog.DEFAULT_FACING)
+	var path: String = EntitySpriteCatalog.texture_path(
+		entity, _faction_for(entity.owner), facing
+	)
+	# state_token() reads current_hp off the retained state, which destroy_entity
+	# left at or below zero — so this path resolves to the destroyed art without
+	# needing to be told the entity died.
+	if path.is_empty() or not ResourceLoader.exists(path):
+		return null
+	var wreck := Sprite2D.new()
+	wreck.name = "Destroyed"
+	wreck.centered = false
+	wreck.texture = load(path)
+	var size: Vector2 = wreck.texture.get_size()
+	wreck.offset = Vector2(-size.x * 0.5, -size.y)
+	wreck.self_modulate.a = 0.0
+	# NO z_index here either (ADR-0013 section 2) — it draws after its parent by
+	# virtue of being a child, which is exactly the "on top" this needs.
+	sprite.add_child(wreck)
+	return wreck
+
+
+## Ends [param entity_id]'s death echo: drops the dying mark and frees the node
+## and every map entry, the deletion [method _free_departed] deferred.
+func _finish_death(entity_id: int) -> void:
+	_dying.erase(entity_id)
+	_forget(entity_id)
+
+
+## Frees [param entity_id]'s sprite (its glow and wreck children with it) and
+## drops every map entry keyed on it. The single teardown path, shared by an
+## ordinary departure and the end of a death echo, so no map can be left holding
+## a freed node.
+func _forget(entity_id: int) -> void:
+	_kill_tween(entity_id)
+	var sprite: Sprite2D = _nodes.get(entity_id)
+	_nodes.erase(entity_id)
+	_facings.erase(entity_id)
+	_positions.erase(entity_id)
+	_glow_nodes.erase(entity_id)   # freed with its parent sprite below
+	_glow_states.erase(entity_id)
+	_attacked.erase(entity_id)
+	_offsets.erase(entity_id)
+	_dying.erase(entity_id)
+	_last_entity.erase(entity_id)
+	if sprite != null and is_instance_valid(sprite):
+		if sprite.get_parent() != null:
+			sprite.get_parent().remove_child(sprite)
+		sprite.queue_free()
+
+
+## The out-and-back offset tween shared by [method lunge] and [method recoil]:
+## [param sprite] displaces by [param peak] over [param out_sec], then returns to
+## rest over [param back_sec].
+func _offset_tween(
+	entity_id: int, sprite: Sprite2D, peak: Vector2,
+	out_sec: float, back_sec: float
+) -> void:
+	var tween: Tween = _begin_tween(entity_id, sprite)
+	tween.tween_method(
+		_set_offset.bind(entity_id), _offset_for(entity_id), peak, out_sec
+	).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_method(
+		_set_offset.bind(entity_id), peak, Vector2.ZERO, back_sec
+	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+
+
+## Starts a fresh tween for [param entity_id] on [param sprite], killing whatever
+## it was already playing. One motion at a time per actor: a move-then-attack in
+## quick succession must not leave two tweens writing the same offset.
+func _begin_tween(entity_id: int, sprite: Sprite2D) -> Tween:
+	_kill_tween(entity_id)
+	var tween: Tween = sprite.create_tween()
+	_tweens[entity_id] = tween
+	return tween
+
+
+## Stops and drops [param entity_id]'s in-flight tween, if any.
+func _kill_tween(entity_id: int) -> void:
+	var tween: Tween = _tweens.get(entity_id)
+	_tweens.erase(entity_id)
+	if tween != null and is_instance_valid(tween) and tween.is_valid():
+		tween.kill()
+
+
+## Writes [param entity_id]'s transform offset and re-composes its position from
+## it. The tween target for [method lunge] and [method recoil] — see
+## [member _offsets] for why the displacement is a separate term.
+##
+## Argument order is offset-first because [method Tween.tween_method] passes the
+## interpolated value as the first argument and the bound id follows it.
+func _set_offset(offset: Vector2, entity_id: int) -> void:
+	_offsets[entity_id] = offset
+	var sprite: Sprite2D = _nodes.get(entity_id)
+	if sprite != null and is_instance_valid(sprite):
+		sprite.position = _base_position(entity_id) + offset
+
+
+## Writes [param entity_id]'s glow resting level. The tween target for [method
+## power_down]'s light fade; same offset-first argument order as
+## [method _set_offset].
+func _set_glow_pulse(pulse: float, entity_id: int) -> void:
+	var glow: Sprite2D = _glow_nodes.get(entity_id)
+	if glow != null and is_instance_valid(glow):
+		glow.set_instance_shader_parameter(&"pulse_base", pulse)
+
+
+## [param entity_id]'s sprite if it is tracked, still valid and NOT mid-death-echo,
+## else [code]null[/code].
+##
+## The dying check is what stops a corpse being animated: [method lean],
+## [method lunge] and [method recoil] all gate on this, so an actor that died to
+## the same action keeps its power-down instead of leaning or rocking through it.
+func _live_sprite(entity_id: int) -> Sprite2D:
+	if _dying.has(entity_id):
+		return null
+	var sprite: Sprite2D = _nodes.get(entity_id)
+	if sprite == null or not is_instance_valid(sprite):
+		return null
+	return sprite
+
+
+## [param entity_id]'s current transform offset, or zero if it has none.
+func _offset_for(entity_id: int) -> Vector2:
+	return _offsets.get(entity_id, Vector2.ZERO)
+
+
+## [param entity_id]'s untransformed board position — the screen point of the tile
+## it stands on, with no motion offset applied.
+func _base_position(entity_id: int) -> Vector2:
+	if _board == null or not _positions.has(entity_id):
+		return Vector2.ZERO
+	return _board.grid_to_screen(_positions[entity_id])
+
+
 ## Creates or updates [param entity]'s additive glow overlay as a child of
 ## [param sprite].
 ##
@@ -429,12 +748,16 @@ func _refresh_glow(entity: EntityState, sprite: Sprite2D, facing: String) -> voi
 	var pulse_base: float = EntityGlow.resting_pulse(destroyed)
 	glow.set_instance_shader_parameter(&"pulse_base", pulse_base)
 
-	# An attack is detected from STATE, not from an event: no event carries an
-	# attacker id (ADR-0004's schema has no attack event at all), and adding one is a
-	# core-layer change well outside this story. Watching has_attacked flip false->true
-	# catches the AI's attacks as well as the player's, which a call-site hook in the
-	# slice would not. The start-of-turn reset flips it true->false and correctly does
-	# not flare.
+	# An attack is detected here from STATE — watching has_attacked flip
+	# false->true, which catches the AI's attacks as well as the player's. Story 008
+	# has since added [DamageEvent], and the slice now ALSO calls [method flare]
+	# from it; the two agree on every ordinary attack and the call is idempotent
+	# within a frame. Both are kept because they cover different gaps: the event
+	# path is the only one that catches a COUNTERATTACK (a counter is free and
+	# never sets has_attacked, so this detector is blind to it), and this path is
+	# the only one that survives a board rebuilt from state with no event to
+	# replay. The start-of-turn reset flips has_attacked true->false and correctly
+	# does not flare.
 	var attacked: bool = _has_attacked(entity)
 	var attacked_before: bool = _attacked.get(id, false)
 	_attacked[id] = attacked

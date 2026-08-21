@@ -69,13 +69,15 @@ const STATE_IDLE: String = "idle"
 
 ## The [code]state[/code] token for an entity at or below zero hp.
 ##
-## [b]⚠ Not reachable from a live [method GameState.entities] feed today.[/b]
+## [b]Only ever reached through the death echo.[/b]
 ## [method GameState.destroy_entity] erases the entity from
 ## [code]entities_by_id[/code] in the same frame its hp hits zero, so a destroyed
-## entity never appears in a feed snapshot — it simply vanishes. This token is
-## resolved correctly here (Story 006 AC-10) but nothing puts it on screen until
-## S5-06 adds the death-echo hold that keeps the node alive for §8.5's 2-4 frame
-## beat. Recorded rather than hidden: S5-06 is load-bearing for AC-10.
+## entity never appears in a feed snapshot — it simply vanishes. This token was
+## resolved correctly from Story 006 (AC-10) but had nothing to draw on until
+## Story 008 added [method EntitySpriteFeed.power_down], which holds the node
+## alive for §8.5's 2-4 frame beat and resolves this path against the RETAINED
+## [EntityState] rather than a live feed. If that hold is ever removed, this token
+## becomes unreachable again.
 const STATE_DESTROYED: String = "destroyed"
 
 

@@ -454,14 +454,71 @@ func _build_cursor() -> void:
 
 # --- Turn loop ---------------------------------------------------------------
 
-## Every commit repaints the placeholder entity markers. It deliberately does
-## NOT drive the AI — that is owned by the End-Turn path ([method try_end_human_turn]),
-## so each [method AITurnDriver.run_ai_turn] runs on a clean call stack rather
-## than re-entrantly inside [method GameState.apply_action]'s own signal emission.
-func _on_action_applied(_result: ActionResult) -> void:
+## Every commit repaints the board and plays §8.5's state transforms. It
+## deliberately does NOT drive the AI — that is owned by the End-Turn path
+## ([method try_end_human_turn]), so each [method AITurnDriver.run_ai_turn] runs on
+## a clean call stack rather than re-entrantly inside
+## [method GameState.apply_action]'s own signal emission.
+##
+## [b]The three steps are strictly ordered[/b] (Story 008 / S5-06):
+## [br]1. [b]Deaths first, BEFORE the sync.[/b] A destroyed entity is already gone
+##    from [method GameStateReader.entities], so the sync in step 2 would free its
+##    sprite — [method EntitySpriteFeed.power_down] must claim the node first or
+##    §8.5's destroyed beat has nothing to play on.
+## [br]2. [b]Sync.[/b] Sprites move onto their new tiles and click targets are
+##    re-authored.
+## [br]3. [b]Motion last, AFTER the sync[/b], so a lean or a lunge is measured from
+##    where the actors now are rather than where they were.
+func _on_action_applied(result: ActionResult) -> void:
+	_dispatch_deaths(result)
 	queue_redraw()
 	_refresh_occupant_pick_regions() # entities moved/spawned/died — re-author the click targets.
+	_dispatch_motion(result)
 	_refresh_status() # AP/affordability/selection may have changed.
+
+
+## Step 1 of [method _on_action_applied]: starts the destroyed beat for everything
+## [param result] killed, unit or structure alike (§8.5, art-bible "no gibs").
+##
+## Must run before the feed syncs — see [method EntitySpriteFeed.power_down].
+func _dispatch_deaths(result: ActionResult) -> void:
+	if _feed == null:
+		return
+	for event: Event in result.events:
+		if event is UnitDestroyedEvent:
+			_feed.power_down((event as UnitDestroyedEvent).entity_id)
+		elif event is StructureDestroyedEvent:
+			_feed.power_down((event as StructureDestroyedEvent).entity_id)
+
+
+## Step 3 of [method _on_action_applied]: plays §8.5's move lean and attack/hit
+## pair from [param result]'s events.
+##
+## Narrowing is [code]if e is XEvent[/code] per ADR-0004 — never a match on
+## runtime type, and never an hp diff.
+##
+## A [DamageEvent] drives three things at once on the same frame: the attacker's
+## body lunge, its §2.2 glow flare (so light and body spike together, §8.5
+## "snappy, synced to the flare"), and the target's recoil. A counterattack
+## arrives as its own [DamageEvent] with the roles swapped, so it animates
+## correctly with no special case here. Anything killed by the blow was marked
+## dying in step 1 and is silently skipped by the feed, so a killing hit reads as
+## a power-down rather than a recoil.
+func _dispatch_motion(result: ActionResult) -> void:
+	if _feed == null or _board == null:
+		return
+	for event: Event in result.events:
+		if event is UnitMovedEvent:
+			var moved := event as UnitMovedEvent
+			_feed.lean(
+				moved.entity_id,
+				_board.grid_to_screen(moved.to) - _board.grid_to_screen(moved.from)
+			)
+		elif event is DamageEvent:
+			var hit := event as DamageEvent
+			_feed.lunge(hit.attacker_id, hit.target_id)
+			_feed.flare(hit.attacker_id)
+			_feed.recoil(hit.target_id, hit.attacker_id)
 
 
 ## Runs AI turns to completion until it is a human's turn again (or the match
