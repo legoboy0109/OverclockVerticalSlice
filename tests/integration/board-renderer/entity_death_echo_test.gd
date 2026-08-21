@@ -17,6 +17,8 @@
 #   * the destroyed ART is what fades in: a child sprite carrying the
 #     *_destroyed_01 texture (Story 006 AC-10, on screen at last).
 #   * the beat ends: the node and every map entry are gone afterwards, no orphan.
+#   * the cross-fade is genuinely MID-FLIGHT partway through — the gap that let a
+#     harness bug masquerade as a product bug on 2026-08-21.
 #   * an id recycled mid-echo rebuilds clean rather than wearing the corpse's fade.
 #
 # NOT covered (cannot be, headless): how the motion and the cross-fade actually
@@ -169,6 +171,38 @@ func test_the_beat_ends_leaving_no_node_and_no_orphan() -> void:
 	assert_bool(feed.is_dying(1)).is_false()
 	assert_int(_entity_sprites(renderer).size()).is_equal(0)
 	assert_int(feed.pick_regions().size()).is_equal(0)
+
+
+# --- The beat actually PLAYS, not just starts and ends ----------------------
+
+func test_the_cross_fade_is_actually_mid_flight_partway_through_the_beat() -> void:
+	# ★ COVERAGE GAP CLOSED 2026-08-21. Every other test here samples the echo either
+	# immediately (node still there) or after the FULL beat (node gone) — so a
+	# power_down that completed INSTANTLY would have passed all of them, and the
+	# destroyed art would never actually appear on screen. This asserts the middle:
+	# at roughly half the beat both stills are genuinely on screen, part-faded, with
+	# the wreck coming up as the body goes down.
+	var renderer := _make_renderer()
+	var feed := _make_feed(renderer)
+	var killed := _make_unit(1, 0, Vector2i(2, 2), UnitTypes.SCOUT)
+	feed.sync([killed] as Array[EntityState])
+	var body: Sprite2D = _entity_sprites(renderer)[0] as Sprite2D
+
+	# Act
+	killed.current_hp = 0
+	feed.power_down(1)
+	var wreck: Sprite2D = body.get_node_or_null(NodePath(WRECK_NODE_NAME)) as Sprite2D
+	assert_object(wreck).is_not_null()
+	await get_tree().create_timer(EntityTransforms.DEATH_ECHO_SEC * 0.5).timeout
+
+	# Assert — both alive, both part-way, and crossing in opposite directions.
+	assert_bool(feed.is_dying(1)).is_true()
+	assert_bool(is_instance_valid(body)).is_true()
+	assert_bool(is_instance_valid(wreck)).is_true()
+	assert_float(body.self_modulate.a).is_between(0.05, 0.95)
+	assert_float(wreck.self_modulate.a).is_between(0.05, 0.95)
+	# The defining property of a CROSS-fade: one is rising as the other falls.
+	assert_float(body.self_modulate.a + wreck.self_modulate.a).is_between(0.7, 1.3)
 
 
 # --- A recycled id rebuilds clean -------------------------------------------

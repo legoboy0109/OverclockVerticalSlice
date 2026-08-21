@@ -26,7 +26,7 @@ goal: "Wire the completed art into the board, run the iso-legibility + swing-bac
 start: "2026-08-19"
 end: "2026-09-02"
 generated: "2026-08-19"
-updated: "2026-08-20"  # s5-06 + s5-08 done; s5-01/02 done; only the human-gated s5-03/04/05/07 remain
+updated: "2026-08-21"  # s5-07 captures done (2 Pillar-1 findings); only s5-03/04/05 + sign-offs remain
 # ⚠ MID-SPRINT SCOPE ACCEPTED 2026-08-19 (~1 day): the four missing entity assets
 # (Sniper, Economy Outpost, Defensive Structure, Research Lab) plus the structure
 # one-tile footprint fix. Surfaced by the user during the s5-04 session. Recorded
@@ -160,15 +160,41 @@ stories:
 
   - id: "s5-07"
     name: "★ Advisory Visual/Feel sign-offs — windowed screenshots (carryover S4-07)"
-    file: "production/qa/evidence/"
+    file: "production/qa/evidence/s5-07-windowed/README.md"
     priority: should-have
-    status: backlog
-    owner: ""
+    status: review
+    owner: "art-director + qa-lead (sign-off pending)"
     estimate_days: 1
-    blocker: "s5-01"
+    blocker: ""
     completed: ""
-    # Also clears the S4-01 residual: windowed one-unit glow render in the live
-    # rasteriser (the headless dummy rasteriser cannot render).
+    # ✅ CAPTURES DONE 2026-08-21 — 11 frames from the REAL renderer (Vulkan Forward+,
+    # RX 6900 XT, 1280x720) via tools/CaptureEvidence.tscn. This machine HAS a display
+    # (DISPLAY=:0.0); the "OWED — requires a windowed session" note every Visual/Feel
+    # AC has carried since Story 002 was never actually blocked. Status is `review`,
+    # not `done`: the captures exist, the human sign-off does not.
+    # ★★ FINDING 1 — PILLAR-1 READ BARELY EXISTS. AP-available vs AP-spent measures
+    #    12.5/255 at the breathe PEAK and 3.3/255 at the TROUGH, over only 0.67% of
+    #    the frame (2.35% of what is drawn). Breathe cycles every 3s, so a glance
+    #    often lands on the ~1% case.
+    # ★★ FINDING 2 — A DESTROYED UNIT DOES NOT POWER DOWN. It dims by 8.9/255 (3.5%).
+    #    The cross-fade itself works and the S4-02 destroyed PNGs render for the first
+    #    time ever — but the actor does not read as shutting down.
+    # ★★ ROOT CAUSE (same for both): the glow only ADDS light on top of already-bright
+    #    accent art. Removing added light cannot make an actor look spent or dead.
+    #    Retuning BREATHE_MIN/SPENT_CLAMP will not move the ceiling. The fix is to
+    #    MULTIPLY the sprite down (desaturate/darken) for spent+destroyed — genre
+    #    standard, and an ART-DIRECTION change, not a code tweak.
+    #    ⛔ NOT FIXED — design freeze until the verdict (retro action 3). Input to
+    #    s5-03 and s5-05.
+    # ✅ PASSES: glow reads as neon trim not a blown panel; move lean / attack lunge /
+    #    hit recoil all visible; ownership decals render and stay legible THROUGH an
+    #    overlay; marker policy ALL vs STRUCTURES_ONLY differs by 4316 px; shader
+    #    compiles clean in the real rasteriser (clears the S4-01 residual).
+    # ★ For s5-03: adjacent units substantially occlude each other at board density.
+    # ⚠ TWO HARNESS TRAPS hit and written up in .agent/notes.md. One produced a frame
+    # that looked exactly like an S5-06 death-echo bug and WAS NOT — verified against a
+    # headless probe before touching product code. It did expose a real test gap (no
+    # test sampled the beat MID-flight); that test now exists. Suite 955/955.
 
   - id: "s5-08"
     name: "Colourblind ownership decision — non-hue markers or documented accept"
