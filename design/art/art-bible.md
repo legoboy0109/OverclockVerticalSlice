@@ -364,6 +364,22 @@ This is the mechanism that satisfies §1 Principle 2 ("Ownership Legible Beyond 
 > - **There is no redundancy** if the hue channel is ever degraded by lighting, calibration or
 >   glow-blur — which is the risk §4.4's table names.
 >
+> **★ UPDATE 2026-08-20, same day (S5-08 option D3 — a non-hue channel now EXISTS).** After this
+> note was written the user chose to build the backup on the **tile** rather than in the sprite: a
+> per-faction ground decal under each entity, drawn by the renderer
+> ([code]src/ui/board_renderer/ownership_marker.gd[/code]). Rush is a solid chevron capping the
+> near vertex (forward-light), Boom is a split pair of flank arcs with a gap at that vertex
+> (the inverse), Neutral is an even unbroken ring. **The three read apart with every colour
+> channel discarded**, which is what §1 P2 actually asks for and what no amount of hue work can
+> deliver. It also fixes the Neutral-vs-Neutral mirror and the weak-structure case in the same
+> stroke, because the decal is the same size whatever it stands under.
+>
+> So P2 is **satisfied as a channel**, by a mechanism §5.2 did not anticipate. What remains
+> unbuilt is specifically the **silhouette** expression of the bias — the sprites are still
+> pixel-identical between factions, and Mass Distribution Bias as a *body-shape* rule is still
+> Full Vision work. The ground decal expresses the same forward/rear asymmetry principle in the
+> one place a fixed iso camera leaves visible. See ADR-0013's 2026-08-20 amendment.
+>
 > **Do not mark P2 resolved on the strength of this note.** It records why shipping without the
 > marker was acceptable *for the Vertical Slice*, not that the marker is unnecessary. Any faction
 > beyond Rush/Boom, any Neutral mirror, and any monochromacy claim re-opens it.
@@ -385,7 +401,7 @@ This is the mechanism that satisfies §1 Principle 2 ("Ownership Legible Beyond 
 No single signal is allowed to be a single point of failure (colorblind vision, grayscale broadcast capture, fog/overlay occlusion all must degrade gracefully). Signals are layered in priority order, each independently sufficient to *narrow* the read even if a higher-priority signal is unavailable:
 
 1. **Hue (fastest, primary — §4.2).** Rush orange-red vs. Boom cyan-azure vs. Neutral achromatic. Read first, in normal play, at full color fidelity.
-2. **Mass Distribution Bias (§5.2 — the mandatory non-hue backup).** Forward-light (Rush) vs. rear-loaded (Boom) vs. neutral-even (Neutral) silhouette. Survives colorblind vision and full desaturation, since it is a shape fact, not a color fact. **⚠ NOT BUILT IN THE VS (2026-08-20, S5-08)** — faction silhouettes are pixel-identical, so this layer does not exist yet and ownership does **not** survive full desaturation. The three named dichromacies are nonetheless covered by hue alone (measured). See §5.2's implementation-status note before relying on this row.
+2. **Mass Distribution Bias (§5.2 — the mandatory non-hue backup).** Forward-light (Rush) vs. rear-loaded (Boom) vs. neutral-even (Neutral) silhouette. Survives colorblind vision and full desaturation, since it is a shape fact, not a color fact. **⚠ AMENDED TWICE ON 2026-08-20 (S5-08).** Faction *silhouettes* are pixel-identical, so the bias is **not** expressed in the body art. It **is** expressed as a per-faction **ground decal** under each entity (chevron / split-flanks / even ring — see §5.2's note and ADR-0013's amendment), which does survive full desaturation and carries this row's promise. Read "silhouette" here as "the decal's shape", not "the unit's outline", until Full Vision builds the latter.
 3. **Board position / turn-context convention.** Standard tactics-genre spatial conventions (each player's forces read from their controlled structures/deploy zone outward; the active player's units carry the §2.1 breathe/idle glow, the opponent's do not during the player's own planning phase) provide a tertiary, situational confirmation — useful exactly when a unit is small, partially occluded, or mid-animation and neither hue nor silhouette is fully legible in that instant.
 
 Because hue and Mass Distribution Bias are independent channels (one chromatic, one geometric), losing either one in isolation (colorblindness removes reliable hue distinction; heavy occlusion or extreme zoom-out can blur silhouette nuance) still leaves a working signal from the other, with position/context as a fallback tiebreak. No degraded viewing condition is allowed to make faction identity fully unreadable — this is the same discipline §4.4's colorblind-safety table applies to the palette, extended to the shape layer.

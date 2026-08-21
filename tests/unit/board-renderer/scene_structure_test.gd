@@ -4,7 +4,11 @@
 # production/epics/board-renderer/story-002-y-sort-depth-scene-skeleton.md
 # that don't need a human eye:
 #   AC-1: exact node tree (FloorTileMapLayer z_index 0, OverlayTileMapLayer
-#         z_index 1, OccupantLayer Node2D y_sort_enabled==true z_index 2;
+#         z_index 1, MarkerLayer Node2D z_index 2, OccupantLayer Node2D
+#         y_sort_enabled==true z_index 3;
+#         ^ MarkerLayer added 2026-08-20 by Story 009 / S5-08 (ADR-0013 amended),
+#           which pushed OccupantLayer's band from 2 to 3. The ordering
+#           floor -> overlay -> markers -> occupants is what the numbers mean.
 #         Floor/Overlay outside the Y-sort group).
 #   AC-4: a child under OccupantLayer with no explicit z_index participates
 #         in the Y-sort group (regression guard — asserts it carries no
@@ -23,36 +27,44 @@ extends GdUnitTestSuite
 
 
 # AC-1: exact scene-tree shape and z-index bands.
-func test_scene_tree_matches_floor_overlay_occupant_structure() -> void:
+func test_scene_tree_matches_floor_overlay_marker_occupant_structure() -> void:
 	# Arrange / Act
 	var renderer: BoardRenderer = auto_free(BoardRenderer.new())
 	add_child(renderer)
 
 	# Assert — node count and types
-	assert_int(renderer.get_child_count()).is_equal(3)
+	assert_int(renderer.get_child_count()).is_equal(4)
 	assert_object(renderer.floor_layer).is_not_null()
 	assert_object(renderer.overlay_layer).is_not_null()
+	assert_object(renderer.marker_layer).is_not_null()
 	assert_object(renderer.occupant_layer).is_not_null()
 
 	assert_bool(renderer.floor_layer is TileMapLayer).is_true()
 	assert_bool(renderer.overlay_layer is TileMapLayer).is_true()
+	assert_bool(renderer.marker_layer is Node2D).is_true()
 	assert_bool(renderer.occupant_layer is Node2D).is_true()
+	# MarkerLayer is a plain Node2D too — it holds individually placed decal
+	# sprites, not tile cells, because a decal is per-ENTITY not per-tile.
+	assert_bool(renderer.marker_layer is TileMapLayer).is_false()
 	# OccupantLayer must be a plain Node2D, not itself a TileMapLayer.
 	assert_bool(renderer.occupant_layer is TileMapLayer).is_false()
 
 	# Assert — declared node names match the story's exact tree
 	assert_str(renderer.floor_layer.name).is_equal("FloorTileMapLayer")
 	assert_str(renderer.overlay_layer.name).is_equal("OverlayTileMapLayer")
+	assert_str(renderer.marker_layer.name).is_equal("MarkerLayer")
 	assert_str(renderer.occupant_layer.name).is_equal("OccupantLayer")
 
-	# Assert — sibling order: Floor, then Overlay, then Occupant
+	# Assert — sibling order: Floor, Overlay, Marker, then Occupant
 	assert_int(renderer.floor_layer.get_index()).is_equal(0)
 	assert_int(renderer.overlay_layer.get_index()).is_equal(1)
-	assert_int(renderer.occupant_layer.get_index()).is_equal(2)
+	assert_int(renderer.marker_layer.get_index()).is_equal(2)
+	assert_int(renderer.occupant_layer.get_index()).is_equal(3)
 
 
-# AC-1: coarse cross-tree z_index band, Floor(0) -> Overlay(1) -> Occupant(2).
-func test_scene_tree_z_index_bands_are_floor_zero_overlay_one_occupant_two() -> void:
+# AC-1: coarse cross-tree z_index band,
+# Floor(0) -> Overlay(1) -> Marker(2) -> Occupant(3).
+func test_scene_tree_z_index_bands_are_floor_overlay_marker_occupant() -> void:
 	# Arrange / Act
 	var renderer: BoardRenderer = auto_free(BoardRenderer.new())
 	add_child(renderer)
@@ -60,7 +72,11 @@ func test_scene_tree_z_index_bands_are_floor_zero_overlay_one_occupant_two() -> 
 	# Assert
 	assert_int(renderer.floor_layer.z_index).is_equal(0)
 	assert_int(renderer.overlay_layer.z_index).is_equal(1)
-	assert_int(renderer.occupant_layer.z_index).is_equal(2)
+	assert_int(renderer.marker_layer.z_index).is_equal(2)
+	assert_int(renderer.occupant_layer.z_index).is_equal(3)
+	# The marker layer is deliberately NOT Y-sorted — flat decals at tile centres
+	# cannot meaningfully occlude one another (see BoardRenderer.marker_layer).
+	assert_bool(renderer.marker_layer.y_sort_enabled).is_false()
 
 
 # AC-1: OccupantLayer carries y_sort_enabled == true; Floor/Overlay sit

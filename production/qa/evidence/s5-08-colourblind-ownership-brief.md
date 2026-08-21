@@ -168,7 +168,41 @@ scope.
 
 ---
 
-## Recommendation
+## ✅ OUTCOME — decided 2026-08-20
+
+**User chose D + A. During implementation, D was re-specified as D3 and built.**
+
+**A — done.** Art bible §5.2 gained an implementation-status note (principle kept, deviation
+recorded with these measurements), §5.3's "survives full desaturation" claim was corrected in
+place, §8.7's "distinct art, not palette-swaps" was marked superseded, and the accessibility audit
+row was re-scoped to cite the real mechanism.
+
+**D as originally written was not buildable.** The estimate ("widen the recolour masks, ~0.5 day")
+assumed per-entity masks. There are none: `recolor.py` finds the accent by **hue-gating the Rush
+master**, and structure plating is **74–94% cool-hued**, so relaxing the gate adds only 0.2–1.0%.
+There is no more orange in those sprites to catch. The runtime glow does not help either — it
+lifts the Defensive Structure from ΔE 1.9 to 2.8 at peak breathe, because the masks are 3.5% of
+the sprite.
+
+**D3 was built instead** — the ownership marker moved to the **tile**: a per-faction ground decal
+under each entity, drawn by the renderer (Story 009). Rush is a solid chevron capping the near
+vertex, Boom is a split pair of flank arcs with a gap at that vertex, Neutral is an even ring.
+
+**Why this beat every option in the table.** It delivers option **C**'s benefit (a real non-hue
+channel, satisfying §1 P2, fixing the Neutral mirror, surviving full desaturation) at option
+**D**'s cost, with **no art regeneration at all** — and it fixes the weak-structure defect as a
+side effect, because the decal is the same size whatever it stands under. A structure carrying
+faction colour on 5% of its body now gets a full-strength ownership tell.
+
+**Residual, unchanged:** the *silhouette* form of Mass Distribution Bias is still unbuilt and is
+still Full Vision work. The sprites remain pixel-identical between factions.
+
+**Open for S5-03:** `marker_policy` defaults to ALL; STRUCTURES_ONLY is a knob away if a full board
+of decals reads as clutter.
+
+---
+
+## Recommendation (as written before the decision — kept for the record)
 
 **D**, with **A**'s documentation correction folded in, and **C** logged as post-gate debt.
 

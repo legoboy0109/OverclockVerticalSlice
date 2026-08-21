@@ -137,10 +137,24 @@ const FLOOR_Z_INDEX: int = 0
 ## Coarse cross-tree z-index band for [member overlay_layer] (ADR-0013 §2).
 const OVERLAY_Z_INDEX: int = 1
 
+## Coarse cross-tree z-index band for [member marker_layer] (ADR-0013 §2,
+## amended 2026-08-20 for Story 009 / S5-08).
+##
+## [b]Above the overlay, below the occupants.[/b] Above, because ownership must stay
+## legible through a range or target highlight — an overlay tint washing the marker
+## out would break it in exactly the moment a player is deciding what to attack.
+## Below, because it is a decal on the floor and an actor standing on the tile must
+## occlude it.
+const MARKER_Z_INDEX: int = 2
+
 ## Coarse cross-tree z-index band for [member occupant_layer] (ADR-0013 §2).
 ## Depth-sort within this band is native [member Node2D.y_sort_enabled],
 ## never this constant nor any custom depth math.
-const OCCUPANT_Z_INDEX: int = 2
+##
+## [b]Was 2 until 2026-08-20[/b], when [constant MARKER_Z_INDEX] took that band
+## (ADR-0013 amendment). The ordering floor -> overlay -> markers -> occupants is
+## what the numbers mean; the absolute values carry no other meaning.
+const OCCUPANT_Z_INDEX: int = 3
 
 ## The 9-class overlay taxonomy (ADR-0013 §3; taxonomy source:
 ## [code]command-action-interface.md[/code] Visual/Audio §B). Each value
@@ -269,6 +283,16 @@ var overlay_layer: TileMapLayer
 ## z-index/y-sort division of labor this node anchors.
 var occupant_layer: Node2D
 
+## The [code]MarkerLayer[/code] holding one faction ownership decal per entity
+## (Story 009 / S5-08), populated by [EntitySpriteFeed].
+##
+## [b]Deliberately NOT Y-sorted[/b], unlike [member occupant_layer]. Markers are
+## flat on the floor at tile centres and one can never meaningfully occlude another;
+## sorting them would only add cost and a second depth rule to keep in step. Their
+## own band ([constant MARKER_Z_INDEX]) puts the whole layer under every occupant,
+## which is the only depth relationship that matters here.
+var marker_layer: Node2D
+
 ## [b]Injectable occupant-pick-region seam (ADR-0013 §4, Story 004).[/b]
 ## Ordered back-to-front matching [member occupant_layer]'s Y-sort paint
 ## order (i.e. the same order real occupant children would visually draw
@@ -314,6 +338,7 @@ func _ready() -> void:
 	floor_layer = _build_iso_tilemap_layer("FloorTileMapLayer", FLOOR_Z_INDEX)
 	overlay_layer = _build_iso_tilemap_layer("OverlayTileMapLayer", OVERLAY_Z_INDEX)
 	_build_overlay_tile_source()
+	marker_layer = _build_marker_layer()
 	occupant_layer = _build_occupant_layer()
 	_build_floor_tile_source()
 
@@ -395,6 +420,17 @@ func _build_diamond_texture(tile_size: Vector2i, tint: Color) -> ImageTexture:
 			else:
 				image.set_pixel(x, y, Color(0.0, 0.0, 0.0, 0.0))
 	return ImageTexture.create_from_image(image)
+
+
+## Constructs the flat [code]MarkerLayer[/code] (ADR-0013 §2 as amended): a plain
+## [Node2D] in the [constant MARKER_Z_INDEX] band, holding the per-entity ownership
+## decals. See [member marker_layer] for why it is not Y-sorted.
+func _build_marker_layer() -> Node2D:
+	var layer := Node2D.new()
+	layer.name = "MarkerLayer"
+	layer.z_index = MARKER_Z_INDEX
+	add_child(layer)
+	return layer
 
 
 ## Constructs the Y-sorted [code]OccupantLayer[/code] (ADR-0013 §2): a plain

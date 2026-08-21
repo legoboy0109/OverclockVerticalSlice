@@ -176,6 +176,38 @@ var _tweens: Dictionary = {}
 ## and why it exists.
 var _dying: Dictionary = {}
 
+## Live [code]entity_id -> ownership marker Sprite2D[/code] under
+## [member BoardRenderer.marker_layer] (Story 009 / S5-08).
+##
+## [b]A sibling in another layer, not a child of the body sprite.[/b] A child would
+## inherit the §8.5 motion transforms — the decal would lean with a moving unit and
+## lunge with an attacking one, when it must stay flat on the tile it marks. It also
+## has to draw UNDER its entity, which a child cannot do without a z_index that
+## ADR-0013 §2 forbids.
+var _marker_nodes: Dictionary = {}
+
+## Which entities get an ownership decal (Story 009 / S5-08).
+enum MarkerPolicy {
+	ALL, ## Every entity. Delivers the non-hue channel board-wide.
+	STRUCTURES_ONLY, ## Structures only — the entities the S5-08 measurement found weak.
+	NONE, ## Hue-only ownership, the pre-S5-08 behaviour.
+}
+
+## How widely ownership decals are drawn. Changing it takes effect on the next
+## [method sync].
+##
+## ★ [b]Open for the S5-03 session.[/b] Defaults to [constant MarkerPolicy.ALL],
+## which is what actually delivers art-bible §1 P2's non-hue channel across the
+## board and fixes the Neutral-vs-Neutral mirror. But units already carry ownership
+## strongly by hue on their own (26–82% accent coverage, ΔE 60–76 deuteranopia —
+## `s5-08-colourblind-ownership-brief.md`), so a decal under every unit may be
+## clutter buying little, and §3.5 is explicit that nothing may compete with the
+## actors for the eye. [constant MarkerPolicy.STRUCTURES_ONLY] targets exactly the
+## entities the measurement found weak. Which reads better on a full board is a
+## legibility call for a human, not a number — hence a knob rather than a decision
+## baked in here.
+var marker_policy: MarkerPolicy = MarkerPolicy.ALL
+
 ## Live [code]entity_id -> the EntityState last seen for it[/code]. Retained solely
 ## so [method power_down] can still resolve a destroyed actor's texture and faction
 ## AFTER [method GameState.destroy_entity] has erased it from
@@ -246,6 +278,7 @@ func _refresh_entity(entity: EntityState) -> void:
 	# and this sync owns the tile term. See [member _offsets].
 	sprite.position = _board.grid_to_screen(entity.position) + _offset_for(id)
 	_last_entity[id] = entity
+	_refresh_marker(entity)
 	_refresh_glow(entity, sprite, facing)
 
 
@@ -423,6 +456,65 @@ func flare(entity_id: int) -> void:
 	_glow_states[entity_id] = [EntityGlow.Mode.FLARE, _resting_pulse_for(entity_id)]
 
 
+# --- Ownership markers (Story 009 / S5-08) -----------------------------------
+
+## Creates or repositions [param entity]'s faction ownership decal on
+## [member BoardRenderer.marker_layer].
+##
+## The decal is a flat tile-sized band whose SHAPE differs per faction, so ownership
+## survives with hue removed — the non-hue backup art-bible §1 P2 requires and §5.2
+## never shipped. Because it is the same size for every entity, a structure that
+## carries faction colour on 5% of its own body still gets a full-strength ownership
+## tell; see [OwnershipMarker] for why that was the problem worth solving.
+##
+## Positioned at the tile centre with no motion offset applied: the marker belongs to
+## the TILE, and an actor leaning or lunging must slide against its own decal rather
+## than drag it along.
+func _refresh_marker(entity: EntityState) -> void:
+	var id: int = entity.entity_id
+	if not _wants_marker(entity) or _board == null or _board.marker_layer == null:
+		_remove_marker(id)
+		return
+	var marker: Sprite2D = _marker_nodes.get(id)
+	if marker == null:
+		marker = Sprite2D.new()
+		marker.name = "Marker%d" % id
+		marker.centered = false
+		# NO z_index (ADR-0013 §2) — the whole LAYER carries the band, and a child
+		# setting its own would be the exact escape the ADR's guardrail forbids.
+		_marker_nodes[id] = marker
+		_board.marker_layer.add_child(marker)
+	var texture: ImageTexture = OwnershipMarker.texture_for(_faction_for(entity.owner))
+	marker.texture = texture
+	var size: Vector2 = texture.get_size()
+	marker.scale = Vector2.ONE / OwnershipMarker.TEXTURE_SCALE
+	# Centred on the tile, unlike the body sprites' bottom-centre pivot: a decal has
+	# no ground-contact point, it IS the ground.
+	marker.offset = -size * 0.5
+	marker.position = _board.grid_to_screen(entity.position)
+
+
+## Whether [param entity] gets a decal under the current [member marker_policy].
+func _wants_marker(entity: EntityState) -> bool:
+	match marker_policy:
+		MarkerPolicy.ALL:
+			return true
+		MarkerPolicy.STRUCTURES_ONLY:
+			return entity is StructureState
+		_:
+			return false
+
+
+## Drops [param entity_id]'s ownership decal, if it has one.
+func _remove_marker(entity_id: int) -> void:
+	var marker: Sprite2D = _marker_nodes.get(entity_id)
+	_marker_nodes.erase(entity_id)
+	if marker != null and is_instance_valid(marker):
+		if marker.get_parent() != null:
+			marker.get_parent().remove_child(marker)
+		marker.queue_free()
+
+
 # --- §8.5 state transforms (Story 008 / S5-06) -------------------------------
 
 ## Tips [param entity_id] into a move, per §8.5's directional lean.
@@ -544,6 +636,12 @@ func power_down(entity_id: int) -> void:
 		# No destroyed art for this type — fade the body out rather than cutting it,
 		# so the loss still reads as a shutdown.
 		tween.tween_property(sprite, ^"self_modulate:a", 0.0, EntityTransforms.DEATH_ECHO_SEC)
+	# The ownership decal goes with the body — a dead entity owns no tile, and a
+	# marker left at full strength under a fading corpse would read as "something is
+	# still standing here".
+	var marker: Sprite2D = _marker_nodes.get(entity_id)
+	if marker != null and is_instance_valid(marker):
+		tween.tween_property(marker, ^"modulate:a", 0.0, EntityTransforms.DEATH_ECHO_SEC)
 	tween.chain().tween_callback(_finish_death.bind(entity_id))
 
 
@@ -611,6 +709,7 @@ func _forget(entity_id: int) -> void:
 	_offsets.erase(entity_id)
 	_dying.erase(entity_id)
 	_last_entity.erase(entity_id)
+	_remove_marker(entity_id)
 	if sprite != null and is_instance_valid(sprite):
 		if sprite.get_parent() != null:
 			sprite.get_parent().remove_child(sprite)

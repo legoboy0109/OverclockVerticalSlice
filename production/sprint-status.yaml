@@ -26,7 +26,7 @@ goal: "Wire the completed art into the board, run the iso-legibility + swing-bac
 start: "2026-08-19"
 end: "2026-09-02"
 generated: "2026-08-19"
-updated: "2026-08-20"  # s5-06 done (DamageEvent + death echo); s5-01/02 done; ASSET-008..011 shipped
+updated: "2026-08-20"  # s5-06 + s5-08 done; s5-01/02 done; only the human-gated s5-03/04/05/07 remain
 # ⚠ MID-SPRINT SCOPE ACCEPTED 2026-08-19 (~1 day): the four missing entity assets
 # (Sniper, Economy Outpost, Defensive Structure, Research Lab) plus the structure
 # one-tile footprint fix. Surfaced by the user during the s5-04 session. Recorded
@@ -174,14 +174,33 @@ stories:
     name: "Colourblind ownership decision — non-hue markers or documented accept"
     file: "production/qa/evidence/s5-08-colourblind-ownership-brief.md"
     priority: should-have
-    status: ready-for-dev
-    owner: "user (design-direction call)"
+    status: done
+    owner: "user (design-direction call) + godot-gdscript-specialist"
     estimate_days: 1
     blocker: ""
-    completed: ""
-    # ★ OPTIONS PREPPED 2026-08-20 — brief written, awaiting the user's call. Four options
-    # (A accept+correct docs / B markers roster-wide / C markers on structures only /
-    # D raise structure accent coverage), recommendation D+A with C as post-gate debt.
+    completed: "2026-08-20"
+    # ✅ DONE 2026-08-20. User chose D+A; D was re-specified as D3 during implementation
+    # and built. Suite 954/954 (was 936), 18 new tests, 0 orphans; slice boots clean.
+    # Story: production/epics/board-renderer/story-009-ownership-marker.md
+    # ⚠ D AS WRITTEN WAS NOT BUILDABLE — the estimate assumed per-entity recolour masks.
+    # There are none: recolor.py hue-gates the Rush master, and structure plating is
+    # 74-94% COOL-hued, so relaxing the gate adds 0.2-1.0%. No more orange exists in
+    # those sprites. The glow does not rescue it either (dE 1.9 -> 2.8 at peak breathe;
+    # masks are 3.5% of the sprite). Flagged to the user rather than substituted silently.
+    # ✅ D3 BUILT: the marker moved to the TILE — a per-faction ground decal under each
+    # entity (Rush solid chevron at the near vertex / Boom split flanks with a gap there /
+    # Neutral even ring). Delivers option C's benefit at option D's cost with ZERO art
+    # regeneration, and fixes the weak-structure defect as a side effect because the decal
+    # is the same size whatever it stands under.
+    # ★★ THIS IS THE FIRST REAL NON-HUE OWNERSHIP CHANNEL THE PROJECT HAS EVER HAD. The
+    # three shapes read apart with all colour discarded — verified by render. §1 P2 is now
+    # satisfied AS A CHANNEL; the SILHOUETTE form of §5.2 stays Full Vision work.
+    # ⚠ ADR-0013 AMENDED — a fourth render layer (MarkerLayer z_index 2), pushing
+    # OccupantLayer 2 -> 3. Not a child sprite: a child inherits S5-06's motion transforms
+    # and cannot draw under its parent without a z_index the ADR forbids.
+    # ★ OPEN FOR S5-03: marker_policy defaults to ALL. Units already read strongly by hue,
+    # and §3.5 forbids competing with the actors, so a decal under every unit may be
+    # clutter — STRUCTURES_ONLY is one line away. Human call, hence a knob.
     # ⚠ UNBLOCKED from s5-03: the questions turned out to be measurable, not dependent on
     # the legibility session's subjective read.
     # ⚠⚠ THE SPRINT NOTE'S FRAMING WAS BACKWARDS. It said "Δ34/255 (13%) — reads on
