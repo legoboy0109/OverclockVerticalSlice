@@ -26,7 +26,7 @@ goal: "Wire the completed art into the board, run the iso-legibility + swing-bac
 start: "2026-08-19"
 end: "2026-09-02"
 generated: "2026-08-19"
-updated: "2026-08-19"  # s5-01+s5-02 done; ASSET-008..011 shipped (roster art complete)
+updated: "2026-08-20"  # s5-06 done (DamageEvent + death echo); s5-01/02 done; ASSET-008..011 shipped
 # ⚠ MID-SPRINT SCOPE ACCEPTED 2026-08-19 (~1 day): the four missing entity assets
 # (Sniper, Economy Outpost, Defensive Structure, Research Lab) plus the structure
 # one-tile footprint fix. Surfaced by the user during the s5-04 session. Recorded
@@ -130,15 +130,33 @@ stories:
   # --- Should Have ---
   - id: "s5-06"
     name: "Unit state transforms — move lean, attack lunge, hit recoil, destroyed cross-fade"
-    file: "design/art/art-bible.md"
+    file: "production/epics/board-renderer/story-008-unit-state-transforms.md"
     priority: should-have
-    status: backlog
-    owner: ""
+    status: done
+    owner: "godot-gdscript-specialist"
     estimate_days: 1
-    blocker: "s5-02"
-    completed: ""
-    # §8.5's move/attack/hit are renderer transforms, NOT art — no textures owed.
-    # destroyed_01 textures already shipped; cross-fade idle_01→destroyed_01, pulse→0.
+    blocker: ""
+    completed: "2026-08-20"
+    # DONE 2026-08-20. Suite 936/936 (was 914), 22 new tests, 0 orphans; slice boots
+    # clean. §8.5's move/attack/hit are renderer transforms, NOT art — no textures owed.
+    # ⚠ Needed TWO structural additions the AC did not anticipate, both recorded in the
+    # story file:
+    #   1. DamageEvent (src/core/event/damage_event.gd) — Combat announced DEATHS only,
+    #      so nothing could tell who struck whom on a survived hit. ADR-0004 already
+    #      named damage_event.gd in its planned-event table and it was never built;
+    #      is_crit dropped (no crit system), attacker_id added (the lunge needs it).
+    #      A counterattack emits its own swapped event, so it animates with no special
+    #      case. USER-APPROVED scope 2026-08-20 before any code was written.
+    #   2. The death echo (EntitySpriteFeed.power_down) — destroy_entity erases an
+    #      entity the frame it dies, so the destroyed beat had nothing to play on. This
+    #      CLOSES s5-01's AC-10: the destroyed PNGs shipped by S4-02 had never once been
+    #      drawn. A dying actor is held on screen, excluded from pick_regions, then freed.
+    # ★ FEEL HALF OWED TO S5-07 (windowed): whether the lean/lunge/recoil read and
+    # survive repetition, and whether the cross-fade reads as a power-down not an
+    # explosion. Headless cannot judge any of it — same false-positive trap s5-02 hit.
+    # ★ Follow-up after the gate: FLARE_DECAY_SEC (s5-02) and every entity_transforms.gd
+    # constant are unpinned feel values that must be tuned TOGETHER — the flare and the
+    # lunge are one beat. Best done off the S5-07 recording.
 
   - id: "s5-07"
     name: "★ Advisory Visual/Feel sign-offs — windowed screenshots (carryover S4-07)"
