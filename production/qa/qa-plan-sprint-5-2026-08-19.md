@@ -32,11 +32,21 @@ on playtest discipline, not on the test suite**. The two playtest protocols are 
 | S5-03 ★ Iso-legibility playtest | Visual/Feel *(verification)* | None (not automatable) | ★ Playtest protocol + naive observer |
 | S5-04 ★ Swing-back playtest | Integration *(verification)* | None (not automatable) | ★ Playtest protocol, ≥1 documented session |
 | S5-05 VS REPORT + re-gate | Process — no test type applies | None | `/gate-check` output recorded |
-| S5-06 Unit state transforms | Visual/Feel | None | Video/screenshot + lead sign-off |
+| S5-06 Unit state transforms | Visual/Feel **+ Logic** *(reclassified 2026-08-20 — see note)* | Unit — `tests/unit/combat/damage_event_test.gd`, `tests/unit/board-renderer/entity_transforms_test.gd`; Integration — `tests/integration/board-renderer/entity_death_echo_test.gd` | Video/screenshot + lead sign-off |
 | S5-07 ★ Advisory Visual/Feel sign-offs | Visual/Feel *(verification)* | None | ★ Windowed evidence docs |
 | S5-08 Colourblind ownership decision | Visual/Feel *(decision)* | None | Recorded rationale, or new art + re-check |
 | S5-09 Wear-variant placement pass | Config/Data | None | Spot-check density vs §6.4 ceiling |
 | S5-10 Structure `damaged` tier | Visual/Feel | None | Screenshot + art-director sign-off |
+
+
+> **★ S5-06 reclassified 2026-08-20 (implementation, not re-planning).** Planned as pure Visual/Feel
+> with no automatable surface. It turned out to need two structural changes that ARE logic and are
+> now covered by blocking tests: a new core `DamageEvent` (combat announced deaths only, so nothing
+> could tell who struck whom on a survived hit) and the **death echo** node-lifetime hold
+> (`destroy_entity` erases an entity the frame it dies, so §8.5's destroyed beat had nothing on
+> screen to play on). 22 tests added; suite 936/936. The *feel* half — whether the motions read and
+> survive repetition, and whether the cross-fade reads as a power-down — remains Visual/Feel and is
+> owed to S5-07 below, unchanged.
 
 ---
 
