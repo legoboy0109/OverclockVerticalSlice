@@ -147,7 +147,36 @@ flagging it as a legibility question for the human session.
   S5-06 rendering bug and was not. If a future capture disagrees with a green headless
   suite, suspect the harness first and verify with a headless probe.
 
-## ★ NEW open question for S5-03 — this fix gave an old question teeth
+## ✅ RESOLVED 2026-08-21 — per-unit actionability (was an open question for S5-03)
+
+Decided by the user immediately after the darken fix landed. Frames here are captured
+against the **shipped** per-unit predicate.
+
+**What it does.** An actor is lit while its owner can still afford the cheapest option
+still open to it. Because `move_cost` varies across the roster (Scout 1, Trooper/Sniper
+2, Heavy 3), that genuinely discriminates between units instead of dimming an army.
+
+**Measured on this board** (available → spent):
+
+| | delta |
+|---|---:|
+| Trooper (unit) | **−30.7/255** |
+| Rush HQ | −3.7/255 |
+| Boom HQ | −9.9/255 |
+
+The HQ deltas are breathe-phase variation, not a state change — **non-combat structures
+never dim, even at 0 AP.** That is deliberate: the two HQs are a large share of the
+board's visual mass, and darkening them at every end of turn would have re-created most
+of the whole-board flattening this change was made to avoid. A structure that *can*
+shoot does follow its own once-per-turn allowance.
+
+**★ A property worth knowing.** `attack_cost` is a flat 2 for every unit, so a unit that
+has **not** attacked has a cheapest option of `min(move_cost, 2)` — at most 2 for the
+entire roster. Differentiation by `move_cost` therefore only appears once a unit has
+spent its attack, or once the pool drops to 1 AP. At 2 AP a fresh Heavy is still lit,
+because it cannot move but can still shoot. That is correct, and asserted.
+
+## ★ Superseded — the question as originally filed
 
 Story 007 flagged that breathe-vs-clamp follows the **owning player's AP pool**
 (spec-literal per §8.5/§2.6), which dims that player's *whole army at once*, versus

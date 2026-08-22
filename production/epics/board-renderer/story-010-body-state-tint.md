@@ -139,6 +139,12 @@ ownership does not dim with the actor).
 **All 7 acceptance criteria met**, with the "does it read at playing distance" half owed
 to S5-03 / S5-07 sign-off like every other Visual/Feel item.
 
+### ✅ The open question below was answered the same day — per-unit actionability
+The user chose **per-unit**. Implemented in `VerticalSliceRoot._is_entity_actionable`
+and covered by `tests/integration/vertical-slice/per_unit_actionability_test.gd`
+(8 tests). Units dim by affordability (−30.7/255 measured); non-combat structures never
+dim, even at 0 AP, so the board keeps its anchors. Original framing retained below.
+
 ### ★ This fix gave an old open question real teeth
 Story 007 flagged that breathe-vs-clamp follows the **owning player's AP pool**
 (spec-literal per §8.5/§2.6), dimming that player's whole army at once, versus **per-unit

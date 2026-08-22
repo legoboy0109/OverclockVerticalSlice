@@ -78,9 +78,17 @@ stories:
     # dst + rgb*a, so it was SQUARED — glow all but invisible (54 changed px/frame).
     # The headless suite passed throughout: instance uniforms STORE headlessly whether
     # or not they RENDER. Alpha is pinned to 1.0 now.
-    # ★ S5-03 decides: breathe/clamp currently follows the OWNING PLAYER's AP pool
-    # (spec-literal, dims a whole army at once) vs per-unit actionability (more
-    # tactical info, one-line change via EntitySpriteFeed.actionable_predicate).
+    # ✅ RESOLVED 2026-08-21 (user): PER-UNIT actionability shipped, replacing the
+    # spec-literal army-wide AP read. An actor is lit while its owner can afford its
+    # cheapest remaining option; move_cost varies across the roster (Scout 1,
+    # Trooper/Sniper 2, Heavy 3) so this discriminates per unit. Measured: units
+    # -30.7/255, HQs -3.7/-9.9 (breathe phase only). ★ NON-COMBAT STRUCTURES NEVER
+    # DIM, even at 0 AP — they are a large share of the board's visual mass and
+    # darkening them every end of turn would re-create the flattening this replaced.
+    # ★ Known property: attack_cost is a flat 2, so a FRESH unit's cheapest option is
+    # min(move_cost, 2) <= 2 roster-wide. move_cost differentiation only shows once a
+    # unit has spent its attack, or at 1 AP. A fresh Heavy at 2 AP is lit (cannot
+    # move, can still shoot) — correct, and asserted.
     # UNBLOCKED 2026-08-19 — s5-01 done. Sprites are one Sprite2D per entity under
     # OccupantLayer, owned by EntitySpriteFeed; that is where the ShaderMaterial goes.
     # 8 glow masks already shipped (one per asset+facing, hue-agnostic). Drives

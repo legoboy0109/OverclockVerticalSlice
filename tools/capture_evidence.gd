@@ -67,10 +67,14 @@ func _run() -> void:
 	_set_breathe_phase(0.75) # sin trough -> BREATHE_MIN
 	await _capture("02b-glow-ap-available-trough",
 		"AP-available at the breathe TROUGH (pulse 0.25) — the dimmest an idle actor gets. The gap between this and 03 is the WORST case for the Pillar-1 read.")
-	_feed.actionable_predicate = func(_e: EntityState) -> bool: return false
+	# Per-unit predicate (user decision 2026-08-21): units dim by affordability,
+	# non-combat structures never dim. Mirrors VerticalSliceRoot._is_entity_actionable
+	# rather than blanket-false, so the capture shows the SHIPPED read.
+	_feed.actionable_predicate = func(e: EntityState) -> bool:
+		return e is StructureState
 	_feed.sync(_entities())
 	await _capture("03-glow-ap-spent",
-		"Every actor AP-spent — glow clamped to 0.08. Compare against 02 (best case) and 02b (worst case): this is the Pillar-1 'can it still act' read.")
+		"Units out of AP, structures unaffected — the PER-UNIT read. Compare 02/02b: units darken, both HQs stay lit because a non-combat structure has no turn allowance to spend.")
 	_feed.actionable_predicate = Callable()
 	_feed.sync(_entities())
 

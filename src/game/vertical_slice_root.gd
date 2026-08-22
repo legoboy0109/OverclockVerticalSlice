@@ -189,13 +189,26 @@ func _build_board_and_camera() -> void:
 		_state.per_player[LOCAL_PLAYER].faction,
 		_state.per_player[AI_PLAYER].faction,
 	])
-	# Glow breathes while an actor's owner still has AP, and clamps at 0 AP — art
-	# bible §8.5/§2.6 read literally. ★ Whether a PER-UNIT read (a unit that has
-	# already acted clamps while its idle squadmates breathe) is the better Pillar-1
-	# signal is an open legibility question for S5-03; swapping it is a one-line
-	# change here (see EntitySpriteFeed.actionable_predicate).
-	_feed.actionable_predicate = func(entity: EntityState) -> bool:
-		return _reader.current_ap(entity.owner) > 0
+	# ★ PER-UNIT actionability (user decision, 2026-08-21), replacing the army-wide
+	# "does this player have any AP" read that art bible §8.5/§2.6 specified
+	# literally. An actor is lit while its owner can still afford SOMETHING for it,
+	# and dims when it cannot.
+	#
+	# [b]Why affordability and not "has this unit acted".[/b] The obvious XCOM-style
+	# read — a unit greys out once used — has no equivalent state here. Attacking
+	# sets has_attacked, but the move cap is SOFT: a unit that has moved, or
+	# attacked, can always keep moving, it just pays a surcharge. There is no point
+	# at which a unit is finished. So "can still act" has to mean "the owner can
+	# still pay for its cheapest remaining option", which IS per-unit because
+	# move_cost varies across the roster (Scout 1, Trooper/Sniper 2, Heavy 3).
+	#
+	# The practical read this gives: at 2 AP the Scout, Trooper and Sniper stay lit
+	# while the Heavy goes dark; at 1 AP only the Scout is left. That answers the
+	# question a player actually has at end of turn — "what can I still do?" —
+	# rather than the blunter "am I out of AP", which the AP counter already says.
+	#
+	# Structures are handled separately: see the closure.
+	_feed.actionable_predicate = _is_entity_actionable
 
 	_camera = Camera2D.new()
 	add_child(_camera)
@@ -688,7 +701,55 @@ func select_at_board_point(board_pos: Vector2) -> bool:
 	return pick.occupant_entity_id != -1 and _cmd.selected_id() == pick.occupant_entity_id
 
 
-## Rebuilds the board's occupant pick-regions from the live entities so a left-click
+## Whether [param entity] can still be used this turn — the Pillar-1 "can this
+## actor act?" read feeding [member EntitySpriteFeed.actionable_predicate], which
+## drives both the glow state and (since Story 010) the body tint.
+##
+## A [UnitState] is actionable while its owner can afford the cheapest option still
+## open to it: moving (always available — the cap is soft, so a moved unit can move
+## again at a surcharge) or attacking, if it has not already attacked this turn.
+## Because [member UnitTypeDef.move_cost] varies across the roster this genuinely
+## discriminates between units rather than dimming a whole army at once.
+##
+## A [StructureState] that can shoot follows the same rule against its own
+## once-per-turn attack; one that cannot shoot never dims, because it is a fixture
+## rather than an actor with a turn allowance and dimming it would say nothing.
+##
+## [b]Not a legality check.[/b] It deliberately does not ask whether any legal move
+## target or attack target exists — that is O(reachable) per actor per refresh, and
+## a unit boxed in by its own squad is still "yours to use", not spent. Affordability
+## is the honest cheap approximation; a fully accurate version would be a legality
+## query and is not worth the cost on a per-frame-adjacent path.
+func _is_entity_actionable(entity: EntityState) -> bool:
+	if _reader == null:
+		return true # unwired: breathe rather than sit inert (feed's own default).
+	# ★ Structures are resolved BEFORE the empty-pool check, deliberately. A
+	# non-combat structure is a fixture with no turn allowance, so it must stay lit
+	# even at 0 AP — dimming it says nothing true, and both HQs are a large share of
+	# the board's visual mass, so darkening them at every end of turn would
+	# re-create most of the whole-board flattening this predicate replaced.
+	if entity is StructureState:
+		var structure := entity as StructureState
+		if structure.type == null or structure.type.attack <= 0:
+			return true
+		# One that CAN shoot does have a once-per-turn allowance, and follows it.
+		return not structure.has_attacked \
+			and _reader.current_ap(entity.owner) >= Combat.attack_cost_for(structure)
+	if entity is UnitState:
+		var unit := entity as UnitState
+		if unit.type == null:
+			return true
+		var ap: int = _reader.current_ap(entity.owner)
+		if ap <= 0:
+			return false
+		var cheapest: int = unit.type.move_cost
+		if not unit.has_attacked:
+			cheapest = mini(cheapest, Combat.attack_cost_for(unit))
+		return ap >= cheapest
+	return true
+
+
+## Rebuilds the board's occupant pick-regions from the live entities## Rebuilds the board's occupant pick-regions from the live entities so a left-click
 ## resolves to the occupant on that tile (scope §8 seam b, consumed by
 ## [method BoardRenderer.pick_at]). Each region is the occupant tile's screen-space
 ## AABB, authored back-to-front (ascending screen Y — the Y-sort paint order) so
