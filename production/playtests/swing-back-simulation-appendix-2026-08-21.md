@@ -111,6 +111,59 @@ roughly 25 minutes.
 
 ---
 
+## ✅ FOLLOW-UP — `max_rounds` armed at 30, and what it exposed
+
+The user armed the round cap the same day (`VerticalSliceRoot.VS_MAX_ROUNDS = 30`). The
+simulator was re-pointed at the shipped configuration and the batch re-run.
+
+**It fixes the termination problem outright.**
+
+| | before | after |
+|---|---:|---:|
+| Games reaching a winner | **0 / 20** | **19 / 19** |
+| Games hitting the safety cap | 20 / 20 | **0** |
+| Turns per game | 200 (cap) | 60 (= 30 rounds) |
+
+### ★★ But capped games skew 95% to the second player
+
+**Player 1 won 18 of 19 (95%)** — including every game where player 0 started with up to three
+free Troopers. `LOCAL_PLAYER = 0`, so **the human sits on the losing side of that skew.**
+
+**Mechanism — the tiebreak does not measure what its name says.**
+`TiebreakMetric.UNIT_COUNT` is implemented as:
+
+```gdscript
+for e: EntityState in entities():
+    counts[e.owner] += 1
+```
+
+That counts **every entity — structures and the HQ included**, not units. So a capped game
+is decided by *who built more*, not by who fought better. It is consistent with the
+observed results: P1 won several games while trailing on unit count, which only makes
+sense if structures decided them.
+
+Two consequences worth putting in front of the verdict:
+
+1. **The optimal line in a capped game is to boom and avoid combat.** Bank Credits,
+   build, never trade units. That is the degenerate strategy the tiebreak accidentally
+   rewards, and it sits directly on top of the unbounded-Credit finding above.
+2. **A 95% second-player rate is not a tuning wobble.** Two identical deterministic
+   agents on a mirrored map should not produce that. Whether it is turn order, the
+   `1 - active_player` tie rule, or the entity-count metric itself, it needs diagnosing
+   before a capped result can be trusted as a *game* outcome rather than a seat outcome.
+
+**Should the cap stay armed? Yes — on the evidence.** Without it 0% of games end, which is
+strictly worse and makes S5-04 unanswerable. With it, every game ends. A human will also
+usually win by destroying the HQ (the thing the AI never does), so the cap should behave
+as the backstop it is meant to be rather than as the usual result. **But if a human game
+does reach turn 30, expect to lose it on a metric that rewarded your opponent's
+construction.** Worth knowing before you play, and worth logging if it happens.
+
+Neither the tiebreak metric nor the seat skew has been changed — both are design calls,
+recorded in `production/post-gate-backlog.md`.
+
+---
+
 ## ⛔ What this CANNOT answer — still owed to a human session
 
 Everything S5-04 actually asks about *feel* is untouched by this and remains open:

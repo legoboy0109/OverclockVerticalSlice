@@ -55,6 +55,27 @@ const HQ_B: Vector2i = Vector2i(9, 5)
 const LOCAL_PLAYER: int = 0
 const AI_PLAYER: int = 1
 
+## Round cap for the vertical slice, arming [member GameState.max_rounds] (user
+## decision, 2026-08-21).
+##
+## [b]Why the slice needs one at all.[/b] An AI-vs-AI simulation over 20 matches found
+## the slice had NO terminating condition: the AI never attacks an HQ (zero HQ damage in
+## 4,182 turn-rows) and `max_rounds` defaulted to 0, so every game ran forever — even
+## with one side starting three Troopers up. See
+## `production/playtests/swing-back-simulation-appendix-2026-08-21.md`.
+##
+## [b]Why 30.[/b] The simulation showed unit counts stabilising by round 20-30 and the
+## economy well developed by 25, so 30 rounds leaves room for a full arc without the
+## indefinite drag. It is a starting value for the S5-04 session to judge, not a locked
+## one — change this single constant.
+##
+## ★ [b]Note what the tiebreak rewards.[/b] [constant GameState.TiebreakMetric.UNIT_COUNT]
+## is the only implemented metric, so a capped game is won on unit COUNT. Combined with
+## the unbounded Credit accumulation the same simulation found, the theoretically optimal
+## line in a capped game is "bank, mass-produce cheap units, avoid fighting" — flagged
+## for the playtest to watch for, not fixed here.
+const VS_MAX_ROUNDS: int = 30
+
 ## Provisional camera zoom over the placeholder board (final feel = `/ux-design`).
 # Camera framing. The board is fit into the viewport minus these HUD-reserved
 # bands (so the top/bottom HUD chrome sits over empty space, not the board), then
@@ -156,6 +177,9 @@ func _build_match() -> void:
 	# ADR-0012). The two sides are pinned to RUSH/BOOM so ownership reads by hue
 	# (art-bible §4.2 / S4-02); both carry empty unit_deltas, so this is exact VS
 	# parity — mechanically identical to Neutral, distinct only in identity/hue.
+	# Arm the round cap so a match can actually end (see VS_MAX_ROUNDS). The tiebreak
+	# machinery already existed and is tested; the slice simply never set this.
+	_state.max_rounds = VS_MAX_ROUNDS
 	_state.per_player[LOCAL_PLAYER].faction = Factions.RUSH
 	_state.per_player[AI_PLAYER].faction = Factions.BOOM
 	_state.per_player[AI_PLAYER].is_ai_controlled = true
@@ -352,6 +376,17 @@ func _refresh_status() -> void:
 	var lines := PackedStringArray()
 	# ASCII only — the engine fallback font has no glyph for many symbols
 	# (bullet/hourglass/warning/arrow), which render as "tofu" boxes.
+	# Match end takes over the whole status line. ★ This is NOT game-hud.md CR-9's
+	# victory/defeat screen — that remains unimplemented for EVERY win path, including
+	# HQ destruction (AC-17/AC-22). It is a stopgap so that arming the round cap does not
+	# produce a build where the match silently stops responding with no explanation,
+	# which is what a playtester would otherwise experience.
+	if _state != null and _state.match_status == GameState.MatchStatus.GAME_OVER:
+		var who: String = "You win" if _state.winner == LOCAL_PLAYER else "You lose"
+		var how: String = "opponent HQ destroyed" if _hq_destroyed() \
+			else "round limit reached (%d) - decided on unit count" % VS_MAX_ROUNDS
+		_status_label.text = ">> MATCH OVER - %s (%s)" % [who, how]
+		return
 	lines.append(">> AI thinking..." if _ai_running else ">> Your turn")
 
 	var build_type: StructureTypeDef = selected_buildable()
@@ -699,6 +734,19 @@ func select_at_board_point(board_pos: Vector2) -> bool:
 		_keep_cursor_in_view()
 	queue_redraw() # paint (or clear) the selected unit's range highlight.
 	return pick.occupant_entity_id != -1 and _cmd.selected_id() == pick.occupant_entity_id
+
+
+## Whether the match ended by HQ destruction rather than by the round cap — used only
+## to word the end-of-match status line. True when either HQ is missing from the live
+## entity set, which is what [method GameState.destroy_entity] leaves behind.
+func _hq_destroyed() -> bool:
+	if _state == null:
+		return false
+	for player: int in 2:
+		var hq: EntityState = _state.entities_by_id.get(player)
+		if hq == null:
+			return true
+	return false
 
 
 ## Whether [param entity] can still be used this turn — the Pillar-1 "can this

@@ -130,8 +130,25 @@ stories:
     # enemy UNIT, so armies collide mid-map and never stand next to the objective.
     # ⇒ The hard gate "no decided game reverses" is currently UNASKABLE — no game becomes
     #   decided because no game ends. In human-vs-AI the human can win but cannot lose.
-    # ⇒ Consider arming max_rounds BEFORE the session so matches terminate (~one line;
-    #   the tiebreak machinery exists and is documented). DESIGN CALL, not applied.
+    # ✅ MAX_ROUNDS ARMED 2026-08-21 (user): VerticalSliceRoot.VS_MAX_ROUNDS = 30.
+    #   Re-ran the batch against the shipped config: 19/19 games now TERMINATE with a
+    #   winner at 60 turns (was 0/20 ending at all). The slice can end a match again.
+    #   Also added a one-line match-over status message — there was NO victory/defeat
+    #   presentation for ANY win path (game-hud CR-9/AC-17/AC-22 all unimplemented);
+    #   invisible while games never ended, immediately visible once they do.
+    # ★★ BUT THE CAP EXPOSED TWO THINGS, both DESIGN CALLS, both logged in
+    #   post-gate-backlog.md §1b, neither fixed:
+    #   1. TiebreakMetric.UNIT_COUNT counts EVERY ENTITY, not units — structures and HQ
+    #      included. A capped game is decided by WHO BUILT MORE, so the optimal capped
+    #      line is boom-and-avoid-combat. Sits right on top of the unbounded-Credit find.
+    #   2. Capped games skew 95% TO PLAYER 1 (18 of 19), including every game where P0
+    #      started up to +3 Troopers ahead. LOCAL_PLAYER = 0, so THE HUMAN IS ON THE
+    #      LOSING SIDE. Two identical deterministic agents on a mirrored map should not
+    #      do this — needs diagnosing before a capped result reads as a game outcome
+    #      rather than a seat outcome.
+    # ⇒ Keep the cap: without it 0% of games end, which is strictly worse. A human will
+    #   usually win by HQ kill (the thing the AI never does), so the cap should act as a
+    #   backstop — but log it if a session game reaches turn 30.
     # ★ Secondary: Credits accumulate unbounded — 4970 peak, still climbing linearly at
     #   the cap. Confirms the pivot's own open question about banking and snowball.
     # ⛔ ANALYSIS A / C / D (swing alive, tempo readable, two-pool tradeoff) are ENTIRELY

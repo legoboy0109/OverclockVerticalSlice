@@ -57,6 +57,32 @@ entity kind and is the single call site everything else routes through
 
 ---
 
+## 1b. Round-cap tiebreak — metric and seat skew (raised 2026-08-21)
+
+`max_rounds` was armed at 30 (`VerticalSliceRoot.VS_MAX_ROUNDS`), which fixed the fact
+that matches could not end at all. Verification immediately surfaced two things that
+were **not** fixed and are design calls:
+
+- **`TiebreakMetric.UNIT_COUNT` counts every entity, not units.** The implementation is
+  `for e in entities(): counts[e.owner] += 1`, so structures and the HQ count. A capped
+  game is therefore decided by **who built more**, and the optimal capped line is to boom
+  and avoid combat — a degenerate strategy sitting right on top of the unbounded-Credit
+  finding. Either rename the metric to match the behaviour, or implement a metric that
+  measures what the tiebreak should reward (material value? HQ hp? territory?).
+- **Capped games skew 95% to player 1** (18 of 19 AI-vs-AI games, including every game
+  where player 0 started up to three Troopers ahead). Two identical deterministic agents
+  on a mirrored map should not do that. Candidate causes: turn order, the
+  `1 - active_player` tie rule, or the entity-count metric itself. **`LOCAL_PLAYER = 0`,
+  so the human is on the losing side of the skew.** Needs diagnosing before a capped
+  result can be read as a game outcome rather than a seat outcome.
+
+Also still open from the same pass: **the AI has no siege drive** (zero HQ damage in
+4,182 turn-rows), and **there is no victory/defeat presentation for any win path** —
+`game-hud.md` CR-9 / AC-17 / AC-22 are all unimplemented. The slice now prints a one-line
+status message on match end as a stopgap, which is explicitly not CR-9's screen.
+
+---
+
 ## 2. Feel-value tuning pass — from Stories 007 / 008 / 010
 
 `FLARE_DECAY_SEC` (0.45) and every constant in `entity_transforms.gd` are unpinned feel

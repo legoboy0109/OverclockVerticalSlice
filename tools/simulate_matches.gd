@@ -157,6 +157,9 @@ func _build_match(favoured: int, handicap: int, variant: int) -> GameState:
 	map.deploy_tiles = []
 
 	var state: GameState = GameState.start_match(map, 0)
+	# Mirror the slice: the round cap is armed there, so simulating without it would
+	# measure a configuration that no longer ships.
+	state.max_rounds = VerticalSliceRoot.VS_MAX_ROUNDS
 	state.per_player[0].faction = Factions.RUSH
 	state.per_player[1].faction = Factions.BOOM
 	state.per_player[0].is_ai_controlled = true
