@@ -122,10 +122,10 @@ stories:
     # ⚠⚠ 2026-08-21 — SIMULATION APPENDIX RUN (measurable half only; session still NOT
     # played). production/playtests/swing-back-simulation-appendix-2026-08-21.md
     # ★★★ FINDING: THE SLICE HAS NO TERMINATING CONDITION UNDER AI PLAY. The AI never
-    # attacks an HQ — ZERO HQ damage across 554+ turn-rows, both HQs at 40/40 in every
-    # game — and GameState.max_rounds is 0 (the slice never arms the round cap). Every
-    # simulated game ran to the 200-turn safety cap with no winner, at every handicap
-    # tested. The AI CAN value the HQ (hq_siege_value 12, with an AC-29 guard against a
+    # attacks an HQ — ZERO HQ damage in ALL 4182 turn-rows, both HQs at 40/40 in every
+    # game — and GameState.max_rounds is 0 (the slice never arms the round cap). ALL 20
+    # games hit the 200-turn cap with NO winner, including 5 where one side started +3
+    # Troopers up. A material lead never converts to a win. The AI CAN value the HQ (hq_siege_value 12, with an AC-29 guard against a
     # zero weight); the hypothesis is that positional scoring pulls units to the nearest
     # enemy UNIT, so armies collide mid-map and never stand next to the objective.
     # ⇒ The hard gate "no decided game reverses" is currently UNASKABLE — no game becomes

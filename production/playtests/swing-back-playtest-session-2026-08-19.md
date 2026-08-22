@@ -17,7 +17,8 @@ An AI-vs-AI simulation pass now covers the **measurable** half of this protocol:
 **It found something that changes what this session should do.** As shipped, a match
 **cannot end** under AI play: the AI never attacks an HQ (zero HQ damage across 554+
 turn-rows, both HQs at full hp in every game), and `max_rounds` is 0 so no round cap
-arms either. Every simulated game ran to the safety cap with no winner.
+arms either. **All 20 simulated games hit the cap with no winner — including five where
+one side started three Troopers up.**
 
 Consequences for the session below:
 

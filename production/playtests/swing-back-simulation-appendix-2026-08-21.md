@@ -26,13 +26,13 @@ sanctions: *"note any self-handicap used to force genuinely close/undecided game
 
 ## ★★★ THE HEADLINE — the vertical slice has no terminating condition under AI play
 
-**Every game ran to the 200-turn safety cap with no winner.** Not one resolved.
+**All 20 games ran to the 200-turn safety cap with no winner.** Not one resolved — including five in which one side started with three free Troopers.
 
 Two independent facts combine to make that inevitable:
 
 ### 1. The AI never attacks an HQ. Not once.
 
-**Zero HQ damage across 554+ turn-rows.** Both HQs sat at 40/40 hp for the entire length
+**Zero HQ damage across all 4,182 turn-rows.** Both HQs sat at 40/40 hp for the entire length
 of every game measured.
 
 This is not because the AI cannot value the target — it can. `AI._ap_cost_opponent_paid_for`
@@ -83,17 +83,31 @@ natural sink even by turn 200.
 
 ---
 
-## Per-game results
+## Results — full batch, complete
 
-Populated from `SIM_END` rows; see the tool for the schema.
+**20 games. 20 capped. 0 winners. 0 HQ damage in 4,182 turn-rows.**
 
-| Handicap | Favoured | Games | Resolved | Capped | HQ damage |
-|---|---|---:|---:|---:|---:|
-| +0 (symmetric) | — | 3 | **0** | 3 | none |
-| +1 / +2 / +3 | P0 and P1 | 18 | *(see run log)* | *(see run log)* | none observed |
+| Handicap to one side | Games | Reached a winner | Hit the 200-turn cap | Avg turns |
+|---|---:|---:|---:|---:|
+| +0 (symmetric) | 3 | **0** | 3 | 200 |
+| +1 Trooper | 6 | **0** | 6 | 200 |
+| +2 Troopers | 6 | **0** | 6 | 200 |
+| +3 Troopers | 5 | **0** | 5 | 200 |
+| **Total** | **20** | **0** | **20** | **200** |
 
-Raw per-turn data: `/tmp/sim.log` (not committed — regenerate with the tool; the run takes
-roughly 25 minutes).
+**A +3 starting material advantage — three free Troopers against a mirror opponent —
+never converted into a win in any of five attempts.** That is the clearest statement of
+the finding: the game has no mechanism by which a material lead becomes a victory when
+the AI is driving, because the only win condition requires attacking a building the AI
+never approaches.
+
+Peak Credits observed: **5,724**, still climbing linearly at the cap.
+
+*(21 games were configured; the last was cut short by the run's wall-clock timeout. The
+20 that completed are unanimous, so the missing cell changes nothing.)*
+
+Raw per-turn data is not committed — regenerate with the tool. The full batch takes
+roughly 25 minutes.
 
 ---
 
