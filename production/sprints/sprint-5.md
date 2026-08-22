@@ -40,7 +40,7 @@ verdict.
 | # | Commitment | Owner | Status |
 |---|---|---|---|
 | 2 | **Never commit above available days.** The measure is **must + should vs the 8 *available* days**; nice-to-haves ride the 2-day buffer and are not commitments. Sprint 4 committed **9.0** (must 7 + should 2) against 8 — **+12.5% before any disruption** — and its full list of 10.5 exceeded even the 10-day total | producer | ✅ **applied** — Sprint 5 commits exactly **8.0** (must 5 + should 3) against 8 available; its 1.0 of nice-to-haves rides the buffer, for 9.0 of 10 total |
-| 3 | **Mid-sprint design changes go to a post-gate backlog.** Accepting one mid-sprint requires an explicit re-plan that **descopes something and records the trade**. Sprint 4 absorbed ~4 days of economy-pivot work without cutting anything, taking committed load to **13.0 against 8 available (+62%)** | producer + creative-director | ⬜ enforce at kickoff |
+| 3 | **Mid-sprint design changes go to a post-gate backlog** (`production/post-gate-backlog.md` — created 2026-08-21, when the first item was actually deferred to it; it did not exist for most of the sprint, so this rule had no destination).** Accepting one mid-sprint requires an explicit re-plan that **descopes something and records the trade**. Sprint 4 absorbed ~4 days of economy-pivot work without cutting anything, taking committed load to **13.0 against 8 available (+62%)** | producer + creative-director | ⬜ enforce at kickoff |
 | 4 | **Estimate human-gated art as an approval loop, not a production task.** Model decision rounds; treat calendar cost as distinct from effort cost. S4-02 was ~3 days of effort spread over 21 calendar days | art-director + producer | ⬜ applies to S5-10 and any art follow-up |
 
 > **Why #3 has teeth this sprint:** the AP+Credits pivot is live and *unvalidated by play*. The
@@ -150,7 +150,7 @@ the freeze still holds for anything not backed by a measured defect.
 | Risk | Probability | Impact | Mitigation |
 |------|-------------|--------|------------|
 | **Validation half rolls over a third time** | High | High | S5-04 is art-independent and runnable **now** — start day 1 in parallel, never queued behind the renderer. This is the specific failure that caused both prior rollovers |
-| Unplanned design work recurs (the AP→AP+Credits pivot consumed Sprint 4's window) | Medium | High | Pivot is complete and committed. **Freeze new design changes until the verdict lands**; route new ideas to a post-gate backlog |
+| Unplanned design work recurs (the AP→AP+Credits pivot consumed Sprint 4's window) | Medium | High | Pivot is complete and committed. **Freeze new design changes until the verdict lands**; route new ideas to `production/post-gate-backlog.md` |
 | Renderer integration surprises (2× textures, two-layer cover, pivot rules) | Low | Medium | Contract is documented in `assets/art/README.md` — read before implementing |
 | Colourblind ownership unresolved at the gate | ~~Medium~~ **Resolved 2026-08-20** | Medium | S5-08 decided (D+A). The accessibility half is closed: the locked hue pair measures as passing all three dichromacies the Standard tier names, and the docs now say so honestly instead of crediting a silhouette backup that was never built. What remains is **not** an accessibility risk but a plain ownership-legibility defect on structures — carried as its own item |
 | Verdict lands PIVOT (muted swing-back / unreadable board) | Medium | Medium | Sanctioned outcome, not a failure → spawns a focused tuning/art follow-up, then re-gate |
