@@ -70,7 +70,7 @@ come back *from*.
 
 ## Secondary finding — Credits accumulate without bound
 
-Peak observed: **4,970 Credits** on a single side, still climbing linearly at the cap.
+Peak observed: **5,724 Credits** on a single side, still climbing linearly at the cap.
 
 This is the exact risk the economy pivot's own open question flagged: *"Credit BANKING may
 worsen leader snowball — stock now unbounded even though income rate is capped ~26/32."*
