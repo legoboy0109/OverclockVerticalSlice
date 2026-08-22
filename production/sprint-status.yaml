@@ -138,14 +138,25 @@ stories:
     #   invisible while games never ended, immediately visible once they do.
     # ★★ BUT THE CAP EXPOSED TWO THINGS, both DESIGN CALLS, both logged in
     #   post-gate-backlog.md §1b, neither fixed:
-    #   1. TiebreakMetric.UNIT_COUNT counts EVERY ENTITY, not units — structures and HQ
-    #      included. A capped game is decided by WHO BUILT MORE, so the optimal capped
-    #      line is boom-and-avoid-combat. Sits right on top of the unbounded-Credit find.
-    #   2. Capped games skew 95% TO PLAYER 1 (18 of 19), including every game where P0
-    #      started up to +3 Troopers ahead. LOCAL_PLAYER = 0, so THE HUMAN IS ON THE
-    #      LOSING SIDE. Two identical deterministic agents on a mirrored map should not
-    #      do this — needs diagnosing before a capped result reads as a game outcome
-    #      rather than a seat outcome.
+    #   1. ✅ FIXED 2026-08-21 — TiebreakMetric had THREE deviations from spec:
+    #      game-state-turn-manager.md always specified {total HQ hp, tiles controlled,
+    #      unit count} with TOTAL HQ HP AS THE DEFAULT. Only UNIT_COUNT shipped (HQ hp
+    #      needed ADR-0007 schema fields that had not landed — they have since), it became
+    #      the de-facto default, AND it counted every entity incl. structures/HQ. Now:
+    #      TOTAL_HQ_HP implemented + default; UNIT_COUNT counts units. Boom exploit closed
+    #      and unit-tested (a player buried in units+outposts LOSES to a healthier HQ).
+    #      TILES_CONTROLLED still unimplemented — "controlled" is undefined, a design call.
+    #   2. Capped games skew ~95-100% TO PLAYER 1. LOCAL_PLAYER = 0, so THE HUMAN IS ON
+    #      THE LOSING SIDE. ★★ ROOT CAUSE NOW ISOLATED and it is NOT the metric: fixing
+    #      the metric did not move the numbers AT ALL (7/7 still P1). With the AI never
+    #      damaging an HQ, every capped game ends 40/40 — an EXACT TIE — which falls to
+    #      the `1 - active_player` seat rule. The old entity-count metric was MASKING
+    #      this behind a number that happened to differ.
+    #      ⇒ Everything in this appendix traces to ONE bug: THE AI HAS NO SIEGE DRIVE.
+    #        No HQ damage -> no decisive win -> every game caps -> tiebreak decides ->
+    #        with an honest metric that is a tie decided by seat.
+    #      ⇒ For HUMAN play the metric now matters and is correct: batter the enemy HQ
+    #        and you win a capped game; you cannot be out-built out of it.
     # ⇒ Keep the cap: without it 0% of games end, which is strictly worse. A human will
     #   usually win by HQ kill (the thing the AI never does), so the cap should act as a
     #   backstop — but log it if a session game reaches turn 30.

@@ -63,13 +63,21 @@ entity kind and is the single call site everything else routes through
 that matches could not end at all. Verification immediately surfaced two things that
 were **not** fixed and are design calls:
 
-- **`TiebreakMetric.UNIT_COUNT` counts every entity, not units.** The implementation is
-  `for e in entities(): counts[e.owner] += 1`, so structures and the HQ count. A capped
-  game is therefore decided by **who built more**, and the optimal capped line is to boom
-  and avoid combat — a degenerate strategy sitting right on top of the unbounded-Credit
-  finding. Either rename the metric to match the behaviour, or implement a metric that
-  measures what the tiebreak should reward (material value? HQ hp? territory?).
-- **Capped games skew 95% to player 1** (18 of 19 AI-vs-AI games, including every game
+- ~~**`TiebreakMetric.UNIT_COUNT` counts every entity, not units.**~~ **FIXED 2026-08-21.**
+  `TOTAL_HQ_HP` implemented and made the default, as `game-state-turn-manager.md` always
+  specified; `UNIT_COUNT` now counts units. The boom exploit is closed and unit-tested.
+  `TILES_CONTROLLED` remains unimplemented — nothing defines what "controlled" means for
+  a tile, and choosing a definition is a design decision, not a gap to fill.
+- **★ NEW: should an exact tie cascade, or fall to the seat?** Two untouched HQs tie
+  exactly, and the tie rule hands the game to `1 - active_player`. In AI-vs-AI that is
+  100% of games, so the seat decides deterministically. A cascade — HQ hp, then unit
+  count, then seat — would break most ties on play rather than position. Not implemented:
+  the GDD lists the three metrics as alternatives, not a cascade, so building one is a
+  design addition rather than a correction.
+- **Capped games skew ~95–100% to player 1** — ★ *root cause now isolated: the AI's
+  missing siege drive (below), NOT the metric.* Correcting the metric did not move the
+  numbers at all, which is what proved it.
+  Original observation: (18 of 19 AI-vs-AI games, including every game
   where player 0 started up to three Troopers ahead). Two identical deterministic agents
   on a mirrored map should not do that. Candidate causes: turn order, the
   `1 - active_player` tie rule, or the entity-count metric itself. **`LOCAL_PLAYER = 0`,

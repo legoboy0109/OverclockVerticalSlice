@@ -159,8 +159,36 @@ as the backstop it is meant to be rather than as the usual result. **But if a hu
 does reach turn 30, expect to lose it on a metric that rewarded your opponent's
 construction.** Worth knowing before you play, and worth logging if it happens.
 
-Neither the tiebreak metric nor the seat skew has been changed — both are design calls,
-recorded in `production/post-gate-backlog.md`.
+### ✅ Tiebreak metric corrected 2026-08-21 — and it isolates the real bug
+
+The metric was fixed the same day. `game-state-turn-manager.md` had specified
+`{total HQ hp, tiles controlled, unit count}` with **total HQ hp as the default** all
+along; only `unit count` had shipped (HQ hp needed schema fields that had not landed
+yet), it became the de-facto default, and it counted every entity. `TOTAL_HQ_HP` is now
+implemented and is the default, and `UNIT_COUNT` counts units. Unit tests prove the boom
+exploit is closed: a player drowning in units and outposts now **loses** a capped game to
+an opponent whose HQ is healthier.
+
+**It did not change AI-vs-AI outcomes — 7 of 7 still went to player 1 — and that is the
+informative part.** With the AI never damaging an HQ, both sides finish every capped game
+at 40/40. That is an *exact tie*, which falls through to the `1 - active_player` rule, so
+the seat wins deterministically.
+
+**So the seat skew was never the metric's fault.** The old entity-count metric was masking
+it behind a number that happened to differ; correcting the metric moved the failure into
+the open and attributes it correctly:
+
+> **The root cause of everything in this appendix is that the AI never attacks an HQ.**
+> No siege drive means no HQ damage, which means no decisive victory, which means every
+> game reaches the cap, which means the tiebreak decides, which — with an honest metric —
+> is an exact tie decided by seat.
+
+For **human** play the metric is now correct and matters: a player who has battered the
+enemy HQ wins a capped game, and cannot be out-built out of it.
+
+Still unchanged, both design calls in `production/post-gate-backlog.md`: **the AI's
+missing siege drive** (the root cause), and whether an exact tie should cascade to a
+secondary metric rather than to the seat.
 
 ---
 

@@ -210,6 +210,8 @@ timing. *(Supersedes the pre-pivot `income()`/`spend()`/`ap_reset_policy` single
 | `STARTING_PLAYER` | {P1, P2, map-defined} | map-defined | Who moves first (first-move advantage) | — | — (see Open Questions on first-player advantage) |
 | `MAX_ROUNDS` (optional) | off, or 20–100 | off (VS default) | Hard round cap → forces resolution; **anti-drag lever** | Games can still drag toward the cap | Games cut off before natural resolution feels satisfying |
 | `TIEBREAK_METRIC` (used iff `MAX_ROUNDS` set) | {total HQ hp, tiles controlled, unit count} | total HQ hp | How a capped game is decided | — | — |
+
+> **Implementation status, 2026-08-21.** `total HQ hp` is implemented and **is** the default, matching this row. It was not, for a period: only `unit count` shipped (HQ hp needed schema fields that had not landed yet), it became the de-facto default, and it was implemented as a count of *every entity* — structures and the HQ included — so a capped game was decided by who had built more. Corrected once `MAX_ROUNDS` was armed for the vertical slice and the behaviour became reachable. `tiles controlled` is **still unimplemented**: nothing in the corpus defines what "controlled" means for a tile, and picking a definition is a design decision rather than a gap to fill. ★ Note that two untouched HQs are an exact tie, which falls through to the non-active-player rule — so this metric only discriminates once someone has actually damaged an HQ.
 | Win condition set | {HQ destruction} (+ optional MAX_ROUNDS tiebreak) | HQ destruction | Victory definition | — | Objective-based conditions are Alpha+ |
 
 > **`MAX_ROUNDS` + `TIEBREAK_METRIC` is a direct lever on the endgame closeout-drag problem** — a

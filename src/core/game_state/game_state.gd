@@ -47,13 +47,24 @@ enum MatchStatus { IN_PROGRESS, GAME_OVER }
 
 ## Which metric [method run_win_check]'s MAX_ROUNDS/tiebreak fallback uses to
 ## pick a winner when the round cap is reached with no HQ destroyed
-## (TR-gamestate-016, ADR-0001). Only [constant TiebreakMetric.UNIT_COUNT] is
-## computable from current state — HQ hp / tiles-controlled tiebreak metrics
-## both require entity-stat-schema fields (ADR-0007: [code]StructureState.hp[/code],
-## structure-type identity) that do not exist yet. This enum is deliberately
-## left extensible (more members may be added once ADR-0007 lands); it is not
-## a closed/final set.
-enum TiebreakMetric { UNIT_COUNT }
+## (TR-gamestate-016, ADR-0001).
+##
+## [b]Corrected 2026-08-21.[/b] `game-state-turn-manager.md` specifies
+## [code]{total HQ hp, tiles controlled, unit count}[/code] with [b]total HQ hp as
+## the default[/b]. Only [constant TiebreakMetric.UNIT_COUNT] originally shipped,
+## because HQ hp needed entity-stat-schema fields that did not exist at the time —
+## [code]StructureState.current_hp[/code] and structure-type identity. [b]ADR-0007
+## has since landed and both exist[/b], so the specified default is now
+## implementable and is implemented. The old note claiming otherwise was stale.
+##
+## [constant TiebreakMetric.TILES_CONTROLLED] remains unimplemented: the GDD names it
+## but nothing defines what "controlled" means for a tile, and inventing a definition
+## is a design decision rather than a gap to fill in. It is deliberately absent from
+## this enum rather than present-but-broken.
+enum TiebreakMetric {
+	TOTAL_HQ_HP, ## Whose HQ is healthier — the spec default. See [method _compute_tiebreak_metric].
+	UNIT_COUNT, ## How many UNITS each side has left. Structures do not count.
+}
 
 ## Signal fired exactly once, synchronously, at the very end of
 ## [method apply_action]'s pipeline — [b]only[/b] when [code]result.ok ==
@@ -125,9 +136,13 @@ static var _dispatch_registered: bool = false
 @export var max_rounds: int = 0
 
 ## Which metric decides the winner when [member max_rounds] is reached with no
-## HQ destroyed. See [enum TiebreakMetric]. Defaults to the only metric
-## currently computable from state.
-@export var tiebreak_metric: int = TiebreakMetric.UNIT_COUNT
+## HQ destroyed. See [enum TiebreakMetric].
+##
+## [b]Defaults to [constant TiebreakMetric.TOTAL_HQ_HP][/b], which is what
+## `game-state-turn-manager.md` specifies. It measures progress toward the only real
+## win condition, so a capped game is decided by who was closer to winning it —
+## and, unlike a count, it cannot be inflated by building things.
+@export var tiebreak_metric: int = TiebreakMetric.TOTAL_HQ_HP
 
 
 ## Returns [param player]'s AP available to spend this turn. O(1) array index.
@@ -686,7 +701,8 @@ func run_win_check(events: Array) -> void:
 ## integer-only, no RNG (ADR-0003) — private helper for [method run_win_check]'s
 ## branch 2 only.
 ##
-## [constant TiebreakMetric.UNIT_COUNT] (the only implemented metric today):
+## [constant TiebreakMetric.TOTAL_HQ_HP] (the default) sums each player's own HQ hp;
+## [constant TiebreakMetric.UNIT_COUNT]:
 ## counts entities in [member entities_by_id] by [member EntityState.owner],
 ## scanned via the stable [member entity_id]-ascending [method entities] order
 ## (ADR-0003) even though a plain count does not depend on visitation order —
@@ -696,9 +712,22 @@ func run_win_check(events: Array) -> void:
 func _compute_tiebreak_metric() -> Array[int]:
 	var counts: Array[int] = [0, 0]
 	match tiebreak_metric:
-		TiebreakMetric.UNIT_COUNT:
+		TiebreakMetric.TOTAL_HQ_HP:
+			# The spec default. Each side scores its OWN HQ's remaining hp, so the
+			# player whose HQ is healthier wins — i.e. the player who did more damage
+			# toward the actual win condition. Unlike a count it cannot be inflated by
+			# producing or building, which is what made the old entity count degenerate
+			# (the optimal capped line was boom-and-avoid-combat).
 			for e: EntityState in entities():
-				counts[e.owner] += 1
+				if e is StructureState and (e as StructureState).is_hq():
+					counts[e.owner] += (e as StructureState).current_hp
+		TiebreakMetric.UNIT_COUNT:
+			# ★ Counts UNITS. It previously counted every entity — structures and the
+			# HQ included — which made the name a lie and handed capped games to
+			# whoever built most. Corrected 2026-08-21; see the enum's note.
+			for e: EntityState in entities():
+				if e is UnitState:
+					counts[e.owner] += 1
 	# No default branch by design: an unrecognized metric (bad save data / a
 	# future enum value not yet handled) intentionally falls through to [0, 0],
 	# which run_win_check resolves as a tie → non-active player wins. A silent
