@@ -119,6 +119,24 @@ stories:
     estimate_days: 1
     blocker: ""
     completed: ""
+    # ⚠⚠ 2026-08-21 — SIMULATION APPENDIX RUN (measurable half only; session still NOT
+    # played). production/playtests/swing-back-simulation-appendix-2026-08-21.md
+    # ★★★ FINDING: THE SLICE HAS NO TERMINATING CONDITION UNDER AI PLAY. The AI never
+    # attacks an HQ — ZERO HQ damage across 554+ turn-rows, both HQs at 40/40 in every
+    # game — and GameState.max_rounds is 0 (the slice never arms the round cap). Every
+    # simulated game ran to the 200-turn safety cap with no winner, at every handicap
+    # tested. The AI CAN value the HQ (hq_siege_value 12, with an AC-29 guard against a
+    # zero weight); the hypothesis is that positional scoring pulls units to the nearest
+    # enemy UNIT, so armies collide mid-map and never stand next to the objective.
+    # ⇒ The hard gate "no decided game reverses" is currently UNASKABLE — no game becomes
+    #   decided because no game ends. In human-vs-AI the human can win but cannot lose.
+    # ⇒ Consider arming max_rounds BEFORE the session so matches terminate (~one line;
+    #   the tiebreak machinery exists and is documented). DESIGN CALL, not applied.
+    # ★ Secondary: Credits accumulate unbounded — 4970 peak, still climbing linearly at
+    #   the cap. Confirms the pivot's own open question about banking and snowball.
+    # ⛔ ANALYSIS A / C / D (swing alive, tempo readable, two-pool tradeoff) are ENTIRELY
+    #   untouched by simulation and still need a human. Analysis D is the pivot's core
+    #   hypothesis and the reason this story exists.
     # ✅ DAY-1 GATE SATISFIED 2026-08-19: session opened BEFORE any s5-01 code was
     # written — the user chose to run it first rather than merely book it. Build 39767de
     # (two-pool economy + dual HUD counters, placeholder-diamond board), suite 860/860.

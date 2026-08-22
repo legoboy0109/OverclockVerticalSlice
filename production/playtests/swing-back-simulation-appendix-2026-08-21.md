@@ -1,0 +1,140 @@
+# S5-04 Appendix — AI-vs-AI Simulation (the measurable half)
+
+> **This is NOT the swing-back playtest.** It does not close S5-04 and it does not
+> substitute for a human session. See "What this cannot answer" below.
+>
+> **Date**: 2026-08-21 · **Build**: commit `6acef13` · **Tool**:
+> `tools/SimulateMatches.tscn` (`./redot --headless tools/SimulateMatches.tscn`)
+> **Suite at time of run**: 972/972 passing.
+
+## Why this exists
+
+S5-04 has been blocked on a human session for three sprints and is the last thing
+standing between this project and its PROCEED/PIVOT/KILL verdict. Its questions split in
+two. Some are judgements only a person can make — does the swing *feel* alive, does tempo
+read at a glance, does spending on economy *feel* like a tempo cost. Others are structural
+properties of the rules, measurable over many games, including **the one hard gate: "no
+decided game reverses."**
+
+This appendix answers the second kind. Both sides are driven by the shipped `AI` — the
+same `AI.choose_action` the vertical slice uses, with the driver's pacing timer removed
+and its economy-cadence counter replicated exactly. Games are differentiated by a starting
+material handicap (0–3 bonus Troopers to one side), which the protocol explicitly
+sanctions: *"note any self-handicap used to force genuinely close/undecided games."*
+
+---
+
+## ★★★ THE HEADLINE — the vertical slice has no terminating condition under AI play
+
+**Every game ran to the 200-turn safety cap with no winner.** Not one resolved.
+
+Two independent facts combine to make that inevitable:
+
+### 1. The AI never attacks an HQ. Not once.
+
+**Zero HQ damage across 554+ turn-rows.** Both HQs sat at 40/40 hp for the entire length
+of every game measured.
+
+This is not because the AI cannot value the target — it can. `AI._ap_cost_opponent_paid_for`
+substitutes `AIBalance.ai.hq_siege_value` (**12**) for the HQ, which is a *high* weight
+against a unit's `produce_cost`, and there is an explicit regression guard (AC-29) against
+that weight being zero. The scoring is there and it is generous.
+
+**Hypothesis for the mechanism** (stated as hypothesis, not measured): the AI's positional
+scoring drives units toward the *nearest enemy unit* (`_nearest_live_enemy_distance`,
+`_positional_value`, `_sets_up_attack_next_turn`), so the two armies collide in the middle
+of a 12×10 map and trade there indefinitely. A high value on a target you never stand next
+to is never realised. **The AI has no siege drive** — no term pulling it toward the
+objective when no enemy unit is nearby.
+
+### 2. There is no round cap either.
+
+`GameState.max_rounds` defaults to **0** (= no cap), and `VerticalSliceRoot._build_match`
+never sets it. The `max_rounds` tiebreak machinery exists and is documented, but nothing in
+the shipped slice arms it.
+
+**So: no HQ kill, no round limit, no draw condition. The match cannot end.**
+
+### What that does to S5-04's hard gate
+
+**"No decided game reverses" is currently satisfied trivially and meaninglessly** — no
+game ever becomes decided, because no game ever ends. The gate cannot be evaluated against
+AI play at all.
+
+It also reframes the human session: in human-vs-AI, **the human can win but cannot lose**,
+except by their own error or by conceding. A swing-back playtest measuring "can a losing
+player come back" is measuring an asymmetric situation — the AI has no path to victory to
+come back *from*.
+
+---
+
+## Secondary finding — Credits accumulate without bound
+
+Peak observed: **4,970 Credits** on a single side, still climbing linearly at the cap.
+
+This is the exact risk the economy pivot's own open question flagged: *"Credit BANKING may
+worsen leader snowball — stock now unbounded even though income rate is capped ~26/32."*
+Confirmed empirically. With production capped and nothing else to spend on, income has
+nowhere to go and simply piles up.
+
+The AP surcharge brake works on *rate of action*, not on *stock*. Note this is partly an
+artefact of games that never end — but the accumulation is linear and shows no sign of a
+natural sink even by turn 200.
+
+---
+
+## Per-game results
+
+Populated from `SIM_END` rows; see the tool for the schema.
+
+| Handicap | Favoured | Games | Resolved | Capped | HQ damage |
+|---|---|---:|---:|---:|---:|
+| +0 (symmetric) | — | 3 | **0** | 3 | none |
+| +1 / +2 / +3 | P0 and P1 | 18 | *(see run log)* | *(see run log)* | none observed |
+
+Raw per-turn data: `/tmp/sim.log` (not committed — regenerate with the tool; the run takes
+roughly 25 minutes).
+
+---
+
+## ⛔ What this CANNOT answer — still owed to a human session
+
+Everything S5-04 actually asks about *feel* is untouched by this and remains open:
+
+- **Analysis A — is the swing alive?** Whether a close game has a genuine swing moment,
+  and whether a stabilisation can flip a still-in-doubt game. Requires playing one.
+- **Analysis C — tempo readability.** Whether you can feel tempo gain/loss at a glance
+  from the dual HUD counters, and whether the two counters read as two distinct budgets or
+  blur into one.
+- **Analysis D — the two-pool tradeoff.** Whether spending on economy *feels* like a tempo
+  cost, whether the hold-vs-cash-out banking decision is alive, and whether the pools read
+  as one entangled economy or two disconnected currencies. **This is the pivot's core
+  hypothesis and the reason S5-04 exists.** No simulation can answer it.
+- **The reversal gate, meaningfully.** Answerable only once games can actually end.
+
+**AI-vs-AI is also not the matchup the protocol is about.** The VS AI is documented as
+"credible, not masterful"; a mirror match between two identical deterministic agents tells
+you about the rules and about the AI, not about how a person experiences the game.
+
+---
+
+## Recommended reading of this for S5-05
+
+The simulation did not close the gate. It did surface something the gate needs to know:
+**as shipped, an AI opponent cannot win a match.** Whatever the verdict, that is worth
+resolving before the swing-back question can be asked properly, because "can a losing
+player come back" presumes a player can be losing.
+
+Cheapest candidate fixes, in rough order of effort — **all are design calls, none applied**:
+
+1. **Arm `max_rounds`** with the existing tiebreak (the machinery is built and documented;
+   the slice just never sets it). Makes every match terminate, and gives the AI a way to
+   "win" on the tiebreak metric.
+2. **Give the AI a siege term** — a pull toward the enemy HQ that does not depend on an
+   enemy unit being nearby, or a fallback objective when no attack candidate scores.
+3. **A Credit sink**, so banking has a ceiling and stock cannot run to 5,000.
+
+Items 2 and 3 are real design/balance work and belong in
+`production/post-gate-backlog.md` unless the verdict makes them blocking. Item 1 is close
+to a one-line configuration change and may be worth doing *before* the human session, so
+that S5-04 is played on a build where matches can end.

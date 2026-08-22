@@ -9,6 +9,31 @@
 
 ---
 
+## ⚠ 2026-08-21 — SIMULATION APPENDIX ADDED, session still NOT run
+
+An AI-vs-AI simulation pass now covers the **measurable** half of this protocol:
+`production/playtests/swing-back-simulation-appendix-2026-08-21.md`.
+
+**It found something that changes what this session should do.** As shipped, a match
+**cannot end** under AI play: the AI never attacks an HQ (zero HQ damage across 554+
+turn-rows, both HQs at full hp in every game), and `max_rounds` is 0 so no round cap
+arms either. Every simulated game ran to the safety cap with no winner.
+
+Consequences for the session below:
+
+- **The hard gate ("no decided game reverses") is currently unaskable.** No game becomes
+  decided because no game ends.
+- **In human-vs-AI you can win but cannot lose**, except by your own error or by
+  conceding. "Can a losing player come back" presumes you can be losing.
+- Consider arming `max_rounds` before playing, so matches terminate — it is close to a
+  one-line config change and the tiebreak machinery already exists. That is a design call,
+  not applied.
+
+**Everything in Analysis A / C / D below is untouched by the simulation and still needs a
+human.** Those are the feel questions, and they are the reason this session exists.
+
+---
+
 ## Session Info
 - **Date(s)**: 2026-08-19
 - **Build / commit**: `76fe01e` — two-pool economy + dual HUD counters, **with the real board art
