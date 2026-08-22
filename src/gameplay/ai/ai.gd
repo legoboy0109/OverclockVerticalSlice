@@ -308,6 +308,21 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 	var adv_score: float = 0.0
 	var adv_ap_cost: int = 0
 
+	# --- Siege drive ---------------------------------------------------------
+	# Folded exactly like the advance above, and for the same reason: every tile of
+	# progress ties on a per-tile rate, so folding each through the global tie-break
+	# would pick the 1-tile step and the unit would crawl.
+	var hq: StructureState = _enemy_hq(lookahead, unit.owner)
+	var siege_dist_before: int = -1
+	if hq != null:
+		siege_dist_before = lookahead.grid.manhattan_distance(unit.position, hq.position)
+	var siege_found: bool = false
+	var siege_tile: Vector2i = Vector2i.ZERO
+	var siege_tiles_moved: int = 0
+	var siege_dist_after: int = siege_dist_before
+	var siege_score: float = 0.0
+	var siege_ap_cost: int = 0
+
 	for r: Movement.ReachableTile in Movement.reachable(lookahead, unit):
 		if not AP.can_afford(lookahead, unit.owner, r.min_cost):
 			continue
@@ -332,6 +347,33 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 			if _is_better(score, r.min_cost, unit.entity_id, best.score, best.ap_cost, best.entity_id):
 				best = _Candidate.new(_make_move_action(unit, r.tile, tiles_moved), score, r.min_cost, unit.entity_id)
 			continue # Anti-oscillation: no advance/SETUP candidate this call.
+
+		# Siege is evaluated BEFORE the nearest-enemy closure gate below, because the
+		# tiles that matter for a siege are precisely the ones that gate rejects: a
+		# step toward the enemy HQ usually does not close on the nearest enemy unit.
+		if siege_dist_before > 0:
+			var hq_dist_after: int = lookahead.grid.manhattan_distance(r.tile, hq.position)
+			# Same strict-closure rule the advance uses, and for the same
+			# anti-oscillation reason: only tiles that genuinely make progress.
+			if hq_dist_after < siege_dist_before:
+				var s_value: float = AIBalance.ai.siege_value_per_tile_closed \
+					* float(siege_dist_before - hq_dist_after)
+				var s_score: float = s_value / float(tiles_moved)
+				var s_take: bool = false
+				if not siege_found:
+					s_take = true
+				elif hq_dist_after < siege_dist_after:
+					s_take = true
+				elif hq_dist_after == siege_dist_after \
+						and _is_better(s_score, r.min_cost, unit.entity_id, siege_score, siege_ap_cost, unit.entity_id):
+					s_take = true
+				if s_take:
+					siege_found = true
+					siege_tile = r.tile
+					siege_tiles_moved = tiles_moved
+					siege_dist_after = hq_dist_after
+					siege_score = s_score
+					siege_ap_cost = r.min_cost
 
 		var dist_after: int = _nearest_live_enemy_distance(lookahead, r.tile, unit.owner)
 		# Anti-oscillation: consider a bare advance ONLY if it strictly closes
@@ -365,6 +407,9 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 
 	if adv_found and _is_better(adv_score, adv_ap_cost, unit.entity_id, best.score, best.ap_cost, best.entity_id):
 		best = _Candidate.new(_make_move_action(unit, adv_tile, adv_tiles_moved), adv_score, adv_ap_cost, unit.entity_id)
+
+	if siege_found and _is_better(siege_score, siege_ap_cost, unit.entity_id, best.score, best.ap_cost, best.entity_id):
+		best = _Candidate.new(_make_move_action(unit, siege_tile, siege_tiles_moved), siege_score, siege_ap_cost, unit.entity_id)
 
 	return best
 
@@ -466,6 +511,24 @@ static func _nearest_live_enemy_distance(state: GameState, from_tile: Vector2i, 
 		if best_dist == -1 or dist < best_dist:
 			best_dist = dist
 	return maxi(0, best_dist)
+
+
+## The enemy HQ [StructureState] for [param owner], or [code]null[/code] if the
+## opponent has none (it was destroyed, or setup never placed one).
+##
+## The objective the siege drive advances on. Identified via
+## [method StructureState.is_hq] — a Resource-ref check against the real HQ template
+## per ADR-0007, never a parallel flag. Deterministic: [method GameState.entities] is
+## entity_id-ordered, so a hypothetical two-HQ opponent always yields the same one.
+##
+## O(entity count), one pass — the same cost class as the enumeration already running.
+static func _enemy_hq(state: GameState, owner: int) -> StructureState:
+	for e: EntityState in state.entities():
+		if e.owner == owner:
+			continue
+		if e is StructureState and (e as StructureState).is_hq():
+			return e as StructureState
+	return null
 
 
 ## `sets_up_attack_next_turn(dest)` (GDD Edge Cases Term 2, AC-32) — true iff,

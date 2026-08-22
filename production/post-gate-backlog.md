@@ -84,8 +84,27 @@ were **not** fixed and are design calls:
   so the human is on the losing side of the skew.** Needs diagnosing before a capped
   result can be read as a game outcome rather than a seat outcome.
 
-Also still open from the same pass: **the AI has no siege drive** (zero HQ damage in
-4,182 turn-rows), and **there is no victory/defeat presentation for any win path** —
+### ★★ 1c. Bound the economy — the actual root cause (raised 2026-08-21)
+
+A siege drive **was** added to the AI and **provably works** (7 tests; probed moving a
+unit from 4 tiles to 2 from the enemy HQ, and spending leftover turn AP on siege moves).
+**It changed nothing in a real match** — 0 HQ damage across 1,260 turn-rows.
+
+Measured why: sweeping the siege weight against a Credit-rich position, the AI keeps
+choosing `BUILD` until the weight hits **2.0–4.0, i.e. 12–20× the positional rate of
+0.16.** Economy actions outscore manoeuvring by an order of magnitude, and with Credits
+unbounded they are always affordable — so AP never reaches movement.
+
+**Fix the economy, not the weight.** A Credit sink or cap bounds the accumulation, which
+lets the existing siege term surface. Raising the siege weight into 2.0–4.0 instead would
+make the AI abandon its economy entirely — trading one degenerate behaviour for another.
+
+Everything else in the appendix hangs off this: unbounded Credits → economy always wins
+scoring → no manoeuvre → no HQ damage → no decisive win → every game caps → tiebreak →
+exact tie → decided by seat.
+
+Also still open from the same pass: **there is no victory/defeat presentation for any win
+path** —
 `game-hud.md` CR-9 / AC-17 / AC-22 are all unimplemented. The slice now prints a one-line
 status message on match end as a stopgap, which is explicitly not CR-9's screen.
 

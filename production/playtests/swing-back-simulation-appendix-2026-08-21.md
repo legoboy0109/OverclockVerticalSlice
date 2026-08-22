@@ -192,6 +192,49 @@ secondary metric rather than to the seat.
 
 ---
 
+### ⚠ Siege drive added 2026-08-21 — it works, and it does not fix the symptom
+
+A siege term was added to the AI: a positional pull toward the enemy HQ
+(`AIBalance.ai.siege_value_per_tile_closed = 0.20`), scored above the ordinary advance
+so progress toward the objective beats progress toward nothing in particular. Seven unit
+tests cover it and the full suite is green.
+
+**It provably fires.** Probed in isolation with a unit 4 tiles from the enemy HQ and no
+nearer enemy, the AI moves to within 2. Traced across a full turn with a realistic
+Credit balance, the AI spends BUILD ×2 (hitting the economy cap), PRODUCE ×2, and then
+puts its remaining AP into two siege moves.
+
+**And it changed nothing in a real match: 0 HQ damage across 1,260 turn-rows, 21 games,
+all still to player 1.** The term is not the bottleneck.
+
+**Why — the measurement that matters.** Sweeping the siege weight against a Credit-rich
+position, the AI keeps choosing `BUILD` until the weight reaches somewhere between
+**2.0 and 4.0** — that is **12–20× the ordinary positional rate of 0.16.** Economy
+actions are not slightly better than manoeuvring; they are an order of magnitude better.
+And with Credits unbounded (peak 5,724 and still climbing), they are *always affordable*.
+So the AP budget is consumed by building and producing before any unit can march, and in
+a real match with ten units the per-unit share of what is left is nothing.
+
+Raising the siege weight into that range would "work" by making the AI ignore its economy
+entirely, which is not a credible opponent — it would trade one degenerate behaviour for
+another.
+
+**So the causal chain runs one level deeper than the siege drive:**
+
+> Credits are unbounded → economy and production are always affordable → they outscore
+> any positional move by 12–20× → the AP budget never reaches manoeuvring → no siege →
+> no HQ damage → no decisive win → every game caps → the tiebreak decides → an exact tie
+> decided by seat.
+
+**The two findings in this appendix are one finding.** The unbounded-Credit accumulation
+is what starves the siege drive. **Bounding the economy — a Credit sink, or a cap — is
+the actual fix**, and it is a design call, recorded in `production/post-gate-backlog.md`.
+
+The siege term is kept: it is correct, tested, harmless at 0.20, and is the piece that
+will make the AI push once the economy is bounded. It is necessary and not sufficient.
+
+---
+
 ## ⛔ What this CANNOT answer — still owed to a human session
 
 Everything S5-04 actually asks about *feel* is untouched by this and remains open:

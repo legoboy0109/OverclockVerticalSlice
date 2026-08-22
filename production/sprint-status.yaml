@@ -152,9 +152,21 @@ stories:
     #      damaging an HQ, every capped game ends 40/40 — an EXACT TIE — which falls to
     #      the `1 - active_player` seat rule. The old entity-count metric was MASKING
     #      this behind a number that happened to differ.
-    #      ⇒ Everything in this appendix traces to ONE bug: THE AI HAS NO SIEGE DRIVE.
-    #        No HQ damage -> no decisive win -> every game caps -> tiebreak decides ->
-    #        with an honest metric that is a tie decided by seat.
+    #      ⇒ SIEGE DRIVE ADDED 2026-08-21 (siege_value_per_tile_closed 0.20, 7 tests).
+    #        It PROVABLY FIRES — probed moving a unit 4 tiles -> 2 from the enemy HQ, and
+    #        spending leftover turn AP on siege moves after BUILDx2 + PRODUCEx2. But it
+    #        changed NOTHING in a real match: 0 HQ damage in 1260 rows, 21 games, all P1.
+    #      ★★ MEASURED WHY: sweeping the siege weight against a Credit-rich position, the
+    #        AI keeps picking BUILD until the weight hits 2.0-4.0 — 12-20x the positional
+    #        rate of 0.16. Economy actions outscore manoeuvring by an ORDER OF MAGNITUDE,
+    #        and with Credits unbounded they are always affordable, so AP never reaches
+    #        movement. Raising siege into that range would make the AI abandon economy
+    #        entirely — one degenerate behaviour traded for another.
+    #      ⇒ THE ROOT CAUSE IS THE UNBOUNDED ECONOMY, NOT THE SIEGE TERM. Bound Credits
+    #        (sink or cap) and the existing siege term surfaces. Backlog §1c.
+    #        Chain: unbounded Credits -> economy always wins scoring -> no manoeuvre ->
+    #        no HQ damage -> no decisive win -> every game caps -> tiebreak -> exact tie
+    #        -> decided by seat. The two findings were always one finding.
     #      ⇒ For HUMAN play the metric now matters and is correct: batter the enemy HQ
     #        and you win a capped game; you cannot be out-built out of it.
     # ⇒ Keep the cap: without it 0% of games end, which is strictly worse. A human will
