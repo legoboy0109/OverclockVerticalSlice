@@ -82,6 +82,28 @@ A `UnitTypeDef` with `requires_pilot = true` is non-functional without one. A ve
 (cannot move, cannot attack, cannot use abilities — but still occupies its tile, still has hp, and
 is still destructible).
 
+**TP-5b — ★ Vehicles and crews are produced separately.** *(User decision, 2026-08-24 — resolves
+PCOQ-4.)* A Factory produces a vehicle; it arrives **unpiloted and inert**. A Barracks produces
+infantry; one of them crews it via `EMBARK`. There is no combined vehicle-plus-crew purchase.
+
+> ★ **This is a better outcome than the packaged alternative, for four reasons.** (1) A newly built
+> vehicle is *vulnerable* — inert until crewed, and a legitimate `CAPTURE_VEHICLE` target, so where
+> you build armour matters. (2) The unpiloted state becomes a **normal, frequent** board state
+> rather than only a battle casualty, which gives the Independents' pirate a target set worth
+> building a faction around. (3) Solar's dedicated **Pilot** specialist and the Machinist's Union's
+> *"infantry primarily focused on piloting"* become real mechanics instead of flavour text. (4) It
+> makes the crew cost *visible* — you watch a soldier walk into the tank.
+>
+> **Accepted cost:** a fiddlier opening for vehicle-heavy factions, who must sequence Factory →
+> vehicle → Barracks → crew → embark before their armour does anything. That is a genuine tempo
+> price, and it is the right one for the Union to pay.
+
+**TP-5c — `can_pilot` decides who may crew.** A `UnitTypeDef` declares `can_pilot: bool`. Only
+`INFANTRY` may pilot. ★ This is a **faction differentiation lever in its own right**: the Democratic
+Alliance lets its ordinary light and medium infantry drive (the generalist answer); the Solar
+Federation fields a dedicated Pilot specialist; the Machinist's Union makes piloting most of what
+its infantry are for. A faction whose infantry cannot pilot cannot field crewed vehicles at all.
+
 **TP-6 — Pilots enter and leave through `EMBARK`/`DISEMBARK`.** Crewing uses the same machinery as
 carriage; a pilot is cargo that happens to enable the vehicle. A vehicle may hold exactly one pilot.
 
@@ -128,7 +150,7 @@ can_capture(actor, v)  = adjacent(actor, v)
 | `EMBARK_AP_COST` / `DISEMBARK_AP_COST` | **1** AP each | Per `unit-abilities.md` |
 | `transport_size` (infantry) | **1** | |
 | `transport_size` (vehicle / mech) | **3** | ★ Makes "multiple infantry **or** one mech" fall out of capacity 3 |
-| Pilot `hp` band | **4–6** | ★ Deliberately low — crew-killing must be a *viable* play, not a theoretical one |
+| Pilot `hp` band | **3–6** | ★ Deliberately low, and matched to the shipped infantry band (Scout 3, Trooper 6) — crew-killing must be a *viable* play, not a theoretical one |
 
 **Indicative transports:**
 

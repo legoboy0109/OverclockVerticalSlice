@@ -146,17 +146,22 @@ effective_attack_range(unit)  = base_range + RANK_RANGE[rank]
 | `RANK_RANGE` | `[0, 0, 0, 1]` |
 | `MERIT_PER_KILL` / `_STRUCTURE` / `_HIT` | 3 / 2 / 1 |
 
-**Worked — an Empire Trooper (base atk 3, hp 10, range 2):**
+**Worked — an Empire medium infantry (the shipped Trooper: atk 3, hp 6, range 2):**
 
 | Rank | Merit | Attack | Max hp | Range | Roughly |
 |---|---:|---:|---:|---:|---|
-| 0 | 0 | 3 | 10 | 2 | as shipped |
-| 1 | 6 | **4** | 10 | 2 | 2 kills |
-| 2 | 16 | **4** | **12** | 2 | ~5 kills |
-| 3 | 32 | **5** | **14** | **3** | ~11 kills |
+| 0 | 0 | 3 | 6 | 2 | as shipped |
+| 1 | 6 | **4** | 6 | 2 | 2 kills |
+| 2 | 16 | **4** | **8** | 2 | ~5 kills |
+| 3 | 32 | **5** | **10** | **3** | ~11 kills |
 
-> A rank-3 Champion Trooper (atk 5, hp 14, range 3) is roughly a Sniper with a Heavy's health. **That
-> is a lot** — deliberately so, and the reason it costs 32 merit and dies as easily as anything else.
+> ⚠ **Rescaled 2026-08-24 against the shipped roster** (Trooper hp is 6, not the 10 an earlier draft
+> assumed). A rank-3 Champion medium infantry (atk 5, hp 10, range 3) is **a Heavy's health with
+> better range than a Heavy and nearly a Sniper's attack, on a unit costing 4 Credits.** That is a
+> lot — deliberately so, and the reason it costs 32 merit and dies as easily as anything else.
+> ★ Note the hp bonuses matter *more* at these real values than the draft implied: +4 hp on a 6-hp
+> unit is a **67% increase**, and it takes the unit from "dies to one Sniper hit" to "survives one".
+> That survivability jump may be the more powerful half of promotion, not the attack.
 > ★ **Check this against `damage-types.md`'s ±3 resistance band and against CR-10.** A Champion with
 > a favourable resistance matchup is the single strongest thing that can exist in the game, and
 > nothing currently bounds that stack.

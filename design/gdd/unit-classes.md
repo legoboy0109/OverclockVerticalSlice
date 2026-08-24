@@ -134,16 +134,27 @@ can_attack(attacker, defender) =
 
 | | Infantry | Ground Vehicle | Air |
 |---|---|---|---|
-| `produce_cost` band | 2–7 | 8–16 | 10–18 |
-| `hp` band | 6–14 | 18–30 | 8–14 |
-| `upkeep` band | 1–3 | 3–6 | 3–6 |
-| Typical `move_cost` | 1–3 | 2–3 (flat ground only) | 1 |
-| Typical reach/turn | 2–5 tiles | 3–5 tiles | ★ 8–12 tiles |
+| `produce_cost` band | 2–7 | 10–16 | 10–14 |
+| `hp` band | **3–10** | **16–24** | **5–9** |
+| `attack` band | 2–6 | 6–8 | 4–7 |
+| `upkeep` band | 1–3 | 4–6 | 4–5 |
+| Typical `move_cost` | 1–3 | 2 (flat ground only) | 1 |
+| Typical reach/turn | 2–5 tiles | 4–5 tiles | ★ 8–10 tiles |
 
-> ★ **Air's fragility is the balance lever, not its cost.** An aircraft with 30 hp and 10-tile reach
-> is unanswerable. The `hp` band above deliberately overlaps *infantry*, not vehicles: air trades
-> survivability for reach. If air feels oppressive in playtest, cut hp before cutting reach — reach
-> is the fantasy.
+> ⚠ **Corrected 2026-08-24 against the shipped roster.** An earlier draft of this table proposed an
+> infantry `hp` band of 6–14. The actual shipped values are **Scout 3 · Sniper 3 · Trooper 6 ·
+> Heavy 10** — the roster is far more fragile than that draft assumed, and every other band here has
+> been rescaled against the real numbers. ★ The practical consequence is large: at these hp values a
+> single Sniper hit (attack 6) **kills any 6-hp unit outright**, so vehicle hp had to come down from
+> the 18–30 first proposed. A 30-hp vehicle against a 6-attack roster takes five clean hits to kill
+> and would simply dominate the board.
+
+> ★ **Air's fragility is the balance lever, not its cost.** The `hp` band above deliberately sits
+> *inside* the infantry range (5–9 against infantry's 3–10), not the vehicle range: air trades
+> survivability for reach. At these numbers a Sniper (attack 6) or a Defensive Structure (attack 4)
+> that **can** target air will kill or nearly kill an aircraft in one hit — which is exactly the
+> pressure that stops air dominating. If air feels oppressive in playtest, cut hp before cutting
+> reach; reach is the fantasy.
 
 ## Edge Cases
 
@@ -175,10 +186,10 @@ can_attack(attacker, defender) =
 | Knob | Default | Safe range | Effect / failure at extremes |
 |---|---|---|---|
 | `AIR_MOVE_COST` | 1 | 1–2 | ★ At 1 with 10 AP, air crosses most of a 12×10 board in a turn — that is the fantasy. At 2 air is merely fast infantry and the class loses its point. **Cannot go below 1** (Dijkstra monotonicity) |
-| Air `hp` band | 8–14 | 6–16 | The primary air balance lever. Cut this before cutting reach |
+| Air `hp` band | 5–9 | 4–12 | The primary air balance lever. Cut this before cutting reach |
 | Vehicle difficult-terrain block | on | on/off | ★ Turning it off collapses the vehicle class into "better infantry". Strongly recommend it stays on |
 | Vehicle `COVER_DR` eligibility | none | none/partial | Same concern as above |
-| Vehicle `produce_cost` band | 8–16 | 6–20 | Against infantry at 2–7, a vehicle should read as 2–3 infantry's worth of commitment |
+| Vehicle `produce_cost` band | 10–16 | 8–20 | Against infantry at 2–7, a vehicle should read as 2–3 infantry's worth of commitment — **plus the infantry slot its crew occupies** (PC-8), which is the larger cost in practice |
 
 ## Acceptance Criteria
 

@@ -127,7 +127,7 @@
 > | # | Question | Owner |
 > |---|---|---|
 > | BPOQ-NEW-1 | ★ **Does the deleted Economy Outpost leave an early-game hole?** Its old job was also *"something useful to spend early Credits on"*. Now the early build order is Barracks → Lab → army, which is fewer meaningful choices in the opening. Watch the first five turns in playtest specifically | game-designer |
-> | BPOQ-NEW-2 | **Its art is already made** (`assets/art/`, S4-02: idle, destroyed, glow mask, 3 hues). Retire it, or reuse the asset for the Factory rather than generating new art? Reuse is cheap and the silhouette is generic enough | art-director |
+> | ~~BPOQ-NEW-2~~ | ✅ **RESOLVED 2026-08-24 (user): reuse the Economy Outpost art for the Factory.** The seven shipped files (`struct_economy_outpost_{rush,boom,neutral}_{idle,destroyed}.png` + `_idle_glow.png`) are re-pointed rather than retired — **zero new generations**, and the silhouette reads as industrial either way. Owed: rename the runtime files and their `.import` sidecars to `struct_factory_*`, update the asset manifest and the entity inventory, and correct `design/assets/specs/` so the spec describes a vehicle factory rather than an income building | ✅ closed |
 > | BPOQ-NEW-3 | **Are Factory and Airfield both needed at first?** Air carries a real Pillar-3 risk (`unit-classes.md` UCOQ-1) and needs a renderer spike. Recommend shipping the Factory first and holding the Airfield until air is proven to render legibly | producer |
 
 ## Overview
