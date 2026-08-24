@@ -343,3 +343,67 @@ has a term for income value and none for **capacity** value.
 Give the AI a **capacity-value** term so a Barracks is worth building, then re-run. Whether
 that alone makes matches resolve is a separate question — armies that can grow may still
 stalemate — but it is one batch to find out, and it is a bounded fix rather than a redesign.
+
+---
+
+## S6-06 GATE RE-RUN — 2026-08-24 — capacity fix landed; **gate still FAILS**
+
+**Change under test**: the AI gained a capacity-value term (a Barracks is worth the army
+capacity it unlocks) **and** the build enumeration was un-gated from a hard identity filter.
+
+### The filter was the real defect, and S6-03 created it
+
+`_score_build_and_economy_candidates` contained `if structure_type != ECONOMY_OUTPOST:
+continue`. Sound when written — the other types had no strategic model, and enumerating
+them on a placeholder basis caused a build↔cancel oscillation. But **S6-03 renamed
+`ECONOMY_OUTPOST → FACTORY` mechanically, and the filter came with it**, leaving the AI
+hard-locked to the one structure whose value S6-01 had just zeroed. It was structurally
+incapable of building a Barracks at any price. Now gated on *"can we actually value this?"*,
+which preserves the original guard's intent while letting any type with a real model in.
+
+### What the fix DID achieve
+
+| | before | after |
+|---|---:|---:|
+| Peak banked Credits | 18,400 | ★ **1,750** ✓ *(condition 4 now passes)* |
+| BUILD candidates above `pass_threshold` | 0 / 24 turns | ★ **20 / 24** |
+
+### What it did NOT
+
+| Gate condition | Result |
+|---|---|
+| resolve on **play** | **0 / 21** — unchanged |
+| **non-zero HQ damage** | **zero in 1,260 rows** — unchanged |
+| +3 advantage converts | **0 / 6** — unchanged |
+
+### ★★ The number that explains it
+
+| late-game (turn > 40) | before fix | after fix |
+|---|---:|---:|
+| mean army size | 2.4 v 2.2 | **2.5 v 2.2** |
+| mean structure hp | 14.7 | **14.9** |
+
+**The AI now spends, but nothing accumulates.** Units die exactly as fast as they are
+produced. Two symmetric AIs reinforcing from HQs at opposite ends of a 12×10 map, trading
+one-for-one in the middle, forever. **Perpetual attrition is the equilibrium** — so the
+population cap was never the binding constraint either.
+
+### ★ Conclusion: this is a BALANCE property, not a bug
+
+Nothing in the current rules lets either side achieve **local superiority**: reinforcement
+is instant and adjacent to the objective, the map is small and symmetric, and a kill scores
+**3.00** against an HQ chip at **0.75**, so no unit ever walks past a fight toward the
+objective.
+
+**Three levers, all design-direction calls:**
+1. **Slower or more distant reinforcement**, so losses cost ground rather than a turn.
+2. **Make the objective outscore trading**, so a unit will break off and push.
+3. **Make combat decisive**, so a material edge converts instead of dissolving.
+
+### ⚠ For the record: three predictions, three misses
+
+Unbounded economy → AI paralysis → capacity. Each was a real defect, each was fixed, and
+**none of them was the cause of non-resolution.** The economy work stands on its own merits
+and the AI genuinely could not build. But the pattern says the remaining question is not an
+engineering one, and the next change should be **chosen by design intent and then measured**,
+not guessed at again. The batch and `tools/DiagnoseAI.tscn` make any candidate cheap to test.

@@ -920,13 +920,26 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 	var cap_reached: bool = economy_investments_committed >= AIBalance.ai.max_economy_investments_per_turn
 
 	for structure_type: StructureTypeDef in _BUILDABLE_STRUCTURE_TYPES:
-		# Only FACTORY has a real AI valuation (_economy_value). The other
-		# buildable types have no strategic model yet; enumerating them on the
-		# placeholder value==build_cost basis made the AI build structures it could
-		# not value and immediately cancel-build them for the refund — a
-		# build<->cancel oscillation that consumed the whole turn. Excluded until
-		# real valuations exist, mirroring the stubbed research enumeration.
-		if structure_type != StructureTypes.FACTORY:
+		# ★★ S6-06: gate on "can we actually VALUE this?", not on identity.
+		#
+		# This read `if structure_type != StructureTypes.ECONOMY_OUTPOST: continue`, and the
+		# guard was sound at the time: the other buildable types had no strategic model, and
+		# enumerating them on a placeholder value==build_cost basis made the AI build things
+		# it could not value and immediately cancel-build them for the refund — a
+		# build<->cancel oscillation that consumed the whole turn.
+		#
+		# ★ But S6-03 renamed ECONOMY_OUTPOST -> FACTORY *mechanically*, and the filter came
+		# with it — so the AI stayed hard-locked to the one structure whose value S6-01 had
+		# just zeroed, and was structurally incapable of building a BARRACKS no matter what
+		# it was worth. That is why the S6-06 batch showed `best_build` = 0.000 in every
+		# single turn, and why both armies stayed at the base cap of 4 forever.
+		#
+		# Gating on a positive valuation keeps the original guard's intent exactly — a type
+		# with no model still scores 0 and is still skipped — while letting any type that
+		# gains a real valuation participate automatically. The Research Lab and Defensive
+		# Structure remain excluded today because they genuinely have no model yet.
+		var prospective_value: float = _economy_value(lookahead, player, structure_type)
+		if prospective_value <= 0.0:
 			continue
 		if cap_reached:
 			continue
@@ -955,7 +968,7 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 		# returns 0 for a structure build since S6-01 -- no structure raises income -- so this
 		# scores 0 today. The conversion is here so that when research actions gain an
 		# economy_value it lands on the same scale as everything else.
-		var value: float = _economy_value(lookahead, player, structure_type)
+		var value: float = prospective_value
 		var denom: float = ap_equivalent_cost(cost, Balance.economy.build_ap_cost)
 		var score: float = _action_score(value / denom, false)
 		var candidate_entity_id: int = _lowest_owned_entity_id(lookahead, player)
@@ -967,6 +980,59 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 			best = _Candidate.new(action, score, cost, candidate_entity_id)
 
 	return best
+
+## AP-equivalent value of the army capacity [param structure_type] would unlock
+## (S6-06). Returns 0 for any structure that grants none.
+##
+## [b]Model:[/b] `cap_bonus × marginal_unit_cost × utilisation`, converted to AP-equivalent.
+## [br]• `marginal_unit_cost` — the cheapest unit [param player] can actually produce. A cap
+##   slot is worth what the player would put in it, and the cheapest producible unit is the
+##   floor of that.
+## [br]• ★ `utilisation` — [code]current_population / effective_cap[/code]. [b]This factor is
+##   the difference between a sane term and a bad one.[/b] Without it the AI values a
+##   Barracks identically whether its army is full or empty, and builds infrastructure it
+##   cannot use while it has nothing on the board. Scaling by pressure means an unconstrained
+##   player values a new slot at ~0 and a capped one values it fully — which is also just
+##   correct play.
+##
+## Deliberately [b]not[/b] decayed over a horizon, unlike the income projection: capacity is
+## a permanent one-time unlock, not a per-turn stream, and decaying it would double-count.
+##
+## ★ Returns 0 for the Factory and the Research Lab today, correctly: the Factory produces
+## ground vehicles (none exist until wave 2) and research is not implemented. Both become
+## non-zero through this same function when they gain something to be worth.
+static func _capacity_value(lookahead: GameState, player: int, structure_type: StructureTypeDef) -> float:
+	if structure_type.cap_bonus <= 0:
+		return 0.0
+	var cap: int = Population.effective_cap(lookahead, player)
+	if cap <= 0:
+		return 0.0
+	var used: int = Population.current_population(lookahead, player)
+	var utilisation: float = clampf(float(used) / float(cap), 0.0, 1.0)
+	if utilisation <= 0.0:
+		return 0.0
+	var marginal_cost: float = _cheapest_producible_cost(lookahead, player)
+	if marginal_cost <= 0.0:
+		return 0.0
+	return credits_to_ap(float(structure_type.cap_bonus) * marginal_cost * utilisation)
+
+
+## Credit cost of the cheapest unit [param player] can currently produce anywhere, or 0.0 if
+## they have no completed producer. The floor on what a freed cap slot is worth.
+static func _cheapest_producible_cost(lookahead: GameState, player: int) -> float:
+	var cheapest: float = 0.0
+	for e: EntityState in lookahead.entities():
+		if e.owner != player or not (e is StructureState):
+			continue
+		var st: StructureState = e as StructureState
+		if st.type == null or st.build_status != StructureState.BuildStatus.COMPLETED:
+			continue
+		for unit_type: UnitTypeDef in st.type.producible_types:
+			var c: float = float(Unit.effective_produce_cost(lookahead, unit_type, player))
+			if cheapest <= 0.0 or c < cheapest:
+				cheapest = c
+	return cheapest
+
 
 
 ## `economy_value(build_action)` (GDD Formulas, AC-15/AC-16):
@@ -990,6 +1056,19 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 ## note) — the dominant-strategy guardrail is [param economy_investments_committed]'s
 ## cadence cap in the caller, never a valuation ceiling here.
 static func _economy_value(lookahead: GameState, player: int, structure_type: StructureTypeDef) -> float:
+	# ★ S6-06 (2026-08-24): CAPACITY value — the term whose absence caused the gate failure.
+	#
+	# S6-01 zeroed this function with reasoning that was right about INCOME and wrong about
+	# VALUE: "no structure raises Credit income, so building is not an economic investment."
+	# True — but since S6-04 a BARRACKS raises the population cap, and the AI had a term for
+	# income value and none for capacity. So it never built one, its cap stayed at the base
+	# 4, its army never grew, both sides ground mid-map with three units each, and 0/21 games
+	# resolved with zero HQ damage. Diagnosed with tools/DiagnoseAI.tscn: `best_build` was
+	# 0.000 in every single traced turn.
+	var capacity: float = _capacity_value(lookahead, player, structure_type)
+	if capacity > 0.0:
+		return capacity
+
 	# ★ S6-01 (2026-08-24): re-pointed off the deleted per-outpost income curve.
 	#
 	# NO STRUCTURE RAISES CREDIT INCOME ANY MORE. Income comes solely from completed

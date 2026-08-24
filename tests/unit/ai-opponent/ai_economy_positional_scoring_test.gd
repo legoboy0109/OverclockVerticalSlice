@@ -66,6 +66,12 @@ func _make_state(current_ap: int = 20, current_credits: int = 30000) -> GameStat
 	# unfunded Credit pool would suppress every economic candidate.
 	state.per_player[0].current_credits = current_credits
 	state.per_player[1].current_credits = current_credits
+	# ★ S6-06: Unit.effective_produce_cost folds in the acting player's faction delta, so a
+	# state without factions assigned CRASHES rather than defaulting. The slice and the
+	# simulator both assign at setup; the bare factory does not. Reached now because the
+	# capacity term prices a cap slot at the cheapest producible unit.
+	for i: int in state.per_player.size():
+		state.per_player[i].faction = Factions.NEUTRAL
 	return state
 
 
@@ -562,25 +568,33 @@ func test_score_build_and_economy_candidates_excludes_factory_once_cap_reached()
 		assert_bool(build_action.structure_type == StructureTypes.FACTORY).is_false()
 
 
-func test_score_build_and_economy_candidates_allows_factory_below_cap() -> void:
-	# Arrange — same board, but economy_investments_committed is below the cap
-	# (0 < 2) -- an Economy Outpost candidate must be enumerable.
+func test_build_enumeration_is_gated_on_a_real_valuation_not_on_identity() -> void:
+	# ★★ S6-06 REPLACED test_..._allows_factory_below_cap, whose premise is dead: the
+	# Factory (the renamed Economy Outpost) has NO valuation since S6-01 -- no structure
+	# raises Credit income any more -- so it is correctly no longer enumerable.
+	#
+	# The rule under test is now the one that fixed the gate failure: a structure is
+	# enumerated if and only if the AI can actually VALUE it. Gating on identity is what
+	# left the AI hard-locked to the one structure worth nothing, unable to build a
+	# BARRACKS at any price, with its population cap pinned at the base 4 forever.
 	var state := _make_state(30)
 	var hq := _make_structure(1, 0, StructureTypes.HQ, Vector2i(5, 5), StructureState.BuildStatus.COMPLETED)
 	_place(state, hq)
+	# Put the army under cap pressure, which is what gives a Barracks its value.
+	for i: int in range(Population.effective_cap(state, 0)):
+		_place(state, _make_unit(200 + i, 0, _make_scout_type(), Vector2i(i, 9)))
 
-	# Act
 	var best := AI._Candidate.new()
 	best = AI._score_build_and_economy_candidates(state, hq, 0, best)
 
-	# Assert — a candidate was found. Because FACTORY's action_score
-	# (~1.765) is the highest-value buildable in this scenario (no enemies to
-	# raise production_value-style scoring), the winning candidate should be
-	# the Economy Outpost build.
+	# A candidate exists, and it is the BARRACKS -- the only buildable with a real model.
 	assert_object(best.action).is_not_null()
 	assert_bool(best.action is BuildAction).is_true()
 	var build_action: BuildAction = best.action
-	assert_bool(build_action.structure_type == StructureTypes.FACTORY).is_true()
+	assert_bool(build_action.structure_type == StructureTypes.BARRACKS).is_true()
+	# And the valueless types are still excluded, which preserves the original guard's
+	# intent (no placeholder valuations -> no build<->cancel oscillation).
+	assert_float(AI._economy_value(state, 0, StructureTypes.FACTORY)).is_equal_approx(0.0, 0.0001)
 
 
 func test_economy_investments_committed_is_a_pure_caller_passed_parameter() -> void:
@@ -591,6 +605,11 @@ func test_economy_investments_committed_is_a_pure_caller_passed_parameter() -> v
 	var state := _make_state(30)
 	var hq := _make_structure(1, 0, StructureTypes.HQ, Vector2i(5, 5), StructureState.BuildStatus.COMPLETED)
 	_place(state, hq)
+	# ★ S6-06: a buildable candidate only exists when one has a real valuation, and the
+	# Barracks earns its value from cap pressure. Without units on the board there is
+	# nothing to enumerate and the cadence gate has nothing to gate.
+	for i: int in range(Population.effective_cap(state, 0)):
+		_place(state, _make_unit(300 + i, 0, _make_scout_type(), Vector2i(i, 9)))
 
 	var best_below_cap := AI._Candidate.new()
 	best_below_cap = AI._score_build_and_economy_candidates(state, hq, 0, best_below_cap)
@@ -603,7 +622,7 @@ func test_economy_investments_committed_is_a_pure_caller_passed_parameter() -> v
 	assert_bool(best_below_cap.action is BuildAction).is_true()
 	if best_at_cap.action != null:
 		var at_cap_build: BuildAction = best_at_cap.action
-		assert_bool(at_cap_build.structure_type == StructureTypes.FACTORY).is_false()
+		assert_bool(at_cap_build.structure_type == StructureTypes.BARRACKS).is_false()
 
 
 # --- Edge: research stub returns no candidates, no error -------------------
