@@ -116,6 +116,7 @@ enum Reason {
 	NO_DEPLOY_SPACE = 128,      ## BaseProduction.legal_deploy_tiles() is empty.
 	NOT_UNDER_CONSTRUCTION = 256, ## Cancel Build: entity is not an owned, UNDER_CONSTRUCTION StructureState.
 	INSUFFICIENT_CREDITS = 512,   ## Credits.can_afford() returned false — the Credit main cost of a dual-cost economic action (Build/Produce) is unaffordable (ADR-0006 pivot). INSUFFICIENT_AP covers the AP-surcharge leg.
+	POPULATION_CAP_REACHED = 1024, ## Population.can_field() returned false — the army is at (or over) its population cap. Mirrors [constant Action.Reason.POPULATION_CAP_REACHED].
 }
 
 
@@ -372,6 +373,24 @@ static func _produce_entry(state: GameState, entity: EntityState) -> VerbEntry:
 	var deploy_tiles: Array[Vector2i] = BaseProduction.legal_deploy_tiles(state, producer, null)
 	if deploy_tiles.is_empty():
 		reason |= Reason.NO_DEPLOY_SPACE
+
+	# ★ Population cap (S6-07, `population-cap.md` AC-12). The RULES already
+	# enforced this -- BaseProduction.validate returns
+	# Action.Reason.POPULATION_CAP_REACHED -- and the AI already respected it, but
+	# this menu did not consult it, so a player at cap saw Produce ENABLED, chose a
+	# unit, and had the commit rejected with no forewarning. The menu is the
+	# affordance AC-12 is about; a rule enforced only at validation is a rule the
+	# player discovers by failing.
+	#
+	# Checked against every producible type, not one: a cap that blocks Heavies may
+	# still admit a Scout, and the menu must stay enabled while ANY unit is legal.
+	var any_fieldable: bool = false
+	for unit_type: UnitTypeDef in producer.type.producible_types:
+		if Population.can_field(state, producer.owner, unit_type):
+			any_fieldable = true
+			break
+	if not any_fieldable:
+		reason |= Reason.POPULATION_CAP_REACHED
 
 	# Dual-cost (ADR-0006 pivot): a unit is affordable iff BOTH its Credit main cost
 	# AND the shared AP surcharge (produce_ap_cost) are payable.

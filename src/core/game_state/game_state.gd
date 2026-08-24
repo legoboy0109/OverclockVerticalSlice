@@ -45,6 +45,25 @@ extends Resource
 ## run_win_check] (Story 004) transitions to [code]GAME_OVER[/code].
 enum MatchStatus { IN_PROGRESS, GAME_OVER }
 
+## Why the match ended — set alongside [member winner] by [method run_win_check],
+## mirroring its two terminal branches.
+##
+## ★ Added 2026-08-24 (S6-08). [GameOverEvent] previously carried only the winner,
+## which is enough to say [i]who[/i] won but not [i]how[/i] — and `game-hud.md`
+## AC-22 requires the victory presentation to reflect a round-limit tiebreak
+## specifically. That AC was deferred as untestable while [member max_rounds] was
+## off; it was armed at 30 in S6-03 and now fires in roughly 1 game in 7, so the
+## deferral no longer holds and the reason has to be recorded rather than inferred.
+##
+## Inferring it downstream would not work: by the time the HUD reads the terminal
+## state the destroyed HQ is gone from [member entities_by_id], so "was an HQ
+## destroyed?" is no longer answerable from state alone.
+enum WinReason {
+	NONE, ## Match still in progress — pairs with [member winner] == -1.
+	HQ_DESTROYED, ## Decisive victory: the loser's HQ was destroyed.
+	ROUND_LIMIT, ## [member max_rounds] reached with both HQs standing; decided by [member tiebreak_metric].
+}
+
 ## Which metric [method run_win_check]'s MAX_ROUNDS/tiebreak fallback uses to
 ## pick a winner when the round cap is reached with no HQ destroyed
 ## (TR-gamestate-016, ADR-0001).
@@ -124,6 +143,12 @@ static var _dispatch_registered: bool = false
 ## [constant MatchStatus.IN_PROGRESS] (no winner yet). Sole writer: [method
 ## run_win_check].
 @export var winner: int = -1
+
+## Why the match ended (see [enum WinReason]), or [constant WinReason.NONE] while
+## it is still [constant MatchStatus.IN_PROGRESS]. Sole writer: [method
+## run_win_check], which sets it in the same statement group as [member winner] —
+## the two are always consistent.
+@export var win_reason: int = WinReason.NONE
 
 ## Optional round cap for the anti-drag terminal predicate (TR-gamestate-016,
 ## ADR-0001). [code]0[/code] (the default) means [b]unset/OFF[/b] — the round
@@ -672,8 +697,10 @@ func run_win_check(events: Array) -> void:
 			hq_winner = 1 - destroyed_hq_owners[0]
 		match_status = MatchStatus.GAME_OVER
 		winner = hq_winner
+		win_reason = WinReason.HQ_DESTROYED
 		var hq_game_over := GameOverEvent.new()
 		hq_game_over.winner = hq_winner
+		hq_game_over.reason = WinReason.HQ_DESTROYED
 		events.append(hq_game_over)
 		return # AC6: decisive victory always beats the tiebreak fallback.
 
@@ -695,8 +722,12 @@ func run_win_check(events: Array) -> void:
 
 	match_status = MatchStatus.GAME_OVER
 	winner = tiebreak_winner
+	win_reason = WinReason.ROUND_LIMIT
 	var tiebreak_game_over := GameOverEvent.new()
 	tiebreak_game_over.winner = tiebreak_winner
+	tiebreak_game_over.reason = WinReason.ROUND_LIMIT
+	tiebreak_game_over.metric = tiebreak_metric
+	tiebreak_game_over.metric_by_player = metric_by_player
 	events.append(tiebreak_game_over)
 
 
@@ -713,6 +744,20 @@ func run_win_check(events: Array) -> void:
 ## kept for consistency with every other order-sensitive entity pass on this
 ## class, and so a future metric (e.g. total hp) that DOES care about order
 ## can be added here without an ordering regression.
+## Each player's current [member tiebreak_metric] score, indexed by player — what
+## a round-limit finish would be decided on if the cap fired right now.
+##
+## The public read over [method _compute_tiebreak_metric], added 2026-08-24 (S6-08)
+## for [method GameStateReader.tiebreak_scores]. Exposed rather than reimplemented
+## in the HUD so the figure a player sees is definitionally the figure that decides
+## the game — a second implementation could drift from this one and would do so
+## invisibly, since both only disagree on games that reach the cap.
+##
+## O(entity count). Read on commit, never per-frame.
+func tiebreak_scores() -> Array[int]:
+	return _compute_tiebreak_metric()
+
+
 func _compute_tiebreak_metric() -> Array[int]:
 	var counts: Array[int] = [0, 0]
 	match tiebreak_metric:

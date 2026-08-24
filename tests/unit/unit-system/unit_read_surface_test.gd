@@ -113,8 +113,16 @@ func test_game_state_reader_exposes_only_unit_info_as_script_method() -> void:
 	# match_status/current_ap/income_breakdown/can_afford/entities/entity_at) plus
 	# the signal-subscription broker (subscribe_action_applied/
 	# unsubscribe_action_applied) -- the brokers register a Callable listener on an
-	# existing signal, NOT a mutation path to GameState. The allowlist grows with
-	# each read accessor / non-mutating affordance but must never admit a mutator.
+	# existing signal, NOT a mutation path to GameState. S6-07 added the economy
+	# readout getters (total_upkeep/net_income/population/population_cap) and S6-08
+	# the terminal-state getters (win_reason/tiebreak_metric/tiebreak_scores) --
+	# all pure pass-throughs to static queries. ★ tiebreak_scores is the one worth
+	# a second look: it forwards to GameState.tiebreak_scores(), which COMPUTES a
+	# metric rather than reading a field. It is still a read -- the computation is
+	# pure and writes nothing -- but it is the shape a mutator could hide in, so it
+	# is admitted deliberately rather than by pattern-match.
+	# The allowlist grows with each read accessor / non-mutating affordance but
+	# must never admit a mutator.
 	assert_array(script_method_names).override_failure_message(
 		"GameStateReader must expose ONLY _init + read accessors + non-mutating " +
 		"affordances; any other script-defined method is a potential mutation " +
@@ -124,6 +132,8 @@ func test_game_state_reader_exposes_only_unit_info_as_script_method() -> void:
 		"structure_info", "can_afford_build", "can_afford_produce",
 		"active_player", "round_number", "match_status", "winner", "current_ap",
 		"income_breakdown", "can_afford", "current_credits", "can_afford_credits",
+		"total_upkeep", "net_income", "population", "population_cap",
+		"win_reason", "tiebreak_metric", "tiebreak_scores",
 		"entities", "entity_at",
 		"subscribe_action_applied", "unsubscribe_action_applied",
 	])

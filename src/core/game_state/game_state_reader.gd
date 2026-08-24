@@ -267,13 +267,17 @@ func current_ap(player: int) -> int:
 	return AP.current_ap(_state, player)
 
 
-## [param player]'s Credit income decomposed into its three additive terms
-## ([code]{base, outpost, econ_tech}[/code], TR-hud-019, ADR-0016 §1) — a direct
+## [param player]'s [b]gross[/b] Credit income decomposed into its additive terms
+## ([code]{base, tiers}[/code], TR-hud-019, ADR-0016 §1) — a direct
 ## pass-through to [method Credits.credit_income_breakdown] (repointed from
 ## [code]AP.ap_income_breakdown[/code] by the ADR-0006 pivot; income now funds the
 ## Credits pool). Read live, never locally re-split from raw inputs (Pass-Through
-## Invariant — ADR-0016 §1 forbids the HUD receiving raw outpost count/tech flag
-## and splitting locally). O(1) plus the owning query's own O(1) reads.
+## Invariant — ADR-0016 §1 forbids the HUD receiving the raw tier count and
+## splitting locally). O(1) plus the owning query's own O(1) reads.
+## [br]★ S6-01 deleted the Economy Outpost: the terms are now [code]base[/code] and
+## [code]tiers[/code] (research-driven). This is [b]gross[/b] — see
+## [method total_upkeep] and [method net_income] for the other two thirds of the
+## UR-8 triple.
 func income_breakdown(player: int) -> Dictionary:
 	return Credits.credit_income_breakdown(_state, player)
 
@@ -292,6 +296,60 @@ func can_afford(player: int, amount: int) -> bool:
 ## Invariant). O(1).
 func current_credits(player: int) -> int:
 	return Credits.current_credits(_state, player)
+
+
+## Why the match ended (see [enum GameState.WinReason]), or [constant
+## GameState.WinReason.NONE] while it is still in progress — a verbatim read.
+## Lets the victory presentation distinguish an HQ kill from a round-limit
+## tiebreak (`game-hud.md` CR-9/AC-22). O(1).
+func win_reason() -> int:
+	return _state.win_reason
+
+
+## Which [enum GameState.TiebreakMetric] would decide (or did decide) a
+## round-limit result. O(1).
+func tiebreak_metric() -> int:
+	return _state.tiebreak_metric
+
+
+## Each player's current tiebreak-metric score, indexed by player — what a capped
+## game would be decided on right now. A verbatim read through
+## [method GameState.tiebreak_scores]; the HUD never recomputes the metric.
+## O(entity count); called on commit, never per-frame.
+func tiebreak_scores() -> Array[int]:
+	return _state.tiebreak_scores()
+
+
+## [param player]'s total per-turn Credit upkeep — a direct pass-through to
+## [method Upkeep.total_upkeep] (Pass-Through Invariant: the HUD never sums unit
+## upkeep itself). The middle term of the UR-8 gross/upkeep/net triple.
+## O(entity count), read once per commit and never per-frame.
+func total_upkeep(player: int) -> int:
+	return Upkeep.total_upkeep(_state, player)
+
+
+## [param player]'s [b]net[/b] Credit income — gross minus upkeep, a direct
+## pass-through to [method Upkeep.net_credit_income]. ★ This is the figure UR-8
+## says carries the visual weight: it is the one that goes negative, and a player
+## must be able to see the equilibrium coming before it arrives. Never locally
+## computed as [method income_breakdown] minus [method total_upkeep] — that would
+## re-derive a value the economy already owns (Pass-Through Invariant).
+func net_income(player: int) -> int:
+	return Upkeep.net_credit_income(_state, player)
+
+
+## [param player]'s current population — a direct pass-through to
+## [method Population.current_population]. Pairs with [method population_cap] for
+## the AC-12 current/max readout.
+func population(player: int) -> int:
+	return Population.current_population(_state, player)
+
+
+## [param player]'s effective population cap including Barracks bonuses — a direct
+## pass-through to [method Population.effective_cap]. The HUD never adds
+## [code]cap_bonus[/code] itself.
+func population_cap(player: int) -> int:
+	return Population.effective_cap(_state, player)
 
 
 ## True iff [param player] can currently afford [param amount] Credits (ADR-0016 §1,

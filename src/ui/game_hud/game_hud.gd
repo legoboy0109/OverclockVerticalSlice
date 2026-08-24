@@ -57,6 +57,7 @@ var _credits_counter: CreditsCounterWidget = null
 var _credits_counter_opponent: CreditsCounterWidget = null
 var _turn_banner: TurnBannerWidget = null
 var _income_breakdown: IncomeBreakdownWidget = null
+var _population: PopulationWidget = null
 var _action_log: ActionLogWidget = null
 var _controls: HudControlsWidget = null
 var _detail_panel: DetailPanelWidget = null
@@ -131,6 +132,16 @@ func assemble(reader: GameStateReader, config: HUDConfig, cmd: CommandInterface,
 	_income_breakdown.configure(config, local_player)
 	_income_breakdown.position = Vector2(0, 20)
 	_credits_counter.add_child(_income_breakdown)
+
+	# Population sits below the income popover rather than inside it: upkeep is a
+	# gradient the player can watch approach, the cap is a hard stop. Same pairing,
+	# different failure shapes — see PopulationWidget's class doc. Screen-anchored,
+	# not parented to the counter, so it stays put when the popover collapses.
+	_population = PopulationWidget.new()
+	_population.bind(reader)
+	_population.configure(local_player)
+	_population.position = Vector2(16, 122)
+	add_child(_population)
 
 	_action_log = ActionLogWidget.new()
 	_action_log.bind(reader)
@@ -233,6 +244,12 @@ func turn_banner() -> TurnBannerWidget:
 ## The AP income breakdown readout.
 func income_breakdown() -> IncomeBreakdownWidget:
 	return _income_breakdown
+
+
+## The population readout (`population-cap.md` AC-12), or [code]null[/code] before
+## [method assemble].
+func population_widget() -> PopulationWidget:
+	return _population
 
 ## The append-only action log.
 func action_log() -> ActionLogWidget:
