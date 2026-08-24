@@ -102,7 +102,7 @@
 >
 > | # | Question | Owner |
 > |---|---|---|
-> | RTOQ-NEW-1 | ★ **How does the Empire's tech-base vulnerability stay distinct now that everyone has one?** Recommend: everyone loses income *growth* when their Lab dies; only the Empire loses *rank* (PV-7), which is a far sharper penalty and matches "high risk, high reward" | user + systems-designer |
+> | ~~RTOQ-NEW-1~~ | ✅ **RESOLVED 2026-08-24 in `factions/holy-cosmic-empire.md`.** Everyone loses income *growth*; **only the Empire loses what it has already built.** Killing an Alliance Lab caps their future; killing the Empire's **Cathedral** un-develops their present — every unit drops one rank per turn until it is rebuilt (PV-7). ★ It is the only mechanism in the game that takes value **back**, which is what makes the Empire's stated vulnerability sharper than the shared one rather than identical to it. Doctrine bonuses deliberately persist — one vulnerability mechanic, clearly legible | ✅ closed |
 > | RTOQ-NEW-2 | **Should Attack/Defense Tech also tier?** Economy now has three tiers; a single flat Attack Tech alongside looks inconsistent, and a tiered combat line would give the Empire's "power increasing based on the linear tech tree" somewhere to live | systems-designer |
 > | RTOQ-NEW-3 | ★ **Is a 2,500 ceiling right?** At the pre-rescale scale it was 25, close to the old ~26 practical ceiling, so existing balance intuition roughly carries over. But the old ceiling was reached by *building*, which cost map space and time, while this one is reached by *researching*, which costs only Credits and turns. The curve to reach it is quite different even though the endpoint is similar | economy-designer |
 

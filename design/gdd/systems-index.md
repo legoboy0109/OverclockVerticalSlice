@@ -68,6 +68,25 @@ endgame closeout-drag problem the prototype surfaced.
 
 ---
 
+### Faction content (Tier 2 of the faction corpus v2)
+
+Six per-faction GDDs, all **DRAFT 2026-08-24**, all governed by `faction-identity.md` v2 and each
+carrying a **CR-10 comparison sheet against the Democratic Alliance baseline**. All six PASS
+CR-10.2 on paper; four carry a named risk that **cannot** be settled on paper and must be playtested.
+
+| Faction | Thesis | Earliest wave | Named risk |
+|---|---|---|---|
+| **Democratic Alliance of Planets** | ★ **The baseline.** Generalist, full three-class roster; its four infantry *are* the shipped units | ★ **Wave 1** | Is the generalist boring? (DAOQ-2) |
+| **Solar Federation** | Volume + specialists; cheap in **AP**, not just Credits | ★ **Wave 1** (reduced) | Is doubled board mobility priced right? (SFOQ-1) |
+| **Galactic Protectorate** | Bimodal — disposable robots + elite specialists; universally EMF-vulnerable | Wave 3 | Can it ever be closed out? (POQ-2) |
+| **Independents** | Poorest, fewest, no air — **steals** vehicles | Wave 2 | ★★ Power set by *opponent behaviour* (IOQ-1) |
+| **Machinist's Union** | Weak crew, superb machines; **compounding economy** | Wave 2 | ★★ Is the early game survivable? (MUOQ-1) |
+| **Holy Cosmic Empire** | ★ **The only faction that promotes**; its army *appreciates*, and can be un-developed | ★ **Wave 4** | ★★ Variance + `defense` hard-counter (HCEOQ-1/2) |
+
+> ★ **Three late-game factions, deliberately different mechanisms:** the Union's *economy* compounds
+> (irreversible), the Empire's *units* compound (reversible by killing the Cathedral), and the
+> Alliance simply out-produces. Checked pairwise; each separation is recorded in the relevant doc.
+
 ## Categories
 
 | Category | Description | Systems in OVERCLOCK |
