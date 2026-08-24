@@ -104,6 +104,22 @@ Alliance lets its ordinary light and medium infantry drive (the generalist answe
 Federation fields a dedicated Pilot specialist; the Machinist's Union makes piloting most of what
 its infantry are for. A faction whose infantry cannot pilot cannot field crewed vehicles at all.
 
+**TP-5d — ★ `crew_bonus`: a pilot may improve the vehicle it crews.** A `UnitTypeDef` with
+`can_pilot = true` may declare a `crew_bonus` — additive deltas to the crewed vehicle's
+`effective_attack`, `effective_max_hp`, `effective_move_cost` or `effective_attack_range`, applied
+only while that unit is the pilot and removed the moment it leaves or dies.
+
+> ★ **Why this exists as general machinery (CR-9).** Without it, a dedicated pilot unit is merely
+> *necessary* rather than *better*, and a faction whose ordinary infantry can drive (the Democratic
+> Alliance) strictly dominates one that must build specialists (the Solar Federation) — the
+> specialist would be a tax, not an identity. `crew_bonus` is what makes "we train pilots properly"
+> a real advantage. It is available to any faction; two use it.
+>
+> **Bounded like every other stat delta:** additive, never multiplicative, and the resulting
+> effective values are subject to the same schema floors as any authored value. A `crew_bonus` large
+> enough to make an unpiloted-vs-piloted vehicle read as two different units is over-tuned — the
+> intent is a meaningful edge, not a transformation.
+
 **TP-6 — Pilots enter and leave through `EMBARK`/`DISEMBARK`.** Crewing uses the same machinery as
 carriage; a pilot is cargo that happens to enable the vehicle. A vehicle may hold exactly one pilot.
 
@@ -150,6 +166,7 @@ can_capture(actor, v)  = adjacent(actor, v)
 | `EMBARK_AP_COST` / `DISEMBARK_AP_COST` | **1** AP each | Per `unit-abilities.md` |
 | `transport_size` (infantry) | **1** | |
 | `transport_size` (vehicle / mech) | **3** | ★ Makes "multiple infantry **or** one mech" fall out of capacity 3 |
+| `crew_bonus` magnitude | **≤ +1** per stat | ★ Keep small. It is an edge, not a transformation — a vehicle that is twice as good crewed is a vehicle nobody fields uncrewed, which erases the unpiloted board state this system exists to create |
 | Pilot `hp` band | **3–6** | ★ Deliberately low, and matched to the shipped infantry band (Scout 3, Trooper 6) — crew-killing must be a *viable* play, not a theoretical one |
 
 **Indicative transports:**
