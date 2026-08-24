@@ -5,10 +5,8 @@
 > **Last Updated**: 2026-07-27
 >
 > ✅ **Resolved 2026-08-24 (S6-24).** The Settings screen exists (`src/ui/settings/settings_screen.gd`)
-> and carries the control-binding UI this note deferred, plus UI scale and reduced motion. It is
-> still **unspecified** — built from the standing commitments in `accessibility-requirements.md`
-> rather than from a UX document, because OQ-3 was never authored. Worth writing that spec
-> retroactively if the screen grows.
+> and carries the control-binding UI this note deferred, plus UI scale and reduced motion. Its spec
+> was written retroactively the same week — `design/ux/settings.md` — and still owes a `/ux-review`.
 > **Journey Phase(s)**: Entry / cold boot (no player-journey.md yet — see Open Questions)
 > **Template**: UX Spec
 > **Scope**: Vertical Slice (S2-05). VS-minimal entry set; persistence/campaign deferred (Alpha+).
@@ -238,9 +236,7 @@ Tier: **Standard** (WCAG 2.1 AA + CVAA).
 2. **New Skirmish → side/faction pick?** The VS is symmetric (scope.md §5), so New Skirmish can
    launch straight into the match with no pre-match pick. If the VS build wants a side choice or
    a map confirm, that's a tiny intermediate screen (flag, not authored here).
-3. ~~**Settings screen is a separate spec**~~ — ⚠ **Partially resolved 2026-08-24 (S6-24).** The
-   screen was IMPLEMENTED without a spec, from `accessibility-requirements.md`'s Standard-tier
-   commitments (full input remapping with conflict warnings, UI scale 75–150%, motion reduction).
-   **The spec still does not exist** — this is a real gap, not a closed question: the screen has no
-   authored layout, no acceptance criteria of its own, and nothing to review it against. Author it
-   if settings grow beyond these three groups.
+3. ~~**Settings screen is a separate spec**~~ — ✅ **Resolved 2026-08-24 (S6-26):**
+   `design/ux/settings.md`. ⚠ Written **retroactively**, after the screen shipped, and **not yet
+   reviewed** — it is the only screen in the game without a `/ux-review`. It documents the built
+   behaviour and flags the choices a reviewer would be expected to challenge.

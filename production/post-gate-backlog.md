@@ -186,10 +186,15 @@ accessibility claim is made publicly.
 > the new `CommandInterface.salient_tiles()` — keyed on the same FSM switch the overlay renderer
 > uses, so a jump can only land on a tile that is already highlighted.
 >
-> **Still open, and moved out of this item:** `InputConfig.menu_keyboard_nav_enabled` (ADR-0014 §6 —
-> there is still no `InputConfig` instance, and the ADR flags `FOCUS_CLICK` as its one unverified
-> engine claim); and **the Settings screen has no UX spec** — it was built from
-> `accessibility-requirements.md` because `main-menu.md` OQ-3 was never authored.
+> **✅ The Settings screen now has a spec** — `design/ux/settings.md`, written retroactively
+> 2026-08-24 (S6-26). ⚠ It owes a `/ux-review`, and its own Open Questions carry the follow-ups that
+> came out of writing it: no per-change undo (Reset is all-or-nothing), a silent save failure, and
+> `ui_*` actions being unrebindable — which prevents lockout but also blocks a legitimate
+> motor-accessibility need.
+>
+> **Still open from this item:** `InputConfig.menu_keyboard_nav_enabled` (ADR-0014 §6 — there is
+> still no `InputConfig` instance, and the ADR flags `FOCUS_CLICK` as its one unverified engine
+> claim).
 
 ### Original entry, kept for context
 

@@ -257,6 +257,7 @@ turn is therefore allowed and genuinely freezes it, which is the "simplest rule"
 3. **Freeze semantics** — the sim is turn-based and event-driven, so "pause" mostly means "block
    input + halt animations." Confirm no timer/tween relies on wall-clock that would desync on
    resume (Snap-Never-Tween makes this cheap).
-4. ~~**Settings screen is a separate spec**~~ — ⚠ **Partially resolved 2026-08-24 (S6-24).** The
-   screen was implemented without a spec, from `accessibility-requirements.md`'s commitments. **The
-   spec itself still does not exist**; see `main-menu.md` OQ-3 for the same note.
+4. ~~**Settings screen is a separate spec**~~ — ✅ **Resolved 2026-08-24 (S6-26):**
+   `design/ux/settings.md`, written retroactively and still owing a `/ux-review`. Note that spec's
+   two-parent exit rule, which this overlay depends on: Settings does not own its own "back", so
+   returning here rather than into the match is the caller's responsibility, not the screen's.
