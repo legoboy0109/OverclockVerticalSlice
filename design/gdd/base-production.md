@@ -157,6 +157,35 @@
 > | ~~BPOQ-NEW-2~~ | ✅ **RESOLVED 2026-08-24 (user): reuse the Economy Outpost art for the Factory.** The seven shipped files (`struct_economy_outpost_{rush,boom,neutral}_{idle,destroyed}.png` + `_idle_glow.png`) are re-pointed rather than retired — **zero new generations**, and the silhouette reads as industrial either way. Owed: rename the runtime files and their `.import` sidecars to `struct_factory_*`, update the asset manifest and the entity inventory, and correct `design/assets/specs/` so the spec describes a vehicle factory rather than an income building | ✅ closed |
 > | BPOQ-NEW-3 | **Are Factory and Airfield both needed at first?** Air carries a real Pillar-3 risk (`unit-classes.md` UCOQ-1) and needs a renderer spike. Recommend shipping the Factory first and holding the Airfield until air is proven to render legibly | producer |
 
+---
+
+# ⛔ EVERYTHING BELOW THIS LINE PREDATES THE S6 ECONOMY REWORK
+
+The blockquoted section above is the **current** design. The body that follows is the original
+Base & Production design as approved 2026-07-22, retained because it holds the rationale,
+formulas, edge cases and acceptance criteria that the rework did **not** replace — but it was
+written against the old structure roster and the old Credit scale, and it has not been rewritten.
+
+**Read it through these three corrections (S6-09, 2026-08-24, cross-review W-4/W-5):**
+
+| Below you will read | It now means | Changed by |
+|---|---|---|
+| **Production Outpost** | **Barracks** — same producer role, plus `cap_bonus` and `max_count` | S6-03 |
+| **Economy Outpost** | **Factory** — *the resource was renamed, the role was not.* The Factory grants **no income**; it is a `GROUND_VEHICLE` producer (wave 2, so it produces nothing yet and is deliberately absent from the build roster) | S6-03 / S6-09 |
+| Any **Credit** figure (`build_cost 4`, `9 Credits`, refunds, payback) | **×100** — the Credit scale was inflated so upkeep and larger armies could be tuned granularly | S6-02 |
+
+★ **The income mechanic below is not a rename — it is gone.** `completed_outpost_count`,
+`economy_outpost_payback`, the `n`-keyed income tail and `ECONOMY_TECH_INCOME_BONUS` describe a
+structure-keyed economy that **S6-01 deleted**. Income is now research-keyed
+(`base_income + econ_tier_bonus × tier`, capped at `max_economy_tier`). Those sections are
+preserved as the record of a design that was tried and replaced — the PIVOT was caused by exactly
+the unbounded-boom loop they describe — **not as instructions.**
+
+Everything else below (build lifecycle, cancel refunds, placement rules, structure damage, the
+closeout-drag brake, the edge cases and ACs) is unaffected by the rework and remains current.
+
+---
+
 ## Overview
 
 Base & Production is OVERCLOCK's economic and army-generating engine: the data-driven structures a
@@ -646,6 +675,21 @@ depend on Research):**
    should add a one-line cross-reference to the Turn Manager canonical sequence (Core Rule 3, step 4) so
    its snapshot timing cites the shared order. Additive doc note only — no formula/value change. Apply on
    AP & Credits Economy's next revision (or via `/propagate-design-change`).
+
+### ★ Reciprocal downstream — the wave-2 systems (added 2026-08-24, S6-09)
+
+Cross-review **W-1**: All 4 systems below declare a dependency on this document, and this
+document listed none of them. Reciprocity was **0/11 across the corpus** — every new GDD pointed
+up, no old GDD pointed back, so reading only this file gave no hint that changing it would break
+them. Restored mechanically; the relationship nature is copied from each new GDD's own
+Dependencies table, which remains the authority.
+
+| Downstream system | Nature |
+|---|---|
+| **Population Cap (#16)** | Hard |
+| **Promotion & Veterancy (#21)** | Hard |
+| **Unit Classes (#17)** | Hard |
+| **Unit Upkeep (#15)** | Soft |
 
 ## Tuning Knobs
 

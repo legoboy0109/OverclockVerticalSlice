@@ -132,6 +132,10 @@ func run_ai_turn(state: GameState) -> void:
 static func _is_economy_or_research(action: Action) -> bool:
 	if action.verb == Action.Verb.RESEARCH:
 		return true
-	if action is BuildAction:
-		return (action as BuildAction).structure_type == StructureTypes.FACTORY
+	# ★ S6-09: no BUILD is an economy investment any more. This read
+	# `structure_type == ECONOMY_OUTPOST`, which was correct while that structure WAS
+	# the economy; S6-03's mechanical rename carried the test onto the FACTORY, which
+	# is a production building and grants no income at all. The throttle exists to
+	# stop the AI spending a whole turn on economy actions (the PIVOT failure), and
+	# since S6-01 the only such action is RESEARCH.
 	return false

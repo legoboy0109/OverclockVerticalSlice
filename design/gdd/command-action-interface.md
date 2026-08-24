@@ -43,7 +43,7 @@ This is the **Pillar 3** fantasy in its purest form — *"the state is always vi
 
 **CR-4 — Contextual action menu.** On selection, the menu lists only the verbs that are *legal and affordable right now* for that entity: **Move** (if `reachable` non-empty), **Attack** (if `legal_targets` non-empty and not yet `has_attacked` and `ap_can_afford(attack_cost)` — AP-only, unchanged by the economy pivot), **Produce** (producers only, if `production_cap` remaining and any `producible_type` **dual-cost affordable** — `credits_can_afford(produce_cost) AND ap_can_afford(PRODUCE_AP_COST)` — with a legal deploy tile), **Cancel Build** (under-construction structures only), and **Wait** (always — ends this entity's involvement without spending). Build carries the same dual-cost gate (`credits_can_afford(build_cost) AND ap_can_afford(BUILD_AP_COST)`) at its player-level entry (CR-5). A verb the entity *has* but cannot use right now (e.g. Attack when unaffordable, or Produce/Build short in either pool) is shown **disabled with its reason**, not hidden — so the player learns why an option is unavailable rather than wondering where it went. **For an economic verb (Produce/Build/Research), the disablement reason names the *binding* pool** — whichever of `credits_can_afford`/`ap_can_afford` failed (see CR-8, D-2) — never a generic "unaffordable."
 
-**CR-5 — Building structures (player-level entry).** Building a *new* structure is not tied to an existing entity (there is nothing to select yet), so it is initiated from a **player-level Build command** (a HUD button / hotkey — the entry affordance is co-owned with Game HUD #10). Choosing Build opens structure-type selection (each option showing `build_cost` + `build_time`, affordability-gated), then enters **build-placement preview** over `legal_build_tiles`. *Producing units* is different — it is initiated by selecting an owned **producer** structure (HQ / Production Outpost) and choosing Produce.
+**CR-5 — Building structures (player-level entry).** Building a *new* structure is not tied to an existing entity (there is nothing to select yet), so it is initiated from a **player-level Build command** (a HUD button / hotkey — the entry affordance is co-owned with Game HUD #10). Choosing Build opens structure-type selection (each option showing `build_cost` + `build_time`, affordability-gated), then enters **build-placement preview** over `legal_build_tiles`. *Producing units* is different — it is initiated by selecting an owned **producer** structure (HQ / Barracks) and choosing Produce.
 
 **CR-6 — Single-click commit; illegal clicks are inert.** Inside a preview mode, a left-click on a **highlighted legal option** commits immediately (spends AP, resolves, updates the board). A click on a non-highlighted tile/target does **not** commit anything — it either does nothing or backs out to the action menu (never an accidental spend on an illegal target). Because only legal options are clickable, the player cannot misclick AP onto an invalid action.
 
@@ -249,6 +249,20 @@ Both contracts' query signature + perf budget remain owed to `/architecture-deci
 **Purity enforcement (owed, not assumed):** CR-2/CR-10 lean on every preview query (`reachable`, `legal_targets`, `preview_damage`, `ap_can_afford`, `credits_can_afford`, and the two new hypothetical-tile queries) being genuinely **side-effect-free** — idempotent, mutating no game state (no AP, no Credits, no hp, no signals any other system treats as gameplay-meaningful). This interface cannot enforce that from the outside; it is a contract obligation on the dependency systems, verified in *their* test suites and named in the ADR — not something this UI's own tests can cover.
 
 **Bidirectional-consistency check (verified 2026-07-22, re-confirmed by `/consistency-check` full scan same day; interface renamed AP Economy → AP & Credits Economy 2026-08-05 pivot, no reciprocity break):** Movement, Combat, Base & Production, AP & Credits Economy, and Game State & Turn Manager each already list Command & Action Interface as a downstream Hard dependent in their own Dependencies sections — reciprocity is clean for the *existing* interfaces, and the two reciprocal contracts above are now landed, not outstanding.
+
+### ★ Reciprocal downstream — the wave-2 systems (added 2026-08-24, S6-09)
+
+Cross-review **W-1**: All 3 systems below declare a dependency on this document, and this
+document listed none of them. Reciprocity was **0/11 across the corpus** — every new GDD pointed
+up, no old GDD pointed back, so reading only this file gave no hint that changing it would break
+them. Restored mechanically; the relationship nature is copied from each new GDD's own
+Dependencies table, which remains the authority.
+
+| Downstream system | Nature |
+|---|---|
+| **Damage Types (#18)** | Hard |
+| **Unit Abilities (#19)** | Hard |
+| **Unit Upkeep (#15)** | Soft |
 
 ## Tuning Knobs
 

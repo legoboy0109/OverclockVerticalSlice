@@ -103,9 +103,11 @@ func _run_one_turn(state: GameState) -> void:
 		# Must match AITurnDriver._is_economy_or_research EXACTLY — this counter feeds
 		# back into AI.choose_action's cadence cap (ADR-0011 §1/§6), so a looser rule
 		# here would silently simulate a different AI than the one that ships.
-		if action.verb == Action.Verb.RESEARCH \
-				or (action is BuildAction \
-					and (action as BuildAction).structure_type == StructureTypes.FACTORY):
+		# ★ S6-09: RESEARCH only — a Factory build is not an economy investment (it
+		# grants no income; the ECONOMY_OUTPOST identity was carried onto it by
+		# S6-03's mechanical rename). Kept in lockstep with the driver by hand;
+		# ai_economy_throttle_parity_test.gd asserts the two agree.
+		if action.verb == Action.Verb.RESEARCH:
 			economy_investments += 1
 		if state.match_status == GameState.MatchStatus.GAME_OVER:
 			return

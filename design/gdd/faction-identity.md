@@ -369,7 +369,7 @@ Mirrors `effective_attack`/`effective_defense` (`base + delta`, additive, floore
 **Combined-income-ceiling rule (hard framework constraint, load-bearing before any non-Neutral income delta ships).** Because a faction income delta stacks a *third* per-`n` term onto a base curve that already multiplies through `OUTPOST_BONUS_TIER1/TIER2` **and** the Economy-Tech term, the same unbounded-stacking failure AP & Credits Economy already caught once (untiered Economy-Tech term, ceiling 26→38 before a cap was retrofitted) can recur along the faction axis. Therefore: **any faction carrying a non-zero income delta (`Δ_base`/`Δ_tier1`/`Δ_tier2`) must be validated against the same `n`-swept ceiling model AP & Credits Economy used in its re-review, and the *combined* ceiling (base tiers × Economy Tech × faction delta) must be re-approved by economy-designer as a single number — not three independently-approved deltas.** This is a validation-discipline rule that costs nothing under Neutral (all Δ = 0, so the combined ceiling *is* AP & Credits Economy's Approved ~26/~32 `credit_income`) and is owed the moment a real delta lands. See OQ-3.
 
 **Two framework flags (prototype-gated, surfaced not resolved):**
-- **Per-stat saturation (Pillar 4 risk):** some base values already sit at their floor (Economy Outpost `build_time` = 1), so no faction delta can shorten them — only lengthen. And two factions with deltas −2 and −5 on the same floored stat become *indistinguishable* on that stat. **This is not abstract: run against the actual Approved roster, the two most identity-defining data points are already floored** — Scout `produce_cost` = 2 (a Rush discount can only reach the 1-AP floor: one point of range on the roster's signature cheap unit) and Economy Outpost `build_time` = 1 (no faction can make Boom's signature structure complete *faster* than Neutral). The asymmetry prototype must run a **per-stat headroom audit against the real Approved values** (not per-faction averages) before setting any delta — several levers have near-zero usable range where the fantasy needs them most.
+- **Per-stat saturation (Pillar 4 risk):** some base values already sit at their floor (Economy Outpost `build_time` = 1), so no faction delta can shorten them — only lengthen. And two factions with deltas −2 and −5 on the same floored stat become *indistinguishable* on that stat. **This is not abstract: run against the actual Approved roster, the two most identity-defining data points are already floored** — Scout `produce_cost` = 2 (a Rush discount can only reach the 1-AP floor: one point of range on the roster's signature cheap unit) and Defensive Structure `build_time` = 1 (no faction can make it complete *faster* than Neutral). ★ **Corrected S6-09:** this example originally cited the Economy Outpost, which no longer exists — and its successor the Factory now sits at `build_time` 3, so it is *not* floored and this argument never applied to it. The argument itself still holds on the two stats named here; the point is that a headroom audit must be run against **live** values, and this footnote is what happens when it is not. The asymmetry prototype must run a **per-stat headroom audit against the real Approved values** (not per-faction averages) before setting any delta — several levers have near-zero usable range where the fantasy needs them most.
 - **Additive income compresses over the match:** covered by the intercept/slope split above — a flat `Δ_base_income` compresses late; the slope levers are the compounding-safe alternative. A shape choice the framework now names explicitly, not a value left to tuning.
 
 **Floors — one already exists today, the rest are one-line additions owed to owning GDDs:**
@@ -407,6 +407,21 @@ Mirrors `effective_attack`/`effective_defense` (`base + delta`, additive, floore
 - **AI Opponent** (#11) — already reads `faction_of(player)`-adjusted `effective_X` automatically via CR-4 (no AI change needed to play a faction correctly-costed). Per-faction *scoring weights* are future work (AI OQ-6). Soft, forward-looking.
 
 **Bidirectional-consistency status (owed):** This GDD introduces additive contract obligations on 5 upstream systems (an `effective_X` fold-in + a floor each). Those 5 GDDs are all **Approved** and do **not** yet list Faction Identity (#12) as a downstream dependent (this system was authored last) — a reciprocity gap to close via `/propagate-design-change`. **Critically, because the VS ships Neutral (identity), none of those systems' shipped *numbers* change** — the fold-ins are no-ops until a non-Neutral faction carries a real delta, which is itself prototype-gated. So the handoffs are **owed-but-deferrable**: only the Game State faction-assignment plumbing is needed for a playable Neutral-vs-Neutral VS; the effective-value fold-ins and floors land alongside the asymmetry prototype, not before.
+
+### ★ Reciprocal downstream — the wave-2 systems (added 2026-08-24, S6-09)
+
+Cross-review **W-1**: All 4 systems below declare a dependency on this document, and this
+document listed none of them. Reciprocity was **0/11 across the corpus** — every new GDD pointed
+up, no old GDD pointed back, so reading only this file gave no hint that changing it would break
+them. Restored mechanically; the relationship nature is copied from each new GDD's own
+Dependencies table, which remains the authority.
+
+| Downstream system | Nature |
+|---|---|
+| **Population Cap (#16)** | Hard |
+| **Unit Abilities (#19)** | Hard |
+| **Unit Classes (#17)** | Hard |
+| **Unit Upkeep (#15)** | Soft |
 
 ## Tuning Knobs
 

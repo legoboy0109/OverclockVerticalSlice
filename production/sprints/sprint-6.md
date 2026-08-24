@@ -107,7 +107,7 @@ full post-mortem and the method lesson.
 
 | ID | Task | Owner | Est. | Notes |
 |----|------|-------|-----:|-------|
-| **S6-09** | `/propagate-design-change` sweep — cross-review W-1/W-4/W-5: dependency reciprocity (0/11), pre-rescale arithmetic, "Production Outpost" naming across ~10 docs | producer | 0.5 | Mechanical; no conclusions change |
+| **S6-09** ✅ | `/propagate-design-change` sweep — cross-review W-1/W-4/W-5: dependency reciprocity (0/11), pre-rescale arithmetic, "Production Outpost" naming across ~10 docs | producer | 0.5 | Mechanical; no conclusions change |
 | **S6-10** | Factory art — re-point the retired Economy Outpost's 7 files to `struct_factory_*` + manifest | art-director | 0.5 | User-approved reuse; zero new generations |
 
 ## ★ Carried and explicitly NOT in this sprint
@@ -195,6 +195,32 @@ turns — the state additions cost nothing.
 **Two presentation calls are yours to overrule** (both flagged in the GDDs, both reversible):
 `unit-upkeep.md` **UOQ-5** — net gets the visual weight rather than all three figures being
 equal. `game-hud.md` **OQ-2** — a capped game shows the metric and both scores.
+
+### S6-09 complete — 2026-08-24 (`f959146` + 3 doc commits)
+
+**Factory re-statted** to `base-production.md`'s roster table (1,000 / 3 / 200; it carried the
+renamed Economy Outpost's 400 / 1 / 100). ★ Which surfaced the bigger problem: the Factory
+*produces nothing* — ground vehicles are wave 2 — and grants no income, yet was offered in the
+build roster. Correcting the stats made the trap three times more expensive. Pulled from the roster
+until it can build something. The AI already skipped it unprompted; this only ever cost the human.
+
+Also fixed the same rename's second inheritance: the AI's economy-investment throttle still counted
+a Factory build as an economy action, in **both** the shipped driver and `simulate_matches.gd`'s
+hand-copied duplicate — the one whose own comment demands it "match EXACTLY ... a looser rule here
+would silently simulate a different AI than the one that ships". A new parity suite pins it.
+
+**W-1** reciprocity restored across 12 GDDs. **W-5** naming triaged by context, not find-replaced —
+three documents (`base-production`, `ap-economy`, `research-tech`) turned out to have the S6 rework
+bolted on top with the entire superseded body left underneath in the present tense, and now carry
+dividers. **W-4** handled with scale notes rather than rewritten numbers. **Plus** the entity
+registry, four sprints stale and the baseline `/consistency-check` trusts.
+
+Suite **1089/1089**. Slice boots clean. Batch unchanged: 18/21, mean 25 turns.
+
+⚠ **Flagged for a direction call, not changed:** Barracks (data 900 vs table 600) and Defensive
+Structure (600/1 vs 500/2) drift the same way the Factory did — but they are live balance values on
+a gate that has only just started passing, and Barracks throughput was one of the two levers that
+fixed it. Re-statting them is a balance decision.
 
 - [x] ✅ **S6-06 gate passed** (2026-08-24, batch 5) — matches resolve on play, from both seats, with non-zero HQ damage
 - [ ] `CREDIT_TO_AP_RATE` ships at 0.01 and the lethal-floor invariant is re-verified

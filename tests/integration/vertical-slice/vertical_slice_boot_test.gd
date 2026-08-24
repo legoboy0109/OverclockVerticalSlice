@@ -230,17 +230,24 @@ func _move_cursor_to(root: VerticalSliceRoot, target: Vector2i) -> void:
 # ==============================================================================
 
 func test_cycle_buildable_changes_the_selected_type() -> void:
+	# ★ S6-09: the roster's first entry is now the BARRACKS -- the Factory was pulled
+	# because it produces nothing until GROUND_VEHICLE units land in wave 2, and a
+	# 1,000-Credit structure that does nothing is a trap rather than a choice.
 	var root := _make_root()
-	assert_object(root.selected_buildable()).is_equal(StructureTypes.FACTORY)
+	var roster: Array[StructureTypeDef] = root._buildable_roster()
+	assert_bool(roster.has(StructureTypes.FACTORY)).override_failure_message(
+		"the Factory must stay out of the build roster until it can produce something"
+	).is_false()
+	assert_object(root.selected_buildable()).is_equal(roster[0])
 	root.cycle_buildable()
-	assert_object(root.selected_buildable()).is_equal(StructureTypes.BARRACKS)
+	assert_object(root.selected_buildable()).is_equal(roster[1])
 
 
 func test_build_places_a_structure_at_a_legal_cursor_tile() -> void:
 	var root := _make_root()
 	var state := root.state()
 	state.per_player[0].current_ap = 20 # ensure the outpost is affordable.
-	var type: StructureTypeDef = root.selected_buildable() # FACTORY (index 0).
+	var type: StructureTypeDef = root.selected_buildable() # BARRACKS (index 0 since S6-09).
 
 	var legal: Array[Vector2i] = GameStateReader.new(state).legal_build_tiles(0, type)
 	assert_bool(legal.is_empty()).is_false()          # there is a legal build tile.

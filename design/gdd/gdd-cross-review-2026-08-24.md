@@ -177,11 +177,11 @@ is the user's call and is deliberately left open.**
 
 | # | Issue | Documents |
 |---|---|---|
-| **W-1** | **Dependency reciprocity is 0/11.** Not one existing GDD lists any of the 7 new systems as a downstream dependent, though all 7 declare hard upstream dependencies on them. Mechanical to fix via `/propagate-design-change` | all 11 pre-v2 GDDs |
+| **W-1** ✅ **RESOLVED 2026-08-24 (S6-09)** — reciprocal downstream blocks added to 12 GDDs, derived from each new GDD's own Dependencies table. | **Dependency reciprocity is 0/11.** Not one existing GDD lists any of the 7 new systems as a downstream dependent, though all 7 declare hard upstream dependencies on them. Mechanical to fix via `/propagate-design-change` | all 11 pre-v2 GDDs |
 | **W-2** | **`game-hud.md`'s pip-threshold derivation is invalidated.** It reasons from *"the highest-hp **unit** is Heavy at 10"* to justify `PIP_MAX_HP = 10`. A Union Siege Mech is a **unit** with **28 hp**; every vehicle is 12–28. The whole "units render pips, structures render numeric" intent collapses — vehicles are units that need numeric readouts. Its worked boundary analysis also cites the deleted Economy Outpost's hp 8 as the binding constraint | `game-hud.md`, `unit-classes.md` |
 | **W-3** | **Deficit does not block `CAPTURE_VEHICLE`.** `unit-upkeep.md` UR-6 blocks produce/build/research in deficit; capture costs 0 Credits, so a player in deficit may steal a 700-upkeep vehicle and deepen it, unguarded. `independents.md` IOQ-3 already notes inherited upkeep can be 44% of their income | `unit-upkeep.md`, `unit-abilities.md`, `independents.md` |
-| **W-4** | **Pre-rescale arithmetic in prose** across `combat-resolution.md`, `game-state-turn-manager.md`, `unit-system.md`, `base-production.md`, `transport-and-pilots.md`. Conclusions unaffected (the rescale is proportional); the arithmetic reads wrong. Tracked as APOQ-SCALE-2 | 5 docs |
-| **W-5** | **"Production Outpost" naming** persists in 10 documents; it is the **Barracks** | 10 docs |
+| **W-4** ✅ **RESOLVED 2026-08-24 (S6-09)** — scale notes rather than rewritten numbers; see the commit rationale. | **Pre-rescale arithmetic in prose** across `combat-resolution.md`, `game-state-turn-manager.md`, `unit-system.md`, `base-production.md`, `transport-and-pilots.md`. Conclusions unaffected (the rescale is proportional); the arithmetic reads wrong. Tracked as APOQ-SCALE-2 | 5 docs |
+| **W-5** ✅ **RESOLVED 2026-08-24 (S6-09)** — context-triaged, not find-replaced; historical records deliberately untouched. | **"Production Outpost" naming** persists in 10 documents; it is the **Barracks** | 10 docs |
 | **W-6** | **`defense` has never shipped a non-zero value on a unit.** `combat-resolution.md` introduced the field and its floor-lock analysis was written against *structures*. The Empire is its first real use on units, at values (2–5) that interact with `MIN_DAMAGE` in ways that analysis did not consider | `combat-resolution.md`, `holy-cosmic-empire.md` |
 
 ---
@@ -344,3 +344,63 @@ Then run `/propagate-design-change` for W-1, W-4 and W-5 as one sweep.
 > ★ **Sequencing recommendation.** B-1 and B-3 should land before the next AI-vs-AI regression batch,
 > because that batch is the evidence the PIVOT fix depends on and it cannot be trusted while the AI
 > cannot value an economic action. B-4 should be answered before any wave-2 art or renderer work.
+
+
+---
+
+## ✅ S6-09 sweep — W-1 / W-4 / W-5 closed, 2026-08-24
+
+**W-1 (reciprocity 0/11).** Reciprocal downstream blocks added to 12 GDDs, generated from each
+wave-2 GDD's own Dependencies table so the new documents stay the authority. `unit-system.md` and
+`ai-opponent.md` each take all 7 — unsurprising: the wave-2 corpus is mostly new unit properties
+and the AI reasoning that must account for them.
+
+★ Why this was worth more than tidiness: the Dependencies section is what tells an author what
+they are about to break, and it only works when read *from the document being edited*. Someone
+opening `unit-system.md` to change `UnitTypeDef` saw nothing indicating seven documents now build
+on it. Every pointer existed; every one pointed the wrong way for that question.
+
+**W-5 (naming).** Deliberately not a find-replace. Occurrences fell into three classes and only
+one should change:
+
+| Class | Treatment |
+|---|---|
+| Stale live reference ("produced from a Production Outpost") | Renamed |
+| Prose *about* the rename ("the Production Outpost becomes the Barracks") | Left — it is the record of the change |
+| A section describing a **deleted** mechanic (outpost-keyed income) | ⛔ **Marked superseded, never renamed** |
+
+Renaming the third class would have been the worst outcome available: it would read as a live rule
+describing a structure that no longer feeds income at all.
+
+Scope was also narrowed on purpose. 2,385 of the 2,523 matching lines are in the session log, with
+more in retrospectives, past playtests, dated consistency reports and closed sprints. Those are the
+audit trail — the names were correct when written, and rewriting them falsifies the record.
+
+★ **The real find.** Three documents — `base-production.md`, `ap-economy.md`, `research-tech.md` —
+had the S6 rework bolted on as a leading block with the entire original body left underneath,
+describing the old roster and the deleted income formula **in the present tense**. A reader who
+skipped the block got a coherent, confident, completely superseded design. Each now carries an
+unmissable divider and a correction table.
+
+★ `faction-identity.md` carried an actual error rather than a stale name: its per-stat saturation
+argument cited "Economy Outpost `build_time` = 1" as a floored stat. That structure's successor now
+sits at `build_time` 3, so it is not floored and the example never applied. The paragraph is
+specifically about auditing headroom against **live** values, so the correction was left visible as
+its own cautionary example.
+
+**W-4 (pre-rescale arithmetic).** `unit-system.md` gains a scale note rather than rescaled numbers.
+Its conclusions are unaffected — the rescale was proportional — and rewriting them would silently
+restate arguments the user approved at the old scale. The remaining W-4 documents are covered by
+the three dividers or carry no Credit figures.
+
+**Beyond the three warnings**, the sweep reconciled `design/registry/entities.yaml`, which had
+drifted for four sprints. That file is the grep-first baseline for `/consistency-check` and this
+very skill, so its stale entries would have been treated as authoritative and used to flag correct
+documents as inconsistent. All 11 spot-checked values now match `data/`.
+
+### ⚠ Left open, deliberately
+
+| | |
+|---|---|
+| **B-4 — the Pillar 3 legibility budget** | Still the open blocker. Needs the user; unchanged by this sweep |
+| **Barracks / Defensive Structure stat drift** | Data says Barracks 900 and Defensive 600/1; `base-production.md`'s roster table says 600 and 500/2. Live balance values on a gate that has only just started passing — reconciling them either way is a **balance decision**, not a data correction |

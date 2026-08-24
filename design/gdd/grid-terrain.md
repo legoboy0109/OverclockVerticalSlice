@@ -225,6 +225,18 @@ Adjacency is the special case `manhattan_distance == 1`.
 *Bidirectional note:* each dependent GDD, when authored, must list Grid & Terrain under its
 own Dependencies section.
 
+### ★ Reciprocal downstream — the wave-2 systems (added 2026-08-24, S6-09)
+
+Cross-review **W-1**: the system below declares a dependency on this document, and this
+document did not list it back. Reciprocity was **0/11 across the corpus** — every new GDD pointed
+up, no old GDD pointed back, so reading only this file gave no hint that changing it would break
+them. Restored mechanically; the relationship nature is copied from each new GDD's own
+Dependencies table, which remains the authority.
+
+| Downstream system | Nature |
+|---|---|
+| **Unit Classes (#17)** | Hard |
+
 ## Tuning Knobs
 
 | Knob | VS Range | Default | Affects | If too high | If too low |
