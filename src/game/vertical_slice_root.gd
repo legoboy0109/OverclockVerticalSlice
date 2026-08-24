@@ -91,6 +91,21 @@ const CAMERA_FIT_MARGIN: float = 0.95
 const CAMERA_ZOOM_MAX: float = 3.0
 const CAMERA_ZOOM_STEP: float = 1.12
 
+## Horizontal screen margin the status plate must leave free on EACH side, in
+## pixels — the columns the bottom corner HUD panels own.
+##
+## Sized off [GameHud]'s own bottom-corner geometry: LOG is 210 wide at x+16 from
+## the left edge, ACTIONS is 200 wide at x-216 from the right, so 240 clears the
+## wider of the two with room to spare at either edge. Kept here rather than
+## imported from [GameHud] because the plate is the slice's own scene glue, not a
+## HUD widget — if the two ever need to agree formally, that is the HUD chrome
+## sign-off's call, not this file's.
+const STATUS_SIDE_RESERVE_PX: float = 240.0
+
+## Floor for the status plate's clamped width, so a very narrow window degrades to
+## a small overlapping plate rather than a one-word-per-line column.
+const STATUS_MIN_WIDTH_PX: float = 280.0
+
 var _state: GameState = null
 var _reader: GameStateReader = null
 var _board: BoardRenderer = null
@@ -396,6 +411,13 @@ func _build_status_overlay() -> void:
 	_status_label.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_status_label.position = Vector2(0, -26)
+	# ★ 2026-08-24 (user-reported: "the central info panel is covering two of the text
+	# boxes"). This label sizes itself to its own longest line, and the control legend
+	# is ~1280px wide at 1600px — so the plate reached under the LOG panel on the left
+	# and the ACTIONS panel on the right, hiding the Build button. Wrapping is what
+	# makes the width a CHOICE rather than whatever the text happens to be; the width
+	# itself is clamped in [method _layout_status] to the band the corner panels leave.
+	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status_label.add_theme_font_size_override("font_size", 14)
 	_status_label.add_theme_color_override("font_color", Color(0.92, 0.95, 1.0))
 	# ★ 2026-08-24: a real backing plate, not just an outline. This block carries the
@@ -413,6 +435,56 @@ func _build_status_overlay() -> void:
 	backing.content_margin_right = 18
 	_status_label.add_theme_stylebox_override("normal", backing)
 	_status_layer.add_child(_status_label)
+	# Re-clamp on resize: the reserve is measured from the screen EDGES (both corner
+	# panels are edge-anchored), so the usable band changes with the window.
+	_status_label.get_viewport().size_changed.connect(_layout_status)
+	_layout_status()
+
+
+## Clamps the status plate to the horizontal band the bottom corner panels leave
+## free, so it can never draw over them at any window size.
+##
+## [b]Why a computed clamp and not a hand-set width.[/b] The two panels it must
+## avoid are anchored to the screen edges and keep a constant inset from them
+## ([code]GameHud[/code]: LOG bottom-left, ACTIONS bottom-right), so the free band
+## is [code]viewport.x - 2 * STATUS_SIDE_RESERVE_PX[/code] at every resolution —
+## one expression that stays true instead of a magic number that is right at 1600
+## and wrong at 1920.
+##
+## The clamp is a MINIMUM size, not a size: with [constant Control.GROW_DIRECTION_BOTH]
+## on a centre anchor, Godot grows the control symmetrically about that anchor, so
+## the plate still hugs short text (a one-line "Your turn" stays a small centred
+## box) and only widens to the band when the text needs it — at which point
+## [member Label.autowrap_mode] wraps rather than letting it spill into the corners.
+## Content margins are subtracted because the plate's border sits outside the text.
+func _layout_status() -> void:
+	if _status_label == null:
+		return
+	var band: float = _status_label.get_viewport_rect().size.x - 2.0 * STATUS_SIDE_RESERVE_PX
+	var margins: float = 0.0
+	var backing: StyleBox = _status_label.get_theme_stylebox("normal")
+	if backing != null:
+		margins = backing.get_margin(SIDE_LEFT) + backing.get_margin(SIDE_RIGHT)
+	_status_label.custom_minimum_size.x = maxf(
+		STATUS_MIN_WIDTH_PX, minf(_widest_status_line(), band - margins)
+	)
+
+
+## Pixel width of the widest line currently in the status text, measured with the
+## label's own font and size — the width the plate WOULD take with no clamp.
+## Measured rather than assumed because the legend's length changes with the
+## selected build/produce type and with any transient flash message.
+func _widest_status_line() -> float:
+	var font: Font = _status_label.get_theme_font("font")
+	if font == null:
+		return 0.0
+	var font_size: int = _status_label.get_theme_font_size("font_size")
+	var widest: float = 0.0
+	for line: String in _status_label.text.split("\n"):
+		widest = maxf(widest, font.get_string_size(
+			line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size
+		).x)
+	return widest
 
 
 ## Recomposes the overlay text from public queries: turn indicator, the current
@@ -434,6 +506,7 @@ func _refresh_status() -> void:
 		var how: String = "opponent HQ destroyed" if _hq_destroyed() \
 			else "round limit reached (%d) - decided on unit count" % VS_MAX_ROUNDS
 		_status_label.text = ">> MATCH OVER - %s (%s)" % [who, how]
+		_layout_status()
 		return
 	lines.append(">> AI thinking..." if _ai_running else ">> Your turn")
 
@@ -469,6 +542,7 @@ func _refresh_status() -> void:
 		"[B/Y] build  [C/LB] cycle   [P/B] produce  [V/RB] cycle   [Tab/Back] end turn   " +
 		"[Esc/Start] pause   [`/R3] panel   [[ /L3] jump cursor")
 	_status_label.text = "\n".join(lines)
+	_layout_status() # the widest line just changed; re-clamp before it is drawn.
 
 
 ## Sets the transient feedback line and repaints the overlay.
