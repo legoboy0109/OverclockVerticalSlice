@@ -186,6 +186,15 @@ number for free and overrides only deliberately.
 
 **Against the current roster:**
 
+> ⚠ **Implementation note (S6-02, 2026-08-24).** The ×100 Credit rescale had been applied
+> to *income* in S6-01 but **not** to `produce_cost` / `build_cost` in the data — leaving a
+> Scout costing 2 against an income of 1,000. Completed as the first act of S6-02, since
+> upkeep derives from `produce_cost` and would otherwise have been meaningless. A
+> mechanical ×100 with no balance change: unit costs 200/400/500/700, structure costs
+> 400/600/800/900. ★ The lesson from the CREDIT_TO_AP_RATE and UPKEEP_DIVISOR misses
+> generalises further than expected — a rescale is not done until **every** quantity in
+> that unit has moved, including ones living in data rather than code.
+
 | Unit | `produce_cost` | derived `upkeep` |
 |---|---:|---:|
 | Scout | 200 | **100** |

@@ -76,6 +76,32 @@ extends Resource
 ## real upgrade, but the third pays back in ~7 turns against a 30-round match.
 @export var econ_tier_costs: PackedInt32Array = PackedInt32Array([1000, 2000, 3500])
 
+# --- Upkeep (the Credit drain; S6-02, unit-upkeep.md) ------------------------
+
+## Divisor in the derived-upkeep convention. Lower = harsher, smaller armies,
+## faster games. ★ Tune this to hit a TARGET EQUILIBRIUM ARMY of 7-9 units rather
+## than for its own sake — the army size is the number with a felt meaning.
+@export var upkeep_divisor: int = 3
+
+## Rounding step for derived upkeep. ★ LOAD-BEARING, not cosmetic: before the ×100
+## Credit rescale the derivation was a bare `ceil(produce_cost / 3)`, and it produced
+## the intended 1/2/2/3 only because `ceil` rounded hard on single-digit numbers. At
+## the new scale that rounding vanishes (67/134/167/234), every value drifts LOW, the
+## roster mean falls 200 -> ~150, and the sustainable army rises ~9 -> ~12 against a
+## cap of 10 — silently breaking the "cap binds first, upkeep binds shortly after"
+## relationship population-cap.md is built on. Rounding up to this step restores it.
+@export var upkeep_granularity: int = 100
+
+## AP spent to voluntarily destroy one's own unit (unit-upkeep.md UR-7). ★ Disband is
+## the escape valve the deficit lock depends on: without it, an over-extended player
+## has no agency in recovering, only the hope of losing units in combat.
+@export var disband_ap_cost: int = 1
+
+## Fraction of `produce_cost` refunded in Credits on disband, as a percentage.
+## ★ A rate, not a quantity — unaffected by the ×100 rescale. Above ~60 invites
+## produce/disband churn; at 0 nobody uses the escape valve UR-6 depends on.
+@export var disband_refund_pct: int = 50
+
 # --- AP tactical budget (the per-turn action-point pool; ADR-0006 pivot) ---
 
 ## Flat AP granted at every start-of-turn reset — the tactical budget floor.

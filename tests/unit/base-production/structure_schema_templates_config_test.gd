@@ -41,7 +41,7 @@ func test_hq_template_matches_stat_table() -> void:
 func test_economy_outpost_template_matches_stat_table() -> void:
 	var eo := StructureTypes.ECONOMY_OUTPOST
 	assert_int(eo.hp).is_equal(8)
-	assert_int(eo.build_cost).is_equal(4)
+	assert_int(eo.build_cost).is_equal(400)  # ★ S6-02: ×100 Credit rescale
 	assert_int(eo.build_time).is_equal(1)
 	assert_int(eo.production_cap).is_equal(0)
 	assert_int(eo.producible_types.size()).is_equal(0)
@@ -52,7 +52,7 @@ func test_economy_outpost_template_matches_stat_table() -> void:
 func test_production_outpost_template_matches_stat_table() -> void:
 	var po := StructureTypes.PRODUCTION_OUTPOST
 	assert_int(po.hp).is_equal(14)
-	assert_int(po.build_cost).is_equal(9)
+	assert_int(po.build_cost).is_equal(900)  # ★ S6-02: ×100 Credit rescale
 	assert_int(po.build_time).is_equal(2)
 	assert_int(po.production_cap).is_equal(4)
 	assert_int(po.defense).is_equal(0)
@@ -66,7 +66,7 @@ func test_production_outpost_template_matches_stat_table() -> void:
 func test_defensive_structure_template_matches_stat_table() -> void:
 	var ds := StructureTypes.DEFENSIVE_STRUCTURE
 	assert_int(ds.hp).is_equal(10)
-	assert_int(ds.build_cost).is_equal(6)
+	assert_int(ds.build_cost).is_equal(600)  # ★ S6-02: ×100 Credit rescale
 	assert_int(ds.build_time).is_equal(1)
 	assert_int(ds.production_cap).is_equal(0)
 	assert_int(ds.attack).is_equal(4)
@@ -79,7 +79,7 @@ func test_research_lab_template_matches_stat_table_and_is_structure_state() -> v
 	var lab := StructureTypes.RESEARCH_LAB
 	# Research-owned stat values (Rule 2b), B&P-owned lifecycle.
 	assert_int(lab.hp).is_equal(12)
-	assert_int(lab.build_cost).is_equal(8)
+	assert_int(lab.build_cost).is_equal(800)  # ★ S6-02: ×100 Credit rescale
 	assert_int(lab.build_time).is_equal(2)
 	assert_int(lab.production_cap).is_equal(0)
 	assert_int(lab.producible_types.size()).is_equal(0)

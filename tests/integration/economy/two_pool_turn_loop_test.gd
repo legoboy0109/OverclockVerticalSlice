@@ -101,7 +101,10 @@ func test_credits_bank_additively_over_three_turns_while_ap_refreshes_flat() -> 
 
 	# --- Turn 1: the first start_turn establishes the baseline. ---
 	state.start_turn(0)
-	var income: int = Credits.credit_income(state, 0) # the fixed per-turn income I.
+	# ★ S6-02: the per-turn figure that actually banks is NET (gross - upkeep). This
+	# fixture owns two completed outposts, which now cost upkeep, so the whole
+	# compounding assertion below is against net rather than gross.
+	var income: int = Upkeep.net_credit_income(state, 0) # the fixed per-turn NET income I.
 	assert_int(Credits.credit_income_breakdown(state, 0)["tiers"]).is_equal(0) # ★ S6-01: tier 0 -> no tier income.
 	assert_int(state.per_player[0].current_ap).is_equal(cfg.flat_ap_per_turn) # flat, leftover 0.
 	assert_int(state.per_player[0].current_credits).is_equal(income)           # banked 1x from 0.
@@ -113,9 +116,10 @@ func test_credits_bank_additively_over_three_turns_while_ap_refreshes_flat() -> 
 	# --- Turn 2 (via the real loop). ---
 	_round_trip_back_to_p0(state)
 	assert_int(state.round_number).is_equal(2)
-	# Income is unchanged (outpost count constant) — assert it, so a silent income
-	# drift would fail here rather than corrupt the accumulation math below.
-	assert_int(Credits.credit_income(state, 0)).is_equal(income)
+	# ★ S6-02: compare NET against NET. Gross income is constant, but `income` above is
+	# the net figure that actually banks, so asserting gross here would compare two
+	# different quantities and pass or fail for the wrong reason.
+	assert_int(Upkeep.net_credit_income(state, 0)).is_equal(income)
 	assert_int(state.per_player[0].current_ap).is_equal(cfg.flat_ap_per_turn) # refreshed flat again.
 	assert_int(state.per_player[0].current_credits).is_equal(2 * income)       # war chest COMPOUNDED to 2I.
 
@@ -144,7 +148,8 @@ func test_unspent_ap_carries_capped_while_credits_keep_banking() -> void:
 
 	# --- Turn 1 baseline. ---
 	state.start_turn(0)
-	var income: int = Credits.credit_income(state, 0)
+	# ★ S6-02: NET is what banks (this fixture owns outposts that now pay upkeep).
+	var income: int = Upkeep.net_credit_income(state, 0)
 	assert_int(state.per_player[0].current_ap).is_equal(cfg.flat_ap_per_turn)
 	assert_int(state.per_player[0].current_credits).is_equal(income)
 

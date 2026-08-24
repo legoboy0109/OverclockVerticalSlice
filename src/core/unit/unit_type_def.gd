@@ -27,6 +27,14 @@ enum TargetingMode { DIRECT, AREA }
 @export var attack_range: int
 @export var move_cost: int
 @export var soft_move_cap: int
+## Credits drained every turn while this unit is alive (S6-02, `unit-upkeep.md`).
+## 0 is legal; negative fails schema validation.
+##
+## Convention (not enforced in code — authored values ship): derived as
+## `ceil(produce_cost / (UPKEEP_DIVISOR × UPKEEP_GRANULARITY)) × UPKEEP_GRANULARITY`,
+## which yields 100/200/200/300 for Scout/Trooper/Sniper/Heavy.
+@export var upkeep: int = 0
+
 @export var produce_cost: int
 @export var defense: int = 0
 @export var targeting_mode: int = TargetingMode.DIRECT

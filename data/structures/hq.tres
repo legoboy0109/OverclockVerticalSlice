@@ -7,6 +7,7 @@
 script = ExtResource("1")
 display_name = "HQ"
 hp = 40
+upkeep = 0
 build_cost = 0
 build_time = 0
 production_cap = 2

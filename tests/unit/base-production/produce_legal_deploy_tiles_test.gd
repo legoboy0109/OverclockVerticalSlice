@@ -48,7 +48,7 @@ func _make_grid() -> GridState:
 # ever being the limiter, unless a test drives it lower. Both players' faction
 # is pinned to Neutral (make_state leaves it null; effective_produce_cost would
 # otherwise dereference a null FactionDef).
-func _make_state(current_ap: int = 100, current_credits: int = 100) -> GameState:
+func _make_state(current_ap: int = 100, current_credits: int = 100000) -> GameState:  # ★ S6-02: ×100 Credit rescale — 100 no longer funds a single unit
 	var state := GameStateFactory.make_state(2, 0)
 	state.grid = _make_grid()
 	for i: int in state.per_player.size():

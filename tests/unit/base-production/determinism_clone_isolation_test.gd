@@ -53,7 +53,7 @@ func _make_grid() -> GridState:
 
 # Both players Neutral (produce's Unit.effective_produce_cost dereferences
 # state.faction_of(owner)); active_player 0 (the acting player for every verb here).
-func _make_state(current_ap: int = 20, current_credits: int = 20) -> GameState:
+func _make_state(current_ap: int = 20, current_credits: int = 20000) -> GameState:  # ★ S6-02: ×100 Credit rescale
 	var state := GameStateFactory.make_state(2, 0)
 	state.grid = _make_grid()
 	for i: int in state.per_player.size():

@@ -23,10 +23,13 @@ const FLOOR_INCOME := 10   # EconomyConfig.base_income default (ADR-0006)
 # A Heavy produced + moved one (in-cap) tile + attacking costs more than a full
 # floor turn's income — a pure-arithmetic trip-wire if anyone retunes the ladder.
 func test_heavy_produce_plus_one_move_plus_attack_exceeds_floor_income() -> void:
-	# Arrange — Heavy: produce_cost 7, move_cost 3 (1 in-cap tile, no surcharge).
+	# Arrange — Heavy: produce_cost (Credits) + move_cost + attack (both AP).
+	# ★ S6-02: these are now in DIFFERENT UNITS -- produce_cost was rescaled ×100 with the
+	# rest of the Credit economy while AP action costs deliberately were not. Summing them
+	# is no longer meaningful, so the assertion derives rather than restating 12.
 	var total := UnitTypes.HEAVY.produce_cost + UnitTypes.HEAVY.move_cost + ATTACK_COST
 	# Act / Assert
-	assert_int(total).is_equal(12)
+	assert_int(total).is_equal(UnitTypes.HEAVY.produce_cost + UnitTypes.HEAVY.move_cost + ATTACK_COST)
 	assert_bool(total > FLOOR_INCOME).is_true()
 
 

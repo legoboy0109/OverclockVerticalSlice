@@ -200,7 +200,7 @@ func test_can_afford_build_matches_dual_cost_credits_and_ap_surcharge() -> void:
 	# (effective_build_cost) AND the AP surcharge (build_ap_cost). It matches the
 	# conjunction of the two owning queries verbatim, never a single-pool check.
 	var state := _make_story_state()
-	state.per_player[0].current_credits = 20  # fund Credits (build_cost is now Credits)
+	state.per_player[0].current_credits = 20000  # fund Credits (build_cost is Credits; ★ S6-02 ×100 rescale)
 	var reader := GameStateReader.new(state)
 	# Act
 	var via_reader: bool = reader.can_afford_build(0, StructureTypes.ECONOMY_OUTPOST)
@@ -226,7 +226,7 @@ func test_can_afford_produce_matches_dual_cost_credits_and_ap_surcharge() -> voi
 	# (effective_produce_cost) AND the AP surcharge (produce_ap_cost). It matches
 	# the conjunction of the two owning queries verbatim, never a single-pool check.
 	var state := _make_story_state()
-	state.per_player[0].current_credits = 20  # fund Credits (produce_cost is now Credits)
+	state.per_player[0].current_credits = 20000  # fund Credits (produce_cost is Credits; ★ S6-02 ×100 rescale)
 	var reader := GameStateReader.new(state)
 	# Act
 	var via_reader: bool = reader.can_afford_produce(0, UnitTypes.TROOPER)
@@ -258,7 +258,7 @@ func test_structure_info_cancel_refund_matches_base_production_cancel_refund_on_
 	var info: Dictionary = reader.structure_info(1)
 	var expected: int = BaseProduction.cancel_refund(structure.type.build_cost)
 	# Assert -- matches the story's stated value (2) and the exact refund expression.
-	assert_int(info["cancel_refund"]).is_equal(2)
+	assert_int(info["cancel_refund"]).is_equal(200)  # ★ S6-02: ×100 Credit rescale
 	assert_int(info["cancel_refund"]).is_equal(expected)
 
 

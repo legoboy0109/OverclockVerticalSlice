@@ -25,6 +25,15 @@ extends Resource
 
 @export var display_name: String
 @export var hp: int
+## Credits drained every turn while this structure is alive AND completed
+## (S6-02, `unit-upkeep.md` UR-3/UR-5). The HQ is the only entity that must stay
+## at 0 — it cannot be given up, so charging for it is a flat tax, not a decision.
+##
+## ★ Structures that GENERATE value still pay. Exempting the Research Lab would make
+## "build a Lab, research everything, sit" free, which is the unbounded-accumulation
+## defect the PIVOT verdict diagnosed, wearing a different hat.
+@export var upkeep: int = 0
+
 @export var build_cost: int
 @export var build_time: int
 @export var production_cap: int = 0

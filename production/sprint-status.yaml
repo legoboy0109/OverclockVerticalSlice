@@ -77,11 +77,25 @@ stories:
     name: "Unit upkeep — net_credit_income, deficit lock, disband"
     file: "design/gdd/unit-upkeep.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: "gameplay-programmer"
     estimate_days: 1.5
-    blocker: "s6-01"
-    completed: ""
+    blocker: ""
+    completed: "2026-08-24"
+    # ✅ DONE. Suite 1011/1011, 0 errors/failures/orphans; slice boots clean (exit 0).
+    # 31 new tests across upkeep_test.gd + disband_and_deficit_lock_test.gd.
+    # ⚠ OVERRAN ITS ESTIMATE, and almost none of it was the feature -- see the
+    #   "Recorded during the sprint" section in sprint-6.md. The x100 Credit rescale
+    #   was INCOMPLETE from s6-01 (data files were never rescaled: a Scout cost 2
+    #   against an income of 1000), and completing it broke ~20 hardcoded cost
+    #   literals plus several underfunded test fixtures.
+    # ★ FOUND A REAL BUG IN MY OWN CODE via the suite: total_upkeep crashed on an
+    #   entity with a null `type`. start_turn step 2 is explicitly required to skip a
+    #   bare EntityState safely and the economy step iterates the SAME list, so it must
+    #   tolerate them too. Guarded + regression test added.
+    # ★ Several "failures" were upkeep WORKING: tests asserting gross income where net
+    #   is now correct (1000 -> 900 = income minus a Scout's upkeep). Rewritten to
+    #   derive from Upkeep; asserting gross there would now be asserting a bug.
     # The half of the PIVOT fix that bounds the STOCK. Neither half works alone: a hard
     # income ceiling with no drain still climbs linearly, which is exactly what the
     # simulation measured at 5,724.

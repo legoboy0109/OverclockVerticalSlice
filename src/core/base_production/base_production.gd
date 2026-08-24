@@ -156,6 +156,11 @@ static func validate_build(state: GameState, action: BuildAction) -> int:
 	# Dual-cost (ADR-0006 pivot): effective_build_cost is the Credit main cost;
 	# build also spends a BUILD_AP_COST AP surcharge. Legal iff BOTH afford.
 	var cost: int = effective_build_cost(state, action.structure_type, player)
+	# ★ S6-02 (unit-upkeep.md UR-6): a player in deficit cannot expand. Checked
+	# BEFORE affordability so the reason names the real cause -- a deficit player
+	# may well be unable to afford the build too, but the deficit is why.
+	if state.per_player[player].in_deficit:
+		return Action.Reason.IN_DEFICIT
 	if not Credits.can_afford(state, player, cost):
 		return Action.Reason.CANT_AFFORD_CREDITS
 	if not AP.can_afford(state, player, Balance.economy.build_ap_cost):
@@ -548,6 +553,11 @@ static func validate_produce(state: GameState, action: ProduceAction) -> int:
 	# Dual-cost (ADR-0006 pivot): effective_produce_cost is the Credit main cost;
 	# produce also spends a PRODUCE_AP_COST AP surcharge. Legal iff BOTH afford.
 	var cost: int = Unit.effective_produce_cost(state, action.unit_type, player)
+	# ★ S6-02 (unit-upkeep.md UR-6): a player in deficit cannot expand. Checked
+	# BEFORE affordability so the reason names the real cause -- a deficit player
+	# may well be unable to afford the build too, but the deficit is why.
+	if state.per_player[player].in_deficit:
+		return Action.Reason.IN_DEFICIT
 	if not Credits.can_afford(state, player, cost):
 		return Action.Reason.CANT_AFFORD_CREDITS
 	if not AP.can_afford(state, player, Balance.economy.produce_ap_cost):

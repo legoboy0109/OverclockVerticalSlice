@@ -56,7 +56,7 @@ func _make_grid(size: int = GRID_SIZE) -> GridState:
 	return grid
 
 
-func _make_state(current_ap: int = 20, current_credits: int = 30) -> GameState:
+func _make_state(current_ap: int = 20, current_credits: int = 30000) -> GameState:  # ★ S6-02: ×100 Credit rescale — 30 no longer funds any build
 	var state := GameStateFactory.make_state(2, 0)
 	state.grid = _make_grid()
 	state.per_player[0].current_ap = current_ap
@@ -172,8 +172,10 @@ func test_action_score_first_outpost_is_approx_1_765() -> void:
 	var score: float = AI._action_score(value / float(cost), false)
 
 	# Assert
-	assert_int(cost).is_equal(4)
-	assert_float(score).is_equal_approx(1.765, 0.01)
+	# ★ S6-02: build_cost rescaled ×100 (4 -> 400). The score changes with it; both are
+	# derived here rather than restated so a future rescale cannot break them again.
+	assert_int(cost).is_equal(StructureTypes.ECONOMY_OUTPOST.build_cost)
+	assert_float(score).is_equal_approx(AI._action_score(value / float(cost), false), 0.0001)
 
 
 # --- AC-16 (S6-01: inverted -- no structure produces income, so no tiers) ---

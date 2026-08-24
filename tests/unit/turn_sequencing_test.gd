@@ -246,8 +246,12 @@ func test_start_turn_step4b_credit_income_observes_step3_same_turn_completion() 
 	_add_under_construction_outpost(state, 0)
 	# Act — run start_turn directly for player 0 (steps 1-4 in order).
 	var events: Array = state.start_turn(0)
-	# Assert — income is base only; the step-3 completion contributed nothing.
-	assert_int(state.per_player[0].current_credits).is_equal(Balance.economy.base_income)
+	# Assert — income is base only; the step-3 completion contributed nothing to it.
+	# ★ S6-02: what banks is NET income (gross - upkeep), not gross. These fixtures own
+	# entities that now pay upkeep, so the expectation derives from Upkeep rather than
+	# from Credits alone. A test asserting gross here would be asserting a bug.
+	assert_int(state.per_player[0].current_credits) \
+		.is_equal(maxi(0, Balance.economy.base_income - Upkeep.total_upkeep(state, 0)))
 	# AP is flat (leftover 0), independent of the economy.
 	assert_int(state.per_player[0].current_ap).is_equal(Balance.economy.flat_ap_per_turn)
 	# The completion event flowed out of start_turn.
@@ -285,9 +289,13 @@ func test_income_total_same_regardless_of_which_system_supplies_the_completion()
 	# regardless of what completed in step 3, which is a stronger statement of the
 	# same additive-and-interchangeable property the test was written for.
 	# AP is flat in both (economy-independent).
-	var base: int = Balance.economy.base_income
-	assert_int(state_build_first.per_player[0].current_credits).is_equal(base)
-	assert_int(state_research_first.per_player[0].current_credits).is_equal(base)
+	# ★ S6-02: what banks is NET (gross - upkeep). The build-first fixture owns a
+	# completing outpost that now pays upkeep; the research-first one owns nothing.
+	# Both are still derived from the same rule, which is the point of the test.
+	assert_int(state_build_first.per_player[0].current_credits) \
+		.is_equal(maxi(0, Balance.economy.base_income - Upkeep.total_upkeep(state_build_first, 0)))
+	assert_int(state_research_first.per_player[0].current_credits) \
+		.is_equal(maxi(0, Balance.economy.base_income - Upkeep.total_upkeep(state_research_first, 0)))
 	assert_int(state_build_first.per_player[0].current_ap).is_equal(Balance.economy.flat_ap_per_turn)
 	assert_int(state_research_first.per_player[0].current_ap).is_equal(Balance.economy.flat_ap_per_turn)
 	assert_int(events_a.size()).is_equal(1)
@@ -317,7 +325,9 @@ func test_step2_flag_reset_and_step3_timers_both_complete_before_step4_when_both
 	# and the queued Research stub term BOTH contribute nothing -- income no longer
 	# reads the board. The step-3-before-step-4 ordering is still proven by the two
 	# completion events above.
-	assert_int(state.per_player[0].current_credits).is_equal(Balance.economy.base_income)
+	# ★ S6-02: NET banks, not gross -- the outpost that just completed pays upkeep.
+	assert_int(state.per_player[0].current_credits) \
+		.is_equal(maxi(0, Balance.economy.base_income - Upkeep.total_upkeep(state, 0)))
 	assert_int(state.per_player[0].current_ap).is_equal(Balance.economy.flat_ap_per_turn) # flat, economy-independent
 
 

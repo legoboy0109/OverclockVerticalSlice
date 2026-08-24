@@ -89,6 +89,32 @@ not once at the end.
 | **Any faction content** | ★ Under **CR-11** a faction needs piloted vehicles and the cap, so no faction can ship before unit classes and pilots exist (wave 2). An infantry-only faction is a fragment, not a test |
 | **Unit classes, abilities, damage types, transport, promotion** | Wave 2–4. All designed, none needed to prove the economy |
 
+## ⚠ Recorded during the sprint — for the retrospective
+
+**S6-02's estimate was for the feature, and the feature was the small part.** The upkeep
+mechanic itself (module, deficit rule, disband, 31 tests) went in cleanly and close to
+estimate. What overran was everything the **×100 Credit rescale** touched, and it touched
+four distinct categories, each failing differently:
+
+| # | What broke | How it surfaced |
+|---|---|---|
+| 1 | `CREDIT_TO_AP_RATE` — a **conversion constant** between two differently-scaled units | Not at all. Found only by re-deriving the AI formula by hand during the cross-review |
+| 2 | `UPKEEP_DIVISOR` — a **rounding function** (`ceil` on small numbers) | Not at all. Found by working the arithmetic |
+| 3 | **Data files** — unit `produce_cost` / structure `build_cost` were never rescaled in S6-01 | A Scout costing 2 against an income of 1,000 |
+| 4 | **Test fixtures** funded with amounts that no longer buy anything | Null-dereference in an AI test, and ~20 hardcoded cost literals |
+
+★ **The lesson, stronger than first written:** a rescale is not done when the code compiles.
+It is done when **every quantity in that unit has moved** — including the ones living in
+data files and in test setup — **and** every constant that *converts* or *rounds* between
+units has been re-derived. Categories 1 and 2 are invisible to grep and to the compiler.
+
+★ **Also cost ~20 minutes: a wrong entry in `.agent/notes.md`.** It said a runner pass
+rebuilds the global class cache after adding a new `class_name`. It does not — and with the
+cache deleted the test runner **hangs silently** (minutes at ~0% CPU, no output), which
+reads exactly like a slow test run. The rebuild is `./redot --headless --editor --quit`.
+Note corrected. **A wrong note is worse than no note**, and this one had survived since
+2026-07-28.
+
 ## Risks
 
 | Risk | P | Impact | Mitigation |

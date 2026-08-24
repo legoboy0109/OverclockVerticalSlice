@@ -62,4 +62,15 @@ extends Resource
 
 ## True if this player is controlled by the AI opponent (ADR-0011). Set once
 ## at Setup; immutable after Setup->PlayerTurn.
+## True while this player's upkeep exceeds their income AND their bank is empty
+## (`unit-upkeep.md` UR-6). Sole writer: [method Upkeep.apply_turn_economy], once per
+## player per turn at the start-of-turn economy step.
+##
+## ★ Deliberately STORED, not derived. UR-6 evaluates the lock once at the economy
+## step and holds it for the whole turn even if the player disbands back into
+## solvency — a lock that flickers within a turn is unreadable, and re-deriving it
+## after every action invites a confusing dance around the boundary. The disband
+## still counts: it resolves the deficit for the NEXT turn.
+@export var in_deficit: bool = false
+
 @export var is_ai_controlled: bool = false

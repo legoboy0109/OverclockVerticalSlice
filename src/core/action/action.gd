@@ -34,12 +34,12 @@
 class_name Action
 extends RefCounted
 
-## The seven committable verbs in Vertical-Slice scope. Only [constant
+## The committable verbs in Vertical-Slice scope (DISBAND added by S6-02). Only [constant
 ## Verb.END_TURN] has a concrete handler in this story — the rest are
 ## forward-declared dispatch slots, registered by their own Core epics
 ## (Movement/Combat/Base & Production/Research) when those land
 ## (out of scope here, per ADR-0002/Story 002).
-enum Verb { MOVE, ATTACK, BUILD, PRODUCE, RESEARCH, CANCEL_BUILD, END_TURN }
+enum Verb { MOVE, ATTACK, BUILD, PRODUCE, RESEARCH, CANCEL_BUILD, END_TURN, DISBAND }
 
 ## Every rejection cause [method GameState.apply_action] can return, plus
 ## [constant Reason.OK] for a passing [code]validate()[/code]. Deliberately an
@@ -67,6 +67,14 @@ enum Reason {
 	# AP-surcharge shortfall still uses CANT_AFFORD, so the Command interface can
 	# name the binding pool. Appended at the end to preserve existing ordinals.
 	CANT_AFFORD_CREDITS,
+	# In deficit: upkeep exceeds income and the bank is empty (unit-upkeep.md UR-6).
+	# Locks produce/build/research for the turn while leaving move, attack and
+	# disband available. Distinct from CANT_AFFORD_CREDITS: the player may hold
+	# nothing at all, and the block persists for the whole turn even if a disband
+	# restores solvency mid-turn. Appended to preserve existing ordinals.
+	IN_DEFICIT,
+	# Disband targeting something that is not an own, living unit (UR-7).
+	NOT_OWN_UNIT,
 }
 
 ## Which verb this is — the dispatch key [method GameState.apply_action] uses

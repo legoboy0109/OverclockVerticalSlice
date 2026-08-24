@@ -132,7 +132,7 @@ func _make_grid(size: int = GRID_SIZE) -> GridState:
 # _make_state idiom. current_credits defaults independently of current_ap
 # (ADR-0006 pivot: the two pools have different scales -- Credits fund the
 # build/produce main cost, AP funds the surcharge + move/attack).
-func _make_state(current_ap: int = 10, current_credits: int = 10) -> GameState:
+func _make_state(current_ap: int = 10, current_credits: int = 10000) -> GameState:  # ★ S6-02: ×100 Credit rescale — 10 no longer funds a unit
 	var state := GameStateFactory.make_state(2, 0)
 	state.grid = _make_grid()
 	for i: int in state.per_player.size():
@@ -346,7 +346,11 @@ func test_outpost_completing_at_real_start_turn_counts_same_turn_income() -> voi
 	assert_int(Credits.credit_income(state, 0)).is_equal(income_before)
 	assert_int(Credits.credit_income_breakdown(state, 0)["tiers"]).is_equal(0)
 	# Credits banked additively from the known 0 baseline.
-	assert_int(state.per_player[0].current_credits).is_equal(income_before)
+	# ★ S6-02: what banks is NET income (gross - upkeep), not gross. These fixtures own
+	# entities that now pay upkeep, so the expectation derives from Upkeep rather than
+	# from Credits alone. A test asserting gross here would be asserting a bug.
+	assert_int(state.per_player[0].current_credits) \
+		.is_equal(maxi(0, income_before - Upkeep.total_upkeep(state, 0)))
 	# AP is flat + capped carryover, not income-driven -- leftover was 0 going
 	# in, so post-reset current_ap == flat_ap_per_turn exactly.
 	assert_int(state.per_player[0].current_ap).is_equal(cfg.flat_ap_per_turn)
@@ -379,7 +383,8 @@ func test_two_outposts_completing_same_start_turn_both_count() -> void:
 	# ★ S6-01: both completed in the same batch (the surviving ADR-0017 D1 /
 	# ADR-0008 ordering AC), and neither raised income -- structures no longer feed
 	# the Credit curve at all. Expected income is base only, at economy_tier 0.
-	var expected_income: int = cfg.base_income
+	# ★ S6-02: NET, not gross -- the two structures that just completed now pay upkeep.
+	var expected_income: int = maxi(0, cfg.base_income - Upkeep.total_upkeep(state, 0))
 	# Banked additively from the known 0 baseline.
 	assert_int(state.per_player[0].current_credits).is_equal(expected_income)
 
@@ -389,7 +394,7 @@ func test_two_outposts_completing_same_start_turn_both_count() -> void:
 func test_produce_via_apply_action_creates_real_active_selectable_unit() -> void:
 	# Arrange -- a real COMPLETED Production Outpost with ample AP + Credits
 	# (both legs of the dual-cost gate generously funded).
-	var state := _make_state(100, 100)
+	var state := _make_state(100, 100000)  # ★ S6-02: ×100 Credit rescale — 100 no longer funds a Trooper (400)
 	var producer := _make_structure(1, 0, Vector2i(0, 0), StructureTypes.PRODUCTION_OUTPOST, StructureState.BuildStatus.COMPLETED)
 	_place(state, producer)
 	var deploy_tile := Vector2i(1, 0) # manhattan==1 from the producer, empty.
