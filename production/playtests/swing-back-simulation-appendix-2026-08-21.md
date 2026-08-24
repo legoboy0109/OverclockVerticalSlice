@@ -458,3 +458,51 @@ effect, not a new defect, but it means condition 4 needs a sink again.
    Preferred on the reasoning that it turns the Credit surplus into the fix rather than a
    side effect, and makes the population-cap/Barracks system load-bearing instead of
    decorative. **User's call.**
+
+---
+
+## S6-07b — BARRACKS THROUGHPUT — **two of four conditions now pass**
+
+**Change** (user's call): keep the cooldown, make investment pay. HQ cooldown **3**,
+Barracks **1** — a player who builds Barracks reinforces three times faster. And the AI's
+structure valuation switched from *capacity headroom* to **throughput**.
+
+### The trend across four batches
+
+| # | Condition | B1 | B2 | B3 | **B4** |
+|---|---|---|---|---|---|
+| 1 | resolve on play | 0/21 | 0/21 | 0/21 | **0/21** ✗ |
+| 2 | **HQ damage (lowest hp)** | none | none | 30/40 | ★ **21/40** ✓ |
+| 3 | both seats | — | — | — | ✗ |
+| 4 | **peak Credits** | 18,400 | 1,750 | 27,000 | ★ **1,850** ✓ |
+
+**An HQ is now taken to just over half health.** That number had never moved off 40 across
+4,182 rows before S6-07.
+
+### ★★ The trap, recorded because it is the most instructive thing here
+
+The first capacity model scaled a Barracks' value by **cap utilisation**
+(`current_population / effective_cap`). It correctly stopped the AI building infrastructure
+it could not use — and created a loop that held the stalemate in place:
+
+> armies cannot grow (units die as fast as they are made) → utilisation stays low → a
+> Barracks looks worthless → throughput stays low → **armies cannot grow**
+
+The AI built ~0.4 Barracks per match. ★ **A gate that keys on the symptom of the problem it
+is meant to solve will preserve that problem.** Switching to throughput-based value broke
+the loop: BUILD candidates above threshold went **0/24 → 20/24 → 24/24** turns.
+
+★ It also inverted a relationship, and the new direction is the correct one: value now
+**falls** as headroom shrinks, rather than rising with pressure. A producer is worth most
+when you have room for what it makes. Over-building is bounded **structurally** (by
+`max_count` and the headroom term) rather than **behaviourally** (by a gate).
+
+### Still failing
+
+Damage reaches ~19 of 40 and stalls: attackers get through, do real work, and die before
+finishing. **Magnitude, not direction** — and the gap is closing.
+
+**Most likely remaining cause:** a kill still scores **3.00** against an HQ chip at **0.75**,
+so a unit standing beside an objective breaks off to fight instead of finishing. That is
+lever 2 from the S6-06 analysis ("make the objective outscore trading") and it is the one
+lever not yet tried.

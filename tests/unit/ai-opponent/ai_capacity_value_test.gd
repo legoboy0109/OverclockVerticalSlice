@@ -91,25 +91,66 @@ func test_a_constrained_barracks_clears_the_pass_threshold() -> void:
 
 # --- The utilisation factor, which is what keeps the term sane ---------------
 
-func test_an_empty_army_values_a_barracks_at_zero() -> void:
-	# ★ Without the utilisation factor the AI would build infrastructure it cannot use
-	# while it has nothing on the board. This is the guard against that.
+func test_an_empty_army_still_values_a_barracks_for_its_throughput() -> void:
+	# ★★ THIS TEST WAS REVERSED ON PURPOSE (S6-07), and the reason is the finding.
+	#
+	# It previously asserted the opposite -- that an empty army values a Barracks at ZERO --
+	# because the first capacity model scaled value by utilisation
+	# (current_population / effective_cap). That correctly stopped the AI building
+	# infrastructure it could not use... and created a self-limiting loop the S6-07 batch
+	# exposed: armies could not grow (units died as fast as they were made), so utilisation
+	# stayed low, so a Barracks looked worthless, so throughput stayed low, so armies could
+	# not grow. The AI built ~0.4 Barracks per match and the stalemate held.
+	#
+	# ★ A gate that keys on the SYMPTOM of the problem it is meant to solve will hold that
+	# problem in place. Value is now THROUGHPUT-based: a Barracks is worth building because
+	# it reinforces faster, whether or not the army is currently at its ceiling.
+	#
+	# Over-building is still bounded, but structurally rather than behaviourally -- by
+	# max_count (a hard 3) and by the headroom term, both of which are tested elsewhere.
 	var state := _state()
 	_add_hq(state, 0, Vector2i(5, 5))
-	assert_float(AI._economy_value(state, 0, StructureTypes.BARRACKS)).is_equal_approx(0.0, 0.0001)
+	assert_float(AI._economy_value(state, 0, StructureTypes.BARRACKS)).is_greater(0.0)
 
 
-func test_capacity_value_rises_with_pressure() -> void:
-	var state_low := _state()
-	_add_hq(state_low, 0, Vector2i(5, 5))
-	_fill_to(state_low, 0, 1)
+func test_capacity_value_is_bounded_by_remaining_headroom() -> void:
+	# ★ Replaces test_capacity_value_rises_with_pressure, whose premise (value scales UP
+	# with utilisation) was inverted by S6-07. The surviving bound is the honest one: you
+	# cannot use slots you are not allowed to fill, so a player already at their ceiling
+	# values a Barracks by the headroom it ADDS, never more.
+	var state := _state()
+	_add_hq(state, 0, Vector2i(5, 5))
+	_fill_to(state, 0, Population.effective_cap(state, 0))  # no headroom at all
+	var at_ceiling: float = AI._economy_value(state, 0, StructureTypes.BARRACKS)
+	# The Barracks' own cap_bonus is the only headroom it creates, so value is finite and
+	# bounded by that -- not by throughput, which is larger.
+	var max_possible: float = AI.credits_to_ap(float(StructureTypes.BARRACKS.cap_bonus) \
+		* AI._cheapest_producible_cost(state, 0))
+	assert_float(at_ceiling).is_less_equal(max_possible + 0.0001)
+	assert_float(at_ceiling).is_greater(0.0)
 
-	var state_high := _state()
-	_add_hq(state_high, 0, Vector2i(5, 5))
-	_fill_to(state_high, 0, Population.effective_cap(state_high, 0))
 
-	assert_float(AI._economy_value(state_high, 0, StructureTypes.BARRACKS)) \
-		.is_greater(AI._economy_value(state_low, 0, StructureTypes.BARRACKS))
+func test_value_falls_as_headroom_shrinks_not_rises_with_pressure() -> void:
+	# ★ S6-07 INVERTED this relationship, and the new direction is the correct one.
+	#
+	# Under the old utilisation model, value ROSE with pressure -- a fuller army made a
+	# Barracks look more valuable. Under the throughput model it FALLS, because a player
+	# near their ceiling has less headroom to grow into and therefore fewer of the units
+	# the Barracks would produce are actually fieldable.
+	#
+	# That is the honest economics: a producer is worth most when you have room for what it
+	# makes. It is also why over-building is now bounded structurally -- the value decays
+	# toward the cap rather than being switched off by a gate.
+	var state_room := _state()
+	_add_hq(state_room, 0, Vector2i(5, 5))
+	_fill_to(state_room, 0, 1)                                    # plenty of headroom
+
+	var state_tight := _state()
+	_add_hq(state_tight, 0, Vector2i(5, 5))
+	_fill_to(state_tight, 0, Population.effective_cap(state_tight, 0))  # none
+
+	assert_float(AI._economy_value(state_room, 0, StructureTypes.BARRACKS)) \
+		.is_greater(AI._economy_value(state_tight, 0, StructureTypes.BARRACKS))
 
 
 # --- Correct zeros ------------------------------------------------------------

@@ -981,40 +981,59 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 
 	return best
 
-## AP-equivalent value of the army capacity [param structure_type] would unlock
-## (S6-06). Returns 0 for any structure that grants none.
+## AP-equivalent value of what [param structure_type] would actually put on the board
+## (S6-07). Returns 0 for anything that neither grants cap nor produces units.
 ##
-## [b]Model:[/b] `cap_bonus × marginal_unit_cost × utilisation`, converted to AP-equivalent.
-## [br]• `marginal_unit_cost` — the cheapest unit [param player] can actually produce. A cap
-##   slot is worth what the player would put in it, and the cheapest producible unit is the
-##   floor of that.
-## [br]• ★ `utilisation` — [code]current_population / effective_cap[/code]. [b]This factor is
-##   the difference between a sane term and a bad one.[/b] Without it the AI values a
-##   Barracks identically whether its army is full or empty, and builds infrastructure it
-##   cannot use while it has nothing on the board. Scaling by pressure means an unconstrained
-##   player values a new slot at ~0 and a capped one values it fully — which is also just
-##   correct play.
+## [b]Model:[/b] `min(throughput_over_horizon, headroom_after_building) × marginal_unit_cost`.
+## [br]• `throughput_over_horizon` — a producer on cooldown C yields one unit per (C+1)
+##   turns, so over [member AIConfig.economy_horizon] turns it yields `horizon / (C+1)`.
+## [br]• `headroom_after_building` — you cannot use slots you are not allowed to fill, so
+##   the population cap bounds the whole thing.
+## [br]• `marginal_unit_cost` — the cheapest unit the player can produce; what a slot is
+##   worth is what they would put in it.
 ##
-## Deliberately [b]not[/b] decayed over a horizon, unlike the income projection: capacity is
-## a permanent one-time unlock, not a per-turn stream, and decaying it would double-count.
+## ★★ [b]This REPLACED a utilisation-scaled model, and the reason is a trap worth
+## recording.[/b] The first version scaled capacity value by
+## `current_population / effective_cap`, which correctly stopped the AI building
+## infrastructure it could not use — but created a self-limiting loop the S6-07 batch
+## exposed: armies could not grow (units died as fast as they were made), so utilisation
+## stayed low, so a Barracks looked worthless, so throughput stayed low, so armies could
+## not grow. The AI built ~0.4 Barracks per match. **A gate that keys on the symptom of the
+## problem it is meant to solve will hold the problem in place.**
 ##
-## ★ Returns 0 for the Factory and the Research Lab today, correctly: the Factory produces
-## ground vehicles (none exist until wave 2) and research is not implemented. Both become
-## non-zero through this same function when they gain something to be worth.
+## Valuing THROUGHPUT instead breaks the loop: a Barracks is worth building because it
+## reinforces faster, whether or not the army is currently at its ceiling. Over-building is
+## still bounded — by [member StructureTypeDef.max_count] (a hard 3) and by the headroom
+## term — which is a structural bound rather than a behavioural one.
 static func _capacity_value(lookahead: GameState, player: int, structure_type: StructureTypeDef) -> float:
-	if structure_type.cap_bonus <= 0:
-		return 0.0
-	var cap: int = Population.effective_cap(lookahead, player)
-	if cap <= 0:
-		return 0.0
-	var used: int = Population.current_population(lookahead, player)
-	var utilisation: float = clampf(float(used) / float(cap), 0.0, 1.0)
-	if utilisation <= 0.0:
+	var produces: bool = not structure_type.producible_types.is_empty()
+	if structure_type.cap_bonus <= 0 and not produces:
 		return 0.0
 	var marginal_cost: float = _cheapest_producible_cost(lookahead, player)
 	if marginal_cost <= 0.0:
 		return 0.0
-	return credits_to_ap(float(structure_type.cap_bonus) * marginal_cost * utilisation)
+
+	var cap: int = Population.effective_cap(lookahead, player)
+	var used: int = Population.current_population(lookahead, player)
+	# Headroom this structure would leave once built — you cannot use slots you are not
+	# allowed to fill, so this bounds everything below.
+	var headroom: int = maxi(0, (cap + structure_type.cap_bonus) - used)
+	if headroom <= 0:
+		return 0.0
+
+	# Units this producer would actually put on the board over the horizon. A producer on
+	# cooldown C yields one unit per (C+1) turns.
+	var throughput: float = 0.0
+	if produces:
+		var period: float = float(structure_type.production_cooldown_turns + 1)
+		throughput = float(AIBalance.ai.economy_horizon) / period
+
+	var usable: float = minf(throughput, float(headroom))
+	if structure_type.cap_bonus > 0 and not produces:
+		usable = float(mini(structure_type.cap_bonus, headroom))
+	if usable <= 0.0:
+		return 0.0
+	return credits_to_ap(usable * marginal_cost)
 
 
 ## Credit cost of the cheapest unit [param player] can currently produce anywhere, or 0.0 if
