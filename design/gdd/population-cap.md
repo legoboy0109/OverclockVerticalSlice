@@ -66,12 +66,22 @@ the check does nothing.*
 `counts_toward_cap: bool`. This is what makes the Protectorate's robots work, and it is available to
 any faction's unit design (CR-9 — general machinery, faction access).
 
-**PC-5 — The cap is raised by investment.** A player raises their cap by `CAP_RAISE_STEP` units per
-purchase, at a cost that **escalates**:
+**PC-5 — ★ The cap is raised by building Barracks, and Barracks are capped in number.** *(User
+decision, 2026-08-24 — resolves PCOQ-3. Supersedes the earlier purchase-curve model.)*
 
-> Escalating rather than flat is deliberate. A flat cost makes "buy capacity forever" strictly
-> correct once income allows it, which recreates the unbounded-economy failure the PIVOT identified,
-> one layer up. An escalating curve gives capacity a natural stopping point.
+Each completed **Barracks** — the reworked Production Outpost — grants `cap_per_barracks` additional
+infantry slots. A faction may build at most **`max_barracks`**, a per-faction value (D3).
+
+> ★ **Why a hard per-faction maximum rather than an escalating cost curve.** An escalating cost is a
+> *soft* brake that a rich player eventually buys through — and the PIVOT verdict is precisely about
+> a game where the rich player never stops buying. A hard count is unambiguous, is legible to the
+> player ("2 of 3 Barracks"), takes a *known* amount of map space, and is a clean faction lever: the
+> Independents' *"lower base infantry cap and more expensive to increase the cap"* becomes a low
+> `max_barracks`, which is far easier to reason about than a cost curve.
+>
+> **It is also attackable** (PC-6). Destroying a Barracks lowers the enemy's cap — a way to attack an
+> army's future rather than its present, which is exactly the kind of reason-to-attack the PIVOT
+> found the game lacking.
 
 **PC-6 — The cap can fall.** If the structure or tech granting capacity is destroyed or lost, the
 cap drops. Units above the new cap are **not destroyed** (see PC-2) — the player is production-locked
@@ -79,15 +89,41 @@ until attrition brings them under. ★ This is a genuine strategic target: attac
 to attack an army's *future* rather than its present, and it is the mechanism that makes the Holy
 Cosmic Empire's stated *"highly vulnerable to tech base disruption"* real.
 
-**PC-7 — Faction access (D3).** A faction sets `base_infantry_cap`, the `cap_raise_cost_curve`
-parameters, and — through its own unit definitions — which of its units are exempt.
+**PC-7 — Faction access (D3).** A faction sets `base_infantry_cap`, its **`max_barracks`**, the
+`cap_per_barracks` value, and — through its own unit definitions — which of its units are exempt.
+
+**PC-8 — ★ Vehicles are capped through their crew, not directly.** *(User decision, 2026-08-24 —
+resolves PCOQ-1.)* The cap counts **infantry only**. Vehicles and aircraft are never counted
+directly. They are bounded instead by the fact that **a vehicle with `requires_pilot = true` consumes
+an infantry slot for its pilot** (`transport-and-pilots.md` TP-1: a crewing unit is carried, and
+carried units count).
+
+> ★ **Why this is the right shape.** It needs no new machinery, and it makes the tradeoff *legible
+> in the fiction*: a tank is not abstractly "worth three infantry", it literally takes a soldier off
+> the line to drive it. It also gives `requires_pilot` a second, larger job — it is no longer just a
+> vulnerability (crew-killing, capture) but **the primary limiter on how much armour a faction can
+> field at once.**
+>
+> **Consequence for the Galactic Protectorate:** its autonomous units escape this on *both* counts —
+> `counts_toward_cap = false` for its robotic infantry, and `requires_pilot = false` for its
+> autonomous mechs, so they consume no slot even indirectly. That is a genuinely large advantage,
+> and **upkeep is the only thing paying for it.** ★ Flag for CR-10's comparison sheet: the
+> Protectorate is the faction most likely to come out over-tuned, and this is the axis to check.
+>
+> **Consequence for the Machinist's Union:** its vehicles are powerful but each one costs a body,
+> so a Union army is *small and heavy* rather than merely heavy. That matches its stated thesis
+> better than an uncapped vehicle count would have.
 
 ## Formulas
 
 ```
 effective_cap(player) = base_infantry_cap(faction_of(player))
-                      + CAP_RAISE_STEP × cap_purchases(player)
-                      + Σ cap_bonus(s) for every COMPLETED structure s owned by player
+                      + cap_per_barracks × completed_barracks_count(player)
+                      + Σ cap_bonus(t) for every completed tech t held by player
+
+can_build_barracks(player) = completed_barracks_count(player)
+                             + under_construction_barracks_count(player)
+                             < max_barracks(faction_of(player))
 
 current_population(player) = count of units u owned by player
                              where u.is_alive AND u.counts_toward_cap
@@ -104,32 +140,40 @@ cap_raise_cost(player)     = CAP_RAISE_BASE_COST
 
 | Constant | Default | Note |
 |---|---:|---|
-| `base_infantry_cap` | **6** | The Alliance baseline |
-| `CAP_RAISE_STEP` | **2** | Units gained per purchase |
-| `CAP_RAISE_BASE_COST` | **8** Credits | First raise |
-| `CAP_RAISE_ESCALATION` | **4** Credits | Added per prior purchase |
-| `CAP_HARD_CEILING` | **14** | Absolute maximum regardless of purchases |
+| `base_infantry_cap` | **4** | The Alliance baseline, with no Barracks built |
+| `cap_per_barracks` | **2** | Infantry slots per completed Barracks |
+| `max_barracks` (Alliance) | **3** | ★ Per-faction (D3) |
+| Barracks `build_cost` | **6** Credits | Unchanged from the Production Outpost it replaces |
+| Barracks `produces_classes` | `{INFANTRY}` | ★ Vehicles need a Factory, aircraft an Airfield (`base-production.md` BP-NEW-1) |
+| Barracks `upkeep` | **1** | Unchanged |
 
-**The raise curve, worked:** 8 → 12 → 16 → 20 Credits for caps of 8 → 10 → 12 → 14.
-Cumulative cost to reach the ceiling: **56 Credits.**
+**Worked, Alliance:** 4 base + (3 Barracks × 2) = **10 infantry** at full build-out, for
+**18 Credits** and 3 tiles of map. The cap is now a *known, bounded, visible* quantity — a player
+can look at the board and know both sides' ceilings.
 
 > ★ **Cross-check against upkeep — these two numbers must agree.** `unit-upkeep.md` puts the
-> equilibrium army at **7–9 units** at a developed economy. The baseline cap of 6, raisable to
-> 8–10 for 8–20 Credits, sits **just under to just at** that equilibrium. That is the intended
-> relationship: **the cap binds first, and upkeep binds shortly after.** A player raising their cap
-> is deliberately buying their way into a position where upkeep starts to hurt — which is a real
-> decision rather than a free upgrade. If either number moves, re-check this paragraph.
+> equilibrium army at **7–9 units** at a developed economy. An Alliance player at full build-out
+> caps at **10 infantry**, plus whatever vehicles their remaining slots crew. That sits **just above**
+> the upkeep equilibrium, which is the intended relationship: **you can build to your cap, but you
+> cannot comfortably sustain a full one.** The cap is the wall; upkeep is what makes you stop before
+> you reach it. If either number moves, re-check this paragraph.
+>
+> ✅ **Re-checked 2026-08-24 against the new research-driven income.** At a fully-researched economy
+> (income **25**) with a realistic build (2 Barracks, 1 Factory, 1 Lab = 6 upkeep), **19** Credits
+> are available for an army, sustaining **8–9 units** at a roster mean upkeep of ~2. The Alliance's
+> full-build-out cap is **10 infantry**. The relationship holds: **cap 10, sustainable 8–9** — you
+> can always field a little more than you can comfortably keep.
 
 **Per-faction caps** (provisional — CR-10 comparison owed):
 
-| Faction | `base_infantry_cap` | Raise cost | Note |
-|---|---:|---|---|
-| Democratic Alliance | 6 | baseline | The reference |
-| Solar Federation | **8** | baseline | ★ Its *actual* differentiator — see OQ-14 |
-| Galactic Protectorate | 5 | baseline | Low, but robots are exempt |
-| Holy Cosmic Empire | 6 | baseline | Cap is not its lever; promotion is |
-| Independents | **4** | **×1.5 escalation** | Few but exceptional; capacity is expensive |
-| Machinist's Union | 5 | baseline | Vehicles carry its weight, not infantry |
+| Faction | `base_infantry_cap` | `max_barracks` | Ceiling | Note |
+|---|---:|---:|---:|---|
+| Democratic Alliance | 4 | 3 | **10** | The reference |
+| Solar Federation | **5** | **4** | **13** | ★ Its *actual* differentiator — volume (see OQ-14) |
+| Galactic Protectorate | 3 | 2 | **7** | Low — but its robots are cap-exempt *and* pilot-free (PC-8) |
+| Holy Cosmic Empire | 4 | 3 | **10** | Cap is not its lever; promotion is |
+| Independents | **3** | **2** | **7** | Few but exceptional; capacity is genuinely scarce |
+| Machinist's Union | 4 | 2 | **8** | ★ Small army — and every vehicle spends one of those slots on a crew |
 
 ## Edge Cases
 
@@ -137,6 +181,7 @@ Cumulative cost to reach the ceiling: **56 Credits.**
 - **A player above cap after a cap reduction:** no forced losses; production-locked until under (PC-2/PC-6).
 - **Cancelling a queued unit:** frees its slot immediately (mirrors Base & Production's cancel/refund).
 - **A unit destroyed while in production:** frees its slot; the producer's queue entry is voided.
+- **A vehicle produced with no free infantry slot for its crew:** ★ rejected. Producing a `requires_pilot` vehicle requires an available slot for the pilot, or an existing free pilot to crew it — otherwise a player could build armour they can never operate. See PCOQ-4.
 - **Raising the cap at the hard ceiling:** the purchase is rejected, not silently consumed.
 - **Cap of 0:** legal only if every one of the faction's units is exempt; otherwise load fails, since a faction that cannot field an army is a data error.
 - **Transported units** (`transport-and-pilots.md`): a unit inside a transport **still counts**. It exists, it just is not standing on a tile. *Rationale: otherwise loading a transport is a cap-dodge.*
@@ -187,6 +232,6 @@ Cumulative cost to reach the ceiling: **56 Credits.**
 
 | # | Question | Owner | Target |
 |---|---|---|---|
-| PCOQ-1 | ★ **Does the cap cover vehicles and air, or infantry only?** The user's direction says *"infantry cap"* throughout, which implies vehicles are bounded by cost and upkeep alone. That is coherent — but it means a vehicle-heavy faction (Machinist's Union) is effectively uncapped, and the Union is *already* the late-game faction. Recommend either a **separate vehicle cap** or making vehicles cost multiple infantry slots. **Design call — the user's** | user | Before `factions/machinists-union.md` |
-| PCOQ-2 | **What happens to a pilot ejected into a full population?** Options: the pilot is lost, the eject is blocked (the vehicle cannot be abandoned), or the cap is temporarily exceeded. Interacts with the Independents' pirate, which is built on unpiloted vehicles | systems-designer | With `transport-and-pilots.md` |
-| PCOQ-3 | **Is the cap raised by a purchase, a structure, or a tech?** Formulas support all three. A structure is the most attackable (good — PC-6) and the most legible; a tech fits the Empire best. Recommend **structure-granted, with tech modifiers** | systems-designer | With `factions/*.md` |
+| ~~PCOQ-1~~ | ✅ **RESOLVED 2026-08-24 (user): infantry cap only — and vehicles are bounded *through their crew*.** Neither a separate vehicle cap nor a multi-slot cost is needed, because **a vehicle requires a pilot, a pilot is infantry, and infantry are capped** (PC-8). Fielding a tank spends an infantry slot on its crew. ★ This is a better answer than either option offered: it needs no new machinery, it makes `requires_pilot` load-bearing rather than flavour, and it gives the Protectorate's autonomous robots a *second* distinct meaning — they escape the cap on both counts and pay in upkeep. See PC-8 | — | ✅ closed |
+| ~~PCOQ-2~~ | ✅ **DISSOLVED 2026-08-24 by PC-8.** The question assumed a crewing pilot might not hold a slot. It does — a pilot is carried and carried units count (TP-1) — so a pilot leaving its vehicle needs no *new* slot and the disembark always succeeds. The abandoned vehicle needs none either, since vehicles are never counted directly. ★ A player at cap may therefore abandon a vehicle to return its crew to the line, which is a genuine tactical option rather than an edge case | — | ✅ closed |
+| ~~PCOQ-3~~ | ✅ **RESOLVED 2026-08-24 (user): a structure — the Barracks**, which is the reworked Production Outpost, with a **per-faction maximum quantity**. This is the attackable option PC-6 wanted, and the per-faction max is a clean new identity lever (D3) | — | ✅ closed |

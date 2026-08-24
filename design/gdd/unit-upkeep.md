@@ -29,11 +29,10 @@ This does three things the game currently cannot do:
 1. **It bounds the stock.** An army is not a one-time purchase but a standing commitment, so Credits
    can no longer accumulate without limit. There is an **equilibrium army size** at which income and
    upkeep meet, and past it, expanding makes you poorer.
-2. **It bounds the economy without a cap.** Because `credit_income` already *tiers down* (+2 per
-   Economy Outpost for the first four, +1 thereafter), a flat upkeep of 1 per outpost makes the
-   fifth outpost **net zero**. The economy finds its own ceiling out of numbers that already exist,
-   rather than hitting an arbitrary wall. ★ This is the part worth keeping if anything else here
-   changes.
+2. **It is one half of the economy's bound — the other half is the finite research tree.** Income
+   plateaus at a hard 25/turn once the three economy tiers are researched (`research-tech.md`);
+   upkeep is what stops the plateau from simply accumulating. ★ **Neither half works alone**, and
+   the pairing is the design. See § "The economy's ceiling".
 3. **It creates the comeback pressure the swing-back playtest has never been able to find.** A
    losing player's smaller army is *cheaper to sustain*, so falling behind partially pays for
    itself. Losing units is not purely bad news. This is the mechanism S5-04 was written to measure
@@ -92,11 +91,20 @@ becomes active and stops the moment it is destroyed.
 **UR-4 — The HQ never pays upkeep.** It cannot be voluntarily given up, so charging for it is a flat
 tax on existing, not a decision. `upkeep = 0`, fixed, not a faction lever.
 
-**UR-5 — Economy Outposts DO pay upkeep, and this is load-bearing.** It is tempting to exempt the
-structure whose job is making money. **Do not.** If Economy Outposts are upkeep-free, the optimal
-line is still to spam them, bank without limit, and never field an army — the exact degenerate
-strategy this system exists to kill. Their upkeep, set against the already-tiering income curve, is
-what gives the economy a ceiling (Formulas, "the self-bounding property").
+**UR-5 — ★ Every structure except the HQ pays upkeep.** *(Rewritten 2026-08-24. This rule
+originally argued that Economy Outposts specifically must pay; that structure has since been
+deleted, but the general principle it rested on is what survives and it is the important half.)*
+
+**A structure that generates value must still cost something to hold**, or the optimal line is to
+build it repeatedly and never field an army. That is the degenerate strategy this system exists to
+kill, and it is not specific to any one structure — it would re-emerge around the Research Lab, the
+Barracks, or anything else exempted.
+
+The **Research Lab in particular pays upkeep (2)** even though it is now the sole engine of economic
+growth. Exempting it would make "build a Lab, research everything, sit" free, which is the same
+failure in a new costume.
+
+Only the HQ is exempt, and only because it cannot be given up (UR-4).
 
 **UR-6 — Deficit: the bank drains, then production locks.** When `total_upkeep > credit_income`, net
 income is negative and the shortfall is drawn from banked Credits.
@@ -165,42 +173,81 @@ overrides it deliberately.
 
 | Structure | `build_cost` | `upkeep` | Note |
 |---|---:|---:|---|
-| HQ | — | **0** | UR-4, fixed |
-| Economy Outpost | 6 | **1** | UR-5 — load-bearing, see below |
-| Production Outpost | 6 | **1** | |
-| Defensive Structure | 5 | **1** | |
-| Research Lab | 8 | **2** | |
+| HQ | — | **0** | UR-4, fixed — the only exemption |
+| Barracks *(was Production Outpost)* | 6 | **1** | Max 3 (Alliance); also grants infantry cap |
+| Factory | 10 | **2** | Max 2; produces ground vehicles |
+| Airfield | 12 | **2** | Max 1; produces aircraft |
+| Research Lab | 8 | **2** | ★ Pays despite being the economy engine — UR-5 |
+| Defensive Structure | 5 | **1** | Max 3 |
+| ~~Economy Outpost~~ | ~~6~~ | ~~1~~ | **DELETED 2026-08-24** — income moved to research |
 
 *(Structure values are authored, not derived — `build_cost` and `produce_cost` are different scales.)*
 
-### ★ The self-bounding property — why the economy caps itself
+### ★★ The economy's ceiling — SUPERSEDED and replaced, 2026-08-24
 
-`credit_income` pays **+2** per Economy Outpost for the first `TIER_THRESHOLD` (4), then **+1** each.
-Economy Tech adds **+1** per outpost up to 6. Upkeep charges a flat **1** per outpost. Therefore:
+> **What this section used to say, and why it is gone.** The original draft derived a self-bounding
+> property from the Economy Outpost income curve: income tiered down (+2 per outpost for the first
+> four, +1 after) while upkeep stayed flat at 1, so the fifth outpost was net-zero and the economy
+> found its own ceiling. **That mechanism no longer exists — the user re-based income onto research
+> and deleted the Economy Outpost on 2026-08-24.** There is no outpost count to tier against.
+>
+> ★ **It has been replaced by something strictly stronger, so this is an upgrade rather than a
+> loss.** The tiering curve was a *soft* brake — it flattened the growth but never stopped it, and a
+> patient player still accumulated forever, just more slowly. Research is **finite**:
 
-| Outpost # | Income added | Upkeep | **Net** | With Economy Tech |
-|---|---:|---:|---:|---:|
-| 1–4 | +2 | −1 | **+1** | **+2** |
-| 5–6 | +1 | −1 | **0** | **+1** |
-| 7+ | +1 | −1 | **0** | **0** |
+```
+credit_income(player) = BASE_INCOME (10) + Σ ECON_TIER_BONUS for each completed economy tier
+                      = 10, 15, 20, or 25.  Nothing else.  Ever.
+```
 
-**Past the fourth outpost, expansion stops paying for itself.** Past the sixth, it is strictly
-pointless. The economy acquires a ceiling that emerges from three constants that already exist and
-were already Approved — no arbitrary cap, no new wall to explain to the player, and the diminishing
-tier the economy GDD already designed finally *does something*.
+**Three tiers exist. Once all three are researched, the economy cannot grow again at any price.**
+That is a hard ceiling, not an asymptote — and it is the property this system needed.
+
+**The bound now has two independent halves, and both are needed:**
+
+| Half | Mechanism | What it stops |
+|---|---|---|
+| **Income ceiling** | Finite research tiers — max 25/turn (`research-tech.md`) | The *rate* growing without limit |
+| **Upkeep drain** | This document | The *stock* accumulating without limit |
+
+Neither alone is sufficient. A hard income ceiling with no drain still accumulates — just linearly
+at a fixed rate, which is exactly what the simulation measured at 5,724 and climbing. A drain with
+no ceiling loses to any income curve that outruns it. **Together, income plateaus at 25 and upkeep
+eats most of it, so banked Credits stabilise instead of climbing.**
+
+### Worked — where the Credits actually go
+
+At full research (income **25**) with a realistic Alliance build (2 Barracks, 1 Factory, 1 Research
+Lab):
+
+```
+gross income            25
+structure upkeep       − 6   (Barracks 1+1, Factory 2, Lab 2)
+                       ────
+available for army      19
+army of 8 @ mean 2     −16
+                       ────
+net per turn            +3
+```
+
+**A player at a developed position banks about 3 Credits a turn, not 30.** And at full structural
+build-out (10 structures, 14 upkeep) they are *negative* before fielding a single soldier — which is
+why `base-production.md`'s per-faction structure maximums and this system are one design, not two.
 
 ### Equilibrium army size — the number to tune against
 
-At a developed economy (4 outposts, Economy Tech held):
+At a fully-researched economy (income 25) with a realistic build (2 Barracks, 1 Factory, 1 Lab):
 
 ```
-credit_income   = 10 (base) + 8 (4×2) + 4 (tech) = 22
-structure_upkeep = 4 (outposts) + 1 (production) + 2 (lab) = 7
-income available for army = 15
+credit_income    = 25          (BASE_INCOME 10 + three economy tiers × 5)
+structure_upkeep = 6           (Barracks 1+1, Factory 2, Research Lab 2)
+income available for army = 19
 ```
 
-At a roster mean upkeep of ~2, that sustains an army of **≈ 7–8 units**, with anything above it
-drawing down the bank. On a 12×10 board that is a real army and a real ceiling.
+At a roster mean upkeep of ~2, that sustains an army of **≈ 8–9 units**, with anything above it
+drawing down the bank. The infantry cap at full Alliance build-out is **10**
+(`population-cap.md`), so **the cap is the wall and upkeep is what makes you stop just short of
+it** — you can always field one or two more than you can comfortably keep.
 
 > **`TARGET_EQUILIBRIUM_ARMY` (7–9 units) is the tuning target, and `UPKEEP_DIVISOR` is the dial
 > that moves it.** Tune the divisor to hit the army size, not the other way around — the army size
@@ -265,7 +312,8 @@ disband_ap_cost      = DISBAND_AP_COST                                      # 1
 |---|---|---|---|
 | `UPKEEP_DIVISOR` | **3** | 2–5 | ★ **The primary dial.** Lower = harsher, smaller armies, faster games. At 2, the equilibrium army drops to ~5 and the board may feel empty. At 5+, upkeep stops biting and the unbounded-stock defect returns |
 | `TARGET_EQUILIBRIUM_ARMY` | **7–9 units** | 5–12 | Not a code constant — the *design target* the divisor is tuned to hit. Stated as a knob because it is the number with felt meaning |
-| Economy Outpost `upkeep` | **1** | 1–2 | ★ Load-bearing (UR-5). At 0 the economy is unbounded again. At 2, outposts 1–4 net +0 with tech and expansion never pays — the economy dies instead of tiering |
+| Research Lab `upkeep` | **2** | 1–3 | ★ Load-bearing (UR-5). At 0, "build a Lab, research everything, sit" is free and the accumulation defect returns around a different structure |
+| Structure maximums | per faction | see `base-production.md` | ★ **Tuned jointly with this system.** They decide the fixed upkeep floor a player carries before fielding any army at all |
 | `DISBAND_REFUND_RATE` | **0.5** | 0.25–0.6 | Above ~0.6 invites produce/disband churn; at 0 disband becomes pure loss and players will not use the escape valve UR-6 depends on |
 | `DISBAND_AP_COST` | **1** | 0–2 | At 0 disbanding is free and spammable; at 3+ a player in deficit cannot afford to fix it |
 | `Δ_upkeep_rate` (per faction) | 0 | small | Faction lever (D9-mod). Subject to CR-10's baseline comparison |
@@ -293,7 +341,7 @@ work; if far above, the cap is decorative. **OQ-13 in `faction-identity.md` owns
 | AC-12 | GIVEN a unit with `produce_cost = P`, WHEN disbanded, THEN the unit is removed, the owner gains `floor(P × 0.5)` Credits and spends `DISBAND_AP_COST` AP | Logic |
 | AC-13 | GIVEN a disband targeting an enemy unit, a structure, or the HQ, THEN it is rejected | Logic |
 | AC-14 | ★ GIVEN an AI-controlled player with ample Credits across a full simulated match, THEN it does not produce-and-disband the same unit type more than twice in any 10-turn window (anti-churn regression on the refund rate) | Integration |
-| AC-15 | GIVEN 4 Economy Outposts and Economy Tech, THEN a 5th outpost changes `net_credit_income` by exactly **+1**, and a 7th by exactly **0** (the self-bounding property holds against the shipped constants) | Logic |
+| AC-15 | **[REWRITTEN 2026-08-24 — the outpost curve it tested no longer exists]** GIVEN a player holding all three economy tiers, THEN `credit_income` is exactly **25** and no further action of any kind increases it (the hard ceiling holds) | Logic |
 | AC-16 | GIVEN any entity definition loaded from data, THEN `upkeep ≥ 0`, and a negative authored value fails load with an error naming the entity | Config-Data |
 | AC-17 | GIVEN an entity with no explicit `upkeep`, THEN its effective upkeep equals `ceil(produce_cost / UPKEEP_DIVISOR)` | Logic |
 | AC-18 | ★ GIVEN the AI-vs-AI simulation batch run with upkeep active, THEN peak banked Credits on any side stays below **150** across a full match (was 5,724 — this is the regression that proves the PIVOT's root cause is fixed) | Integration |

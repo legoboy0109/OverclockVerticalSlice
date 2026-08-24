@@ -89,10 +89,15 @@ per faction.
 unit that occupies a structure, and cannot be produced from a Production Outpost without an
 air-capable producer. Their role is strike and reach.
 
-**UC-7 — Class and the population cap.** By default `INFANTRY` counts toward the cap and the other
-two do not — but this is `counts_toward_cap` on the unit, not on the class (`population-cap.md`
-PC-4), so a designer may deviate deliberately. ★ **See PCOQ-1** — an uncapped vehicle class is a real
-balance concern for the Machinist's Union and is unresolved.
+**UC-7 — ★ Class and the population cap: infantry only, with vehicles capped through their crew.**
+*(User decision, 2026-08-24.)* `INFANTRY` counts toward the population cap; `GROUND_VEHICLE` and
+`AIR` never do. Vehicles are not uncapped, though — **a vehicle with `requires_pilot = true` spends
+an infantry slot on its crew** (`population-cap.md` PC-8), so armour competes with boots for the
+same ceiling. A faction fielding heavy armour therefore fields *fewer soldiers*, which is a
+tradeoff the player can see rather than a number in a table.
+
+`counts_toward_cap` remains a per-unit property, not a per-class one (PC-4), so the Protectorate's
+robotic **infantry** can be cap-exempt while still being infantry.
 
 **UC-8 — Class is immutable.** A unit never changes class, including through promotion or tech. A
 tech that "upgrades" a mech (the Protectorate's autonomous mechs) changes its properties, not its

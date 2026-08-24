@@ -17,6 +17,87 @@
 > across two axes; the *wording* needs a decision (Open Questions).
 > **Priority / Layer**: Vertical Slice / Foundation (system #3)
 
+> ## ★★ REVISION BANNER — economy re-based onto research (2026-08-24)
+>
+> **Status: IN REVISION.** User decision, 2026-08-24: **Credit income no longer comes from Economy
+> Outposts. It comes from research.** The **Economy Outpost is deleted from the game.**
+>
+> **Stated motivation (user):** stop needing many income buildings taking up map space, and put a
+> harder limit on how far the economy can grow.
+>
+> ### The old formula and why it goes
+>
+> ```
+> OLD:  credit_income = BASE_INCOME
+>                     + OUTPOST_BONUS_TIER1 × min(n, TIER_THRESHOLD)
+>                     + OUTPOST_BONUS_TIER2 × max(0, n − TIER_THRESHOLD)
+>                     + economy_tech_term
+> ```
+>
+> Every term after `BASE_INCOME` was keyed to `n`, the count of completed Economy Outposts. With no
+> Economy Outposts there is no `n`, so the entire tail of the formula goes with it.
+>
+> ```
+> NEW:  credit_income(player) = BASE_INCOME + Σ ECON_TIER_BONUS[t]
+>                                for each completed economy tech tier t
+> ```
+>
+> ### ★★ Why this matters far beyond tidiness — it is the PIVOT fix
+>
+> `production/vertical-slice/REPORT.md` returned **PIVOT** on one measured cause: *the economy is
+> unbounded, so building always outscores fighting, so nobody ever marches on the objective, so no
+> game is ever won.* Credits peaked at **5,724** and were still climbing linearly at turn 200,
+> because there was always another Economy Outpost worth building.
+>
+> **Research is a finite tree. Three economy tiers exist, they are researched once each, and then
+> the economy is done growing — permanently, at a ceiling of 25.** Combined with per-faction
+> maximums on every remaining structure (`base-production.md`), a player reaches a state with
+> **nothing left to build** — at which point AP has nowhere to go but movement and combat. That is
+> precisely the behaviour the simulation could not produce at any siege weight.
+>
+> ★ The self-bounding property that `unit-upkeep.md` originally derived from the tiering outpost
+> curve is **superseded by this** — and by something stronger. A tiering curve was a *soft* brake
+> that flattened but never stopped. A finite tech tree is a **hard ceiling**. See
+> `unit-upkeep.md` § "The economy's ceiling".
+>
+> ### What is unchanged
+>
+> AP is untouched: still flat `FLAT_AP_PER_TURN` (10) with capped carryover (5). The dual-cost
+> both-or-neither contract is untouched. `BASE_INCOME` stays 10. **Upkeep still subtracts from this
+> result** (`unit-upkeep.md`) — income is computed here, the drain is applied there.
+>
+> ### The new income table
+>
+> | State | Cumulative research spend | `credit_income` |
+> |---|---:|---:|
+> | No economy tech | 0 | **10** |
+> | Economy Tier I | 10 | **15** |
+> | Economy Tier II | 30 | **20** |
+> | Economy Tier III | 65 | **25** |
+>
+> Tier bonuses are flat (+5 each) while tier **costs escalate** (10 / 20 / 35). Diminishing returns
+> on investment without a diminishing *benefit*, which keeps each tier feeling like a real upgrade
+> while making the third a genuine commitment: it pays back in 7 turns against a 30-round match.
+>
+> **Payback:** Tier I 2 turns · Tier II 4 turns · Tier III 7 turns.
+>
+> ### Consequences owed
+>
+> - `OUTPOST_BONUS_TIER1`, `OUTPOST_BONUS_TIER2`, `TIER_THRESHOLD`, `ECONOMY_TECH_INCOME_BONUS`,
+>   `ECONOMY_TECH_TIER_THRESHOLD` are all **removed**. Every knob below referencing them is dead.
+> - `BASE_INCOME_FLOOR` (owed to this doc as OQ-2 in `faction-identity.md`) is now trivially
+>   satisfied — income can never fall below `BASE_INCOME`, since faction deltas apply to tier
+>   bonuses, not to the base.
+> - ★ **The combined-income-ceiling validation rule is now cheap.** It exists to catch unbounded
+>   stacking across three multiplying per-`n` terms. There is no `n` any more and the ceiling is a
+>   single literal number (25, or 25 ± faction deltas). The discipline stays; the work shrinks.
+> - ★ **The Research Lab becomes the single most valuable structure in the game** — it is now the
+>   only path to economic growth. That is a *good* consequence: it is a high-value attack target,
+>   and the game badly needs reasons to attack. It also means the Holy Cosmic Empire's *"highly
+>   vulnerable to tech base disruption"* thesis now has teeth for everyone, and the Empire's version
+>   must be made distinct from the baseline vulnerability rather than identical to it.
+> - `/design-review` + `/propagate-design-change` owed once the corpus settles.
+
 ## Overview
 
 The economy runs on **two resources**, each owning a distinct decision axis:

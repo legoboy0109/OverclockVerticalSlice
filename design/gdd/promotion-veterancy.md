@@ -105,8 +105,20 @@ turn until support is restored.
 - **This is a faction-declared property, not a rule for everyone.** The Empire opts into a
   vulnerability in exchange for its power curve. That opt-in *is* CR-9 working correctly.
 
-**PV-8 — Faction access (D6).** Promotion is granted through the faction's tech tree or its unit
-definitions. A faction whose units never promote simply never sets it.
+**PV-8 — ★ Faction access (D6): the Holy Cosmic Empire only, for now.** *(User decision,
+2026-08-24 — resolves PVOQ-5.)* The machinery here is general and any faction *could* be granted it
+(CR-9), but **only the Empire has it in the current design.** No other faction's units accrue merit
+or hold a rank.
+
+> ★ **Why exclusivity matters.** If every faction promotes, the Empire's identity reduces to
+> *degree* — "we promote a bit better" — which is the weakest kind of asymmetry and precisely the
+> reskin failure Pillar 4 exists to prevent. Sole access makes promotion **the** Empire, and makes
+> the matchup question *"how do I fight an army that gets stronger?"* rather than *"whose veterans
+> are better?"*
+>
+> **Practical consequence:** every merit hook, rank display and AI valuation is dead code for five
+> of six factions. That is acceptable and deliberate — but it means promotion should be built
+> **last** among the Tier-1 systems, since it benefits exactly one faction.
 
 **PV-9 — Upkeep and rank.** ★ **Unresolved** — see `unit-upkeep.md` UOQ-3. A promoted unit is worth
 more; whether it *costs* more per turn is a genuine design question with a real bearing on the
@@ -217,4 +229,4 @@ effective_attack_range(unit)  = base_range + RANK_RANGE[rank]
 | PVOQ-2 | ★ **Per-instance stats are an architectural change.** Unit stats today come from a shared immutable `UnitTypeDef`; rank makes two units of the same type genuinely different. This touches the stat read path, save/load, the renderer and the AI's valuation. **Needs an ADR** — and it is the same underlying change `transport-and-pilots.md` TPOQ-1 needs, so they should be designed together | technical-director | ADR before build |
 | PVOQ-3 | **How is rank shown?** Pillar 3 is a hard gate the project has already nearly failed, and the board already carries faction hue, AP-state tint, glow and an ownership decal. Rank needs a channel that does not compete with those. Recommend a small rank pip on the ownership decal — it is already a per-entity ground element with room | art-director | With `/ux-design` |
 | PVOQ-4 | **Does a promoted unit cost more upkeep?** (`unit-upkeep.md` UOQ-3.) Thematically yes; mechanically it means success is taxed, which cuts against the reward. Recommend **no**, and let the risk of loss be the only cost | systems-designer | With upkeep tuning |
-| PVOQ-5 | **Should non-Empire factions promote at all?** PV-8 allows it. If every faction promotes, the Empire's identity is only *degree*, which is weak. Recommend **only the Empire promotes at first**, with the machinery general so others can be granted it later | user | Faction authoring |
+| ~~PVOQ-5~~ | ✅ **RESOLVED 2026-08-24 (user): the Empire only, for now.** Machinery stays general (CR-9) so another faction can be granted it later without a rules change. ★ Consequence: promotion should be built **last** of the Tier-1 systems — it serves one faction of six | — | ✅ closed |

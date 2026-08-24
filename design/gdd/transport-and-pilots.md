@@ -70,8 +70,15 @@ a free extension of every passenger's movement.
 > corridor?), can exceed the population cap, and makes a loaded transport *safer* than the units
 > walking. **A loaded transport is a high-value target. That is the decision.**
 
-**TP-5 — Crewed vehicles: `requires_pilot`.** A `UnitTypeDef` with `requires_pilot = true` is
-non-functional without one. A vehicle is either **piloted** (fully functional) or **unpiloted**
+**TP-5 — Crewed vehicles: `requires_pilot`.** ★★ **This flag now carries far more weight than it
+did when this document was drafted.** Following the user's 2026-08-24 decision that the population
+cap counts **infantry only**, `requires_pilot` is **the game's primary limiter on how much armour a
+faction can field** — a crewing pilot is a carried unit, carried units count toward the cap
+(TP-1), and so every piloted vehicle costs its owner an infantry slot. See `population-cap.md` PC-8.
+It is no longer merely a vulnerability; it is a balance mechanism, and changing it on any unit
+changes that faction's army size.
+
+A `UnitTypeDef` with `requires_pilot = true` is non-functional without one. A vehicle is either **piloted** (fully functional) or **unpiloted**
 (cannot move, cannot attack, cannot use abilities — but still occupies its tile, still has hp, and
 is still destructible).
 
@@ -143,7 +150,7 @@ can_capture(actor, v)  = adjacent(actor, v)
 - **`targets_crew` against an unpiloted vehicle:** falls through to normal vehicle damage (the `damage_target` conditional fails), so the attack is never wasted.
 - **`targets_crew` against a `requires_pilot = false` unit:** same fall-through. The Protectorate is immune by construction, not by exception (TP-9).
 - **Pilot killed while the vehicle is inside a transport:** ★ not possible — cargo is untargetable (TP-1).
-- **A pilot disembarking at population cap:** ★ **unresolved — `population-cap.md` PCOQ-2.** The pilot already counts while crewing, so no *new* slot is needed; the open question is whether the vehicle then needs one of its own.
+- **A pilot disembarking at population cap:** the pilot already counted while crewing, so no *new* slot is needed and the disembark succeeds. The vehicle it leaves becomes unpiloted and needs no slot of its own (vehicles are never counted directly, PC-8). ★ Net effect: a player at cap may freely abandon a vehicle to put its crew back on the line — a real tactical option, and a deliberate one.
 - **Capturing a vehicle whose class the capturing faction never fields:** legal, and delightful. An Independents player driving a Union mech is the fantasy working.
 - **Two units adjacent to one unpiloted vehicle:** first to act claims it. Turn order decides; deterministic, no contest rule needed.
 
