@@ -200,10 +200,23 @@ in Credits, once in bodies.**
 | **Damage Types** (#18) | `BURST` for Artillery and Bomber; Tank's `INCENDIARY` resistance | Wave 3 |
 | **Promotion** (#21) | ★ **none** | — |
 
-★ **Wave 1 note:** the Alliance's four infantry, HQ, Barracks, Research Lab and Defensive Structure
-are all buildable with only Wave-1 systems. **A playable, complete Alliance-vs-Alliance mirror match
-exists before vehicles or air are built at all** — which makes this faction the natural first
-target and the cheapest possible proof that the reworked economy resolves matches.
+> ### ⚠ Corrected 2026-08-24 — an earlier draft of this note was wrong
+>
+> It claimed *"a playable, complete Alliance-vs-Alliance mirror exists before vehicles or air are
+> built"*, and offered an infantry-only Alliance as a cheap early test. **That is not a complete
+> Alliance and it is not a valid test.** Under **CR-11** every faction has piloted vehicles and an
+> infantry cap; an Alliance without them is missing two of the three things that define how the
+> faction spends its budgets. Testing it would measure a game nobody will play.
+>
+> ★ **The Alliance is complete at wave 2**, when unit classes and pilots exist. Its infantry, HQ,
+> Barracks, Research Lab and Defensive Structure are wave-1 buildable — but that subset is a
+> *fragment*, not a shippable faction, and should not be presented as one.
+>
+> **What CAN be validated in wave 1 is the economy, and it needs no faction at all.** Upkeep, the
+> research-driven income curve and the per-structure maximums all apply to the units the vertical
+> slice *already ships*. Running the AI-vs-AI batch on the existing Neutral slice with the new
+> economy answers the PIVOT's question — *do matches now resolve on play?* — without pretending a
+> partial faction is a faction.
 
 ## Tuning Knobs
 

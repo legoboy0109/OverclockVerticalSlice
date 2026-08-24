@@ -297,6 +297,20 @@ Recorded as a *pass* because it is the kind of boundary that usually is not.
 
 Then run `/propagate-design-change` for W-1, W-4 and W-5 as one sweep.
 
+> ### ⚠ Addendum 2026-08-24 — a sequencing claim in this corpus was wrong, and is withdrawn
+>
+> Two faction documents (and this reviewer's handoff) claimed an **infantry-only faction could be
+> shipped early** as a cheap validation target. **The user corrected it:** under the new
+> `faction-identity.md` **CR-11**, every faction has piloted vehicles and an infantry cap, so a
+> faction stripped of vehicles is a fragment rather than a faction, and testing it would measure a
+> game nobody will play. Corrected in `democratic-alliance.md` and `solar-federation.md`.
+>
+> ★ **The underlying goal survives, on a better footing.** What wave 1 can validate is **the
+> economy**, and it needs no faction at all — upkeep, research-driven income and the per-structure
+> maximums all apply to the units the vertical slice *already ships*. Run the AI-vs-AI batch on the
+> existing Neutral slice with the new economy: that answers the PIVOT's question — *do matches now
+> resolve on play?* — honestly, without dressing a partial roster up as a faction.
+
 > ★ **Sequencing recommendation.** B-1 and B-3 should land before the next AI-vs-AI regression batch,
 > because that batch is the evidence the PIVOT fix depends on and it cannot be trusted while the AI
 > cannot value an economic action. B-4 should be answered before any wave-2 art or renderer work.

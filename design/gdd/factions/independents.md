@@ -95,6 +95,15 @@ unpiloted vehicle. See the tuning notes.
 ★ **Deliberately mediocre**, per the direction. Every one is worse than its Alliance counterpart at
 a lower price — and that is the point: the Independents' *good* vehicles are the ones they take.
 
+★ **All `requires_pilot = true`**, `counts_toward_cap = false` (the crew consumes an infantry slot,
+`population-cap.md` PC-8), `resistances {EMF: −2}` (DT-9b default). The Partisan and the Pirate both
+`can_pilot`. *(Declared explicitly 2026-08-24 — the cross-review found this table omitted it.)*
+
+> ★ **The Independents crew stolen vehicles the same way.** `CAPTURE_VEHICLE` makes the Pirate the
+> new vehicle's pilot, so a stolen tank is a *piloted* tank subject to every ordinary rule — it can
+> be crew-killed, it costs a slot, and it can be taken back. **Theft grants no exemption from the
+> pilot requirement**, which is what keeps the mechanic symmetric.
+
 | Unit | `cost` | `hp` | `atk` | `rng` | `move` | `capacity` | `upkeep` | vs Alliance |
 |---|---:|---:|---:|---:|---:|---:|---:|---|
 | **Technical** | **800** | 12 | 4 | 1 | 2 | 2 | **300** | vs Transport (1,000/16 hp/unarmed): armed but flimsy |
@@ -107,6 +116,12 @@ a lower price — and that is the point: the Independents' *good* vehicles are t
 ### Roster — Air: none
 
 ★ **The Independents field no aircraft and cannot build an Airfield.** `max_airfields = 0`.
+
+> ⚠ **Open against the universal-vehicle rule (2026-08-24):** the user has stated that *every*
+> faction has piloted vehicles and the infantry cap. The Independents satisfy both — their ground
+> vehicles are crewed and their cap is the tightest in the game (7). **Fielding no *air* is a
+> separate choice** and is currently the only class-level hole in the corpus. Confirm it is intended
+> to survive the universal rule, or grant them an aircraft (IOQ-4).
 
 > A legitimate identity statement under UC-9 (*"a faction may field none of a class"*), and the
 > strongest structural statement in the roster: rebels do not have an air force.

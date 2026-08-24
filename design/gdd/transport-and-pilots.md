@@ -82,6 +82,16 @@ A `UnitTypeDef` with `requires_pilot = true` is non-functional without one. A ve
 (cannot move, cannot attack, cannot use abilities — but still occupies its tile, still has hp, and
 is still destructible).
 
+**TP-5a — ★ Every faction fields piloted ground vehicles.** *(User decision, 2026-08-24 —
+`faction-identity.md` **CR-11**.)* `requires_pilot = true` on ground vehicles is a universal
+baseline. The **only** sanctioned exception is the Galactic Protectorate (CR-11a), whose *mechs* can
+be freed by completing Mech Autonomy research and whose Autonomous Lifter ships pilot-free — and
+**even it must always crew its tanks.** No faction begins a match with pilot-free ground armour.
+
+> ★ This is what guarantees that **armour always costs an infantry slot** (PC-8) and that the
+> Independents' `targets_crew`/`CAPTURE_VEHICLE` design has targets in every matchup. A pilot-free
+> faction would be immune to an entire faction's identity.
+
 **TP-5b — ★ Vehicles and crews are produced separately.** *(User decision, 2026-08-24 — resolves
 PCOQ-4.)* A Factory produces a vehicle; it arrives **unpiloted and inert**. A Barracks produces
 infantry; one of them crews it via `EMBARK`. There is no combined vehicle-plus-crew purchase.

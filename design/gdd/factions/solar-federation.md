@@ -287,10 +287,15 @@ Identical to the Alliance's, **minus** damage types (Solar has no resistances an
 | **Unit Abilities** (#19) | ★ `REPAIR`, `SELF_DESTRUCT`, `PARADROP`, `EMBARK`/`DISEMBARK` | Wave 2 |
 | **Transport & Pilots** (#20) | ★ `crew_bonus` (TP-5d), `can_pilot`, large-capacity transports | Wave 2 |
 
-★ **Wave-1 subset:** Citizen Trooper, Volunteer, Barracks, Research Lab and the Autonomous Defence
-Node need **no** Tier-1 system beyond upkeep and the population cap — the Volunteer needs
-`SELF_DESTRUCT`, which is one catalogue entry. **A reduced Alliance-vs-Solar match is playable in
-wave 1**, and that match is the first real Pillar-4 evidence this project has ever had.
+> ⚠ **Corrected 2026-08-24.** An earlier draft proposed a *"reduced Alliance-vs-Solar match in wave
+> 1"* as early Pillar-4 evidence. **Withdrawn.** Under **CR-11** every faction has piloted vehicles
+> and an infantry cap, and Solar's own identity leans on the **Pilot** specialist and `crew_bonus` —
+> a Solar without vehicles has no use for its Pilot and loses one of its four specialists. A reduced
+> matchup would produce *misleading* Pillar-4 evidence, which is worse than none.
+>
+> ★ **Solar is complete at wave 2**, alongside the Alliance. The two are still the right first
+> asymmetric pair — Solar remains the faction needing the fewest new systems — but the pair is a
+> **wave-2 milestone**, not a wave-1 shortcut.
 
 ## Tuning Knobs
 

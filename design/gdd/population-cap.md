@@ -51,6 +51,12 @@ that is a real strategic identity rather than an arithmetic one. The intended fe
 
 ## Detailed Rules
 
+**PC-0 — ★ Every faction is subject to this system.** *(User decision, 2026-08-24 —
+`faction-identity.md` **CR-11**.)* The infantry cap is a universal baseline, not a per-faction
+choice: every faction declares a `base_infantry_cap` and a `max_barracks`. The **only** sanctioned
+exemption is at the *unit* level — the Galactic Protectorate's robotic infantry (CR-11a) — and it is
+paid for in upkeep, not granted freely. A faction may not opt out of the cap itself.
+
 **PC-1 — The cap counts living units, not structures.** Structures are bounded by Base &
 Production's `production_cap` and by build costs; they are not in scope here.
 

@@ -196,6 +196,43 @@ machinery** (`promotion-veterancy.md`, `transport-and-pilots.md`) that any facti
 then grant access to it through D6/D8. This keeps CR-1 true, keeps the systems testable, and is why
 Tier 1 of the corpus exists at all.
 
+**CR-11 — ★ Universal baseline: every faction has piloted vehicles and an infantry cap.**
+*(User decision, 2026-08-24.)* These two are **not** per-faction choices. Every shipping faction:
+
+1. **Fields ground vehicles that require a crew** (`requires_pilot = true`), so armour always costs
+   an infantry slot (`population-cap.md` PC-8) and is always exposed to crew-killing and capture
+   (`transport-and-pilots.md` TP-7/TP-8).
+2. **Is subject to the infantry cap** — every faction declares a `base_infantry_cap` and a
+   `max_barracks`, and no faction may opt out of the system.
+
+> ★ **Why this is a Core Rule rather than a convention.** Both mechanics are load-bearing for
+> balance *across* factions, not within one. If a faction could field pilot-free armour it would
+> escape the cap entirely (armour is uncapped except through its crew) **and** be immune to the
+> Independents' entire design. If a faction could opt out of the cap it would have no army-size
+> bound but upkeep. Either exemption, granted casually, breaks the corpus's two shared limiters at
+> once. Anything that looks like an exception is a **deliberate, reviewed** exception (see below),
+> never an omission.
+
+**CR-11a — The one sanctioned exception: the Galactic Protectorate.** *(User decision, 2026-08-24,
+made explicitly rather than inherited.)* The Protectorate may hold **autonomous** units that need no
+crew, and its robotic infantry are **cap-exempt**. Both are bounded:
+
+- **It never fully escapes.** Its **tanks always require pilots**, at every tech level. Only its
+  *mechs* can be freed, and only by completing the expensive **Mech Autonomy** research — so the
+  exemption is *earned mid-match*, not granted at setup, and its human cap stays scarce all game.
+- **It pays in upkeep.** The cap-exempt Servitor costs **300/turn** — the same as an Alliance Heavy,
+  for a unit with attack 2. ★ The exemption was measured and does **not** make the faction larger:
+  it fields the **smallest sustainable army in the corpus** (~5 units), because a cap stops at a wall
+  while upkeep keeps taking. What it buys is *resilience* (never production-locked, always able to
+  field something), not scale.
+- **It is a legible strategic property, not a hidden one.** *"The Protectorate can research its way
+  out of needing people"* is the faction's stated arc, and it is the hard counter to the
+  Independents' Pirate — an emergent interaction between two independently authored factions.
+
+> ★ **Any future proposal to exempt a second faction from either mechanic re-opens this rule**, and
+> should be reviewed against CR-10's comparison sheet before it is accepted. One exception is an
+> identity; two is the rule quietly dissolving.
+
 **CR-10 — Every faction is measured against the baseline before it ships.** *(Promoted from v1's
 OQ-10, which noted the gap and enforced nothing.)*
 

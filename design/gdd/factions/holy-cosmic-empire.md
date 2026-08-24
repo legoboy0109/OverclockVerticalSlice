@@ -96,6 +96,12 @@ using the existing merit machinery rather than any new rule.
 every other faction's: `combat-resolution.md`'s formula subtracts `defense` from incoming damage, so
 an Empire vehicle takes *less per hit* rather than surviving *more hits*.
 
+★ **All `requires_pilot = true`**, `counts_toward_cap = false` (the crew consumes an infantry slot,
+PC-8), `resistances {EMF: −2}` (DT-9b default). Levy and Knight both `can_pilot`. *(Declared
+explicitly 2026-08-24 — the cross-review found this table omitted it.)* **The Empire has no
+autonomous units and no route to any** — its machines always need people, which is consistent with
+a faction whose identity is a hierarchy of *people*.
+
 | Unit | Role | `cost` | `hp` | ★ `def` | `atk` | `rng` | `move` | `upkeep` | Notes |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---|
 | **Aegis Walker** | Line vehicle | **1,400** | 18 | ★ **3** | 5 | 2 | 2 | **500** | |
