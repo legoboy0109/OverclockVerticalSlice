@@ -88,10 +88,32 @@ replacement-unit-inherits-rank. **When a veteran dies, that investment is gone.*
 the hp immediately, not on next heal. *Rationale: a promotion that does nothing until later is an
 anticlimax at the exact moment the game should feel best.*
 
-**PV-6 — Promotion is automatic and immediate.** It happens the moment the merit threshold is
-crossed, during the same action that earned it, after damage resolves. No player decision, no
-ceremony turn, no cost. *Rationale: a promotion the player must remember to spend on is
-bookkeeping.*
+**PV-6 — Promotion is automatic, and applies once the whole attack has resolved.** Merit is awarded
+the moment it is earned; the resulting rank change is applied **after the entire action completes**,
+not partway through it. No player decision, no ceremony turn, no cost. *Rationale: a promotion the
+player must remember to spend on is bookkeeping.*
+
+> ### ★ Why "after the whole action", and not "immediately" — resolves a real contradiction
+>
+> An earlier draft said promotion applied *"after damage resolves and before the next target"*, so
+> that a burst's later targets faced the promoted stats. **That directly contradicted
+> `damage-types.md` DT-9**, which guarantees *"all deaths applied after all damage — no target's
+> death changes another's damage within the same attack."* A kill in tile 1 promoting the attacker
+> and raising the damage dealt to tiles 2–4 is exactly the order-dependence DT-9 exists to forbid.
+>
+> **DT-9 wins, deliberately.** Its guarantee is load-bearing for *every* area weapon in the corpus —
+> the Alliance Artillery and Bomber, the Protectorate Breaker and Strafer, the Union Battery, the
+> Solar Volunteer — and **Pillar 2 requires that a player can predict an attack's outcome before
+> committing to it.** An attack whose later damage depends on whether an earlier tile happened to
+> die is not predictable.
+>
+> **What the Empire loses: essentially nothing.** The merit is still earned, the promotion still
+> lands, one beat later. The only case affected is a single area attack that both crosses a rank
+> threshold *and* has surviving targets in the same volley — and even then the unit is promoted
+> before it acts again.
+>
+> ★ **Ordering, stated once so implementation cannot diverge:** compute all damage → apply all
+> deaths → award all merit → apply all rank changes → emit events.
 
 **PV-7 — ★ Rank loss through tech-base disruption.** This is the Empire's stated vulnerability made
 mechanical. A faction may declare `rank_requires_support: true`, meaning its units' ranks are
@@ -168,9 +190,9 @@ effective_attack_range(unit)  = base_range + RANK_RANGE[rank]
 
 ## Edge Cases
 
-- **A unit killing multiple enemies in one area attack:** merit for each kill. Multiple thresholds may be crossed in one action; the unit lands at the highest rank its merit supports.
+- **A unit killing multiple enemies in one area attack:** merit for each kill, all awarded after the attack fully resolves. Multiple thresholds may be crossed at once; the unit lands at the highest rank its merit supports. ★ The *other targets in that same attack* are damaged at the unit's **pre-promotion** stats (PV-6 / DT-9).
 - **Merit from a counterattack kill:** yes — the counter is that unit's action for the purpose of merit, even though it costs no AP.
-- **Rank-up mid-combat:** applied after damage resolves and before the next target (PV-6), so a burst's later targets face the promoted stats. ★ Deterministic because `damage-types.md` DT-9 fixes area resolution order.
+- **Rank-up during an area attack:** the promotion applies **after the whole attack resolves** (PV-6), so every target in that attack is damaged at the pre-promotion stats. ★ This is what keeps `damage-types.md` DT-9's determinism guarantee intact.
 - **A unit at max hp promoting to rank 2:** max hp and current hp both rise (PV-5); it ends above its previous maximum, which is correct.
 - **A unit at rank 3 gaining more merit:** merit accrues, rank stays capped. Retained merit matters for PV-7 recovery.
 - **Rank loss below 0:** floors at 0.
@@ -218,7 +240,7 @@ effective_attack_range(unit)  = base_range + RANK_RANGE[rank]
 | AC-8 | GIVEN one action crossing two thresholds, THEN the unit ends at the highest rank its merit supports | Logic |
 | AC-9 | GIVEN a promoted unit is destroyed, THEN no rank or merit persists anywhere in state | Integration |
 | AC-10 | GIVEN a counterattack kill, THEN the counterattacking unit gains kill merit | Integration |
-| AC-11 | GIVEN a burst promoting the attacker mid-resolution, THEN later targets in that same attack face the promoted stats, deterministically across repeated runs | Integration |
+| AC-11 | **[REVISED 2026-08-24 — the original asserted the behaviour that contradicted DT-9]** GIVEN an area attack in which an early target dies and pushes the attacker over a rank threshold, THEN **every** target in that attack takes damage computed at the attacker's **pre-promotion** stats, and the rank change is observable only after the action completes — identically across repeated runs | Integration |
 | AC-12 | GIVEN `rank_requires_support` and no living completed support structure at start of turn, THEN every unit of that faction drops exactly one rank and retains its merit | Integration |
 | AC-13 | GIVEN support is restored, THEN units re-promote to the rank their retained merit supports | Integration |
 | AC-14 | GIVEN rank loss at rank 0, THEN rank stays 0 and no unit is destroyed | Logic |

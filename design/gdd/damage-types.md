@@ -99,7 +99,12 @@ exemption.** *Rationale: an AoE that only hits enemies is strictly good and has 
 decision in it; friendly fire is what makes an area weapon a skill expression rather than a bigger
 number.*
 
-**DT-9 — Area resolution order is deterministic.** Targets resolve in a fixed board order (row-major
+**DT-9 — Area resolution order is deterministic.** ★ **This rule is load-bearing and one other
+system was corrected to preserve it:** `promotion-veterancy.md` PV-6 originally promoted a unit
+mid-burst, which would have let an early target's death change a later target's damage. It now
+applies rank changes **after the whole attack resolves**. Any future mechanic that mutates an
+attacker's stats during resolution must defer the same way.
+ Targets resolve in a fixed board order (row-major
 by tile coordinate), each through the standard formula, with all deaths applied after all damage.
 No target's death changes another's damage within the same attack. **Pillar 2 requires this
 explicitly.**

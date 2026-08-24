@@ -14,6 +14,62 @@
 > **Specialists consulted**: art-director (Visual/Audio), qa-lead (Acceptance Criteria). Formulas — none owned; systems-designer not needed. CD-GDD-ALIGN pillar review skipped — Lean mode.
 > **All 8 required sections complete** + Visual/Audio, UI Requirements, Open Questions. Sibling to Command & Action Interface (#9); resolves its OQ-3 seams.
 
+> ## ★★ REVISION BANNER — income breakdown and hp thresholds (2026-08-24)
+>
+> **Status: IN REVISION.** Two corrections from `gdd-cross-review-2026-08-24.md`.
+>
+> ### ★ B-3 — the Credit income breakdown specifies two components that no longer exist
+>
+> This document mandates a breakdown of **`base` + `outpost` + `econ_tech`**, with edge cases for
+> *"0 completed Economy Outposts"* and *"Economy Tech held but 0 Economy Outposts exist"*.
+>
+> **The Economy Outpost is deleted and income is now research-tiered** (`ap-economy.md`,
+> `base-production.md`, 2026-08-24). Only `base` survives. Implemented as written, the HUD queries
+> fields that do not exist.
+>
+> **Replacement contract — and it absorbs an obligation this document did not previously carry:**
+>
+> ```
+> gross   =  BASE_INCOME (1,000)  +  Σ completed economy tiers (+500 each)
+> upkeep  =  Σ upkeep of every completed, living, non-HQ entity
+> NET     =  gross − upkeep                    ← what actually reaches the bank
+> ```
+>
+> All **three** figures must be readable during the player's own turn, *before* the next economy
+> step charges them — this is `unit-upkeep.md` **UR-8**, a binding contract that had no home in the
+> HUD spec until now. A drain the player only discovers after it has happened is a feel-bug.
+>
+> ★ **`net` is the figure that matters and should carry the visual weight.** A player approaching
+> the upkeep equilibrium must be able to *see it coming*; that early warning is most of what makes
+> upkeep a decision rather than a tax.
+>
+> **Also required (`unit-upkeep.md` AC-20):** a prospective purchase's effect on `net` must be
+> previewable before commit — the same preview-before-commit discipline Command & Action Interface
+> already applies to cost and damage.
+>
+> **Superseded edge cases:** *"0 completed Economy Outposts"* and *"Economy Tech held but 0
+> outposts"* both describe deleted mechanics. Their replacement: **at 0 economy tiers the breakdown
+> shows `gross = base` with no tier line** — never a phantom "+0 from research" implying a bonus
+> exists. The original intent (never imply an inactive bonus is earning) carries over exactly.
+>
+> ### ★ W-2 — the pip-vs-numeric threshold analysis is invalidated
+>
+> The Knob-Interactions reasoning derives `PIP_MAX_HP` from *"the highest-hp **unit** is Heavy at
+> 10"* and *"the lowest-hp structure is the Economy Outpost at 8."* **Both premises are now false:**
+> the Economy Outpost no longer exists, and `unit-classes.md` introduces vehicles and aircraft as
+> **units** with hp from 12 to **28** (a Union Siege Mech).
+>
+> The stated design intent — *"all structures render numeric, all units render pips"* — **cannot
+> survive vehicles**, because a 28-pip unit is exactly the unreadable pip wall the rule exists to
+> prevent. ★ The rule needs re-deriving on a basis that is not "unit vs structure": recommend
+> **hp-only** (`< PIP_MAX_HP` → pips, `≥` → numeric, no entity-kind reasoning at all), which is what
+> the mechanic already does and which handles vehicles correctly with no special case. **Flagged,
+> not fixed — the visual call belongs with `/ux-design`.**
+>
+> ★ **Broader note for the UX pass (review B-4):** this document is one of six now carrying a new
+> visual requirement, and **nothing owns the aggregate.** Pillar 3 is a hard gate that has never
+> been run. See the review report's B-4.
+
 ## Overview
 
 The **Game HUD** is the persistent, always-on information layer that surfaces the game's state so the player can read the board at a glance. Where the Command & Action Interface (#9) handles *acting* — selection, previews, and committing — the HUD handles *knowing*: it is a read-only aggregation of state from Game State & Turn Manager, AP & Credits Economy, and the Core gameplay systems, rendered as durable on-screen chrome that is never selected or clicked-through. It owns **two first-class budget counters** — the **AP counter** (the *tactical* budget for move/attack, shown as a first-class neon element with an on-demand AP-carryover indicator) and the **Credits counter** (the *banked economic* war chest, shown as a co-equal first-class neon element with an on-demand Credit income breakdown) — plus the **turn/round indicator** and **"YOUR TURN / ENEMY TURN"** banner, the **action log**, the **unit and structure info panels** (hp as chunky pips, attack, move cost, has-acted state, build timers, production capacity, research status and buffs), and the **victory/defeat presentation**. It computes nothing about balance — every value it shows is read from the system that owns it — so its single job is to make the authoritative game state *legible*. Without the HUD the player would be flying blind: unable to see how much AP or how many Credits they have, whose turn it is, how hurt a unit is, or whether they've won. With it, the entire depth of the tempo duel stays readable (Pillar 3), and both economies stay *felt* — the AP counter fills at the start of each turn and ticks down with every tactical spend, while the Credits counter grows each turn with income and ticks down on each economic spend, so the player always senses both the budget they are racing *and* the war chest they are banking. The two must read as visually distinct (different hue families) so the tactical tempo and the economic war chest never blur. The HUD and the Command & Action Interface are deliberately split along a *know vs. act* line, and this document restates that boundary at each seam so the two never duplicate or contradict each other.
