@@ -105,10 +105,18 @@ carried units count).
 > field at once.**
 >
 > **Consequence for the Galactic Protectorate:** its autonomous units escape this on *both* counts —
-> `counts_toward_cap = false` for its robotic infantry, and `requires_pilot = false` for its
-> autonomous mechs, so they consume no slot even indirectly. That is a genuinely large advantage,
-> and **upkeep is the only thing paying for it.** ★ Flag for CR-10's comparison sheet: the
-> Protectorate is the faction most likely to come out over-tuned, and this is the axis to check.
+> `counts_toward_cap = false` for its robotic infantry, and `requires_pilot = false` for its mechs
+> once the autonomy tech lands. That looks like a large advantage, and **upkeep is the only thing
+> paying for it.**
+>
+> ✅ **CHECKED 2026-08-24 in `factions/galactic-protectorate.md`, and the flag was wrong.** Worked
+> through the CR-10 sheet, the Protectorate ends up with the **smallest sustainable army in the
+> game** — ~5 units against the Alliance's ~9 and Solar's ~11. ★ **Cap exemption is worth much less
+> than it looks once upkeep is the real constraint, because a cap stops at a wall and upkeep keeps
+> taking.** What the exemption actually buys is *resilience* — the Protectorate can never be
+> production-locked by a cap and can always field something — which is a comeback property, not a
+> scale one. Recorded here because the intuition ("uncapped must be stronger") is wrong in a way
+> that will recur when the next cap-exempt unit is designed.
 >
 > **Consequence for the Machinist's Union:** its vehicles are powerful but each one costs a body,
 > so a Union army is *small and heavy* rather than merely heavy. That matches its stated thesis
