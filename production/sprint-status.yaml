@@ -185,13 +185,36 @@ stories:
 
   - id: "s5-05"
     name: "VS REPORT + PROCEED/PIVOT/KILL verdict + re-run /gate-check (carryover S4-06)"
-    file: "production/gate-checks/"
+    file: "production/vertical-slice/REPORT.md"
     priority: must-have
-    status: backlog
-    owner: ""
+    status: done
+    owner: "creative-director + producer (user decided the verdict)"
     estimate_days: 0.5
-    blocker: "s5-03, s5-04"
-    completed: ""
+    blocker: ""
+    completed: "2026-08-24"
+    # ★★ VERDICT: PIVOT (user's call, 2026-08-24). Suite verified 984/984 at the verdict.
+    # Landed WITHOUT s5-03/s5-04, deliberately: the simulation evidence is sufficient for
+    # a PIVOT on §10's own clause ("swing-back absent/muted -> revisit economy tuning",
+    # CD amendment A routes it to PIVOT and never to KILL), and the human sessions would
+    # otherwise judge a build whose central failure is already known and already scheduled
+    # for repair. Waiting a FOURTH sprint for them was the alternative.
+    # Docs: production/vertical-slice/REPORT.md + PIVOT-NOTE.md (required by scope §10)
+    #       production/gate-checks/gate-pre-production-production-2026-08-24.md
+    # ⛔ GATE RE-RUN = FAIL (upgraded from CONCERNS 2026-07-28). Not a regression in the
+    #   project — a CONCERNS on MISSING evidence became a FAIL on NEGATIVE evidence.
+    #   Artifacts 12/13 (only the human playtest is absent); 18/18 ADRs Accepted; tests green.
+    #   Triggered by the gate's own hard rule: slice built + a VS validation item NO -> FAIL.
+    #   The NO is "no critical fun-blocker bugs" — the AI has no path to victory.
+    # ★ stage.txt UNCHANGED (Pre-Production). A PIVOT does not advance the gate.
+    # ★ ROOT CAUSE (one sentence): the economy is unbounded, so building always outscores
+    #   fighting, so nobody ever marches on the objective, so no game is ever won.
+    # ★ REPLACEMENT FIRST PIVOT LEVER: bound the economy (Credit sink/cap). scope §7.1's
+    #   designated first lever ("add build-outpost") is ALREADY SPENT — outposts shipped in
+    #   Sprint 3 and the economy they feed is the thing that broke.
+    # ★ REGRESSION GATE for the follow-up work: ./redot --headless tools/SimulateMatches.tscn
+    #   Pass = games resolve on PLAY (HQ kill), not seat; both seats win; the
+    #   material-advantaged side wins more often than not; non-zero HQ damage exists at all.
+    # ⇒ s5-03 + s5-04 are STILL OWED and now sequenced AFTER the economy fix.
 
   # --- Should Have ---
   - id: "s5-06"
