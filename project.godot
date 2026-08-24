@@ -9,8 +9,17 @@ config_version=5
 
 [application]
 
+; Stamped in the main menu's footer — the spec keeps it there specifically so a
+; playtest bug report can name the build it came from.
+config/version="0.1.0-vslice"
+
 config/name="OVERCLOCK"
-run/main_scene="res://scenes/vertical_slice.tscn"
+run/main_scene="res://scenes/main_menu.tscn"
+; ★ 2026-08-24: boot destination is the MAIN MENU, per design/ux/main-menu.md
+; ("always the boot destination and the return target from pause -> Quit to Main
+; Menu"). The slice is now reached through New Skirmish rather than being the
+; application root. Tools that want the board directly load
+; res://scenes/vertical_slice.tscn themselves (tools/CaptureSlice.tscn does).
 config/features=PackedStringArray("4.6", "Forward Plus")
 
 [display]

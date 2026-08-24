@@ -209,14 +209,30 @@ Tier: **Standard** (WCAG 2.1 AA + CVAA).
 
 ## Acceptance Criteria
 
-- [ ] Main menu appears within [X]ms of app launch (target set at build time).
-- [ ] "New Skirmish" starts a fresh VS match and loads the board + HUD.
-- [ ] "Settings" opens the settings screen and returns to the menu on back.
-- [ ] "Quit" shows a confirm prompt; confirming exits, cancelling returns to the menu.
-- [ ] Keyboard/gamepad navigation reaches New Skirmish → Settings → Quit in order, each with a
-      focus indicator distinct from mouse-hover.
-- [ ] No Campaign/Continue entry appears in the VS build.
-- [ ] With reduced-motion enabled, the menu presents instantly with no lost information.
+> ✅ **Implemented 2026-08-24 (S6-22).** `scenes/main_menu.tscn` +
+> `src/ui/main_menu/main_menu.gd`; it is now the project's `run/main_scene`. Covered by
+> `tests/integration/main-menu/main_menu_test.gd` (10 tests). Screenshots in
+> `production/qa/evidence/main-menu/`.
+
+- [x] Main menu appears within [X]ms of app launch — it is the boot scene; no measured target set.
+- [x] "New Skirmish" starts a fresh VS match and loads the board + HUD.
+- [ ] ⛔ **"Settings" opens the settings screen and returns to the menu on back** — the settings
+      screen has no spec and does not exist (OQ-3). The entry is **present and inert**, with a
+      tooltip saying so, rather than omitted (it is a specified component here) or wired to nothing
+      (which would open a broken screen). **This AC cannot pass until the Settings screen is
+      authored** — see `production/post-gate-backlog.md` item 6, which also parks the control-binding
+      UI there.
+- [x] "Quit" shows a confirm prompt; confirming exits, cancelling returns to the menu — and returns
+      focus to the Quit entry it came from, not the top of the menu.
+- [x] Keyboard/gamepad navigation reaches New Skirmish → Settings → Quit in order, each with a
+      focus indicator distinct from mouse-hover. *(Settings is skipped by traversal while inert —
+      `FOCUS_NONE` — which is the Standard Button pattern's stated treatment.)*
+- [x] No Campaign/Continue entry appears in the VS build.
+- [ ] ⚠ **With reduced-motion enabled, the menu presents instantly with no lost information** —
+      trivially true today because **no enter/exit flourish was built**: the spec calls the
+      title/menu fade decorative and Snap-Never-Tween makes the menu interactive instantly, so the
+      simplest correct implementation has nothing to strip. Re-open this AC if a flourish is ever
+      added, and pair it with a real reduced-motion setting (there is no settings store yet).
 
 ---
 

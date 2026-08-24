@@ -1,0 +1,35 @@
+## capture_menu.gd — screenshots the real main menu (default and quit-confirm).
+## Usage: `./redot tools/CaptureMenu.tscn` (needs a display)
+extends Node
+
+const OUT: String = "res://production/qa/evidence/main-menu"
+const VIEW: Vector2i = Vector2i(1600, 900)
+
+
+func _ready() -> void:
+	get_window().size = VIEW
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
+	_run()
+
+
+func _run() -> void:
+	var menu: Control = load("res://scenes/main_menu.tscn").instantiate()
+	add_child(menu)
+	for i: int in 10:
+		await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	_shot("01-menu-default")
+
+	menu.open_quit_confirm()
+	for i: int in 6:
+		await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	_shot("02-quit-confirm")
+	print("done")
+	get_tree().quit()
+
+
+func _shot(name: String) -> void:
+	get_viewport().get_texture().get_image().save_png(
+		ProjectSettings.globalize_path("%s/%s.png" % [OUT, name]))
+	print("  wrote ", name)
