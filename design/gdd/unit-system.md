@@ -18,6 +18,32 @@
 > **Implements Pillar**: Pillar 3 (Readable Board — silhouette-first, roles read at a glance); Pillar 2 (Tempo Is the Skill — unit roles create tactical depth)
 > **Priority / Layer**: Vertical Slice / Core (system #4)
 
+
+> ## ⚠️ SCALE NOTE — Credit figures below are pre-rescale (added 2026-08-24, S6-09)
+>
+> Cross-review **W-4** (APOQ-SCALE-2). Every Credit figure in this document was written before
+> S6-02 multiplied the Credit scale by **100**, so the arithmetic below reads wrong even though
+> **every conclusion it reaches is unchanged** — the rescale was proportional, so all the
+> comparisons, ratios and "out-values the Trooper" arguments still hold exactly.
+>
+> Multiply any Credit figure below by 100. The live roster:
+>
+> | Unit | `produce_cost` below | live | `upkeep` (new in S6-02) |
+> |---|---:|---:|---:|
+> | Scout | 2 | **200** | 100 |
+> | Trooper | 4 | **400** | 200 |
+> | Sniper | 5 | **500** | 200 |
+> | Heavy | 7 | **700** | 300 |
+>
+> ★ The prose was left as written rather than rescaled in place. Rewriting the numbers would
+> silently restate arguments the user approved at the old scale, and a proportional rescale is
+> exactly the class of change where an in-place edit *looks* safe and is not — S6-02 proved that
+> twice, on `CREDIT_TO_AP_RATE` and `UPKEEP_DIVISOR`, both of which broke because someone assumed
+> proportionality carried. **`data/units/*.tres` is the authority for any live number.**
+>
+> ★ `upkeep` has no pre-rescale counterpart — it did not exist. Nothing below accounts for the
+> recurring cost of fielding a unit, which is now a first-class part of what a unit is worth.
+
 ## Overview
 
 Unit System defines the game's mobile combat pieces: the **data-driven templates** (each unit

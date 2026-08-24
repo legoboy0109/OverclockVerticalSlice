@@ -155,6 +155,36 @@
 >   must be made distinct from the baseline vulnerability rather than identical to it.
 > - `/design-review` + `/propagate-design-change` owed once the corpus settles.
 
+---
+
+# ⛔ EVERYTHING BELOW THIS LINE PREDATES THE S6 ECONOMY REWORK
+
+The revision banner above is the **current** design. The body that follows is the original AP &
+Credits Economy design, retained for the rationale, spend contracts, edge cases and acceptance
+criteria the rework did not replace — but it was written against the outpost-keyed income formula
+and the old Credit scale, and it has not been rewritten.
+
+**Read it through these corrections (S6-09, 2026-08-24, cross-review W-4/W-5):**
+
+| Below you will read | Status |
+|---|---|
+| `completed_outpost_count(player)`, the `n` term, `OUTPOST_BONUS_TIER1/2`, `TIER_THRESHOLD`, `ECONOMY_TECH_INCOME_BONUS`, `economy_outpost_payback` | ⛔ **DELETED, not renamed.** Income is research-keyed: `base_income + econ_tier_bonus × tier`, `tier` capped at `max_economy_tier` (S6-01) |
+| **Economy Outpost** | Renamed to **Factory**, which grants **no income** — it is a `GROUND_VEHICLE` producer. Nothing that reads a structure count feeds income any more |
+| **Production Outpost** | **Barracks** (S6-03) |
+| Any **Credit** figure (`build_cost 4`, refunds, income examples) | **×100** (S6-02) |
+| Gross income as the whole story | Incomplete — **upkeep** is now subtracted per turn (`unit-upkeep.md`), and `net = gross − upkeep` is the figure that matters |
+
+★ **Why the deleted formula is kept rather than cut.** `production/vertical-slice/REPORT.md`
+returned **PIVOT** because Credits climbed without bound and economy actions always outscored
+manoeuvring. The formula below is the mechanism that caused it. Deleting the record would lose the
+one worked example of the failure the whole S6 rework exists to prevent — it is preserved as
+evidence, **not as instructions.**
+
+The AP half of this document (flat per-turn AP, the carry cap, spend contracts, both-or-neither
+dual-cost) is **unaffected** and remains current.
+
+---
+
 ## Overview
 
 The economy runs on **two resources**, each owning a distinct decision axis:

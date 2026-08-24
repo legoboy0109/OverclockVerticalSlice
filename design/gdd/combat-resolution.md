@@ -292,8 +292,8 @@ Base-&-Production-owned value below this rate, its reward for immobility. Counte
 - **If the attacker cannot afford `attack_cost`**: the attack is not offered and `attack()` rejects it
   — no AP spent, no state change (AP & Credits Economy `ap_can_afford` gate + `apply_action` atomicity).
 - **If the target is an enemy structure (HQ/outpost)**: damage applies via the same formula (with
-  structure cover-immunity, Rule 6). **Most structures never counter** — HQ, Economy Outpost, and
-  Production Outpost all ship `can_counterattack = false`. The **Defensive Structure is the exception**:
+  structure cover-immunity, Rule 6). **Most structures never counter** — HQ, Factory, and
+  Barracks all ship `can_counterattack = false`. The **Defensive Structure is the exception**:
   it has `can_counterattack = true` (the first VS entity to do so) and *does* retaliate when attacked
   while the attacker is a legal target under its own DIRECT range/profile (Rule 7) — even though, like
   every structure, it can never move. If an HQ reaches 0 hp, the win-check fires `GameOver` and no
@@ -341,7 +341,7 @@ overload for its after-move attack preview — see Public interface cross-system
 its Dependencies when authored.
 
 **Base & Production (#7, Designed 2026-07-21):**
-- Owns structure entities (HQ / Economy Outpost / Production Outpost / Defensive Structure), their `hp`
+- Owns structure entities (HQ / Factory / Barracks / Defensive Structure), their `hp`
   and `defense` (HQ 2, Defensive Structure 1 — populated into Combat's shared, defender-agnostic
   `defense` field), and the **Defensive Structure's** `attack`/`attack_range`/`can_counterattack` +
   `DEFENSIVE_ATTACK_COST`. Combat targets and damages structures and **accepts the Defensive Structure as
@@ -662,5 +662,5 @@ impossible; the Turn Manager owns the reserved "non-active player wins" rule for
 | Does **line-of-fire blocking** make Impassable / Procedural-Center bands too strong as sightline walls? | game-designer / Grid / Combat | Watch in playtest — Grid's Impassable now doubles as a line-of-fire blocker for DIRECT fire; `PROC_DENSITY`/`PROC_FEATURE_MIX` may need re-tuning. (Grid and Unit raise the same flag.) |
 | Is flat **`attack_cost = 2`** right, or is any unit's attack mispriced at a flat rate? | game-designer / economy-designer | Decided flat 2 (keeps legibility; Unit's per-AP audit assumes a constant 2-AP denominator). Revisit only if playtest shows a specific unit's attack is over/under-valued at 2. **★ Raised again 2026-08-21 and DEFERRED, decision unchanged** — the trigger above had not fired (S5-04 has not run), and the prompt was a rendering side-effect rather than playtest evidence. A candidate spread (Scout 1 / Trooper 2 / Sniper 2 / Heavy 3, roster mean held at 2) and the full list of what would need re-checking are recorded in `production/post-gate-backlog.md` §1. |
 | When **defense / counter / AREA units** are eventually added, do the infrastructure rules hold? | Unit (#4) / Combat (#6) / Base & Production (#7) | **Partly realized:** Base & Production's **Defensive Structure** is the first entity to populate `defense` (1) and set `can_counterattack = true`, exercising Rule 7's counter path + the shared `defense` field. Re-validate the **defense-stacking constraint** for *units* (a unit's `defense + COVER_DR < ` lowest `effective_attack`; first live at a Defense-Tech unit on Cover = 2 mitigation) and the DIRECT-counter profile when it playtests. **Structures no longer participate** — cover-immunity (Rule 6) means the HQ's `defense 2` never stacks with Cover, resolving the earlier "keep structures off Cover" caveat by rule rather than by placement. AREA remains dormant (`DIRECT` everywhere in the VS). |
-| Does the **min-1 damage floor** worsen the endgame closeout-drag? | Base & Production (#7) | **CONFIRMED not a factor** — Base & Production (#7, Designed 2026-07-21) brakes the drag via production rate/quality (HQ Scouts-only cap 2 + expensive/destroyable Production Outpost), not the damage formula. `systems-designer` re-affirmed: the min-1 floor only binds for Scout-tier attackers into Cover and does not participate in the closeout mechanic. Combat only guarantees nothing is unkillable. |
+| Does the **min-1 damage floor** worsen the endgame closeout-drag? | Base & Production (#7) | **CONFIRMED not a factor** — Base & Production (#7, Designed 2026-07-21) brakes the drag via production rate/quality (HQ Scouts-only cap 2 + expensive/destroyable Barracks), not the damage formula. `systems-designer` re-affirmed: the min-1 floor only binds for Scout-tier attackers into Cover and does not participate in the closeout mechanic. Combat only guarantees nothing is unkillable. |
 | **Cross-system handoff to Unit System (#4, Approved):** add stat fields `targeting_mode` (enum, default DIRECT), `min_range` (int, default 1), `defense` (int, default 0), `can_counterattack` (bool, default false) to the unit schema + `entities.yaml`; `attack_range` becomes the max range for both profiles. | Unit (#4) / this session | **Action item.** Combat specs the resolution; Unit owns the fields. Partly actioned in Phase 5 (registry candidates); Unit System's GDD should be revised to document the four fields. Consider `/propagate-design-change`. |

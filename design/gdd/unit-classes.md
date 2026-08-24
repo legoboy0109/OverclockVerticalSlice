@@ -86,7 +86,7 @@ at least one unit or structure that can target `AIR`.** A faction with no answer
 per faction.
 
 **UC-6 — Air does not capture, hold, or build.** Aircraft cannot capture objectives, cannot be the
-unit that occupies a structure, and cannot be produced from a Production Outpost without an
+unit that occupies a structure, and cannot be produced from a Barracks without an
 air-capable producer. Their role is strike and reach.
 
 **UC-7 — ★ Class and the population cap: infantry only, with vehicles capped through their crew.**

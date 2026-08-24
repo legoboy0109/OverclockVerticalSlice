@@ -5,7 +5,7 @@
 > **Last Updated**: 2026-08-05 (AP↔Credits pivot: start-of-turn step 4 splits into **reset AP to a flat
 > value + capped carryover** and **add Credit income to the banked Credit pool**; end-of-turn no longer
 > discards AP (it carries into the next reset, capped) and Credits are never discarded. Both resets still
-> follow the build-timer advance, so a just-completed Economy Outpost counts toward Credit income this
+> follow the build-timer advance, so a just-completed structure counts toward Credit income this
 > turn. See ap-economy.md.)
 > **Prior**: 2026-07-21 (Base & Production reconciliation: Core Rule 3's Start-of-turn phase became an
 > explicit **canonical numbered sequence** — flags → start-of-turn effects (incl. build-timer advance)
@@ -56,7 +56,7 @@ always fair, always legible, and always exactly where they left it.
         Base & Production own the flag semantics; the turn manager owns when they clear.)*
      3. **Apply start-of-turn effects** — including **Base & Production's build-timer advance** (under-
         construction structures decrement; any reaching 0 transition to Completed) and Research's
-        research-timer advance. These run **before** step 4 so a just-completed Economy Outpost counts
+        research-timer advance. These run **before** step 4 so a just-completed structure counts
         toward Credit income *this* turn.
      4. **Reset the two resources** (both amounts owned by AP & Credits Economy):
         - **4a. Reset AP to flat + capped carryover** — set `current_ap := FLAT_AP_PER_TURN +
