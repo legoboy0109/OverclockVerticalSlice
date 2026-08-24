@@ -639,8 +639,36 @@ static func _consider_attack(lookahead: GameState, attacker: EntityState, target
 ## target, including a non-lethal HQ chip, because [param hp_removed] is never
 ## 0 (Combat's [code]MIN_DAMAGE=1[/code] floor on any legal, landed attack) and
 ## [method _ap_cost_opponent_paid_for] is never 0/undefined for any target kind.
+## Converts a Credit quantity into AP-equivalent terms (CR-3's single scale).
+## ★ Apply ONLY to genuinely Credit-denominated values. Terms that are already
+## AP-equivalent weights — [member AIConfig.hq_siege_value], the positional rates — must
+## never pass through here, or they are converted twice.
+static func credits_to_ap(credits: float) -> float:
+	return credits * AIBalance.ai.credit_to_ap_rate
+
+
+## AP-equivalent cost of a dual-cost economic action: the AP surcharge plus the Credit
+## main cost converted onto the same scale. ★ This is what an economic action's score must
+## be divided by — dividing by the raw Credit cost silently uses two different units.
+static func ap_equivalent_cost(credit_cost: int, ap_surcharge: int) -> float:
+	return float(ap_surcharge) + credits_to_ap(float(credit_cost))
+
+
+## The opponent's sunk cost in [param target], expressed in AP-equivalent terms.
+##
+## ★ The HQ branch returns [member AIConfig.hq_siege_value] — already an AP-equivalent
+## WEIGHT, not a Credit quantity — so it is returned unconverted. Everything else returns a
+## Credit `produce_cost`/`build_cost` and IS converted. Getting this split wrong in either
+## direction re-creates a PIVOT-class defect: convert the HQ too and sieging becomes 100×
+## less attractive than trading; skip the units and the reverse.
+static func _opponent_paid_ap_equivalent(target: EntityState) -> float:
+	if target is StructureState and (target as StructureState).is_hq():
+		return float(AIBalance.ai.hq_siege_value)
+	return credits_to_ap(float(_ap_cost_opponent_paid_for(target)))
+
+
 static func _combat_value(hp_removed: int, is_kill: bool, target: EntityState) -> float:
-	var ap_cost_opponent_paid: float = float(_ap_cost_opponent_paid_for(target))
+	var ap_cost_opponent_paid: float = _opponent_paid_ap_equivalent(target)
 	var target_max_hp: float = float(_max_hp_of(target))
 	var value: float = ap_cost_opponent_paid * (float(hp_removed) / target_max_hp)
 	if is_kill:
@@ -744,10 +772,25 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 		if not Credits.can_afford(lookahead, producer.owner, cost) \
 				or not AP.can_afford(lookahead, producer.owner, Balance.economy.produce_ap_cost):
 			continue
+		# ★ S6-05: mirror the gates apply_action enforces, so the driver never generates a
+		# candidate that will be rejected on commit (CR-4 -- the AI pays the same costs and
+		# obeys the same rules as the player, and a reject loop stalls its turn).
+		if lookahead.per_player[producer.owner].in_deficit:
+			continue
+		if not Population.can_field(lookahead, producer.owner, unit_type):
+			continue
 		for tile: Vector2i in deploy_tiles:
 			var multiplier: float = _reachability_multiplier(lookahead, producer.owner, tile, unit_type)
-			var value: float = _production_value(unit_type, multiplier)
-			var score: float = _action_score(value / float(cost), false)
+			# ★ S6-05: both sides on the AP-equivalent scale. Dividing a Credit-denominated
+			# value by a raw Credit cost happened to cancel, so produce scoring survived the
+			# rescale by luck rather than by design -- and it left produce incomparable with
+			# move/attack, which are AP-native. Now both convert explicitly.
+			var value: float = credits_to_ap(_production_value(unit_type, multiplier))
+			# ★ Denominator uses LIFETIME cost, not the purchase price -- otherwise the AI
+			# under-prices every unit and over-builds into the deficit lock.
+			var denom: float = float(Balance.economy.produce_ap_cost) \
+				+ credits_to_ap(lifetime_credit_cost(unit_type))
+			var score: float = _action_score(value / denom, false)
 			if _is_better(score, cost, producer.entity_id, best.score, best.ap_cost, best.entity_id):
 				var action := ProduceAction.new()
 				action.player = producer.owner
@@ -764,6 +807,17 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 ## pre-selected by [method _reachability_multiplier] — kept as a separate,
 ## directly-testable function so the worked example (Trooper 4 ×
 ## 1.1 = 4.4, AC-14) is checkable without re-deriving the band selection.
+## ★ S6-05: a unit's cost to its owner is its purchase price PLUS the upkeep it will drain
+## for the rest of the match (`unit-upkeep.md` UOQ-4). Valuing it at the purchase price
+## alone is what makes an AI over-build into deficit -- it sees a Heavy as 700 Credits when
+## it is really 700 + 300/turn for as long as it lives.
+##
+## Uses [member AIConfig.economy_horizon] as the assumed remaining lifetime, reusing the
+## same horizon the economy projection already uses rather than inventing a second one.
+static func lifetime_credit_cost(unit_type: UnitTypeDef) -> float:
+	return float(unit_type.produce_cost) + float(unit_type.upkeep) * float(AIBalance.ai.economy_horizon)
+
+
 static func _production_value(unit_type: UnitTypeDef, multiplier: float) -> float:
 	return float(unit_type.produce_cost) * multiplier
 
@@ -887,13 +941,23 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 		if not Credits.can_afford(lookahead, player, cost) \
 				or not AP.can_afford(lookahead, player, Balance.economy.build_ap_cost):
 			continue
+		# ★ S6-05: mirror validate_build's gates (see the produce path).
+		if lookahead.per_player[player].in_deficit:
+			continue
+		if not BaseProduction.can_build_more(lookahead, player, structure_type):
+			continue
 
 		var tiles: Array[Vector2i] = BaseProduction.legal_build_tiles(lookahead, player, structure_type)
 		if tiles.is_empty():
 			continue
 
+		# ★ S6-05: AP-equivalent denominator (see the produce path). _economy_value already
+		# returns 0 for a structure build since S6-01 -- no structure raises income -- so this
+		# scores 0 today. The conversion is here so that when research actions gain an
+		# economy_value it lands on the same scale as everything else.
 		var value: float = _economy_value(lookahead, player, structure_type)
-		var score: float = _action_score(value / float(cost), false)
+		var denom: float = ap_equivalent_cost(cost, Balance.economy.build_ap_cost)
+		var score: float = _action_score(value / denom, false)
 		var candidate_entity_id: int = _lowest_owned_entity_id(lookahead, player)
 		if _is_better(score, cost, candidate_entity_id, best.score, best.ap_cost, best.entity_id):
 			var action := BuildAction.new()

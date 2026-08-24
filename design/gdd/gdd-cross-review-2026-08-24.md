@@ -99,6 +99,36 @@ constant producing them moved. Both coupled invariants were re-checked: the leth
 **widened** (1.65 vs the old 1.77, against a floor of 3.5), and the Defense-Tech pass margin is
 untouched.
 
+> ### ⚠⚠ CORRECTION 2026-08-24 (S6-05 implementation) — B-5's DIRECTION was partly wrong
+>
+> This review stated: *"the AI would value building and killing roughly one hundred times a
+> march."* **Reading the actual scoring code during S6-05 shows that is right about killing
+> and wrong about building.** The real picture, per verb:
+>
+> | Verb | Value term | Denominator | Net effect of the ×100 rescale |
+> |---|---|---|---|
+> | **Attack** | target's `produce_cost` — Credits, ×100 | `attack_cost` — **AP, unchanged** | ★ **score inflated ~100×** |
+> | **Produce** | `produce_cost` × multiplier — ×100 | raw Credit `produce_cost` — ×100 | ★ **cancels — unchanged** |
+> | **Build** | `_economy_value` — **0 since S6-01** | Credit `build_cost` | ★ **score 0** |
+> | **Move** | positional rate 0.16 — AP-native | AP | unchanged |
+>
+> So building was never inflated (it is zero), producing survived **by luck** — the ×100
+> cancelled top and bottom — and only **combat** was distorted. The conclusion that the batch
+> would have been unmeasurable stands, and the fix is the same; the mechanism is not what was
+> written.
+>
+> ★★ **And a hazard this review missed entirely:** `hq_siege_value` is **12**, an
+> AP-equivalent *weight* that did not rescale, while a unit's value became its ×100 Credit
+> cost. A Trooper kill would score **~30× an HQ strike** — precisely the "armies collide in
+> the middle and trade indefinitely, nobody sieges" behaviour the PIVOT verdict diagnosed,
+> now amplified. Corrected by converting only the **Credit** branches of the opponent-paid
+> lookup and leaving the HQ weight alone.
+>
+> ★ **The meta-lesson:** the direction of a unit-mismatch bug is not guessable from the fact
+> that a mismatch exists. It depends on which side of each ratio scaled — and here that
+> differed per verb inside one function family. **Read the arithmetic, do not reason about it
+> abstractly.**
+
 > ### ★ The general lesson, recorded because it has now happened twice
 >
 > **A "purely proportional" rescale is not safe for two classes of constant:**

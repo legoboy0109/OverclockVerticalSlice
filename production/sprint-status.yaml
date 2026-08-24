@@ -175,11 +175,39 @@ stories:
     name: "★★ AI re-anchor — CREDIT_TO_AP_RATE 0.01, economy_value on research tiers, lifetime cost"
     file: "design/gdd/ai-opponent.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: "ai-programmer"
     estimate_days: 1.5
-    blocker: "s6-01, s6-02, s6-03, s6-04"
-    completed: ""
+    blocker: ""
+    completed: "2026-08-24"
+    # ✅ DONE. Suite 1039/1039, 0 errors/failures/orphans; slice boots clean (exit 0).
+    # ★★ CREDIT_TO_AP_RATE WAS NEVER IMPLEMENTED -- it existed only in doc comments, and the
+    #   code divided value by the RAW CREDIT cost (equivalent to rate 1.0). Implemented for
+    #   real: credits_to_ap() + ap_equivalent_cost(), applied at every Credit-denominated
+    #   value AND every economic denominator.
+    # ★★ MY CROSS-REVIEW GOT B-5's DIRECTION PARTLY WRONG, corrected in the report:
+    #   ATTACK inflated ~100x (Credit value / AP cost). PRODUCE cancelled (both sides x100)
+    #   and survived by luck. BUILD is 0 (economy_value returns 0 since S6-01). MOVE
+    #   unchanged. Only combat was distorted -- building never was.
+    # ★★ AND A HAZARD THE REVIEW MISSED: hq_siege_value (12) is an AP-equivalent WEIGHT that
+    #   did not rescale, while unit values became x100 Credit costs -- a Trooper kill would
+    #   have scored ~30x an HQ strike, i.e. the exact "armies trade forever, nobody sieges"
+    #   behaviour, amplified. Fixed by converting ONLY the Credit branches of the
+    #   opponent-paid lookup (_opponent_paid_ap_equivalent) and leaving the HQ weight alone.
+    # ★ Verified from shipped constants: economy tier 1.60 < LETHAL_FLOOR_BONUS 3.5 ✓;
+    #   kill 3.00; HQ chip 0.75; produce 0.26; march 0.16 > PASS_THRESHOLD 0.15 ✓.
+    #   All in ONE order of magnitude, which is the whole point of the rate.
+    # ★ LIFETIME COST (UOQ-4): produce is now divided by purchase + upkeep x horizon, not
+    #   the sticker price. Changed a documented AC from 1.10 to ~0.26 -- a REAL behaviour
+    #   change, recorded in the test with its rationale: producing now correctly loses to a
+    #   good attack, which it previously did not, while still clearing the pass bar.
+    # ★ AI now mirrors validate_build/validate_produce's new gates (deficit lock, population
+    #   cap, structure maximum) so the driver never generates a candidate that will be
+    #   rejected on commit -- a reject loop stalls its turn.
+    # ⚠ PREDICTION TO CHECK IN S6-06: a kill (3.00) still outscores an HQ chip (0.75) 4:1,
+    #   so the AI sieges only when no unit is available to kill. That may be correct play,
+    #   or it may be the mid-map trading pattern surviving. THE BATCH DECIDES.
+    # ⚠ NOT in scope: OQ-15 (the AI cannot play six different armies on one weight set).
     # ★★ THE HIGHEST-RISK STORY IN THE SPRINT. It touches the most carefully-reasoned
     #   document in the corpus and its invariants must be RECOMPUTED, not assumed.
     # 1. CREDIT_TO_AP_RATE 1.0 -> 0.01 (cross-review B-5). Non-negotiable; see header.

@@ -112,7 +112,7 @@ func _make_heavy_type() -> UnitTypeDef:
 	type.attack_range = 1
 	type.move_cost = 3
 	type.soft_move_cap = 3
-	type.produce_cost = 7
+	type.produce_cost = 700  # ★ S6-05: ×100 Credit rescale (synthetic fixture)
 	return type
 
 
@@ -127,7 +127,7 @@ func _make_scout_type() -> UnitTypeDef:
 	type.attack_range = 1
 	type.move_cost = 1
 	type.soft_move_cap = 3
-	type.produce_cost = 2
+	type.produce_cost = 200  # ★ S6-05: ×100 Credit rescale (synthetic fixture)
 	return type
 
 
@@ -327,7 +327,7 @@ func _make_trooper_reach_type() -> UnitTypeDef:
 	type.attack_range = 1
 	type.move_cost = 2
 	type.soft_move_cap = 8
-	type.produce_cost = 4
+	type.produce_cost = 400  # ★ S6-05: ×100 Credit rescale (synthetic fixture)
 	return type
 
 
@@ -665,7 +665,7 @@ func test_positional_scoring_never_competes_on_a_tile_that_enables_a_combo_attac
 	attacker_type.attack_range = 1
 	attacker_type.move_cost = 2
 	attacker_type.soft_move_cap = 8
-	attacker_type.produce_cost = 4
+	attacker_type.produce_cost = 400  # ★ S6-05: ×100 Credit rescale (synthetic fixture)
 
 	var state := _make_state()
 	var attacker := _make_unit(1, 0, attacker_type, Vector2i(0, 0))

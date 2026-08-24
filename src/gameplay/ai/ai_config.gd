@@ -28,6 +28,25 @@ extends Resource
 
 ## Global hp-to-AP exchange rate anchoring `combat_value` and
 ## `research_value`'s Attack/Defense Tech term.
+## ★★ Converts one Credit into AP-equivalent terms, so CR-3's single scoring scale can
+## compare an economic action against a tactical one (`ai-opponent.md`).
+##
+## [b]0.01, and the value is derived rather than tuned.[/b] The 2026-08-24 rescale
+## multiplied every Credit quantity by 100 while deliberately leaving AP *action* costs
+## alone, so 1 Credit is worth 1/100th of what it was against an unchanged AP cost.
+##
+## ★ [b]Left at 1.0 this is not a rounding error, it is the PIVOT defect returning.[/b]
+## Credit-denominated VALUE terms (a target's `produce_cost`, a unit's `produce_cost`)
+## scale ×100 while AP-native terms (`positional_value_per_tile_closed` 0.16) do not — so
+## a kill would outscore a march by ~100×, the AI would only ever trade, and the
+## regression batch would report that the economy fix had failed when it had not.
+##
+## ★ [b]Do NOT apply it to a term that is already AP-equivalent[/b] — notably
+## [member hq_siege_value], which is a weight rather than a Credit quantity. Converting it
+## twice would restore exactly the "armies trade in the middle and never siege" behaviour
+## the verdict diagnosed.
+@export var credit_to_ap_rate: float = 0.01
+
 @export var hp_per_ap: float = 1.5
 
 ## Fraction of a kill victim's sunk AP credited as bonus `combat_value`.
