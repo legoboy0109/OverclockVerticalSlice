@@ -381,6 +381,24 @@ default**; the fold-ins land with the asymmetry prototype. *(Reciprocity closed 
 and the damage formula; Base & Production (#7, Approved) owns `produce_cost` *spending flow* and
 deploy-tile selection (though the cost *values* live here).
 
+### ★ Reciprocal downstream — the wave-2 systems (added 2026-08-24, S6-09)
+
+Cross-review **W-1**: All 7 systems below declare a dependency on this document, and this
+document listed none of them. Reciprocity was **0/11 across the corpus** — every new GDD pointed
+up, no old GDD pointed back, so reading only this file gave no hint that changing it would break
+them. Restored mechanically; the relationship nature is copied from each new GDD's own
+Dependencies table, which remains the authority.
+
+| Downstream system | Nature |
+|---|---|
+| **Damage Types (#18)** | Hard |
+| **Population Cap (#16)** | Hard |
+| **Promotion & Veterancy (#21)** | Hard |
+| **Transport & Pilots (#20)** | Hard |
+| **Unit Abilities (#19)** | Hard |
+| **Unit Classes (#17)** | Hard |
+| **Unit Upkeep (#15)** | Soft |
+
 ## Tuning Knobs
 
 | Knob | VS Range | Default | Affects | If too high | If too low |

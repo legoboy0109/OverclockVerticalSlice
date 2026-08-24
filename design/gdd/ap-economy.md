@@ -458,6 +458,19 @@ state (no refund on destruction), and `CANCEL_REFUND_RATE` (a **Credit** refund 
 **Faction Identity** — the optional faction income deltas now fold into `credit_income` (no-op under the
 VS Neutral/empty-delta default); the `BASE_INCOME_FLOOR` guard applies to Credit income.
 
+### ★ Reciprocal downstream — the wave-2 systems (added 2026-08-24, S6-09)
+
+Cross-review **W-1**: All 2 systems below declare a dependency on this document, and this
+document listed none of them. Reciprocity was **0/11 across the corpus** — every new GDD pointed
+up, no old GDD pointed back, so reading only this file gave no hint that changing it would break
+them. Restored mechanically; the relationship nature is copied from each new GDD's own
+Dependencies table, which remains the authority.
+
+| Downstream system | Nature |
+|---|---|
+| **Unit Abilities (#19)** | Hard |
+| **Unit Upkeep (#15)** | Soft |
+
 ## Tuning Knobs
 
 | Knob | VS Range | Default | Affects | If too high | If too low |

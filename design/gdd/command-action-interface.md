@@ -250,6 +250,20 @@ Both contracts' query signature + perf budget remain owed to `/architecture-deci
 
 **Bidirectional-consistency check (verified 2026-07-22, re-confirmed by `/consistency-check` full scan same day; interface renamed AP Economy → AP & Credits Economy 2026-08-05 pivot, no reciprocity break):** Movement, Combat, Base & Production, AP & Credits Economy, and Game State & Turn Manager each already list Command & Action Interface as a downstream Hard dependent in their own Dependencies sections — reciprocity is clean for the *existing* interfaces, and the two reciprocal contracts above are now landed, not outstanding.
 
+### ★ Reciprocal downstream — the wave-2 systems (added 2026-08-24, S6-09)
+
+Cross-review **W-1**: All 3 systems below declare a dependency on this document, and this
+document listed none of them. Reciprocity was **0/11 across the corpus** — every new GDD pointed
+up, no old GDD pointed back, so reading only this file gave no hint that changing it would break
+them. Restored mechanically; the relationship nature is copied from each new GDD's own
+Dependencies table, which remains the authority.
+
+| Downstream system | Nature |
+|---|---|
+| **Damage Types (#18)** | Hard |
+| **Unit Abilities (#19)** | Hard |
+| **Unit Upkeep (#15)** | Soft |
+
 ## Tuning Knobs
 
 > **All knobs here are UX-feel values.** Per the Pass-Through Invariant, the Command & Action Interface owns **no balance constant** — cost/damage/income knobs live in Movement, Combat, Base & Production, and AP & Credits Economy. Changing any knob below alters *feel and legibility*, never game balance.

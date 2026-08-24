@@ -596,6 +596,20 @@ reciprocal edges are logged as handoffs below and should be wired when those GDD
 **Provisional (undesigned dependents):** Command & Action Interface (#9), Game HUD (#10), AI Opponent
 (#11), Faction Identity (#12) — each lists Research / Tech under its Dependencies when authored.
 
+### ★ Reciprocal downstream — the wave-2 systems (added 2026-08-24, S6-09)
+
+Cross-review **W-1**: All 3 systems below declare a dependency on this document, and this
+document listed none of them. Reciprocity was **0/11 across the corpus** — every new GDD pointed
+up, no old GDD pointed back, so reading only this file gave no hint that changing it would break
+them. Restored mechanically; the relationship nature is copied from each new GDD's own
+Dependencies table, which remains the authority.
+
+| Downstream system | Nature |
+|---|---|
+| **Promotion & Veterancy (#21)** | Hard |
+| **Population Cap (#16)** | Soft |
+| **Unit Upkeep (#15)** | Soft |
+
 ## Tuning Knobs
 
 | Knob | VS Range | Default | Affects | If too high | If too low |

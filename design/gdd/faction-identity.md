@@ -408,6 +408,21 @@ Mirrors `effective_attack`/`effective_defense` (`base + delta`, additive, floore
 
 **Bidirectional-consistency status (owed):** This GDD introduces additive contract obligations on 5 upstream systems (an `effective_X` fold-in + a floor each). Those 5 GDDs are all **Approved** and do **not** yet list Faction Identity (#12) as a downstream dependent (this system was authored last) — a reciprocity gap to close via `/propagate-design-change`. **Critically, because the VS ships Neutral (identity), none of those systems' shipped *numbers* change** — the fold-ins are no-ops until a non-Neutral faction carries a real delta, which is itself prototype-gated. So the handoffs are **owed-but-deferrable**: only the Game State faction-assignment plumbing is needed for a playable Neutral-vs-Neutral VS; the effective-value fold-ins and floors land alongside the asymmetry prototype, not before.
 
+### ★ Reciprocal downstream — the wave-2 systems (added 2026-08-24, S6-09)
+
+Cross-review **W-1**: All 4 systems below declare a dependency on this document, and this
+document listed none of them. Reciprocity was **0/11 across the corpus** — every new GDD pointed
+up, no old GDD pointed back, so reading only this file gave no hint that changing it would break
+them. Restored mechanically; the relationship nature is copied from each new GDD's own
+Dependencies table, which remains the authority.
+
+| Downstream system | Nature |
+|---|---|
+| **Population Cap (#16)** | Hard |
+| **Unit Abilities (#19)** | Hard |
+| **Unit Classes (#17)** | Hard |
+| **Unit Upkeep (#15)** | Soft |
+
 ## Tuning Knobs
 
 | Knob | Default (VS) | Safe range / guidance | What it affects / what breaks at extremes |

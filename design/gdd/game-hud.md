@@ -245,6 +245,22 @@ The HUD **owns**: the AP counter, the Credits counter, the AP-carryover indicato
 
 **Bidirectional-consistency check (verified 2026-07-22; interface names re-pointed at the 2026-08-05 pivot):** Game State & Turn Manager, AP & Credits Economy, Grid & Terrain, Unit System, Combat Resolution, Base & Production, and Research / Tech each already list Game HUD as a downstream Hard dependent — reciprocity is clean, no fixes owed. (AP & Credits Economy's own GDD lists Command & Action Interface / Game HUD as the presentation consumers of `current_ap`/`current_credits`/both incomes/both afford queries — see `ap-economy.md`.)
 
+### ★ Reciprocal downstream — the wave-2 systems (added 2026-08-24, S6-09)
+
+Cross-review **W-1**: All 5 systems below declare a dependency on this document, and this
+document listed none of them. Reciprocity was **0/11 across the corpus** — every new GDD pointed
+up, no old GDD pointed back, so reading only this file gave no hint that changing it would break
+them. Restored mechanically; the relationship nature is copied from each new GDD's own
+Dependencies table, which remains the authority.
+
+| Downstream system | Nature |
+|---|---|
+| **Damage Types (#18)** | Hard |
+| **Population Cap (#16)** | Hard |
+| **Promotion & Veterancy (#21)** | Hard |
+| **Unit Abilities (#19)** | Hard |
+| **Unit Upkeep (#15)** | Soft |
+
 ## Tuning Knobs
 
 > **All knobs are UX-feel values.** Per the Pass-Through Invariant the HUD owns no balance constant; these affect legibility and feel only.

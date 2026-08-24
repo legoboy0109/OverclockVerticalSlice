@@ -466,6 +466,24 @@ loop continues while max(action_score(candidate) for candidate in legal_affordab
 
 **Bidirectional-consistency check (verified 2026-07-22):** this GDD requires no new query or interface additions from any dependency — it is a pure consumer of queries that already exist. Each of the 7 Hard-dependency GDDs has been updated in kind to list AI Opponent (#11) as a downstream dependent in their own Dependencies sections, closing the reciprocity gap the same day this GDD was authored.
 
+### ★ Reciprocal downstream — the wave-2 systems (added 2026-08-24, S6-09)
+
+Cross-review **W-1**: All 7 systems below declare a dependency on this document, and this
+document listed none of them. Reciprocity was **0/11 across the corpus** — every new GDD pointed
+up, no old GDD pointed back, so reading only this file gave no hint that changing it would break
+them. Restored mechanically; the relationship nature is copied from each new GDD's own
+Dependencies table, which remains the authority.
+
+| Downstream system | Nature |
+|---|---|
+| **Damage Types (#18)** | Hard |
+| **Population Cap (#16)** | Hard |
+| **Promotion & Veterancy (#21)** | Hard |
+| **Transport & Pilots (#20)** | Hard |
+| **Unit Abilities (#19)** | Hard |
+| **Unit Classes (#17)** | Hard |
+| **Unit Upkeep (#15)** | Soft |
+
 ## Tuning Knobs
 
 | Knob | Default | Safe range | What it affects / what breaks at extremes |
