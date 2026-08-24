@@ -14,7 +14,7 @@
 ## Overview
 
 The **Independents** are poor, few, and very good at their jobs. The smallest economy in the game,
-the tightest population ceiling, the worst vehicles — and an infantry roster made **entirely of
+the tightest population ceiling, the worst vehicles, a single scavenged aircraft — and an infantry roster made **entirely of
 specialists**, each of which does something no line unit can.
 
 Their signature is the **Pirate**, who does not fight vehicles so much as *acquire* them: shoot the
@@ -113,25 +113,43 @@ a lower price — and that is the point: the Independents' *good* vehicles are t
 > Alliance Tank it loses: 18 hp and attack 5 against 22 and 7. ★ **Its real job is being the thing
 > you build while waiting to steal something better.**
 
-### Roster — Air: none
+### Roster — Air
 
-★ **The Independents field no aircraft and cannot build an Airfield.** `max_airfields = 0`.
+★ **One aircraft, added 2026-08-24 (user decision, resolving IOQ-4).** The Independents were
+originally authored with no air at all; every other faction fields it, and a permanent class-level
+hole is a different thing from a weakness.
 
-> ⚠ **Open against the universal-vehicle rule (2026-08-24):** the user has stated that *every*
-> faction has piloted vehicles and the infantry cap. The Independents satisfy both — their ground
-> vehicles are crewed and their cap is the tightest in the game (7). **Fielding no *air* is a
-> separate choice** and is currently the only class-level hole in the corpus. Confirm it is intended
-> to survive the universal rule, or grant them an aircraft (IOQ-4).
+| Unit | Role | `cost` | `hp` | `atk` | `rng` | `upkeep` | `capacity` | Notes |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| ★ **Buzzard** | Scavenged lifter-gunship | **1,300** | ★ **6** | 3 | 1 | **400** | ★ **2** | `requires_pilot` ✔ · accepts `{INFANTRY}` · carries **`PARADROP`** · `can_target {INFANTRY, GROUND_VEHICLE}` |
 
-> A legitimate identity statement under UC-9 (*"a faction may field none of a class"*), and the
-> strongest structural statement in the roster: rebels do not have an air force.
+> ### ★★ The Buzzard exists to deliver the Pirate
 >
-> **UC-5 compliance** — every faction must be able to answer air — is met by the **Missile Team**, a
-> man-portable specialist that hits `{AIR, GROUND_VEHICLE}` with EMF. It cannot touch infantry, so
-> it is a true specialist rather than a general-purpose gun.
+> It is not a gunship with a cargo bay bolted on — **it is the faction's signature mechanic given
+> reach.** `PARADROP` places a carried unit on any empty tile within 3, ignoring terrain and
+> pathing. Loading a **Pirate** and dropping it beside an unattended enemy vehicle converts the
+> Independents' whole design from *"wait for the opponent to be careless near me"* into *"go and
+> find the carelessness."*
 >
-> ★ **And they cannot steal their way to an air force either**, because `CAPTURE_VEHICLE` is
-> ground-only. This hole is permanent, and the faction is designed around living with it.
+> ★ **That is the right kind of aircraft for this faction** — it does not fix any of their
+> weaknesses (still poor, still few, still bad at straight fights) and it does not make them
+> generally stronger. It makes the thing they are *already* built to do reachable.
+>
+> **It is priced hard, three times over:**
+> - **6 hp — the most fragile aircraft in the game.** An Alliance Fighter (attack 6) or a
+>   Protectorate Talon (attack 8) kills it outright in one hit.
+> - **It costs 2 of only 7 cap slots to use** — one for its own pilot, one for the Pirate inside
+>   (carried units count, TP-1). A Buzzard mission is a fifth of the faction's army capacity.
+> - **If it is shot down loaded, the Pirate dies with it** (TP-4). A failed raid costs 1,300 + 500
+>   Credits and two slots.
+>
+> **The Airfield is a real commitment for them:** 1,200 Credits and 200/turn upkeep against an income
+> ceiling of **1,600** — 12.5% of their whole economy just to hold the building. ★ An Independents
+> player who builds one has made a strategic bet on raiding, and given up something else to do it.
+>
+> **UC-5 is still met by the Missile Team**, not the Buzzard — the Buzzard cannot target air at all.
+> Their anti-air remains a man-portable specialist, which keeps the "we don't have an air force, we
+> have *a plane*" reading intact.
 
 ### Structures and economy
 
@@ -146,7 +164,7 @@ a lower price — and that is the point: the Independents' *good* vehicles are t
 | Barracks `build_cost` | ★ **900** | 600 | ★ +50% |
 | **Infantry ceiling** | ★ **7** | 10 | −30% |
 | `max_factories` | 1 | 2 | −1 |
-| `max_airfields` | ★ **0** | 1 | ★ none |
+| `max_airfields` | ★ **1** | 1 | — *(was 0; corrected 2026-08-24)* |
 | `max_defensive` | 3 | 3 | — |
 
 **★ All three income levers are used at once, which is unique in the corpus:** the **intercept**
@@ -169,7 +187,7 @@ No new formulas. `FactionDef` deltas:
 tech_available[ECONOMY_TIER_III] = false        ★ the binary lever
 Δ_base_cap         = −1 · Δ_max_barracks = −1
 Δ_barracks_cost    = +300
-Δ_max_factories    = −1 · Δ_max_airfields = −1  (to 0)
+Δ_max_factories    = −1 · Δ_max_airfields =  0   ★ (baseline 1 — corrected 2026-08-24)
 Δ_upkeep_rate      = 0                           (low upkeep authored per-unit)
 ```
 
@@ -189,9 +207,9 @@ upkeep), leaving **1,000/turn** for an army.*
 | Line unit quality | 3 atk / 6 hp | 3 atk / 5 hp | Alliance, slightly |
 | Longest range | Artillery 5 | Marksman 4 (Artillery has 5) | **Alliance** |
 | Own vehicle quality | Tank 22 hp / 7 atk | ★ Scrap 18 / 5 | ★ **Alliance, decisively** |
-| Air | 3 aircraft | ★ **none** | ★ **Alliance, decisively** |
-| Anti-air | Fighter, Helicopter | Missile Team only | **Alliance** |
-| ★ **Can gain material without spending** | no | ★ **yes — theft** | ★ **Independents, uniquely** |
+| Air | 3 aircraft | ★ **1** (Buzzard — fragile, unarmed vs air) | ★ **Alliance, decisively** |
+| Anti-air | Fighter, Helicopter | Missile Team only (the Buzzard cannot hit air) | **Alliance** |
+| ★ **Can gain material without spending** | no | ★ **yes — theft, now with air delivery** | ★ **Independents, uniquely** |
 | Behavioural pressure on opponent | none | ★ high | **Independents** |
 | Board presence when broke | 0 | 0 | tie |
 
@@ -222,6 +240,9 @@ upkeep), leaving **1,000/turn** for an army.*
 - **Capturing an aircraft:** rejected — ground only.
 - **Independents facing an all-infantry army:** the Pirate has nothing to steal and is a mediocre 500-Credit soldier. ★ The faction's worst matchup, and it is a *composition* counter rather than a stat one.
 - **A stolen vehicle's upkeep:** paid by the new owner, at the vehicle's own value. ★ Stealing a Protectorate Lance Tank means inheriting **700/turn** against a 1,600 income — theft is not free, and a poor faction can be *bankrupted by its own prize*. Deliberate, and probably the best single guard on this faction.
+- **Buzzard shot down while carrying a Pirate:** both die (TP-4). ★ 1,800 Credits and two of seven cap slots lost in one hit — the most concentrated risk the faction can take.
+- **Paradropping a Pirate beside a crewed vehicle:** legal, but the Pirate must still shoot the crew out first and then board — the drop buys *position*, never the steal itself.
+- **Buzzard facing enemy air:** it has no anti-air capability and 6 hp. It must be escorted by ground-based Missile Teams or kept away from contested air entirely.
 - **Independents mirror:** two poor armies with no air and mutual theft. Likely slow; worth measuring.
 
 ## Dependencies
@@ -231,9 +252,9 @@ upkeep), leaving **1,000/turn** for an army.*
 | **Unit Upkeep** (#15) | Its low upkeep, and the stolen-vehicle upkeep guard | Sprint 6 |
 | **Population Cap** (#16) | Low cap, expensive Barracks, capture gating | Wave 1 |
 | **Research** (#8 rev) | ★ Tech denial on Economy Tier III | Wave 1 |
-| **Unit Abilities** (#19) | `CAPTURE_VEHICLE`, `DEMOLISH`, `FORTIFY`, `SPOT` | Wave 2 |
+| **Unit Abilities** (#19) | `CAPTURE_VEHICLE`, `DEMOLISH`, `FORTIFY`, `SPOT`, ★ `PARADROP` | Wave 2 |
 | **Transport & Pilots** (#20) | ★★ **Hard blocker** — `targets_crew`, unpiloted state, boarding | Wave 2 |
-| **Unit Classes** (#17) | Vehicles; `max_airfields = 0` | Wave 2 |
+| **Unit Classes** (#17) | Vehicles and air | Wave 2 |
 | **Damage Types** (#18) | `EMF` on the Missile Team | Wave 3 |
 | **Promotion** (#21) | none | — |
 
@@ -261,7 +282,10 @@ properly rather than patched.**
 | AC-1 | GIVEN the Independents at full available research, THEN `credit_income` is exactly **1,600** | Logic |
 | AC-2 | GIVEN an Independents player, THEN Economy Tier III never appears as a legal research target | Integration |
 | AC-3 | GIVEN a full Independents build-out, THEN `effective_cap` is exactly **7** | Logic |
-| AC-4 | GIVEN an Independents player, THEN an Airfield build order is rejected and no aircraft is producible | Integration |
+| AC-4 | **[REVISED 2026-08-24]** GIVEN an Independents player, THEN exactly one Airfield may be built and the **Buzzard** is its only producible aircraft | Integration |
+| AC-4b | GIVEN a Buzzard carrying a Pirate, WHEN `PARADROP` targets an empty tile within 3, THEN the Pirate is placed there and may act on a subsequent turn | Integration |
+| AC-4c | GIVEN a loaded Buzzard is destroyed, THEN the carried Pirate is destroyed with it and both cap slots free | Integration |
+| AC-4d | GIVEN a Buzzard and an enemy `AIR` unit, THEN the aircraft is not a legal target | Logic |
 | AC-5 | GIVEN a Pirate attacking a crewed enemy vehicle, THEN the pilot's hp decreases and the vehicle's does not | Integration |
 | AC-6 | GIVEN that attack kills the pilot, THEN the vehicle becomes unpiloted and is not destroyed | Integration |
 | AC-7 | GIVEN a Pirate adjacent to an unpiloted enemy ground vehicle with a free cap slot, THEN `CAPTURE_VEHICLE` transfers ownership and the Pirate becomes its pilot | Integration |
@@ -283,6 +307,6 @@ properly rather than patched.**
 | IOQ-1 | ★★ **Is the Independents' variance acceptable?** Against a careful opponent they are the worst faction in the game; against a careless one they play with a stolen army. No constant in this document sets that — **opponent behaviour does.** This is a faction-design judgement, not a balance calculation. **Design call — the user's**, and the one I would most want played before it is trusted | user + game-designer |
 | IOQ-2 | ★★ **Can the AI ever leave a vehicle unpiloted?** If the AI never makes that mistake, the Pirate is dead weight in every AI match — which is most of the game's content. Conversely, an AI that parks vehicles badly hands the Independents free wins. ★ **The Independents may be the faction that most needs the AI to be *good*, not merely competent** (`faction-identity.md` OQ-15) | ai-programmer |
 | IOQ-3 | **Is stealing a Protectorate tank actually good for the Independents?** Inheriting 700/turn upkeep against a 1,600 income is 44% of their whole economy for one vehicle. ★ Theft may be self-limiting in a way that is *better* than any rule I could write — but it needs measuring, because it could equally mean theft is never worth doing | economy-designer |
-| IOQ-4 | **Should the Independents have any way to acquire aircraft?** Currently permanent and absolute. Strong identity, but it means an air-heavy opponent has a category the Independents can only answer with one specialist. Recommend leaving it and watching the Missile Team's performance | user |
+| ~~IOQ-4~~ | ✅ **RESOLVED 2026-08-24 (user): grant them at least one aircraft.** The **Buzzard**, a scavenged lifter-gunship whose real job is `PARADROP`-ing a Pirate next to an unattended enemy vehicle — it extends the faction's signature rather than patching a weakness. Priced hard: 6 hp (most fragile aircraft in the game), 2 of 7 cap slots per mission, and cargo dies with it. ★ They still cannot **steal** aircraft (`CAPTURE_VEHICLE` is ground-only), so "we have a plane, not an air force" survives | ✅ closed |
 | IOQ-5 | ★ **Does `targets_crew` belong to more than the Pirate?** Giving it to a second faction would make the unpiloted state common enough to matter generally — but it would also dilute the Independents' signature. Recommend **Pirate-only** until playtest says otherwise | systems-designer |
 | IOQ-6 | **The name.** *"Independents"* is neutral to the point of invisible next to five loaded names, and *"Revolutionary Rebels"* is more evocative than the mechanics, which read as **scavengers and opportunists** rather than ideologues. **Naming call — the user's** | user |
