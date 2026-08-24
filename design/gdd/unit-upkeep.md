@@ -334,7 +334,7 @@ disband_ap_cost      = DISBAND_AP_COST                                      # 1
 
 | System | Impact |
 |---|---|
-| **Game HUD** (#10) | ★ UR-8: gross / upkeep / net must be visible during the turn, and a prospective purchase's effect on net previewable. **The HUD currently shows a single Credits figure and no income breakdown at all** |
+| **Game HUD** (#10) | ★ UR-8: gross / upkeep / net must be visible during the turn, and a prospective purchase's effect on net previewable. ✅ **Delivered 2026-08-24 (S6-07)** — `IncomeBreakdownWidget` shows `gross − upkeep = net` with net carrying the visual weight, plus an `open_preview()` projection for a prospective purchase |
 | **AI Opponent** (#11) | ★★ **This is the point of the whole exercise.** The AI must value a unit at its *lifetime* cost, not its purchase price, or it will over-build into deficit exactly as it over-builds today. Its economy scoring is written against a one-time cost model |
 | **Faction Identity** (#12) | D9 — factions own their units' upkeep and may delta the global rate |
 
@@ -389,4 +389,4 @@ work; if far above, the cap is decorative. **OQ-13 in `faction-identity.md` owns
 | UOQ-2 | **Should structures under construction pay?** UR-3 says no, reasoning that `build_time` is already a deliberate vulnerability window. Charging would make expansion meaningfully riskier and slow the game further — arguably desirable given the PIVOT | systems-designer | With playtest |
 | ~~UOQ-3~~ | ✅ **RESOLVED 2026-08-24: no** — see `promotion-veterancy.md` PVOQ-4. A promoted unit costs no more to keep; the Empire already pays for its curve by having to fight for it and by having it reversible | ✅ closed |
 | UOQ-4 | ★ **The AI needs a lifetime-cost model, not a purchase-price one.** It currently scores a unit at `produce_cost`. Under upkeep, a Heavy at 7 Credits with upkeep 3 costs 7 + 3×(remaining turns) — a completely different number. Without this the AI will over-build into deficit exactly as it over-builds today, and the PIVOT fix will not show in AI-vs-AI results | ai-programmer | Sprint 6, alongside implementation |
-| UOQ-5 | **Is `net_credit_income` the right HUD primitive, or should gross and upkeep be equally prominent?** UR-8 requires all three; their relative weight is a UX call | ux-designer | `/ux-design` HUD pass |
+| UOQ-5 | ~~**Is `net_credit_income` the right HUD primitive, or should gross and upkeep be equally prominent?**~~ — **answered by implementation 2026-08-24 (S6-07)**: all three are shown as UR-8 requires, but **not** with equal weight. Net is larger and the only coloured figure; gross and upkeep are context on the line above, stated as arithmetic so the relationship is visible rather than implied. Rationale: net is the figure that goes negative, and UR-8's actual requirement is that the player sees the equilibrium *coming*. ★ Presentation choice — reversible, and the user's to overrule | ux-designer | ✅ Closed |

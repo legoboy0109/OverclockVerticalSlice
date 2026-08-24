@@ -302,3 +302,60 @@ func test_near_cap_warns_before_the_cap_binds() -> void:
 	_commit(state)
 	assert_bool(w.is_at_cap()).is_false()
 	assert_bool(w.is_near_cap()).is_true()
+
+
+# ==============================================================================
+# AC-12, second half: the produce affordance is disabled at cap, with a reason.
+# ==============================================================================
+
+func test_the_produce_verb_is_disabled_at_the_population_cap() -> void:
+	# ★ The gap this closes. BaseProduction.validate already returned
+	# POPULATION_CAP_REACHED and the AI already respected the cap, but the CAI verb
+	# menu never consulted it -- so a player at cap saw Produce ENABLED, picked a
+	# unit, and had the commit rejected with no forewarning. A rule enforced only at
+	# validation is a rule the player discovers by failing.
+	var state := _state()
+	var hq := _add_structure(state, 0, StructureTypes.HQ, Vector2i(6, 6))
+	var cap: int = Population.effective_cap(state, 0)
+	for i: int in cap:
+		_add_unit(state, 0, UnitTypes.TROOPER, Vector2i(1 + i, 12))
+
+	var entry: CommandFSM.VerbEntry = null
+	for e: CommandFSM.VerbEntry in CommandFSM.menu_model(state, hq):
+		if e.verb == CommandFSM.Verb.PRODUCE:
+			entry = e
+	assert_object(entry).is_not_null()
+	assert_bool(entry.enabled).override_failure_message(
+		"Produce must be disabled at the population cap, not left enabled to fail on commit"
+	).is_false()
+	assert_int(entry.reason & CommandFSM.Reason.POPULATION_CAP_REACHED).is_greater(0)
+
+
+func test_the_produce_verb_stays_enabled_with_population_headroom() -> void:
+	var state := _state()
+	var hq := _add_structure(state, 0, StructureTypes.HQ, Vector2i(6, 6))
+	var entry: CommandFSM.VerbEntry = null
+	for e: CommandFSM.VerbEntry in CommandFSM.menu_model(state, hq):
+		if e.verb == CommandFSM.Verb.PRODUCE:
+			entry = e
+	assert_object(entry).is_not_null()
+	assert_int(entry.reason & CommandFSM.Reason.POPULATION_CAP_REACHED).override_failure_message(
+		"an empty army must not be reported as population-blocked"
+	).is_equal(0)
+
+
+func test_the_menu_and_the_rules_agree_on_the_population_block() -> void:
+	# The menu's job is to predict validation, so the two must never disagree --
+	# a menu that is merely *stricter* is also a bug (it hides legal moves).
+	var state := _state()
+	var hq := _add_structure(state, 0, StructureTypes.HQ, Vector2i(6, 6))
+	var cap: int = Population.effective_cap(state, 0)
+	for i: int in cap:
+		_add_unit(state, 0, UnitTypes.TROOPER, Vector2i(1 + i, 12))
+
+	var menu_blocked: bool = false
+	for e: CommandFSM.VerbEntry in CommandFSM.menu_model(state, hq):
+		if e.verb == CommandFSM.Verb.PRODUCE:
+			menu_blocked = (e.reason & CommandFSM.Reason.POPULATION_CAP_REACHED) > 0
+	var rules_blocked: bool = not Population.can_field(state, 0, UnitTypes.TROOPER)
+	assert_bool(menu_blocked).is_equal(rules_blocked)

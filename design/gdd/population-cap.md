@@ -270,6 +270,7 @@ can look at the board and know both sides' ceilings.
 | AC-10 | GIVEN a pirate stealing a unit while its new owner is at cap, THEN the steal is rejected | Integration |
 | AC-11 | GIVEN any `FactionDef`, THEN `base_infantry_cap ≥ 0`, and a cap of 0 fails load unless every unit in that faction's roster is cap-exempt | Config-Data |
 | AC-12 | GIVEN a player at cap, THEN the HUD shows current/max population and the produce affordance is visibly disabled with a stated reason | UI (advisory) |
+| AC-12a | ✅ **Both halves shipped 2026-08-24 (S6-07).** The **readout** half is `PopulationWidget` (current/max, colour-coded, plus `cap_reason()` wording). The **disabled produce affordance** half is `CommandFSM._produce_entry`, which now consults `Population.can_field()` and raises `Reason.POPULATION_CAP_REACHED`. ★ **This was a live defect, not just missing polish**: the rules enforced the cap (`BaseProduction.validate` → `Action.Reason.POPULATION_CAP_REACHED`) and the AI respected it, but the verb menu never checked — so a player at cap saw Produce **enabled**, chose a unit, and had the commit rejected with no forewarning. A rule enforced only at validation is a rule the player discovers by failing. The check tests *every* producible type, so a cap that blocks a Heavy still offers a Scout | UI (advisory) |
 
 ## Open Questions
 
