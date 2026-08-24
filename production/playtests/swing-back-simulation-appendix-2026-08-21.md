@@ -276,3 +276,70 @@ Items 2 and 3 are real design/balance work and belong in
 `production/post-gate-backlog.md` unless the verdict makes them blocking. Item 1 is close
 to a one-line configuration change and may be worth doing *before* the human session, so
 that S5-04 is played on a build where matches can end.
+
+---
+
+## ⛔ S6-06 GATE RUN — 2026-08-24 — **FAILED**, and the diagnosis was wrong
+
+**Build**: post S6-01..S6-05 (economy re-based on research tiers, upkeep, per-structure
+maximums, population cap, AI re-anchored). Suite 1039/1039. 21 games, 1,260 turn-rows.
+
+| # | Gate condition | Result | Baseline |
+|---|---|---|---|
+| 1 | resolve on **play** | **0 / 21** | 0 / 20 — unchanged |
+| 2 | **non-zero HQ damage** | **NO — zero in 1,260 rows** | zero in 4,182 — unchanged |
+| 3 | outcomes from both seats | n/a | — |
+| 4 | peak banked Credits | **18,400** (target <15,000) | 572,400 equivalent |
+
+A **+3 material advantage converted in 0 of 6 games.** Unchanged.
+
+### The PIVOT note predicted its own falsifier, and hit it
+
+> *"Bounding the economy lets the existing siege term surface. **If it does not, the
+> diagnosis is wrong and that is the first thing to revisit.**"*
+
+It did not surface. **The economy chain was wrong at its last link.**
+
+### ★★ What instrumentation found (`tools/DiagnoseAI.tscn`, built for this)
+
+Traced 24 turns, reporting per-verb best scores against `pass_threshold` (0.15):
+
+| verb | turns with a candidate above threshold |
+|---|---:|
+| move | 14 / 24 |
+| attack | 17 / 24 |
+| produce | 24 / 24 |
+| ★ **build** | ★ **0 / 24 — `best_build` is 0.000 in EVERY row** |
+
+**The AI never builds anything, ever.** The chain:
+
+> `_economy_value` returns 0 for structures (S6-01) → the AI never builds a **Barracks** →
+> the population cap stays at its base of **4** → the army never grows → both sides field
+> 3–4 units, replace losses instantly from the HQ, and grind mid-map forever → nothing ever
+> reaches an objective.
+
+It also explains condition 4: **Credits accumulated to 18,400 because the AI had nothing it
+was willing to buy.** Not a broken drain — a broken *buyer*.
+
+★ **The defect was introduced in S6-01**, with reasoning that was right about income and
+wrong about value: *"no structure raises Credit income, so building is not an economic
+investment."* True — but since **S6-04 a Barracks raises the population cap**, and the AI
+has a term for income value and none for **capacity** value.
+
+### ⚠ Two corrections to the first reading of this batch
+
+1. **"The AI leaves 98% of its AP unspent" was an ARTEFACT.** `simulate_matches.gd` emits
+   its row *after* `end_turn`, which runs `start_turn` for the next player and resets their
+   AP — so the `ap0` column is a *fresh* budget, not a leftover one. The probe shows the AI
+   committing **9–12 actions per turn** and spending ~20 of 45 AP. ★ **Check where a metric
+   is captured before drawing a conclusion from it.**
+2. **"The diagnosis was wrong" was too broad.** The economy work is correct and necessary —
+   the unbounded-Credit defect was real and is fixed (a ~97% reduction against the
+   equivalent baseline). What was wrong is the final link, *"AP never reaches movement."*
+   AP does reach movement. The AI simply cannot grow.
+
+### Next
+
+Give the AI a **capacity-value** term so a Barracks is worth building, then re-run. Whether
+that alone makes matches resolve is a separate question — armies that can grow may still
+stalemate — but it is one batch to find out, and it is a bounded fix rather than a redesign.
