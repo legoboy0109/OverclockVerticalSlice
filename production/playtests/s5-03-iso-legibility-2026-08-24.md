@@ -3,7 +3,8 @@
 > **Ran**: 2026-08-24 · **Build**: `design/initial-gdd-corpus` @ S6-11 · Redot 26.2, Forward+, 1280×720
 > **Harness**: `tools/CaptureLegibility.tscn` → `production/qa/evidence/s5-03-legibility/` (5 frames)
 > **Measurements**: `tools/analyse_legibility.py`
-> **Status**: ⚠️ **CONDITIONAL PASS — one blocking defect found and it is narrow.**
+> **Status**: ⚠️ **CONDITIONAL PASS** — one blocking defect found, **and fixed the same day**
+> (§1a). Still owes the naive-observer session.
 > **Owed**: the naive/silent-observer session. No script can supply that half; see §6.
 
 ---
@@ -62,8 +63,59 @@ else can safely stand. It is the worst unit in the roster to have as the least i
 
 Raise the Sniper's saturated coverage toward the roster's ~42–50 % band. It does not need
 redesigning — its silhouette is the **most** distinct in the roster (§3) and should not be touched.
-It needs hue applied to more of the chassis it already has. Bringing it to ~40 % would put its
-faction separation in line with the Trooper's ΔE 46.
+It needs hue applied to more of the chassis it already has.
+
+---
+
+## 1a. ✅ FIXED — 2026-08-24, same day
+
+New pipeline stage `tools/asset-pipeline/promote_accent.py`, run on the rush master, then
+re-derived through the existing chain (recolour → facings → place_runtime → glow/destroyed
+variants), so all six Sniper sprites and both derived faction sets stay in sync.
+
+| Measure | Before | After | Roster comparison |
+|---|---:|---:|---|
+| Hue coverage | 13.3 % | **43.5 %** | Trooper 42.5 %, Scout 45.4 % |
+| Faction ΔE76 *(accent mask, both factions)* | 12.9 | **66.5** | Scout 81, Heavy 90, Trooper 97 |
+| Coverage spread across roster | **4.7×** | **1.5×** | — |
+
+The Sniper now sits with the Trooper — which is the correct target, since the art bible names the
+Trooper as the roster's baseline control.
+
+### ★★ How it was fixed matters, because two obvious approaches produce unusable art
+
+Both of these hit the coverage number exactly and both had to be thrown away:
+
+| Approach | Coverage | Result |
+|---|---|---|
+| Promote the brightest *N* plate pixels | ✅ exact | ⛔ A global value threshold cuts **across** panels, taking the lit half of many and leaving the shadowed half — reads as orange **speckle** on grey armour |
+| Value-banded connected components | ✅ exact | ⛔ Quantising value before labelling splits smoothly-shaded panels into **stripes**; promoting some and not others gives a corduroy artefact |
+| **Grow the existing accent outward** | ✅ exact | ✅ Reads as a bolder version of the same design |
+
+**Growth works because it does not invent a composition.** The artist already decided *where* this
+unit's accent belongs; dilation only decides *how far* it extends. It also cannot speckle — every
+added pixel is adjacent to accent already there.
+
+The grown tone (saturation 0.72, value band 0.42–0.86) was chosen by rendering muted / mid / vivid
+candidates **at the real shipping size of 99×156 on the real stage colour** and comparing. At master
+resolution all three look fine; at board scale the vivid option starts flattening the unit into a
+single orange mass and loses the grey structural contrast that gives the silhouette its form.
+
+### What was deliberately NOT chased
+
+Test 4's grayscale/desaturation measure still reports the Sniper at Δ 11.4 against a 13 threshold.
+**That is not a Sniper problem.** The whole roster sits in an 11–23 band on that axis:
+
+```
+sniper 11.4  ·  scout 13.6  ·  trooper 14.5  ·  heavy 23.3
+```
+
+This is the roster-wide non-hue-ownership gap S5-08 measured and the project consciously deferred —
+the art bible's mandated non-hue marker is not in the shipped art for *any* unit. Pushing the Sniper
+past its peers would be over-fitting one unit to a test none of them pass. It is logged as the
+existing S5-08 item, not as a Sniper defect.
+
+Suite 1089/1089, slice boots clean, frames re-captured.
 
 ---
 
@@ -174,9 +226,9 @@ knows what they are looking at.
 
 | # | Change | Scope | Why now |
 |---|---|---|---|
-| **1** | ⛔ **Raise the Sniper's hue coverage to ~40 %** | Art — 6 sprites (2 factions × 2 facings + neutral). Silhouette untouched | The only blocking defect. It is narrow, cheap, and it is the unit the player most needs to identify at range |
+| **1** | ✅ **DONE — Sniper hue coverage 13.3 % → 43.5 %** | `promote_accent.py` + the existing derive chain. Silhouette untouched | The only blocking defect. Fixed same day; see §1a |
 | **2** | Add an **accent-coverage check** to the asset pipeline | Tooling — `analyse_legibility.py` already computes it | This defect shipped and survived a full art sprint because nothing measured it. Every wave-2 unit will have the same failure mode available |
-| **3** | Re-run the **neutral** faction check | Art — neutral Sniper measures **0.5 %** coverage | Neutral is the vertical slice's default faction. Its Sniper is effectively an unlit silhouette |
+| **3** | ✅ **DONE — neutral re-derived** from the corrected master in the same pass | Was 0.5 % coverage | Neutral is the vertical slice's default faction |
 | **4** | Book the **naive-observer session** | ~20 minutes, one person who has not seen the game | The gate is not formally passed without it, and it is the only part that cannot be automated |
 | **5** | Re-run this harness after any unit-art change | `./redot tools/CaptureLegibility.tscn && python3 tools/analyse_legibility.py` | It is now a repeatable measurement, not a one-off |
 
