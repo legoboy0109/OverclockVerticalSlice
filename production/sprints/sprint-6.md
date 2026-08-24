@@ -100,8 +100,8 @@ full post-mortem and the method lesson.
 
 | ID | Task | Owner | Est. | Deps | Acceptance |
 |----|------|-------|-----:|------|------------|
-| **S6-07** | **HUD: gross / upkeep / net** — replace the dead `base + outpost + econ_tech` breakdown (cross-review B-3); population readout; purchase preview shows its effect on net | ui-programmer | 1.0 | S6-02, S6-04 | `unit-upkeep.md` AC-19/AC-20; `population-cap.md` AC-12. ★ `net` carries the visual weight — a player must see the equilibrium coming |
-| **S6-08** | **Victory/defeat presentation** — `game-hud.md` CR-9 / AC-17 / AC-22, unimplemented and carried since Sprint 5. A one-line status message is the current stopgap | ui-programmer | 1.0 | S6-06 | A real win/loss screen fires on HQ destruction and on the round cap. ★ Invisible while games never ended; player-facing the moment they do |
+| **S6-07** ✅ | **HUD: gross / upkeep / net** — replace the dead `base + outpost + econ_tech` breakdown (cross-review B-3); population readout; purchase preview shows its effect on net | ui-programmer | 1.0 | S6-02, S6-04 | `unit-upkeep.md` AC-19/AC-20; `population-cap.md` AC-12. ★ `net` carries the visual weight — a player must see the equilibrium coming |
+| **S6-08** ✅ | **Victory/defeat presentation** — `game-hud.md` CR-9 / AC-17 / AC-22, unimplemented and carried since Sprint 5. A one-line status message is the current stopgap | ui-programmer | 1.0 | S6-06 | A real win/loss screen fires on HQ destruction and on the round cap. ★ Invisible while games never ended; player-facing the moment they do |
 
 ### Nice to Have (rides the buffer)
 
@@ -157,6 +157,44 @@ Note corrected. **A wrong note is worse than no note**, and this one had survive
 | **Human-gated work rolls over a 4th time** | High | Medium | Accepted and planned around — none of it is on this sprint's critical path |
 
 ## Definition of Done
+
+### S6-07 / S6-08 complete — 2026-08-24 (`3ddcad7`, `9c65447`)
+
+**S6-07** — the income popover was still *rendering* `base + outpost + econ_tech` long
+after S6-01 deleted the Economy Outpost. Its data model had been repointed; its `_draw()`
+had not, so the player saw two permanently-zero terms for mechanics that no longer exist and
+could not see upkeep or net at all. Now shows `gross − upkeep = net`, with net larger and the
+only coloured figure (UR-8: the player must see the equilibrium *coming*). `open_preview()`
+projects net after a prospective purchase (AC-20). New `PopulationWidget` for AC-12's readout,
+kept separate from income on purpose — upkeep is a gradient you can watch approach, the cap is
+a hard stop.
+
+**★ A live defect surfaced while writing that up.** AC-12's other half — "the produce
+affordance is visibly disabled with a stated reason" — was not just unshipped. The population
+cap was enforced in the rules (`BaseProduction.validate`), respected by the AI, and displayed
+by the new widget, but **the verb menu never checked it**. A player at cap saw Produce
+*enabled*, chose a unit, and got a rejection with no forewarning. Fixed in `CommandFSM`.
+
+**S6-08** — both of CR-9's clauses, which needed genuinely different presentation rather than
+one path with a swapped noun. An HQ kill explains itself; a round-limit finish explains
+nothing (nothing died, and the board still looks playable), so that path also shows the
+deciding metric and both scores. Required recording *why* the match ended: the deciding HQ is
+already erased from `entities_by_id` by the time the HUD reads terminal state, so the cause is
+unrecoverable after the fact. Adds `GameState.WinReason` + `win_reason`, and
+`reason`/`metric`/`metric_by_player` on `GameOverEvent`.
+
+**★★ AC-22 had been silently live for a sprint.** It was marked *"deferred — not testable in
+VS scope, activate when `MAX_ROUNDS` ships"*. `MAX_ROUNDS` shipped in **S6-03**, and ~1 game in
+7 was ending on it, untested, with no presentation. Nothing connected arming the round cap to
+that AC's activation condition. **Lesson, recorded in `game-hud.md`: a deferral whose trigger
+is another story's side effect will not re-open itself — name the story that satisfies it.**
+
+Suite **1085/1085** (28 new). Slice boots clean. Regression batch unchanged at 18/21, mean 25
+turns — the state additions cost nothing.
+
+**Two presentation calls are yours to overrule** (both flagged in the GDDs, both reversible):
+`unit-upkeep.md` **UOQ-5** — net gets the visual weight rather than all three figures being
+equal. `game-hud.md` **OQ-2** — a capped game shows the metric and both scores.
 
 - [x] ✅ **S6-06 gate passed** (2026-08-24, batch 5) — matches resolve on play, from both seats, with non-zero HQ damage
 - [ ] `CREDIT_TO_AP_RATE` ships at 0.01 and the lethal-floor invariant is re-verified
