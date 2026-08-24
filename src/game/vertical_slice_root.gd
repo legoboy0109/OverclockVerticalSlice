@@ -153,7 +153,6 @@ func _ready() -> void:
 	# If the match ever opens on the AI's side, hand off immediately.
 	_drive_ai_turns()
 	_refresh_occupant_pick_regions() # author the initial click targets from the starting entities.
-	queue_redraw()
 	_refresh_status()
 
 
@@ -551,7 +550,7 @@ func _build_cursor() -> void:
 ##    where the actors now are rather than where they were.
 func _on_action_applied(result: ActionResult) -> void:
 	_dispatch_deaths(result)
-	queue_redraw()
+	_refresh_open_preview() # the board changed under any open range overlay.
 	_refresh_occupant_pick_regions() # entities moved/spawned/died — re-author the click targets.
 	_dispatch_motion(result)
 	_refresh_status() # AP/affordability/selection may have changed.
@@ -705,7 +704,6 @@ func move_cursor(direction: Vector2i) -> bool:
 		_refresh_status()
 	_keep_cursor_in_view() # pan the camera if the cursor nears the view edge (zoomed in).
 	_sync_cursor_highlight()
-	queue_redraw() # repaint the selection overlay.
 	return true
 
 
@@ -720,9 +718,14 @@ func select_at_cursor() -> bool:
 		return false
 	var entity: EntityState = _state.entity_at(_cursor.grid_pos)
 	if entity is UnitState and entity.owner == LOCAL_PLAYER:
-		var ok: bool = _cmd.try_select(_state, entity as UnitState)
+		var unit: UnitState = entity as UnitState
+		var ok: bool = _cmd.try_select(_state, unit)
 		if ok:
-			queue_redraw() # paint the selected unit's move/attack range immediately.
+			# Selecting a unit opens its move preview, so its range is on screen the
+			# instant it is picked rather than after a second keypress. Showing a
+			# unit's reach IS a move preview, so this uses the FSM's own
+			# PREVIEW_MOVE state rather than inventing a parallel highlight.
+			_cmd.enter_preview(_state, unit, CommandFSM.State.PREVIEW_MOVE)
 		return ok
 	return false
 
@@ -768,7 +771,11 @@ func select_at_board_point(board_pos: Vector2) -> bool:
 			_flash = ""
 			_refresh_status()
 		_keep_cursor_in_view()
-	queue_redraw() # paint (or clear) the selected unit's range highlight.
+	# Mouse select opens the same preview the keyboard path does, so the two input
+	# routes never disagree about what is on screen after a selection.
+	var picked: EntityState = _state.entities_by_id.get(_cmd.selected_id())
+	if picked is UnitState and picked.owner == LOCAL_PLAYER:
+		_cmd.enter_preview(_state, picked as UnitState, CommandFSM.State.PREVIEW_MOVE)
 	return pick.occupant_entity_id != -1 and _cmd.selected_id() == pick.occupant_entity_id
 
 
@@ -1002,37 +1009,39 @@ func _tiles_for_cost(unit: UnitState, ap_cost: int) -> int:
 	return 1
 
 
-# --- Board-space affordance drawing (range preview + cursor) -----------------
+# --- Board-space affordance drawing — REMOVED 2026-08-24 ---------------------
+#
+# ★ This node used to draw the selected unit's move range, its attack targets and
+# a ring on the unit itself in `_draw()`. None of it was ever visible.
+#
+# `_board` is a CHILD of this node, and a CanvasItem paints ITSELF BEFORE its
+# children — so everything drawn here rendered underneath all four of the board's
+# TileMapLayers. The same defect hid the board cursor (fixed the same day). It is
+# an easy one to keep making: the code looks correct, runs every frame, and
+# produces pixels that are simply covered.
+#
+# Range preview now goes through the path that already owns it:
+# `CommandInterface.enter_preview()` -> `_render_overlays()` ->
+# `BoardRenderer.set_overlays()`, painting on the board's own overlay layer.
+# That is strictly better than what was here, and not only because it is visible:
+#
+#   - it separates IN-CAP from OVER-CAP move tiles, so the player can see where
+#     the AP surcharge starts. The old flat fill drew both the same colour and
+#     hid the single most Pillar-1-relevant thing about a move.
+#   - it adds the after-move-attack echo, showing which tiles let the unit still
+#     shoot after moving.
+#   - it re-issues automatically on `action_applied` (ADR-0015 §3), so the
+#     overlay tracks a changing board instead of going stale until reselect.
+#
+# The cursor moved to `BoardRenderer.set_cursor()` on its own layer for the same
+# reason. Nothing should be drawn in this node's `_draw()` again — if it must
+# appear over the board, it belongs on a layer inside the board.
 
-## Draws the selected unit's move/attack range and the keyboard cursor. Entity
-## sprites are NOT drawn here — [EntitySpriteFeed] renders those as real nodes in
-## the board's Y-sort group (Story 006). What remains is only the immediate-mode
-## affordance layer: range highlight underneath, cursor outline on top.
-func _draw() -> void:
-	if _board == null or _reader == null:
-		return
-	# Under the entity markers: the selected unit's move/attack range, so the player
-	# can SEE where a unit can go (short-range units otherwise look unresponsive).
-	_draw_selection_overlay()
-	# Entities themselves are NOT drawn here any more — EntitySpriteFeed owns one
-	# real Sprite2D per entity under the board's Y-sorted occupant layer (Story 006).
-	# Drawing them here too would paint unsorted markers on top of the sprites.
 
-	# ★ The cursor is NOT drawn here any more (2026-08-24). It was, and it was
-	# invisible for two compounding reasons:
-	#   1. `_board` is a CHILD of this node, so this `_draw` paints UNDER every one
-	#      of the board's TileMapLayers. The diamond was rendered beneath the floor.
-	#   2. It was a fixed 14px radius against a 128x64px tile — a fifth of a cell,
-	#      which would have been a dot even had it been on top.
-	# It now lives on the renderer's own CursorTileMapLayer via
-	# BoardRenderer.set_cursor(), which fixes both: correct z-band and a tile-sized
-	# ring baked at the tile's real dimensions.
-
-
-## Paints the board cursor at the cursor's current tile.
+## Paints the board cursor at its current tile.
 ##
 ## The single call site for cursor rendering — every path that moves the cursor
-## ends here, so the highlight can never drift from [member BoardCursor.grid_pos].
+## ends here, so the highlight cannot drift from [member BoardCursor.grid_pos].
 ## Delegates to [method BoardRenderer.set_cursor], which owns its own TileMapLayer
 ## precisely so an open move/attack preview cannot clear it.
 func _sync_cursor_highlight() -> void:
@@ -1041,39 +1050,25 @@ func _sync_cursor_highlight() -> void:
 	_board.set_cursor(_cursor.grid_pos)
 
 
-## Highlights the selected own unit's reachable MOVE tiles (translucent fill) and
-## attackable target tiles (red outline), plus a ring on the unit itself — so the
-## player can see a unit's (often short) range rather than guessing. Computed from
-## the same [Movement]/[Combat] queries [method act_at_cursor] commits through, so
-## the highlight and what M actually does never disagree.
-func _draw_selection_overlay() -> void:
+## Re-issues the open range overlay after a commit, so it reflects the board that
+## now exists rather than the one that did when the unit was selected.
+##
+## ★ [method CommandInterface.notify_action_applied] is the hook ADR-0015 §3
+## specifies for exactly this ("the reachable overlay reflects the new board
+## state... no reselect trick") and it had NO CALLER anywhere in the project — it
+## was documented, implemented, tested, and never wired. That was harmless only
+## while nothing held a preview open; now that selecting a unit opens its move
+## preview, an unrefreshed overlay would show a moved unit's PRE-move reach until
+## the player reselected it.
+##
+## A no-op when nothing is selected, when the selection is not an own unit, or
+## when the selected unit is what just died.
+func _refresh_open_preview() -> void:
 	if _cmd == null or _state == null:
 		return
 	var entity: EntityState = _state.entities_by_id.get(_cmd.selected_id())
-	if not (entity is UnitState) or entity.owner != LOCAL_PLAYER:
-		return
-	var unit: UnitState = entity as UnitState
-	for reach: Movement.ReachableTile in Movement.reachable(_state, unit):
-		draw_colored_polygon(_tile_diamond(_board.grid_to_screen(reach.tile)), Color(0.3, 0.8, 1.0, 0.18))
-	for target: Combat.TargetResult in Combat.legal_targets(_state, unit):
-		var d: PackedVector2Array = _tile_diamond(_board.grid_to_screen(target.tile))
-		d.append(d[0])
-		draw_polyline(d, Color(1.0, 0.35, 0.2, 0.95), 2.5)
-	# Ring the selected unit so the player knows which one is active.
-	var sel: PackedVector2Array = _tile_diamond(_board.grid_to_screen(unit.position))
-	sel.append(sel[0])
-	draw_polyline(sel, Color(0.4, 1.0, 0.5, 0.95), 2.5)
-
-
-## A tile-sized isometric diamond (matching the floor tile shape) centred at
-## [param center], for range highlights.
-func _tile_diamond(center: Vector2) -> PackedVector2Array:
-	var hw: float = BoardRenderer.TILE_WIDTH_PX * 0.5
-	var hh: float = BoardRenderer.TILE_HEIGHT_PX * 0.5
-	return PackedVector2Array([
-		center + Vector2(0.0, -hh), center + Vector2(hw, 0.0),
-		center + Vector2(0.0, hh), center + Vector2(-hw, 0.0),
-	])
+	if entity is UnitState and entity.owner == LOCAL_PLAYER:
+		_cmd.notify_action_applied(_state, entity as UnitState)
 
 
 # --- Accessors (for the boot/integration test) -------------------------------

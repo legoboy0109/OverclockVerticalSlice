@@ -64,6 +64,8 @@ var _population: PopulationWidget = null
 var _player_panel: HudPanel = null
 var _opponent_panel: HudPanel = null
 var _actions_panel: HudPanel = null
+var _detail_panel_panel: HudPanel = null
+var _action_log_panel: HudPanel = null
 var _action_log: ActionLogWidget = null
 var _controls: HudControlsWidget = null
 var _detail_panel: DetailPanelWidget = null
@@ -159,12 +161,17 @@ func assemble(reader: GameStateReader, config: HUDConfig, cmd: CommandInterface,
 	_turn_banner.position = Vector2(-80, 12)
 	add_child(_turn_banner)
 
+	# --- LOG: what just happened, bottom-left, clear of the action strip --------
+	_action_log_panel = HudPanel.new()
+	_action_log_panel.configure("LOG", Vector2(210, 150))
+	_action_log_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_action_log_panel.position = Vector2(16, -166)
+	add_child(_action_log_panel)
+
 	_action_log = ActionLogWidget.new()
 	_action_log.bind(reader)
 	_action_log.configure(config)
-	_action_log.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	_action_log.position = Vector2(16, -160)
-	add_child(_action_log)
+	_action_log_panel.add_content(_action_log, Vector2(0, 0))
 
 	# --- ACTIONS: the two commit verbs, on a ground so they read as buttons -----
 	_actions_panel = HudPanel.new()
@@ -179,12 +186,17 @@ func assemble(reader: GameStateReader, config: HUDConfig, cmd: CommandInterface,
 	_controls.attach_interface(cmd)
 	_actions_panel.add_content(_controls, Vector2(0, 0))
 
+	# --- SELECTED: the inspected entity, on the same ground as everything else ---
+	_detail_panel_panel = HudPanel.new()
+	_detail_panel_panel.configure("SELECTED", Vector2(196, 104))
+	_detail_panel_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	_detail_panel_panel.position = Vector2(-212, -52)
+	add_child(_detail_panel_panel)
+
 	_detail_panel = DetailPanelWidget.new()
 	_detail_panel.bind(reader)
 	_detail_panel.attach_interface(cmd)
-	_detail_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	_detail_panel.position = Vector2(-200, -80)
-	add_child(_detail_panel)
+	_detail_panel_panel.add_content(_detail_panel, Vector2(0, 0))
 
 	_game_over_overlay = GameOverOverlay.new()
 	_game_over_overlay.bind(reader)

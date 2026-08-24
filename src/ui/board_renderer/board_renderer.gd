@@ -197,16 +197,30 @@ enum OverlayClass {
 ## per class is sufficient for this story's mechanism proof — real
 ## hatch/pattern/outline/glyph authoring per command-action-interface.md §B
 ## is technical-art's later pass, not re-derived here.
+## ★ Alphas retuned 2026-08-24, and the retune is the point rather than a polish
+## pass. These were authored at 0.85-0.9 — effectively opaque — back when nothing
+## ever displayed them: the slice painted its range preview in an immediate-mode
+## `_draw()` that rendered underneath the board, so no one ever saw an overlay on
+## a real match. The first frame that did showed a Scout's surcharged move set
+## covering roughly two thirds of the board in near-solid tan, which buried the
+## terrain, the ownership decals and the neon actors all at once.
+##
+## Art bible Principle 3 is explicit that depth and affordance cues stay
+## SUBORDINATE to the actors; an overlay is information about the board, not a
+## replacement for it. These now tint rather than cover. The ordering is
+## deliberate too: sparse, decisive classes (attack target, refund) stay strong
+## because they mark a handful of tiles, while the classes that can cover half the
+## map (the two move tiers) are the quietest.
 const OVERLAY_TINTS: Dictionary = {
-	OverlayClass.MOVE_IN_CAP: Color(0.75, 0.9, 1.0, 0.85),
-	OverlayClass.MOVE_OVER_CAP: Color(0.85, 0.65, 0.35, 0.85),
-	OverlayClass.ATTACK_TARGET: Color(1.0, 0.25, 0.25, 0.9),
-	OverlayClass.BLOCKED_BY_FRIENDLY: Color(0.4, 0.4, 0.4, 0.85),
-	OverlayClass.OUT_OF_RANGE: Color(0.3, 0.3, 0.35, 0.4),
-	OverlayClass.AREA_DEAD_ZONE: Color(0.5, 0.2, 0.5, 0.6),
-	OverlayClass.BUILD_DEPLOY_GO_TILE: Color(0.75, 0.9, 1.0, 0.85),
-	OverlayClass.CANCEL_REFUND: Color(0.9, 0.3, 0.2, 0.75),
-	OverlayClass.AFTER_MOVE_ECHO: Color(1.0, 0.25, 0.25, 0.4),
+	OverlayClass.MOVE_IN_CAP: Color(0.62, 0.85, 1.0, 0.30),
+	OverlayClass.MOVE_OVER_CAP: Color(0.95, 0.72, 0.36, 0.20),
+	OverlayClass.ATTACK_TARGET: Color(1.0, 0.28, 0.24, 0.55),
+	OverlayClass.BLOCKED_BY_FRIENDLY: Color(0.45, 0.45, 0.50, 0.35),
+	OverlayClass.OUT_OF_RANGE: Color(0.3, 0.3, 0.35, 0.22),
+	OverlayClass.AREA_DEAD_ZONE: Color(0.55, 0.25, 0.55, 0.40),
+	OverlayClass.BUILD_DEPLOY_GO_TILE: Color(0.70, 0.92, 1.0, 0.42),
+	OverlayClass.CANCEL_REFUND: Color(0.9, 0.32, 0.22, 0.50),
+	OverlayClass.AFTER_MOVE_ECHO: Color(1.0, 0.30, 0.24, 0.26),
 }
 
 ## The 12 on-board glyph classes (ADR-0013 §5, Story 005; taxonomy source:

@@ -35,6 +35,44 @@ func _run() -> void:
 			await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		_shot("02-cursor-moved")
+	# --- Produce a unit and SELECT it, so the move-range overlay is on screen ---
+	# This is the case the old immediate-mode `_draw()` was meant to serve and never
+	# could, so it is the frame worth capturing.
+	if slice.has_method("request_produce_at_cursor"):
+		# Walk back toward the HQ first: shot 02 moved the cursor 3 tiles away, which
+		# is outside the producer's deploy radius, so producing there silently fails.
+		for i: int in 3:
+			slice.move_cursor(Vector2i(-1, 0))
+			await get_tree().process_frame
+		slice.move_cursor(Vector2i(1, 0)) # one tile off the HQ = a legal deploy tile
+		await get_tree().process_frame
+		slice.request_produce_at_cursor()
+		for i: int in 4:
+			await get_tree().process_frame
+		var st: GameState = slice.state()
+		var target := Vector2i(-1, -1)
+		for e: EntityState in st.entities():
+			if e is UnitState and e.owner == 0:
+				target = e.position
+				break
+		if target.x >= 0:
+			# Walk the cursor onto the produced unit, then select it.
+			for i: int in 40:
+				var c: Vector2i = slice.cursor_tile()
+				if c == target:
+					break
+				var step := Vector2i(
+					signi(target.x - c.x) if c.x != target.x else 0,
+					signi(target.y - c.y) if c.x == target.x else 0)
+				if step == Vector2i.ZERO:
+					break
+				slice.move_cursor(step)
+				await get_tree().process_frame
+			slice.select_at_cursor()
+			for i: int in 4:
+				await get_tree().process_frame
+			await RenderingServer.frame_post_draw
+			_shot("03-unit-selected-move-range")
 	print("done")
 	get_tree().quit()
 

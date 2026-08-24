@@ -83,12 +83,36 @@ func _draw() -> void:
 		y += 13.0
 
 
-## A short label for [param event]'s log row (advisory text — the icon/wording is
-## a [code]/ux-design[/code] + [code]/art-bible[/code] concern). Uses the event's
-## script class name so each Event subclass reads distinctly without this widget
-## enumerating them.
+## Player-facing wording per event class, keyed by the event's global class name.
+##
+## ★ Added 2026-08-24. The log previously rendered the raw class name, so the one
+## surface whose entire job is telling the player what just happened said
+## "UnitDeployedEvent" at them. That was fine while nothing had ever been seen on
+## screen; it is not something to ship. Wording is deliberately plain and
+## past-tense, matching how the player would describe the same event out loud.
+const ENTRY_LABELS: Dictionary = {
+	&"UnitDeployedEvent": "Unit deployed",
+	&"UnitMovedEvent": "Unit moved",
+	&"UnitDestroyedEvent": "Unit destroyed",
+	&"DamageEvent": "Damage dealt",
+	&"StructurePlacedEvent": "Construction started",
+	&"StructureCompletedEvent": "Structure completed",
+	&"StructureDestroyedEvent": "Structure destroyed",
+	&"StructureCancelledEvent": "Construction cancelled",
+	&"TechCompletedEvent": "Research complete",
+	&"GameOverEvent": "Match over",
+}
+
+
+## A short label for [param event]'s log row (advisory text — the icon treatment
+## remains a [code]/ux-design[/code] + [code]/art-bible[/code] concern).
+##
+## Falls back to the class name for an event class with no entry here, which keeps
+## a newly-added event visible in the log rather than silently blank — a missing
+## label should look like a missing label, not like nothing happening.
 func _entry_text(event: Event) -> String:
 	var script: Script = event.get_script()
-	if script != null and script.get_global_name() != &"":
-		return String(script.get_global_name())
-	return "Event"
+	if script == null or script.get_global_name() == &"":
+		return "Event"
+	var key: StringName = script.get_global_name()
+	return ENTRY_LABELS.get(key, String(key))
