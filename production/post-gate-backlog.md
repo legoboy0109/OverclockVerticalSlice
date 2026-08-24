@@ -155,5 +155,60 @@ accessibility claim is made publicly.
   overlapping. Not a defect against any stated criterion; a legibility question for S5-03
   to judge, and a possible spacing/scale item after it.
 - **`pass_threshold` unenforced in `choose_action`** — latent, carried since Sprint 4.
-- **cai-005 InputMap wiring** — letter keys are read by keycode rather than through
-  rebindable actions.
+- ~~**cai-005 InputMap wiring**~~ — ✅ **done 2026-08-24 (S6-17).** The six board verbs
+  (move-attack, build, produce, both cycles, end turn) were raw `event.keycode` matches
+  and are now named actions carrying a keyboard key *and* a pad button. This is the
+  precondition the rebinding UI needed — see item 6.
+
+---
+
+## 6. Control-binding UI — deferred to the main menu (2026-08-24, user decision)
+
+**Decision: not built until the main menu exists.** Recorded here rather than attempted,
+because there is nowhere to put it — a rebinding screen with no menu to reach it from is a
+screen the player cannot open.
+
+### Why it is now worth building at all
+
+Before 2026-08-24 there was nothing to rebind: the board verbs were raw `event.keycode`
+matches in `VerticalSliceRoot._unhandled_input`, so a binding was a `match` arm rather than
+data. S6-17/S6-20 converted all seven to named InputMap actions, each carrying a keyboard
+key and a gamepad button:
+
+| Action | Key | Pad |
+|---|---|---|
+| `board_act` | M | X |
+| `board_build` | B | Y |
+| `board_build_cycle` | C | LB |
+| `board_produce` | P | B |
+| `board_produce_cycle` | V | RB |
+| `board_end_turn` | Tab | Start |
+| `board_menu_focus` | ` | Back/Select |
+
+Plus `board_cursor_cycle` ( `[` / `]` , **no pad binding assigned** — ADR-0014's own Risks
+section left the shoulder-button choice open, and LB/RB went to the two cycle verbs) and
+the engine defaults `ui_up/down/left/right` + `ui_accept`. **These are the rows a rebinding
+screen would edit.**
+
+### Where it belongs
+
+`design/ux/main-menu.md` is **Approved** (`/ux-review` 2026-07-27) and already routes to a
+**Settings** screen — "*Opens the settings screen (separate spec — see Data Requirements /
+Open Questions)*". That settings screen has **no spec of its own yet**. Control bindings
+belong under it; writing the rebinding UI first would mean inventing its host.
+
+### Carried along with it, same home
+
+- **`InputConfig.menu_keyboard_nav_enabled`** — ADR-0014 §6 names this accessibility toggle
+  (keyboard/gamepad traversal off, mouse click still live, via `FOCUS_CLICK`). It does not
+  exist, and neither does any `input_config.tres` instance — there is no config plumbing for
+  `InputConfig` at all today. ⚠ The ADR flags `FOCUS_CLICK`'s traversal-suppression as **its
+  one unverified engine claim**; verify against Redot 26.2 before building on it.
+- **A pad binding for `board_cursor_cycle`**, which has none.
+
+### What to re-check when picking it up
+
+- Whether the seven actions above are still the full set — any verb added between now and
+  then must be a named action, or it silently becomes unrebindable *and* keyboard-only.
+- `accessibility-requirements.md`'s committed tier: remapping is a common Standard-tier
+  expectation, so the settings spec should state whether this is required or optional there.

@@ -3,6 +3,15 @@
 > **Status**: Reviewed — APPROVED (`/ux-review` 2026-07-27, 0 blocking)
 > **Author**: user + ux-designer
 > **Last Updated**: 2026-07-27
+>
+> ⛔ **Note added 2026-08-24 (no design change).** The **control-binding / rebinding UI** is
+> deferred until this menu is implemented, by user decision. It belongs under the **Settings**
+> screen this spec already routes to but does not itself specify. The precondition is done — all
+> seven board verbs are named InputMap actions with keyboard *and* gamepad bindings as of S6-17/20,
+> so there is now something concrete for such a screen to edit. Full context, the current binding
+> table, and two items travelling with it (`InputConfig.menu_keyboard_nav_enabled`, and a missing
+> pad binding for `board_cursor_cycle`) are in `production/post-gate-backlog.md` item 6.
+> **Whoever specs the Settings screen should start there.**
 > **Journey Phase(s)**: Entry / cold boot (no player-journey.md yet — see Open Questions)
 > **Template**: UX Spec
 > **Scope**: Vertical Slice (S2-05). VS-minimal entry set; persistence/campaign deferred (Alpha+).
@@ -46,7 +55,7 @@ target from pause → Quit to Main Menu. Alternate entry: none (it is the root).
 | Exit Destination | Trigger | Notes |
 |---|---|---|
 | VS skirmish (in-match) | "New Skirmish" | Starts a fresh match; loads the VS map + HUD |
-| Settings | "Settings" | Opens the settings screen (separate spec — see Data Requirements / Open Questions) |
+| Settings | "Settings" | Opens the settings screen (separate spec — see Data Requirements / Open Questions). ⛔ **Control bindings live here** — deferred to this screen by user decision 2026-08-24; the actions are already named and rebindable in `project.godot`, see `production/post-gate-backlog.md` item 6 |
 | App exit | "Quit" (confirm) | Closes the process |
 
 ---
