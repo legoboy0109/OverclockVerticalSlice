@@ -63,10 +63,10 @@ lower than a casual reading suggests: a Sniper's attack of 6 one-shots most of t
 
 | Unit | Role | `produce_cost` | `hp` | `attack` | `range` | `move_cost` | `soft_move_cap` | `upkeep` | `can_pilot` |
 |---|---|---:|---:|---:|---:|---:|---:|---:|:---:|
-| **Light Infantry** *(Scout)* | Screen, scout, crew | 2 | 3 | 2 | 1 | 1 | 4 | **1** | ★ **yes** |
-| **Medium Infantry** *(Trooper)* | The line | 4 | 6 | 3 | 2 | 2 | 3 | **2** | ★ **yes** |
-| **Heavy Infantry** *(Heavy)* | Push and hold | 7 | 10 | 5 | 2 | 3 | 2 | **3** | no |
-| **Sniper** | Reach and threat | 5 | 3 | 6 | 3 | 2 | 3 | **2** | no |
+| **Light Infantry** *(Scout)* | Screen, scout, crew | **200** | 3 | 2 | 1 | 1 | 4 | **100** | ★ **yes** |
+| **Medium Infantry** *(Trooper)* | The line | **400** | 6 | 3 | 2 | 2 | 3 | **200** | ★ **yes** |
+| **Heavy Infantry** *(Heavy)* | Push and hold | **700** | 10 | 5 | 2 | 3 | 2 | **300** | no |
+| **Sniper** | Reach and threat | **500** | 3 | 6 | 3 | 2 | 3 | **200** | no |
 
 - All are `INFANTRY`, all `counts_toward_cap = true`, all `damage_type = KINETIC`, all
   `resistances = {}` (neutral across the board — the baseline defines "no resistance").
@@ -82,13 +82,13 @@ All `GROUND_VEHICLE`: blocked by difficult terrain, no cover benefit, `requires_
 
 | Unit | Role | `produce_cost` | `hp` | `attack` | `range` | `move_cost` | `upkeep` | Notes |
 |---|---|---:|---:|---:|---:|---:|---:|---|
-| **Transport** | Move infantry | 10 | 16 | — | — | 2 | **4** | `transport_capacity` 3, accepts `{INFANTRY}`. Unarmed. `can_target = {}` |
-| **Tank** | The armoured answer | 14 | 22 | 7 | 2 | 2 | **5** | `resistances = {INCENDIARY: +2}` |
-| **Artillery** | Break a static line | 16 | 16 | 8 | **5** | 2 | **5** | `min_range` **2** — cannot fire adjacent. `area_shape = BURST` |
+| **Transport** | Move infantry | **1,000** | 16 | — | — | 2 | **400** | `transport_capacity` 3, accepts `{INFANTRY}`. Unarmed. `can_target = {}` |
+| **Tank** | The armoured answer | **1,400** | 22 | 7 | 2 | 2 | **500** | `resistances = {INCENDIARY: +2, EMF: −2}` (EMF is the DT-9b default) |
+| **Artillery** | Break a static line | **1,600** | 16 | 8 | **5** | 2 | **500** | `min_range` **2** — cannot fire adjacent. `area_shape = BURST` |
 
 > ★ **The Artillery is the Alliance's most interesting unit and its most dangerous to balance.**
 > Range 5 on a 12×10 board reaches a long way, and `BURST` hits four tiles. Its guards are: it costs
-> 16 Credits *and* an infantry slot, it cannot fire at anything adjacent (`min_range` 2), it takes
+> 1,600 Credits *and* an infantry slot, it cannot fire at anything adjacent (`min_range` 2), it takes
 > `AREA_AP_SURCHARGE` on every shot, it has infantry-tier hp, and **its burst hits friendlies**
 > (DT-8). It is meant to be answered by getting close to it. Watch it in playtest before anything
 > else on this sheet.
@@ -100,9 +100,9 @@ All `AIR`: flat `AIR_MOVE_COST` 1 over any terrain, no cover, cannot capture or 
 
 | Unit | Role | `produce_cost` | `hp` | `attack` | `range` | `upkeep` | `can_target` |
 |---|---|---:|---:|---:|---:|---:|---|
-| **Fighter** | Air superiority | 12 | 7 | 6 | 2 | **4** | ★ `{AIR}` **only** |
-| **Bomber** | Strike ground | 14 | 6 | 7 | 1 | **5** | `{INFANTRY, GROUND_VEHICLE}`, `area_shape = BURST` |
-| **Helicopter** | Flexible gunship | 12 | 9 | 5 | 2 | **4** | `{INFANTRY, GROUND_VEHICLE, AIR}` — the generalist's generalist |
+| **Fighter** | Air superiority | **1,200** | 7 | 6 | 2 | **400** | ★ `{AIR}` **only** |
+| **Bomber** | Strike ground | **1,400** | 6 | 7 | 1 | **500** | `{INFANTRY, GROUND_VEHICLE}`, `area_shape = BURST` |
+| **Helicopter** | Flexible gunship | **1,200** | 9 | 5 | 2 | **400** | `{INFANTRY, GROUND_VEHICLE, AIR}` — the generalist's generalist |
 
 > ★ **The Helicopter is the Alliance in miniature** — it can hit anything and is best against
 > nothing. It is also the faction's **UC-5 compliance**: the Alliance can always answer air, because
@@ -114,11 +114,11 @@ All `AIR`: flat `AIR_MOVE_COST` 1 over any terrain, no cover, cannot capture or 
 | Structure | Produces | Max | `build_cost` | `build_time` | `hp` | `upkeep` | Notes |
 |---|---|---:|---:|---:|---:|---:|---|
 | **HQ** | Light Infantry | 1 | — | — | 40 | **0** | `defense` 2. The win condition |
-| **Barracks** | `{INFANTRY}` | **3** | 6 | 2 | 12 | **1** | ★ +2 infantry cap each |
-| **Factory** | `{GROUND_VEHICLE}` | **2** | 10 | 3 | 14 | **2** | ★ Reuses the retired Economy Outpost art |
-| **Airfield** | `{AIR}` | **1** | 12 | 3 | 12 | **2** | |
-| **Research Lab** | — | 1 | 8 | 2 | 10 | **2** | ★ The whole economy |
-| **Defensive Structure** | — | **3** | 5 | 2 | 10 | **1** | `attack` 4, `range` 2, `can_counterattack`. ★ **Manned** — see below |
+| **Barracks** | `{INFANTRY}` | **3** | **600** | 2 | 12 | **100** | ★ +2 infantry cap each |
+| **Factory** | `{GROUND_VEHICLE}` | **2** | **1,000** | 3 | 14 | **200** | ★ Reuses the retired Economy Outpost art |
+| **Airfield** | `{AIR}` | **1** | **1,200** | 3 | 12 | **200** | |
+| **Research Lab** | — | 1 | **800** | 2 | 10 | **200** | ★ The whole economy |
+| **Defensive Structure** | — | **3** | **500** | 2 | 10 | **100** | `attack` 4, `range` 2, `can_counterattack`. ★ **Manned** — see below |
 
 **★ "Manned defence structures" (user direction) — what it means mechanically.** The Alliance's
 Defensive Structure `requires_pilot = true`: it needs an infantry crew to fire, and so **costs an
@@ -132,9 +132,9 @@ Solar's are free to hold but weak.**
 
 | | Value | vs baseline |
 |---|---|---|
-| `BASE_INCOME` | 10 | — (defines it) |
-| Economy tiers | I/II/III at 10/20/35 Credits, +5 each | — |
-| Income ceiling | **25** | — |
+| `BASE_INCOME` | **1,000** | — (defines it) |
+| Economy tiers | I/II/III at 1,000 / 2,000 / 3,500 Credits, **+500** each | — |
+| Income ceiling | **2,500** | — |
 | `base_infantry_cap` | **4** | — |
 | `cap_per_barracks` | 2 · `max_barracks` **3** | — |
 | **Infantry ceiling** | **10** | — |
@@ -163,16 +163,16 @@ path be caught by a test that needs no faction-specific fixture.
 **Sustainability check** (the CR-10 comparison sheet's anchor row):
 
 ```
-income at full research                     25
-structure upkeep (2 Barracks, 1 Factory, 1 Lab)  − 6
-                                            ────
-available for army                          19
+income at full research                          2,500
+structure upkeep (2 Barracks, 1 Factory, 1 Lab)  −  600
+                                                 ───────
+available for army                               1,900
 ```
 
-At a mean infantry upkeep of 2, that is **8–9 infantry** against a cap of **10** — the intended
-"you can field a little more than you can comfortably keep". Add a Tank (upkeep 5, plus a crew at
-2) and the sustainable infantry count drops by three. **Armour is expensive twice: once in Credits,
-once in bodies.**
+At a mean infantry upkeep of 200, that is **8–9 infantry** against a cap of **10** — the intended
+"you can field a little more than you can comfortably keep". Add a Tank (upkeep 500, plus a crew at
+200) and the sustainable infantry count drops by three and a half. **Armour is expensive twice: once
+in Credits, once in bodies.**
 
 ## Edge Cases
 
@@ -211,7 +211,7 @@ target and the cheapest possible proof that the reworked economy resolves matche
 |---|---|---|
 | Infantry stat block | as shipped | ★ **Do not touch casually.** These are the only values in the game that have ever been played, and five comparison sheets are keyed to them |
 | Artillery `range` / `min_range` | 5 / 2 | ★ The most dangerous number on this sheet. Reduce range before touching the burst |
-| Tank `hp` | 22 | Against a 6-attack roster, four clean hits. Above ~26 it stops being answerable by infantry |
+| Tank `hp` | 22 | Against a 6-attack roster, four clean hits — three for an EMF weapon at the DT-9b default. Above ~26 it stops being answerable by infantry |
 | Air `hp` | 6–9 | Deliberately inside the infantry band. Cut this before cutting reach |
 | `max_barracks` / `max_factories` / `max_airfields` | 3 / 2 / 1 | ★ Sets the Alliance's map footprint and its fixed upkeep floor |
 | Defensive Structure `requires_pilot` | **true** | ★ The "manned" identity. Flipping it to false makes the Alliance strictly better and erases Solar's contrast |
@@ -223,7 +223,7 @@ target and the cheapest possible proof that the reworked economy resolves matche
 | AC-1 | GIVEN the Alliance `FactionDef`, THEN every MOD-domain delta is 0 and `effective_X(e, alliance) == base_X(e)` for every domain (the regression anchor) | Logic |
 | AC-2 | GIVEN the Alliance roster, THEN its four infantry match `data/units/{scout,trooper,heavy,sniper}.tres` exactly | Config-Data |
 | AC-3 | GIVEN a full Alliance build-out, THEN `effective_cap` is exactly 10 | Logic |
-| AC-4 | GIVEN all three economy tiers researched, THEN `credit_income` is exactly 25 | Logic |
+| AC-4 | GIVEN all three economy tiers researched, THEN `credit_income` is exactly **2,500** | Logic |
 | AC-5 | GIVEN a Tank production order with no free infantry slot for its crew, THEN it is rejected | Integration |
 | AC-6 | GIVEN an uncrewed Alliance Defensive Structure, THEN it does not fire and does not counterattack, and still blocks its tile | Integration |
 | AC-7 | GIVEN a crewed one, THEN it fires at `attack` 4 / `range` 2 and counterattacks | Integration |

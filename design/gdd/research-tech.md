@@ -54,17 +54,17 @@
 >
 > | Tech | `research_cost` (Credits) | `ap_surcharge` | `research_time` | Effect |
 > |---|---:|---:|---:|---|
-> | **Economy Tier I** | 10 | 1 | 1 turn | `credit_income` +5 (10 → 15) |
-> | **Economy Tier II** | 20 | 1 | 2 turns | `credit_income` +5 (15 → 20) |
-> | **Economy Tier III** | 35 | 1 | 3 turns | `credit_income` +5 (20 → 25) |
+> | **Economy Tier I** | **1,000** | 1 | 1 turn | `credit_income` **+500** (1,000 → 1,500) |
+> | **Economy Tier II** | **2,000** | 1 | 2 turns | `credit_income` **+500** (1,500 → 2,000) |
+> | **Economy Tier III** | **3,500** | 1 | 3 turns | `credit_income` **+500** (2,000 → 2,500) |
 >
 > - Tiers are **strictly sequential**: II requires I, III requires II. This is what makes the
 >   economy a *curve you climb* rather than a menu, and it gives the Holy Cosmic Empire's *"linear
 >   tech tree"* identity a shape the base game already speaks.
-> - **Flat +5 per tier, escalating cost.** Diminishing returns on investment without a diminishing
+> - **Flat +500 per tier, escalating cost.** Diminishing returns on investment without a diminishing
 >   benefit — each tier still feels like a real upgrade, but Tier III (7-turn payback against a
 >   30-round match) is a genuine commitment rather than an automatic purchase.
-> - **The economy ceiling is 25 Credits/turn, and it is HARD.** Once Tier III is held there is no
+> - **The economy ceiling is 2,500 Credits/turn, and it is HARD.** Once Tier III is held there is no
 >   further economic growth available at any price. ★ This is the structural change; everything else
 >   here is bookkeeping.
 >
@@ -104,7 +104,7 @@
 > |---|---|---|
 > | RTOQ-NEW-1 | ★ **How does the Empire's tech-base vulnerability stay distinct now that everyone has one?** Recommend: everyone loses income *growth* when their Lab dies; only the Empire loses *rank* (PV-7), which is a far sharper penalty and matches "high risk, high reward" | user + systems-designer |
 > | RTOQ-NEW-2 | **Should Attack/Defense Tech also tier?** Economy now has three tiers; a single flat Attack Tech alongside looks inconsistent, and a tiered combat line would give the Empire's "power increasing based on the linear tech tree" somewhere to live | systems-designer |
-> | RTOQ-NEW-3 | ★ **Is a 25 ceiling right?** It is close to the old ~26 practical ceiling, so existing balance intuition roughly carries over. But the old ceiling was reached by *building*, which cost map space and time, while this one is reached by *researching*, which costs only Credits and turns. The curve to reach it is quite different even though the endpoint is similar | economy-designer |
+> | RTOQ-NEW-3 | ★ **Is a 2,500 ceiling right?** At the pre-rescale scale it was 25, close to the old ~26 practical ceiling, so existing balance intuition roughly carries over. But the old ceiling was reached by *building*, which cost map space and time, while this one is reached by *researching*, which costs only Credits and turns. The curve to reach it is quite different even though the endpoint is similar | economy-designer |
 
 ## Overview
 

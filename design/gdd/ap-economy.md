@@ -17,6 +17,63 @@
 > across two axes; the *wording* needs a decision (Open Questions).
 > **Priority / Layer**: Vertical Slice / Foundation (system #3)
 
+> ## ★★★ SCALE BANNER — AP and Credit quantities inflated (2026-08-24)
+>
+> **User decision, 2026-08-24.** All AP and Credit quantities are inflated to give balance work
+> room to breathe. **Cost *scaling* — the ratios between things — is unchanged. Only the units
+> change.**
+>
+> | | Old | **New** | Factor |
+> |---|---:|---:|---:|
+> | `FLAT_AP_PER_TURN` | 10 | ★ **30** | ×3 |
+> | `AP_CARRYOVER_CAP` | 5 | ★ **15** | ×3 |
+> | Max AP at a turn's start | 15 | ★ **45** | ×3 |
+> | **AP action costs** (`move_cost`, `attack_cost`, surcharges) | 1–3 | ★ **unchanged** | ×1 |
+> | **All Credit quantities** (income, costs, upkeep, refunds) | — | ★ **×100** | ×100 |
+>
+> ### Why — and what each half buys
+>
+> **Credits ×100 buys granularity.** At the old scale upkeep had about four usable values (1, 2, 3,
+> 4) across the whole roster, so two units of similar weight were forced to identical upkeep and a
+> designer had nowhere to put a 15% difference. At ×100 the same design space holds hundreds of
+> steps. ★ This matters most for **upkeep**, which is the finest-grained mechanic in the game and
+> was the most cramped.
+>
+> **AP ×3 buys usable armies — with a real cost.** `FLAT_AP_PER_TURN` triples while action costs do
+> **not**, so every player gets roughly three times as many actions per turn. This is deliberate and
+> it addresses a measured structural problem: AP is a *flat shared* budget, so at 10 AP an army
+> larger than about five units had members standing still every turn regardless of what the player
+> wanted. Larger rosters and the population cap made that worse. See
+> `factions/solar-federation.md` § "Why volume nearly did not work".
+>
+> ### ⚠ The tension this creates, stated once and honestly
+>
+> **Abundant AP dilutes Pillar 1.** "Every Choice Is a Tradeoff" rests on AP being scarce enough
+> that spending it on economy visibly costs you tempo. At 30 AP a typical army can move *and* attack
+> in the same turn, so the triage that made the pillar felt is softer.
+>
+> This is a real cost, knowingly accepted — the alternative was armies the player could not command.
+> **The dial that restores tension without undoing the fix is AP action costs**, which were
+> deliberately left unchanged ("keep the same cost scaling for now") and can be raised later once
+> larger armies have been played. ★ **Do not restore tension by cutting `FLAT_AP_PER_TURN` back —
+> that re-creates the idle-army problem this change exists to solve.** Recorded as APOQ-SCALE-1.
+>
+> ### ⚠ Corpus sweep owed — this banner is authoritative, several older docs are not yet
+>
+> The constants tables in **this** document are updated and authoritative. Other **Approved** GDDs
+> still quote the old figures in prose and worked examples — `game-state-turn-manager.md` (setup AP),
+> `combat-resolution.md` ("at floor income (10 AP)…"), `base-production.md`'s closeout-drag analysis,
+> `unit-system.md`'s per-AP audit, and `transport-and-pilots.md`'s embark note. **None of their
+> *conclusions* change** — the rescale is proportional, so every ratio, breakpoint and payback period
+> is preserved — but their arithmetic reads wrong. Run `/propagate-design-change` once the faction
+> corpus settles rather than editing them piecemeal now. Tracked as APOQ-SCALE-2.
+
+> ### What does NOT change
+>
+> `hp`, `attack`, `defense`, `COVER_DR`, `MIN_DAMAGE`, resistances, ranges, merit thresholds,
+> `build_time`, cooldowns and every rate (`DISBAND_REFUND_RATE`, `CANCEL_REFUND_RATE`) are all
+> **untouched**. They are not denominated in AP or Credits.
+
 > ## ★★ REVISION BANNER — economy re-based onto research (2026-08-24)
 >
 > **Status: IN REVISION.** User decision, 2026-08-24: **Credit income no longer comes from Economy
@@ -38,7 +95,7 @@
 > Economy Outposts there is no `n`, so the entire tail of the formula goes with it.
 >
 > ```
-> NEW:  credit_income(player) = BASE_INCOME + Σ ECON_TIER_BONUS[t]
+> NEW:  credit_income(player) = BASE_INCOME (1,000) + Σ ECON_TIER_BONUS[t] (+500 each)
 >                                for each completed economy tech tier t
 > ```
 >
@@ -50,7 +107,7 @@
 > because there was always another Economy Outpost worth building.
 >
 > **Research is a finite tree. Three economy tiers exist, they are researched once each, and then
-> the economy is done growing — permanently, at a ceiling of 25.** Combined with per-faction
+> the economy is done growing — permanently, at a ceiling of 2,500.** Combined with per-faction
 > maximums on every remaining structure (`base-production.md`), a player reaches a state with
 > **nothing left to build** — at which point AP has nowhere to go but movement and combat. That is
 > precisely the behaviour the simulation could not produce at any siege weight.
@@ -62,24 +119,24 @@
 >
 > ### What is unchanged
 >
-> AP is untouched: still flat `FLAT_AP_PER_TURN` (10) with capped carryover (5). The dual-cost
-> both-or-neither contract is untouched. `BASE_INCOME` stays 10. **Upkeep still subtracts from this
+> AP is untouched: now flat `FLAT_AP_PER_TURN` (**30**) with capped carryover (**15**) — see the SCALE banner above. The dual-cost
+> both-or-neither contract is untouched. `BASE_INCOME` is now **1,000** (was 10). **Upkeep still subtracts from this
 > result** (`unit-upkeep.md`) — income is computed here, the drain is applied there.
 >
 > ### The new income table
 >
 > | State | Cumulative research spend | `credit_income` |
 > |---|---:|---:|
-> | No economy tech | 0 | **10** |
-> | Economy Tier I | 10 | **15** |
-> | Economy Tier II | 30 | **20** |
-> | Economy Tier III | 65 | **25** |
+> | No economy tech | 0 | **1,000** |
+> | Economy Tier I | 1,000 | **1,500** |
+> | Economy Tier II | 3,000 | **2,000** |
+> | Economy Tier III | 6,500 | **2,500** |
 >
-> Tier bonuses are flat (+5 each) while tier **costs escalate** (10 / 20 / 35). Diminishing returns
+> Tier bonuses are flat (+500 each) while tier **costs escalate** (1,000 / 2,000 / 3,500). Diminishing returns
 > on investment without a diminishing *benefit*, which keeps each tier feeling like a real upgrade
 > while making the third a genuine commitment: it pays back in 7 turns against a 30-round match.
 >
-> **Payback:** Tier I 2 turns · Tier II 4 turns · Tier III 7 turns.
+> **Payback:** Tier I 2 turns · Tier II 4 turns · Tier III 7 turns. ★ Unchanged — the rescale is proportional, so every payback period, ratio and breakpoint in the corpus is preserved exactly.
 >
 > ### Consequences owed
 >
@@ -132,7 +189,7 @@ Every turn poses **two kinds of decision**, cleanly separated:
   war chest in one turn; expansion is paced by your tactical budget too.
 
 The old fantasy — *"one pool, never quite enough for everything"* — becomes **"a stable tactical
-rhythm punctuated by strategic commitments."** AP still creates per-turn pressure (10 AP + a little
+rhythm punctuated by strategic commitments."** AP still creates per-turn pressure (**30** AP + a little
 carry doesn't stretch to everything you'd like to do); Credits create the save-up-and-spend arc that
 single-pool AP couldn't. The felt result: a commander who fights with a steady hand (AP) and *invests*
 with deliberate timing (Credits) — the coupling that made "I built something, now I can't act" feel bad
@@ -268,7 +325,7 @@ Identical in shape to the former `ap_income` — only the resource it grants cha
 
 | Variable | Symbol | Type | Range | Description |
 |----------|--------|------|-------|-------------|
-| `BASE_INCOME` | — | int const | 10 | Flat Credits every player earns each turn regardless of board state |
+| `BASE_INCOME` | — | int const | ★ **1000** | Flat Credits every player earns each turn regardless of board state *(was 10; ×100 rescale 2026-08-24)* |
 | `OUTPOST_BONUS_TIER1` | — | int const | 2 | Credits per outpost for outposts 1–`TIER_THRESHOLD` |
 | `OUTPOST_BONUS_TIER2` | — | int const | 1 | Credits per outpost beyond `TIER_THRESHOLD` (diminished tier) |
 | `TIER_THRESHOLD` | — | int const | 4 | Number of outposts earning the full bonus before diminishing |
@@ -297,8 +354,8 @@ ap_at_reset(player) = FLAT_AP_PER_TURN + min(ap_leftover(player), AP_CARRYOVER_C
 
 | Variable | Type | Range | Description |
 |----------|------|-------|-------------|
-| `FLAT_AP_PER_TURN` | int const | 10 | Flat AP granted every turn (tactical budget floor) |
-| `AP_CARRYOVER_CAP` | int const | 5 | Max unspent AP that carries into the next turn |
+| `FLAT_AP_PER_TURN` | int const | ★ **30** | Flat AP granted every turn (tactical budget floor) *(was 10; ×3 rescale 2026-08-24)* |
+| `AP_CARRYOVER_CAP` | int const | ★ **15** | Max unspent AP that carries into the next turn *(was 5; ×3 rescale 2026-08-24)* |
 | `ap_leftover` | int | 0 – (FLAT+CAP) | The player's unspent AP at their previous end-of-turn |
 | `ap_at_reset` | int | 10 – 15 | AP the player holds at the start of their turn |
 
@@ -350,7 +407,7 @@ apply(A, player):                                  # both-or-neither
 
 ## Edge Cases
 
-- **AP leftover exceeds the cap:** only `AP_CARRYOVER_CAP` (5) carries; the rest is lost (e.g. end a
+- **AP leftover exceeds the cap:** only `AP_CARRYOVER_CAP` (**15**) carries; the rest is lost (e.g. end a
   turn with 9 unspent → next turn starts at `10 + min(9, 5) = 15`, not 19).
 - **Full Credit war chest but 0 AP:** an economic action is **illegal** — the AP surcharge is
   unaffordable. This is the intended tempo gate: you cannot dump the war chest in one turn.
@@ -524,7 +581,7 @@ two GDDs; this system owns the data and the two afford queries.
 | Question | Owner | Notes / target |
 |----------|-------|----------------|
 | **Pillar 1 wording** — "One Economy, Every Choice" is literally contradicted by the two-resource split. Reword the pillar (e.g. "Every Choice Is a Tradeoff" across tempo + investment), or reinterpret it as owning only the Credit economy? | user / creative-director | **Design-direction call — flagged, not decided here.** The pivot preserves Pillar 1's *intent* (meaningful tradeoffs) but not its *letter*. Resolve in the pillars/vision doc as part of propagation. |
-| **Flat AP / carryover / logistics-AP-cost tuning** — `FLAT_AP_PER_TURN` (10), `AP_CARRYOVER_CAP` (5), `PRODUCE_AP_COST` (1), `BUILD_AP_COST` (2), `RESEARCH_AP_COST` (base 1, per-tech overridable) are first-cut defaults. | game-designer + playtest | The most playtest-sensitive pivot numbers; tune against the S4-05 tempo playtest. Per-tech research surcharges let Research tune tempo cost tech-by-tech. |
+| **Flat AP / carryover / logistics-AP-cost tuning** — `FLAT_AP_PER_TURN` (**30**), `AP_CARRYOVER_CAP` (**15**), `PRODUCE_AP_COST` (1), `BUILD_AP_COST` (2), `RESEARCH_AP_COST` (base 1, per-tech overridable) are first-cut defaults. ★ **The AP *cost* constants were deliberately NOT rescaled** — raising them is the dial that restores Pillar-1 tension after the ×3 budget increase (APOQ-SCALE-1). | game-designer + playtest | The most playtest-sensitive pivot numbers; tune against the S4-05 tempo playtest. Per-tech research surcharges let Research tune tempo cost tech-by-tech. |
 | **Credit banking → snowball** — Credits now *accumulate* (unbounded stock), so a saved war chest enables larger single-turn bursts than the old use-it-or-lose-it pool. Does banking worsen the leader's snowball, and does the `BUILD_AP_COST` rate-limit sufficiently brake it? | economy-designer / game-designer | **Re-opened by the pivot.** The income *rate* is still capped (~26/~32), but stock is not. Consider a soft Credit cap or a stronger AP surcharge if playtest shows runaway bursts. |
 | **Starting Credits** — does a player begin turn 1 with 0 Credits (earning their first income at their first reset) or a small starting balance so turn 1 isn't dead? | game-designer | Recommend: income applied at the first start-of-turn reset (turn 1 opens with ~10 Credits), no separate starting grant — mirrors the old model's turn-1 spendability. Confirm in playtest. |
 | **AI two-currency scoring** — the AI scored everything in "value-per-AP"; with two currencies it needs a Credit↔AP conversion so a unified score still holds, and the lethal-floor-vs-economy-ceiling invariant must be re-validated. | ai-opponent.md (#11) | **Engineering, tracked in ai-opponent.md.** Anchor: Credit costs equal the old AP costs → ~1:1 conversion as a starting rate. |

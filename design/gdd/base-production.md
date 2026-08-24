@@ -62,12 +62,12 @@
 > | Structure | Produces | Also does | Max per faction | `build_cost` | `build_time` | `upkeep` |
 > |---|---|---|---:|---:|---:|---:|
 > | **HQ** | the faction's basic unit | is the win condition | 1 (fixed) | — | — | **0** |
-> | **Barracks** *(was Production Outpost)* | `INFANTRY` | ★ **+`cap_per_barracks` infantry cap** | `max_barracks` (3) | 6 | 2 | 1 |
-> | **Factory** *(new)* | `GROUND_VEHICLE` | — | `max_factories` (2) | 10 | 3 | 2 |
-> | **Airfield** *(new)* | `AIR` | — | `max_airfields` (1) | 12 | 3 | 2 |
-> | **Research Lab** | — | ★ **the entire economy** | 1 | 8 | 2 | 2 |
-> | **Defensive Structure** | — | fires on enemies | `max_defensive` (3) | 5 | 2 | 1 |
-> | ~~**Economy Outpost**~~ | ~~—~~ | ~~+2 Credit income~~ | **DELETED** | ~~6~~ | ~~1~~ | ~~1~~ |
+> | **Barracks** *(was Production Outpost)* | `INFANTRY` | ★ **+`cap_per_barracks` infantry cap** | `max_barracks` (3) | **600** | 2 | **100** |
+> | **Factory** *(new)* | `GROUND_VEHICLE` | — | `max_factories` (2) | **1,000** | 3 | **200** |
+> | **Airfield** *(new)* | `AIR` | — | `max_airfields` (1) | **1,200** | 3 | **200** |
+> | **Research Lab** | — | ★ **the entire economy** | 1 | **800** | 2 | **200** |
+> | **Defensive Structure** | — | fires on enemies | `max_defensive` (3) | **500** | 2 | **100** |
+> | ~~**Economy Outpost**~~ | ~~—~~ | ~~+2 Credit income~~ | **DELETED** | ~~600~~ | ~~1~~ | ~~100~~ |
 >
 > *(Maximums shown are the Democratic Alliance baseline. Every one is a faction lever, D5.)*
 >
@@ -80,17 +80,17 @@
 > With every structure capped, an Alliance player's *complete* build-out is:
 >
 > ```
-> 3 Barracks (18) + 2 Factory (20) + 1 Airfield (12) + 1 Lab (8) + 3 Defensive (15)  =  73 Credits
-> 10 structures.  Total upkeep 14.  Then there is nothing left to build, ever.
+> 3 Barracks (1,800) + 2 Factory (2,000) + 1 Airfield (1,200) + 1 Lab (800) + 3 Defensive (1,500)
+>   =  7,300 Credits · 10 structures · total upkeep 1,400 · then nothing left to build, ever.
 > ```
 >
-> Against an income ceiling of **25**, that build-out leaves **11 Credits/turn** for an army — which
-> will not sustain a full 10-infantry cap at a roster mean upkeep of ~2. ★ **Maxing every structure
-> is deliberately not affordable.** The player must choose between infrastructure and army, which is
-> a real decision, and it is the decision the game currently does not make anyone face.
+> Against an income ceiling of **2,500**, that build-out leaves **1,100 Credits/turn** for an army —
+> which will not sustain a full 10-infantry cap at a roster mean upkeep of ~200. ★ **Maxing every
+> structure is deliberately not affordable.** The player must choose between infrastructure and army,
+> which is a real decision, and it is the decision the game currently does not make anyone face.
 >
-> A realistic build (2 Barracks, 1 Factory, 1 Lab = 6 upkeep) leaves **19** for an army of ~8. That
-> is the intended shape.
+> A realistic build (2 Barracks, 1 Factory, 1 Lab = 600 upkeep) leaves **1,900** for an army of ~9.
+> That is the intended shape.
 >
 > ### What is superseded in this document
 >

@@ -81,7 +81,7 @@ it gets a unit that is cheaper, or tougher, or that also does something else.**
 
 | id | Effect | `ap_cost` | `credit_cost` | Range | Cooldown | Motivated by |
 |---|---|---:|---:|---:|---:|---|
-| `REPAIR` | Restore `REPAIR_AMOUNT` hp to one friendly unit. Cannot exceed max hp; cannot target self | 2 | 1 | 1 | 1 | Solar healer; Protectorate support |
+| `REPAIR` | Restore `REPAIR_AMOUNT` hp to one friendly unit. Cannot exceed max hp; cannot target self | 2 | **100** | 1 | 1 | Solar healer; Protectorate support |
 | `DEMOLISH` | Attack with `DEMOLISH_BONUS` added vs **structures only**. No effect on units | 3 | 0 | 1 | 2 | Protectorate demolitions |
 | `SELF_DESTRUCT` | Destroy self; deal `SELF_DESTRUCT_DAMAGE` in a `BURST` centred on self. ★ Hits friendlies (DT-8) | 1 | 0 | 0 | — (`uses_per_match` 1) | Solar suicide bomber |
 | `CAPTURE_VEHICLE` | Take ownership of an **unpiloted** ground vehicle on an adjacent tile. Subject to the new owner's population cap | 3 | 0 | 1 | 1 | ★ Independents pirate |
@@ -95,7 +95,7 @@ it gets a unit that is cheaper, or tougher, or that also does something else.**
 | Constant | Default | Note |
 |---|---:|---|
 | `REPAIR_AMOUNT` | **4** hp | Against an hp band of 6–14, meaningful without erasing a trade |
-| `DEMOLISH_BONUS` | **+4** vs structures | HQ has 40 hp — a demolition unit should threaten it, not delete it |
+| `DEMOLISH_BONUS` | **+4** vs structures | HQ has 40 hp — a demolition unit should threaten it, not delete it. ★ Not a Credit value; unaffected by the ×100 rescale |
 | `SELF_DESTRUCT_DAMAGE` | **6** | ★ Must not one-shot the roster's mid-tier or the ability becomes mandatory |
 | `PARADROP_RANGE` | **3** tiles | |
 | `FORTIFY_DEFENSE` | **+2** | Against a 2–6 attack band, a real but not absolute tilt |

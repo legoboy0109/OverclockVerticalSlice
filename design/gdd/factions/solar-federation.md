@@ -53,16 +53,21 @@ this was nearly a real problem.
 Working Solar's numbers through surfaced a structural interaction that **is not obvious and applies
 to every volume-based design in the game**:
 
-> **AP is a flat shared budget (10/turn, +5 carryover). It does not scale with army size.**
+> **AP is a flat shared budget. It does not scale with army size.**
 
-So fielding more units does **not** grant more actions. At the Alliance's typical `move_cost` of 2,
-ten AP moves five units — and an eleventh, twelfth and thirteenth unit would simply *stand still
-every turn*. A faction whose whole thesis is "more bodies" would have been handed an army it
-structurally cannot use, and the extra units would be pure upkeep for zero tempo.
+So fielding more units does **not** grant more actions. ★ **This finding is what drove the user's
+2026-08-24 AP rescale from 10 to 30** (`ap-economy.md` SCALE banner): at 10 AP and the Alliance's
+typical `move_cost` of 2, *five* units exhausted the whole turn, and an eleventh, twelfth and
+thirteenth would simply have stood still every turn. A faction whose thesis is "more bodies" would
+have been handed an army it structurally cannot use.
 
-**The resolution, and it is what makes Solar work: Solar's units are cheap in AP, not just in
-Credits.** The Citizen Trooper has `move_cost` **1**, so 10 AP moves *ten* of them. Volume converts
-into tempo instead of into idle pieces.
+**At 30 AP the problem is mitigated for everyone**, which is the point of the rescale — but it is
+mitigated *proportionally*, so the relative advantage below is unchanged.
+
+**What makes Solar work is that its units are cheap in AP, not just in Credits.** The Citizen
+Trooper has `move_cost` **1**, so a 30-AP turn moves *thirty* single tiles of Solar infantry against
+*fifteen* of the Alliance's. Volume converts into tempo instead of into idle pieces — and it does so
+at any AP budget, because the advantage is a **ratio**.
 
 ★ **This is the deciding difference between Solar and the baseline**, more than cost and more than
 the cap. It also means the faction's identity is only partly economic — it is really about **AP
@@ -83,13 +88,36 @@ corpus:
 
 | Unit | Role | `cost` | `hp` | `atk` | `rng` | `move_cost` | `soft_cap` | `upkeep` | Abilities |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---|
-| **Citizen Trooper** | The entire line | **3** | 4 | 3 | 2 | ★ **1** | 4 | ★ **1** | — |
-| **Pilot** | Crews vehicles, better | **2** | 3 | 1 | 1 | 1 | 3 | **1** | ★ `crew_bonus: attack +1` |
-| **Medic** | Sustain | **4** | 4 | 1 | 1 | 1 | 3 | **2** | `REPAIR` |
-| **Volunteer** | Delete a position | **3** | 3 | 2 | 1 | 1 | 4 | **1** | `SELF_DESTRUCT` |
+| **Citizen Trooper** | The entire line | **300** | 4 | 3 | 2 | ★ **1** | 4 | ★ **100** | — |
+| **Pilot** | Crews vehicles, better | **200** | 3 | 1 | 1 | 1 | 3 | **100** | ★ `crew_bonus: attack +1` |
+| **Medic** | Sustain | **400** | 4 | 1 | 1 | 1 | 3 | **200** | `REPAIR` |
+| **Volunteer** | Delete a position | **300** | 3 | 2 | 1 | 1 | 4 | **100** | `SELF_DESTRUCT` |
+| ★ **Lance Team** | **Anti-armour** | **400** | 3 | 6 | 1 | 1 | 3 | **200** | — · `damage_type = EMF` · `can_target = {GROUND_VEHICLE, AIR}` |
 
-**Against the baseline's line unit** (Alliance Medium Infantry: cost 4, hp 6, atk 3, rng 2, move 2,
-upkeep 2):
+> ### ★ The Lance Team — Solar's anti-armour answer (added 2026-08-24, user decision)
+>
+> Solar was authored with **no answer to armour at all**, and that was flagged as possibly crossing
+> from "a strong weakness" into "an unwinnable matchup" — the *"got countered, not outplayed"*
+> failure the Alliance document names. The user's call was to grant exactly **one** option.
+>
+> **It is a hard specialist, not a generalist patch.** `can_target = {GROUND_VEHICLE, AIR}` means it
+> **cannot shoot infantry at all** — against an infantry army it is a 400-Credit body that does
+> nothing. At range 1 it must stand next to a tank to fire, with 3 hp. It answers armour by being
+> *brought deliberately*, and it dies for it.
+>
+> **It uses EMF** (`damage-types.md` DT-9b), so against a vehicle's default −2 EMF resistance its
+> attack of 6 lands as **8** — three hits on an Alliance Tank rather than four. ★ It also works
+> before damage types ship: with EMF inert in waves 1–2 it simply deals 6, which is playable, and
+> **its base attack should be re-checked when DT lands** (SFOQ-6).
+>
+> **Why this is the right shape for Solar specifically:** it is *another specialist*, which is the
+> faction's stated identity (*"one standard infantry unit with economical stats and multiple
+> specialists"*). It costs a cap slot like everything else, so bringing anti-armour means bringing
+> fewer Citizens. And it keeps the faction's real weakness intact — Solar still has no armour of its
+> own and still cannot absorb a hit.
+
+**Against the baseline's line unit** (Alliance Medium Infantry: cost 400, hp 6, atk 3, rng 2, move 2,
+upkeep 200):
 
 > The Citizen Trooper is **25% cheaper, half the upkeep, twice the mobility, and 33% more fragile.**
 > Crucially, at 4 hp it dies to a single Alliance Heavy hit (attack 5) where the Trooper survives —
@@ -98,7 +126,7 @@ upkeep 2):
 
 **★ `can_pilot` is false on every Solar unit except the Pilot.** Unlike the Alliance — where any
 Light or Medium infantry can drive — Solar *must* build specialists to crew anything. That is a real
-constraint (a vehicle needs a 2-Credit Pilot and a cap slot before it functions) paid for by
+constraint (a vehicle needs a 200-Credit Pilot and a cap slot before it functions) paid for by
 `crew_bonus`: a Solar-crewed vehicle hits harder than the same vehicle would under anyone else.
 
 ### Roster — Ground Vehicles
@@ -109,8 +137,8 @@ and both have a weapon secondary to that job. All `requires_pilot = true`,
 
 | Unit | `cost` | `hp` | `atk` | `rng` | `move_cost` | `capacity` | `upkeep` |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| **Gun Truck** | 9 | 12 | 4 | 1 | 2 | **2** | **3** |
-| **Armoured Transport** | 13 | 18 | 3 | 1 | 2 | **4** | **4** |
+| **Gun Truck** | **900** | 12 | 4 | 1 | 2 | **2** | **300** |
+| **Armoured Transport** | **1,300** | 18 | 3 | 1 | 2 | **4** | **400** |
 
 > ★ **The Armoured Transport's capacity of 4 is the largest in the game** and is Solar's real
 > vehicle identity: it moves a third of a Solar army in one piece. That is powerful and it is
@@ -125,9 +153,9 @@ and both have a weapon secondary to that job. All `requires_pilot = true`,
 
 | Unit | Role | `cost` | `hp` | `atk` | `rng` | `upkeep` | `can_target` |
 |---|---|---:|---:|---:|---:|---:|---|
-| **Interceptor** | ★ General-purpose, weak at all of it | 11 | 6 | **4** | 2 | **4** | `{INFANTRY, GROUND_VEHICLE, AIR}` |
-| **Gunship** | Manned gun helicopter | 12 | 8 | 5 | 1 | **4** | `{INFANTRY, GROUND_VEHICLE}` |
-| **Paratrooper Transport** | Reach | 13 | 7 | — | — | **4** | `{}` — unarmed. `capacity` 3, carries `PARADROP` |
+| **Interceptor** | ★ General-purpose, weak at all of it | **1,100** | 6 | **4** | 2 | **400** | `{INFANTRY, GROUND_VEHICLE, AIR}` |
+| **Gunship** | Manned gun helicopter | **1,200** | 8 | 5 | 1 | **400** | `{INFANTRY, GROUND_VEHICLE}` |
+| **Paratrooper Transport** | Reach | **1,300** | 7 | — | — | **400** | `{}` — unarmed. `capacity` 3, carries `PARADROP` |
 
 > The **Interceptor** is the direction's *"general purpose fighter with weak all around stats"* read
 > literally: it can hit anything, and its attack of 4 means it kills almost nothing outright. Against
@@ -144,11 +172,11 @@ and both have a weapon secondary to that job. All `requires_pilot = true`,
 | Structure | Produces | Max | `cost` | `build_time` | `hp` | `upkeep` | Notes |
 |---|---|---:|---:|---:|---:|---:|---|
 | **HQ** | Citizen Trooper | 1 | — | — | 40 | **0** | `defense` 2 |
-| **Barracks** | `{INFANTRY}` | ★ **4** | 6 | 2 | 12 | **1** | +2 cap each |
-| **Factory** | `{GROUND_VEHICLE}` | 2 | 10 | 3 | 14 | **2** | |
-| **Airfield** | `{AIR}` | 1 | 12 | 3 | 12 | **2** | |
-| **Research Lab** | — | 1 | 8 | 2 | 10 | **2** | |
-| ★ **Autonomous Defence Node** | — | ★ **5** | ★ **3** | ★ **1** | 8 | **1** | `attack` **2**, `range` 2, `requires_pilot` **false**, `can_counterattack`. ★ `can_target` includes **`AIR`** |
+| **Barracks** | `{INFANTRY}` | ★ **4** | **600** | 2 | 12 | **100** | +2 cap each |
+| **Factory** | `{GROUND_VEHICLE}` | 2 | **1,000** | 3 | 14 | **200** | |
+| **Airfield** | `{AIR}` | 1 | **1,200** | 3 | 12 | **200** | |
+| **Research Lab** | — | 1 | **800** | 2 | 10 | **200** | |
+| ★ **Autonomous Defence Node** | — | ★ **5** | ★ **300** | ★ **1** | 8 | **100** | `attack` **2**, `range` 2, `requires_pilot` **false**, `can_counterattack`. ★ `can_target` includes **`AIR`** |
 
 **★ The Defence Node is the direction's *"cheap autonomous defence structures that build quickly but
 have lower damage"*, and it is the sharpest contrast in the corpus.** Against the Alliance's manned
@@ -156,13 +184,13 @@ Defensive Structure (cost 5, build 2, attack 4, **requires a crew**):
 
 | | Alliance | Solar |
 |---|---|---|
-| Cost | 5 | **3** |
+| Cost | 500 | **300** |
 | Build time | 2 turns | **1 turn** |
 | Attack | **4** | 2 |
 | Crew required | ★ **yes — an infantry slot** | ★ **no** |
 | Max | 3 | **5** |
 
-> Solar can blanket a position in five nodes for 15 Credits and five turns, **spending no army
+> Solar can blanket a position in five nodes for 1,500 Credits and five turns, **spending no army
 > capacity at all**, and they shoot at aircraft. The Alliance's are twice as lethal but each one
 > takes a soldier off the line. That is a genuine strategic difference rather than a stat tweak, and
 > it is the clearest evidence in the corpus that the manned/autonomous axis was worth building.
@@ -175,18 +203,18 @@ Defensive Structure (cost 5, build 2, attack 4, **requires a crew**):
 
 | | Solar | Alliance | Δ |
 |---|---:|---:|---|
-| `BASE_INCOME` | **8** | 10 | ★ −2 (intercept) |
-| Economy tier bonus | **+4** each | +5 each | ★ −1 (slope) |
-| Tier costs | 10 / 20 / 35 | same | — |
-| **Income ceiling** | ★ **20** | 25 | **−20%** |
+| `BASE_INCOME` | **800** | 1,000 | ★ −200 (intercept) |
+| Economy tier bonus | **+400** each | +500 each | ★ −100 (slope) |
+| Tier costs | 1,000 / 2,000 / 3,500 | same | — |
+| **Income ceiling** | ★ **2,000** | 2,500 | **−20%** |
 | `base_infantry_cap` | **5** | 4 | +1 |
 | `max_barracks` | ★ **4** | 3 | +1 |
 | **Infantry ceiling** | ★ **13** | 10 | **+30%** |
 | Tech tree | full access, base cost | same | — |
 | Promotion | none | none | — |
 
-**Both income levers are used deliberately** (`faction-identity.md` D4): the **intercept** (−2 on
-`BASE_INCOME`) makes Solar poorer from turn 1 and never stops; the **slope** (−1 per tier) means the
+**Both income levers are used deliberately** (`faction-identity.md` D4): the **intercept** (−200 on
+`BASE_INCOME`) makes Solar poorer from turn 1 and never stops; the **slope** (−100 per tier) means the
 gap *widens* as both players research, so Solar's disadvantage compounds exactly as the Alliance's
 economy matures. Solar wants the game decided before that gap opens.
 
@@ -195,8 +223,8 @@ economy matures. Solar wants the game decided before that gap opens.
 Solar introduces no new formulas. Its `FactionDef` carries:
 
 ```
-Δ_base_income      = −2
-Δ_econ_tier_bonus  = −1        (per tier; ceiling 20 vs baseline 25)
+Δ_base_income      = −200
+Δ_econ_tier_bonus  = −100      (per tier; ceiling 2,000 vs baseline 2,500)
 Δ_base_cap         = +1
 Δ_max_barracks     = +1
 Δ_max_defensive    = +2
@@ -214,24 +242,24 @@ build (2 Barracks, 1 Factory, 1 Lab).*
 
 | Axis | Alliance | Solar | Winner |
 |---|---:|---:|---|
-| Income ceiling | 25 | 20 | **Alliance** |
-| Credits for army after structures | 19 | 14 | **Alliance** |
-| Mean infantry upkeep | ~2.0 | ~1.25 | **Solar** |
+| Income ceiling | 2,500 | 2,000 | **Alliance** |
+| Credits for army after structures | 1,900 | 1,400 | **Alliance** |
+| Mean infantry upkeep | ~200 | ~125 | **Solar** |
 | **Sustainable infantry** | **~9** | ★ **~11** | **Solar** |
 | Infantry ceiling (cap) | 10 | 13 | **Solar** |
-| Cost per hp (line unit) | 0.67 | 0.75 | **Alliance** |
-| Cost per attack (line unit) | 1.33 | 1.00 | **Solar** |
+| Cost per hp (line unit) | 67 | 75 | **Alliance** |
+| Cost per attack (line unit) | 133 | 100 | **Solar** |
 | **Army attack total** (sustainable) | ~34 | ~33 | ≈ tie |
 | **Army hp total** (sustainable) | ~50 | ~44 | **Alliance** |
-| Tiles moved per turn (10 AP) | ~5 | ★ **~10** | **Solar** |
-| Anti-armour ground option | Tank (atk 7) | ★ **none** | **Alliance** |
+| Tiles moved per turn (30 AP) | ~15 | ★ **~30** | **Solar** |
+| Anti-armour ground option | Tank (atk 7) | ★ Lance Team (EMF, effective 8 — but cannot touch infantry) | **Alliance**, narrowly |
 | Defensive coverage per Credit | low | ★ **high** | **Solar** |
-| Cheap anti-air | Fighter (12) | ★ Defence Node (3) | **Solar** |
+| Cheap anti-air | Fighter (1,200) | ★ Defence Node (300) | **Solar** |
 | Single-unit peak damage | Artillery 8 | Gunship 5 | **Alliance** |
 
 **Verdict against CR-10.2** (*"a faction must be unable to win the comparison on every axis at
 once"*): **PASS.** Solar loses decisively on economy, army durability, anti-armour and peak damage;
-it wins on count, tempo, defensive coverage and cheap anti-air. The two armies land at near-identical
+it wins on count, tempo, defensive coverage and cheap anti-air. ★ **Re-checked after the Lance Team was added:** the anti-armour axis moves from a Solar *hole* to a Solar *narrow answer*, which does not flip any other row — the Lance Team cannot shoot infantry, so it buys no general strength. The two armies land at near-identical
 total attack from opposite directions, which is the shape a good matchup wants.
 
 ★ **The axis to watch is "tiles moved per turn."** Doubling a faction's effective board mobility is a
@@ -244,7 +272,7 @@ is the first dial to touch — **before** cost, upkeep or the cap.
 - **Armoured Transport destroyed carrying 4:** all four die (TP-4). A third of a Solar army in one hit.
 - **Volunteer detonating adjacent to friendlies:** they take damage (DT-8). With Solar's high unit density this is a *frequent* consideration, not a rare one.
 - **Medic repairing a Medic:** legal. `REPAIR` cannot target self, but two Medics can sustain each other — ★ watch for a stalling pair (`unit-abilities.md` ABOQ-3, which flags healing against a game already struggling to resolve).
-- **Solar at 13 infantry with 10 AP:** ★ **the expected steady state.** Even at `move_cost` 1 the player cannot act with everything every turn. This is intended — a Solar army has depth in reserve, not a full board of simultaneous actors.
+- **Solar at 13 infantry with 30 AP:** ★ at `move_cost` 1 a Solar player *can* now move every unit and still have AP for attacks — which is exactly what the AP rescale was for. The constraint that remains is Credits and the cap, not action budget.
 - **Defence Node vs an Alliance Tank:** attack 2 against 22 hp and `INCENDIARY` resistance does essentially nothing. Solar's nodes hold against infantry and aircraft, not armour.
 - **Solar vs Solar mirror:** legal. Two swarms of fast, fragile units on a 12×10 board — ★ likely the fastest-resolving matchup in the game, and worth measuring for exactly that reason.
 - **Paradrop onto a tile adjacent to the enemy HQ:** legal and is Solar's most aggressive line. Bounded by the transport surviving to get within 3.
@@ -279,9 +307,9 @@ wave 1**, and that match is the first real Pillar-4 evidence this project has ev
 
 | # | Criterion | Type |
 |---|---|---|
-| AC-1 | GIVEN Solar at full research, THEN `credit_income` is exactly **20** | Logic |
+| AC-1 | GIVEN Solar at full research, THEN `credit_income` is exactly **2,000** | Logic |
 | AC-2 | GIVEN a full Solar build-out, THEN `effective_cap` is exactly **13** | Logic |
-| AC-3 | GIVEN a Solar Citizen Trooper and 10 AP on open terrain, THEN 10 single-tile moves are affordable | Integration |
+| AC-3 | GIVEN a Solar Citizen Trooper and a full 30-AP turn on open terrain, THEN 30 single-tile moves are affordable | Integration |
 | AC-4 | GIVEN any Solar unit other than the Pilot, THEN `can_pilot` is false and `EMBARK` into a `requires_pilot` vehicle is rejected | Integration |
 | AC-5 | GIVEN a Solar Pilot crewing a Gun Truck, THEN the vehicle's `effective_attack` is 5 (4 + `crew_bonus` 1) | Logic |
 | AC-6 | GIVEN that Pilot dies or disembarks, THEN the vehicle's `effective_attack` returns to 4 and it becomes inert | Integration |
@@ -290,7 +318,7 @@ wave 1**, and that match is the first real Pillar-4 evidence this project has ev
 | AC-9 | GIVEN that Node and an adjacent `AIR` unit, THEN the aircraft is a legal target | Integration |
 | AC-10 | GIVEN a 6th Defence Node build order, THEN it is rejected naming `max_defensive` | Integration |
 | AC-11 | GIVEN a Solar Volunteer detonating beside friendly Citizens, THEN the friendlies take damage | Integration |
-| AC-12 | GIVEN the Solar roster, THEN no unit has a non-empty `resistances` map (Solar predates damage types) | Config-Data |
+| AC-12 | GIVEN a Solar Lance Team, THEN infantry never appear in its legal targets at any range, and a `GROUND_VEHICLE` at range 1 does | Integration |
 | AC-13 | GIVEN the Solar roster, THEN at least one unit or structure targets `AIR` (UC-5) | Config-Data |
 | AC-14 | GIVEN any Solar unit, THEN `merit`/`rank` are absent or permanently 0 | Logic |
 | AC-15 | ★ GIVEN an Alliance-vs-Solar AI batch, THEN neither faction wins more than **65%** across both seats (the CR-10 playtest gate) | Integration |
@@ -302,5 +330,6 @@ wave 1**, and that match is the first real Pillar-4 evidence this project has ev
 | SFOQ-1 | ★★ **Is doubled board mobility priced correctly?** `move_cost` 1 across a whole roster is the largest single advantage granted anywhere in the corpus, and it is the mechanism that makes the faction work. It could equally be the thing that makes it dominant. **Measure it first** | systems-designer |
 | SFOQ-2 | ★ **Can the AI play Solar at all?** Solar needs `EMBARK`, `PARADROP`, `REPAIR` and `SELF_DESTRUCT` used well — multi-turn plans against a single-action greedy AI (`transport-and-pilots.md` TPOQ-4, `faction-identity.md` OQ-15). **Solar may be the faction that forces the AI-planning work**, which is an argument for doing it early while it is cheap |
 | SFOQ-3 | **Does the Medic pair stall matches?** Two Medics sustaining each other is a soft lock, in a game whose PIVOT verdict was *"matches never resolve"*. `REPAIR_AMOUNT` must be checked against the damage band with Solar specifically in mind | economy-designer |
-| SFOQ-4 | **Is having no tank too harsh?** Solar's only anti-armour is the Gunship (attack 5 vs 22 hp) and swarming. Against a Union or Protectorate armour list this may be unwinnable rather than merely hard — the "got countered, not outplayed" failure the Alliance doc names | user + game-designer |
+| ~~SFOQ-4~~ | ✅ **RESOLVED 2026-08-24 (user): grant exactly one anti-armour option.** The **Lance Team** — EMF, effective 8 vs vehicles, range 1, 3 hp, and **cannot target infantry at all.** A hard specialist rather than a generalist patch: it must be brought deliberately, it costs a cap slot, and against an infantry army it does nothing. Solar still has no armour of its own | ✅ closed |
+| SFOQ-6 | ★ **Re-check the Lance Team when damage types ship.** It is authored at attack 6 so it is playable in waves 1–2 with EMF inert. Once DT-9b's default −2 vehicle resistance lands, its effective damage becomes 8 — a 33% jump that arrives silently with an unrelated system. Recommend dropping the base to 4–5 at that point, and adding a regression that pins its effective damage against a standard Tank across both states | systems-designer |
 | SFOQ-5 | ★ **The name.** *"Solar Federation"* and *"Technocratic Socialists"* pull in different directions — one is geographic, the other ideological. The faction's mechanics read as **collective, industrial, disposable**, which the ideological reading serves better. **Naming call — the user's** | user |

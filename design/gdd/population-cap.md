@@ -143,12 +143,12 @@ cap_raise_cost(player)     = CAP_RAISE_BASE_COST
 | `base_infantry_cap` | **4** | The Alliance baseline, with no Barracks built |
 | `cap_per_barracks` | **2** | Infantry slots per completed Barracks |
 | `max_barracks` (Alliance) | **3** | ★ Per-faction (D3) |
-| Barracks `build_cost` | **6** Credits | Unchanged from the Production Outpost it replaces |
+| Barracks `build_cost` | **600** Credits | Unchanged in scale from the Production Outpost it replaces |
 | Barracks `produces_classes` | `{INFANTRY}` | ★ Vehicles need a Factory, aircraft an Airfield (`base-production.md` BP-NEW-1) |
-| Barracks `upkeep` | **1** | Unchanged |
+| Barracks `upkeep` | **100** | Unchanged in scale |
 
 **Worked, Alliance:** 4 base + (3 Barracks × 2) = **10 infantry** at full build-out, for
-**18 Credits** and 3 tiles of map. The cap is now a *known, bounded, visible* quantity — a player
+**1,800 Credits** and 3 tiles of map. The cap is now a *known, bounded, visible* quantity — a player
 can look at the board and know both sides' ceilings.
 
 > ★ **Cross-check against upkeep — these two numbers must agree.** `unit-upkeep.md` puts the
@@ -159,8 +159,8 @@ can look at the board and know both sides' ceilings.
 > you reach it. If either number moves, re-check this paragraph.
 >
 > ✅ **Re-checked 2026-08-24 against the new research-driven income.** At a fully-researched economy
-> (income **25**) with a realistic build (2 Barracks, 1 Factory, 1 Lab = 6 upkeep), **19** Credits
-> are available for an army, sustaining **8–9 units** at a roster mean upkeep of ~2. The Alliance's
+> (income **2,500**) with a realistic build (2 Barracks, 1 Factory, 1 Lab = 600 upkeep), **1,900**
+> Credits are available for an army, sustaining **8–9 units** at a roster mean upkeep of ~200. The Alliance's
 > full-build-out cap is **10 infantry**. The relationship holds: **cap 10, sustainable 8–9** — you
 > can always field a little more than you can comfortably keep.
 
@@ -206,10 +206,9 @@ can look at the board and know both sides' ceilings.
 | Knob | Default | Safe range | Effect / failure at extremes |
 |---|---|---|---|
 | `base_infantry_cap` | 6 | 3–10 | ★ Primary faction lever. Below 3 the board feels empty and single losses are catastrophic; above 10 the cap stops binding before upkeep does and becomes decorative |
-| `CAP_RAISE_STEP` | 2 | 1–3 | At 1 raising feels pointless; at 4+ a single purchase transforms the game |
-| `CAP_RAISE_BASE_COST` | 8 | 5–15 | Below 5 raising is auto-correct; above 15 nobody raises and the cap is a fixed wall |
-| `CAP_RAISE_ESCALATION` | 4 | 2–8 | ★ The brake. At 0 the curve is flat and "buy capacity forever" returns — the PIVOT failure one layer up |
-| `CAP_HARD_CEILING` | 14 | 10–20 | The absolute backstop. Should sit above where upkeep already makes expansion painful, so it rarely binds |
+| `cap_per_barracks` | 2 | 1–3 | At 1 a Barracks is barely worth its tile; at 4+ a single structure transforms the game |
+| `max_barracks` | 3 | 2–5 | ★ Primary faction lever, and it sets the faction's map footprint |
+| `CAP_HARD_CEILING` | 14 | 10–20 | The absolute backstop above the per-faction ceilings. With `max_barracks` hard-capped it now rarely binds — retained as a safety net against a faction authored with an extreme combination |
 
 ## Acceptance Criteria
 
@@ -219,8 +218,8 @@ can look at the board and know both sides' ceilings.
 | AC-2 | GIVEN the same state, WHEN they produce a unit with `counts_toward_cap = false`, THEN it succeeds | Integration |
 | AC-3 | GIVEN a unit committed to production, THEN `current_population` includes it before it is deployed | Logic |
 | AC-4 | GIVEN a queued unit is cancelled, THEN `current_population` decreases by 1 immediately | Logic |
-| AC-5 | GIVEN `cap_purchases = k`, THEN `cap_raise_cost` equals `CAP_RAISE_BASE_COST + CAP_RAISE_ESCALATION × k` | Logic |
-| AC-6 | GIVEN a player at `CAP_HARD_CEILING`, WHEN they attempt to raise, THEN it is rejected and no Credits are spent | Logic |
+| AC-5 | GIVEN `n` completed Barracks, THEN `effective_cap` equals `base_infantry_cap + cap_per_barracks × n` | Logic |
+| AC-6 | GIVEN a player at `max_barracks`, WHEN they order another Barracks, THEN it is rejected naming the maximum and no Credits are spent | Integration |
 | AC-7 | GIVEN a structure granting `cap_bonus` is destroyed, THEN `effective_cap` decreases by that bonus and no owned unit is destroyed | Integration |
 | AC-8 | GIVEN a player above cap after such a loss, THEN production is rejected until `current_population < effective_cap` | Integration |
 | AC-9 | GIVEN a unit loaded into a transport, THEN it still counts toward the cap | Integration |

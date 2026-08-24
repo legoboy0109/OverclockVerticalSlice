@@ -134,10 +134,10 @@ can_attack(attacker, defender) =
 
 | | Infantry | Ground Vehicle | Air |
 |---|---|---|---|
-| `produce_cost` band | 2–7 | 10–16 | 10–14 |
+| `produce_cost` band | **200–700** | **1,000–1,600** | **1,000–1,400** |
 | `hp` band | **3–10** | **16–24** | **5–9** |
 | `attack` band | 2–6 | 6–8 | 4–7 |
-| `upkeep` band | 1–3 | 4–6 | 4–5 |
+| `upkeep` band | **100–300** | **400–600** | **400–500** |
 | Typical `move_cost` | 1–3 | 2 (flat ground only) | 1 |
 | Typical reach/turn | 2–5 tiles | 4–5 tiles | ★ 8–10 tiles |
 
@@ -189,7 +189,7 @@ can_attack(attacker, defender) =
 | Air `hp` band | 5–9 | 4–12 | The primary air balance lever. Cut this before cutting reach |
 | Vehicle difficult-terrain block | on | on/off | ★ Turning it off collapses the vehicle class into "better infantry". Strongly recommend it stays on |
 | Vehicle `COVER_DR` eligibility | none | none/partial | Same concern as above |
-| Vehicle `produce_cost` band | 10–16 | 8–20 | Against infantry at 2–7, a vehicle should read as 2–3 infantry's worth of commitment — **plus the infantry slot its crew occupies** (PC-8), which is the larger cost in practice |
+| Vehicle `produce_cost` band | 1,000–1,600 | 800–2,000 | Against infantry at 200–700, a vehicle should read as 2–3 infantry's worth of commitment — **plus the infantry slot its crew occupies** (PC-8), which is the larger cost in practice |
 
 ## Acceptance Criteria
 

@@ -54,7 +54,7 @@ board where you cannot predict a hit is illegible.
 | Type | Reads as | Strong against | Weak against |
 |---|---|---|---|
 | `KINETIC` | Bullets, shells, the default | Nothing in particular — the baseline | Nothing in particular |
-| `EMF` | Electromagnetic, disruption | **Machines** — robots, vehicles, autonomous units | **Organic infantry** |
+| `EMF` | Electromagnetic, disruption | ★ **Machines** — vehicles, aircraft, robots. Default −2 resistance (DT-9b), so EMF is *the* anti-armour language | **Organic infantry** — default +2 |
 | `INCENDIARY` | Fire, napalm | **Organic infantry, units in cover** (it burns them out) | **Armoured vehicles** |
 
 > ★ **`KINETIC` is deliberately neutral, and this is the most important line in the document.** It
@@ -103,6 +103,20 @@ number.*
 by tile coordinate), each through the standard formula, with all deaths applied after all damage.
 No target's death changes another's damage within the same attack. **Pillar 2 requires this
 explicitly.**
+
+**DT-9b — ★ Machines are EMF-vulnerable by default.** `GROUND_VEHICLE` and `AIR` units carry an
+implicit `resistances[EMF] = −2` unless their definition overrides it. Infantry carry an implicit
+`resistances[EMF] = +2`.
+
+> ★ **Why this is a default rather than per-unit authoring.** Without it, "anti-armour" has no
+> mechanical meaning — a faction wanting an anti-tank specialist would have to be handed a big flat
+> attack number, which also makes it good against infantry, which is exactly what a specialist
+> should not be. Making EMF *the* anti-machine damage type gives every faction a language for
+> anti-armour that costs no new machinery and stays symmetric (CR-9).
+>
+> A unit may still override: the Galactic Protectorate's tanks are *"weak to EMF"* **beyond** the
+> baseline (−3, not −2), which keeps that trait distinctive rather than merely shared. A faction
+> wanting EMF-hardened armour sets 0 or positive and pays for it elsewhere.
 
 **DT-10 — Structures and damage types.** Structures carry resistances like units. They remain
 cover-immune per `combat-resolution.md` Rule 6 — an Approved rule that closes a real floor-lock trap

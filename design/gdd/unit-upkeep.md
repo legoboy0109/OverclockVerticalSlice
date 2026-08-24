@@ -11,8 +11,8 @@
 > **Why this system exists — measured, not speculative.** The vertical slice returned a **PIVOT**
 > verdict (`production/vertical-slice/REPORT.md`). Root cause, in one sentence: *the economy is
 > unbounded, so building always outscores fighting, so nobody ever marches on the objective, so no
-> game is ever won.* Credits peaked at **5,724** on one side and were still climbing linearly at
-> turn 200; economy actions outscored manoeuvring by **12–20×** and, with an unbounded stock, were
+> game is ever won.* Credits peaked at **5,724** on one side (pre-rescale units; **572,400** at the current scale) and
+> were still climbing linearly at turn 200; economy actions outscored manoeuvring by **12–20×** and, with an unbounded stock, were
 > permanently affordable. **The game has faucets and no drains. This is the drain.**
 
 ---
@@ -155,31 +155,53 @@ reaches inside it.
 ### Default upkeep — derived, then overridable
 
 ```
-default_upkeep(entity) = ceil(produce_cost(entity) / UPKEEP_DIVISOR)
+default_upkeep(entity) = ceil( produce_cost(entity) / (UPKEEP_DIVISOR × UPKEEP_GRANULARITY) )
+                         × UPKEEP_GRANULARITY
 ```
 
-with `UPKEEP_DIVISOR = 3`. Any entity may override the derived value with an explicit `upkeep`; the
-derivation exists so that a designer authoring a new unit gets a sane number for free and only
-overrides it deliberately.
+with `UPKEEP_DIVISOR = 3` and `UPKEEP_GRANULARITY = 100`. Any entity may override the derived value
+with an explicit `upkeep`; the derivation exists so a designer authoring a new unit gets a sane
+number for free and overrides only deliberately.
+
+> ### ★ Why the granularity term exists — a real trap the ×100 rescale created
+>
+> At the pre-rescale scale the formula was simply `ceil(produce_cost / 3)`, and it produced exactly
+> the intended values because **`ceil` was doing heavy rounding on small numbers**: Scout
+> `ceil(2/3) = 1`, Trooper `ceil(4/3) = 2`, Sniper `ceil(5/3) = 2`, Heavy `ceil(7/3) = 3`. All four
+> correct.
+>
+> After the ×100 rescale that rounding effect **vanishes**: `ceil(200/3) = 67`, `ceil(400/3) = 134`,
+> `ceil(500/3) = 167`, `ceil(700/3) = 234`. Every value drifts *below* its intended figure, and the
+> roster mean falls from 200 to ~150 — which would have raised the sustainable army from ~9 to ~12
+> against a cap of 10 and **silently broken the "cap binds first, upkeep binds shortly after"
+> relationship** that `population-cap.md` is built on.
+>
+> Rounding up to the nearest `UPKEEP_GRANULARITY` restores the original behaviour exactly —
+> 100 / 200 / 200 / 300 — while still allowing a designer to *author* any value in between. That is
+> the whole point of the rescale: coarse defaults, fine manual control.
+>
+> ★ **This is the kind of thing a proportional rescale is supposed to be safe from, and was not.**
+> Worth remembering when the next constant is rescaled: any formula containing `ceil`, `floor` or
+> integer division does **not** survive a change of units unchanged.
 
 **Against the current roster:**
 
 | Unit | `produce_cost` | derived `upkeep` |
 |---|---:|---:|
-| Scout | 2 | **1** |
-| Trooper | 4 | **2** |
-| Sniper | 5 | **2** |
-| Heavy | 7 | **3** |
+| Scout | 200 | **100** |
+| Trooper | 400 | **200** |
+| Sniper | 500 | **200** |
+| Heavy | 700 | **300** |
 
 | Structure | `build_cost` | `upkeep` | Note |
 |---|---:|---:|---|
 | HQ | — | **0** | UR-4, fixed — the only exemption |
-| Barracks *(was Production Outpost)* | 6 | **1** | Max 3 (Alliance); also grants infantry cap |
-| Factory | 10 | **2** | Max 2; produces ground vehicles |
-| Airfield | 12 | **2** | Max 1; produces aircraft |
-| Research Lab | 8 | **2** | ★ Pays despite being the economy engine — UR-5 |
-| Defensive Structure | 5 | **1** | Max 3 |
-| ~~Economy Outpost~~ | ~~6~~ | ~~1~~ | **DELETED 2026-08-24** — income moved to research |
+| Barracks *(was Production Outpost)* | 600 | **100** | Max 3 (Alliance); also grants infantry cap |
+| Factory | 1,000 | **200** | Max 2; produces ground vehicles |
+| Airfield | 1,200 | **200** | Max 1; produces aircraft |
+| Research Lab | 800 | **200** | ★ Pays despite being the economy engine — UR-5 |
+| Defensive Structure | 500 | **100** | Max 3 |
+| ~~Economy Outpost~~ | ~~600~~ | ~~100~~ | **DELETED 2026-08-24** — income moved to research |
 
 *(Structure values are authored, not derived — `build_cost` and `produce_cost` are different scales.)*
 
@@ -196,8 +218,8 @@ overrides it deliberately.
 > patient player still accumulated forever, just more slowly. Research is **finite**:
 
 ```
-credit_income(player) = BASE_INCOME (10) + Σ ECON_TIER_BONUS for each completed economy tier
-                      = 10, 15, 20, or 25.  Nothing else.  Ever.
+credit_income(player) = BASE_INCOME (1,000) + Σ ECON_TIER_BONUS (+500) per completed economy tier
+                      = 1,000, 1,500, 2,000, or 2,500.  Nothing else.  Ever.
 ```
 
 **Three tiers exist. Once all three are researched, the economy cannot grow again at any price.**
@@ -207,44 +229,45 @@ That is a hard ceiling, not an asymptote — and it is the property this system 
 
 | Half | Mechanism | What it stops |
 |---|---|---|
-| **Income ceiling** | Finite research tiers — max 25/turn (`research-tech.md`) | The *rate* growing without limit |
+| **Income ceiling** | Finite research tiers — max **2,500**/turn (`research-tech.md`) | The *rate* growing without limit |
 | **Upkeep drain** | This document | The *stock* accumulating without limit |
 
 Neither alone is sufficient. A hard income ceiling with no drain still accumulates — just linearly
 at a fixed rate, which is exactly what the simulation measured at 5,724 and climbing. A drain with
-no ceiling loses to any income curve that outruns it. **Together, income plateaus at 25 and upkeep
+no ceiling loses to any income curve that outruns it. **Together, income plateaus at 2,500 and upkeep
 eats most of it, so banked Credits stabilise instead of climbing.**
 
 ### Worked — where the Credits actually go
 
-At full research (income **25**) with a realistic Alliance build (2 Barracks, 1 Factory, 1 Research
-Lab):
+At full research (income **2,500**) with a realistic Alliance build (2 Barracks, 1 Factory,
+1 Research Lab):
 
 ```
-gross income            25
-structure upkeep       − 6   (Barracks 1+1, Factory 2, Lab 2)
-                       ────
-available for army      19
-army of 8 @ mean 2     −16
-                       ────
-net per turn            +3
+gross income             2,500
+structure upkeep        −  600   (Barracks 100+100, Factory 200, Lab 200)
+                        ───────
+available for army       1,900
+army of 9 @ mean 200    −1,800
+                        ───────
+net per turn              +100
 ```
 
-**A player at a developed position banks about 3 Credits a turn, not 30.** And at full structural
-build-out (10 structures, 14 upkeep) they are *negative* before fielding a single soldier — which is
-why `base-production.md`'s per-faction structure maximums and this system are one design, not two.
+**A player at a developed position banks about 100 Credits a turn against a 2,500 income — roughly
+4%, not 100%.** And at full structural build-out (10 structures, 1,400 upkeep) they are *negative*
+before fielding a single soldier, which is why `base-production.md`'s per-faction structure maximums
+and this system are one design rather than two.
 
 ### Equilibrium army size — the number to tune against
 
-At a fully-researched economy (income 25) with a realistic build (2 Barracks, 1 Factory, 1 Lab):
+At a fully-researched economy (income **2,500**) with a realistic build (2 Barracks, 1 Factory, 1 Lab):
 
 ```
-credit_income    = 25          (BASE_INCOME 10 + three economy tiers × 5)
-structure_upkeep = 6           (Barracks 1+1, Factory 2, Research Lab 2)
-income available for army = 19
+credit_income    = 2,500       (BASE_INCOME 1,000 + three economy tiers × 500)
+structure_upkeep =   600       (Barracks 100+100, Factory 200, Research Lab 200)
+income available for army = 1,900
 ```
 
-At a roster mean upkeep of ~2, that sustains an army of **≈ 8–9 units**, with anything above it
+At a roster mean upkeep of ~200, that sustains an army of **≈ 8–9 units**, with anything above it
 drawing down the bank. The infantry cap at full Alliance build-out is **10**
 (`population-cap.md`), so **the cap is the wall and upkeep is what makes you stop just short of
 it** — you can always field one or two more than you can comfortably keep.
@@ -310,11 +333,12 @@ disband_ap_cost      = DISBAND_AP_COST                                      # 1
 
 | Knob | Default | Safe range | What it affects / what breaks at extremes |
 |---|---|---|---|
-| `UPKEEP_DIVISOR` | **3** | 2–5 | ★ **The primary dial.** Lower = harsher, smaller armies, faster games. At 2, the equilibrium army drops to ~5 and the board may feel empty. At 5+, upkeep stops biting and the unbounded-stock defect returns |
+| `UPKEEP_DIVISOR` | **3** | 2–5 | ★ **The primary dial.** Lower = harsher, smaller armies, faster games. At 2 the equilibrium army drops to ~5 and the board may feel empty. At 5+ upkeep stops biting and the unbounded-stock defect returns |
+| `UPKEEP_GRANULARITY` | **100** | 25–100 | ★ The rounding step for *derived* upkeep. Lowering it gives finer defaults but re-introduces the drift documented above unless the divisor is re-checked. Authored values are unaffected — they may use any value |
 | `TARGET_EQUILIBRIUM_ARMY` | **7–9 units** | 5–12 | Not a code constant — the *design target* the divisor is tuned to hit. Stated as a knob because it is the number with felt meaning |
 | Research Lab `upkeep` | **2** | 1–3 | ★ Load-bearing (UR-5). At 0, "build a Lab, research everything, sit" is free and the accumulation defect returns around a different structure |
 | Structure maximums | per faction | see `base-production.md` | ★ **Tuned jointly with this system.** They decide the fixed upkeep floor a player carries before fielding any army at all |
-| `DISBAND_REFUND_RATE` | **0.5** | 0.25–0.6 | Above ~0.6 invites produce/disband churn; at 0 disband becomes pure loss and players will not use the escape valve UR-6 depends on |
+| `DISBAND_REFUND_RATE` | **0.5** | 0.25–0.6 | ★ A rate, not a quantity — unaffected by the ×100 rescale | Above ~0.6 invites produce/disband churn; at 0 disband becomes pure loss and players will not use the escape valve UR-6 depends on |
 | `DISBAND_AP_COST` | **1** | 0–2 | At 0 disbanding is free and spammable; at 3+ a player in deficit cannot afford to fix it |
 | `Δ_upkeep_rate` (per faction) | 0 | small | Faction lever (D9-mod). Subject to CR-10's baseline comparison |
 
@@ -341,10 +365,10 @@ work; if far above, the cap is decorative. **OQ-13 in `faction-identity.md` owns
 | AC-12 | GIVEN a unit with `produce_cost = P`, WHEN disbanded, THEN the unit is removed, the owner gains `floor(P × 0.5)` Credits and spends `DISBAND_AP_COST` AP | Logic |
 | AC-13 | GIVEN a disband targeting an enemy unit, a structure, or the HQ, THEN it is rejected | Logic |
 | AC-14 | ★ GIVEN an AI-controlled player with ample Credits across a full simulated match, THEN it does not produce-and-disband the same unit type more than twice in any 10-turn window (anti-churn regression on the refund rate) | Integration |
-| AC-15 | **[REWRITTEN 2026-08-24 — the outpost curve it tested no longer exists]** GIVEN a player holding all three economy tiers, THEN `credit_income` is exactly **25** and no further action of any kind increases it (the hard ceiling holds) | Logic |
+| AC-15 | **[REWRITTEN 2026-08-24 — the outpost curve it tested no longer exists]** GIVEN a player holding all three economy tiers, THEN `credit_income` is exactly **2,500** and no further action of any kind increases it (the hard ceiling holds) | Logic |
 | AC-16 | GIVEN any entity definition loaded from data, THEN `upkeep ≥ 0`, and a negative authored value fails load with an error naming the entity | Config-Data |
 | AC-17 | GIVEN an entity with no explicit `upkeep`, THEN its effective upkeep equals `ceil(produce_cost / UPKEEP_DIVISOR)` | Logic |
-| AC-18 | ★ GIVEN the AI-vs-AI simulation batch run with upkeep active, THEN peak banked Credits on any side stays below **150** across a full match (was 5,724 — this is the regression that proves the PIVOT's root cause is fixed) | Integration |
+| AC-18 | ★ GIVEN the AI-vs-AI simulation batch run with upkeep active, THEN peak banked Credits on any side stays below **15,000** across a full match — i.e. under ~6 turns of ceiling income. (The pre-fix figure was 5,724 at the *old* scale, equivalent to 572,400 here, and still climbing linearly. **This is the regression that proves the PIVOT's root cause is fixed**) | Integration |
 | AC-19 | GIVEN a player's turn, THEN the HUD displays gross income, total upkeep and net income as three distinct readable figures before the next economy step | UI (advisory) |
 | AC-20 | GIVEN a player considering a purchase, THEN the resulting change to net income is previewable before commit | UI (advisory) |
 

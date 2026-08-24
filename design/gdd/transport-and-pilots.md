@@ -214,8 +214,8 @@ can_capture(actor, v)  = adjacent(actor, v)
 | `transport_capacity` | 3 | 2–4 | At 4+ one transport moves a whole army and the board becomes two blobs. At 1 transports are not worth their cost |
 | Pilot `hp` | 4–6 | 3–8 | ★ The dial that decides whether crew-killing is real. Above ~8 nobody bothers and the Independents lose their identity; below 3 vehicles are too fragile to field |
 | `transport_size` (vehicle) | 3 | 2–4 | Governs the "infantry or one mech" tradeoff directly |
-| `EMBARK_AP_COST` | 1 | 1–2 | At 2, loading three units costs 6 AP of a 10 AP turn and transports become unusable |
-| `CAPTURE_VEHICLE` cost | 3 AP | 2–4 | See `unit-abilities.md` — the ability most likely to be degenerate |
+| `EMBARK_AP_COST` | 1 | 1–2 | At 2, loading three units costs 6 AP of a 30-AP turn — tolerable since the rescale, where at 10 AP it made transports unusable. ★ Re-check if AP action costs are ever raised (APOQ-SCALE-1) |
+| `CAPTURE_VEHICLE` cost | 3 AP | 2–4 | ★ AP, not Credits — unaffected by the rescale | See `unit-abilities.md` — the ability most likely to be degenerate |
 
 ## Acceptance Criteria
 
