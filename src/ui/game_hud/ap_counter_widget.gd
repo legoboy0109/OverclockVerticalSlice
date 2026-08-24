@@ -38,6 +38,13 @@ func _budget_color() -> Color:
 	return Color(0.55, 0.55, 0.6) if _is_opponent else Color(0.2, 1.0, 0.9)
 
 
+## The `AP` resource label. ★ Added 2026-08-24 — this counter previously rendered
+## a BARE NUMBER, so the single most-consulted figure in the HUD appeared as "30"
+## with nothing on screen saying what 30 was.
+func _resource_label() -> String:
+	return "AP"
+
+
 ## "AP" for the "insufficient AP" unaffordable-preview text (AC-7).
 func _insufficient_noun() -> String:
 	return "AP"

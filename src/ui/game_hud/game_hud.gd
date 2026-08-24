@@ -58,6 +58,12 @@ var _credits_counter_opponent: CreditsCounterWidget = null
 var _turn_banner: TurnBannerWidget = null
 var _income_breakdown: IncomeBreakdownWidget = null
 var _population: PopulationWidget = null
+
+## The three grouping panels (2026-08-24). They own no state and read nothing —
+## they are backing plates, so they are not [HudReactiveControl]s.
+var _player_panel: HudPanel = null
+var _opponent_panel: HudPanel = null
+var _actions_panel: HudPanel = null
 var _action_log: ActionLogWidget = null
 var _controls: HudControlsWidget = null
 var _detail_panel: DetailPanelWidget = null
@@ -86,36 +92,65 @@ func assemble(reader: GameStateReader, config: HUDConfig, cmd: CommandInterface,
 	# Draw order = child order; the victory/defeat overlay is added LAST so it
 	# preempts every other widget on a game-ending frame (Story 006).
 
+	# ★ 2026-08-24 — the readouts are GROUPED into titled panels instead of scattered
+	# across four screen corners. Before this, the top-left held a bare "30" with no
+	# unit on it, Credits sat under it unlabelled, population floated further down
+	# again, and the opponent's state was dimmed into the opposite corner. Nothing
+	# said which numbers belonged together, and every one of them drew straight onto
+	# the board, so text competed with terrain for the same pixels.
+	#
+	# The widgets themselves are UNCHANGED — same display models, same bindings,
+	# same tests. Only composition moved: each is now a child of a HudPanel that
+	# supplies a ground, a frame and a title. That keeps this a layout change rather
+	# than a rewrite of nine widgets.
+
+	# --- YOU: the three budgets that drive every decision, in one place ---------
+	_player_panel = HudPanel.new()
+	_player_panel.configure("YOU", Vector2(232, 118))
+	_player_panel.position = Vector2(16, 12)
+	add_child(_player_panel)
+
 	_ap_counter = ApCounterWidget.new()
 	_ap_counter.bind(reader)
 	_ap_counter.configure(config, local_player)
-	_ap_counter.position = Vector2(16, 12)
-	add_child(_ap_counter)
+	_player_panel.add_content(_ap_counter, Vector2(0, 0))
 
-	if config.show_opponent_ap:
-		_ap_counter_opponent = ApCounterWidget.new()
-		_ap_counter_opponent.bind(reader)
-		_ap_counter_opponent.configure(config, opponent, true) # muted opponent AP.
-		_ap_counter_opponent.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-		_ap_counter_opponent.position = Vector2(-160, 12)
-		add_child(_ap_counter_opponent)
-
-	# The Credits counter (CR-3d) — the AP counter's co-equal, in a distinct hue
-	# family, sitting just below it on the top spine (provisional layout). Both
-	# counters are gated as a pair by SHOW_OPPONENT_AP for the opponent (CR-3b).
 	_credits_counter = CreditsCounterWidget.new()
 	_credits_counter.bind(reader)
 	_credits_counter.configure(config, local_player)
-	_credits_counter.position = Vector2(16, 30)
-	add_child(_credits_counter)
+	_player_panel.add_content(_credits_counter, Vector2(0, 24))
 
+	_population = PopulationWidget.new()
+	_population.bind(reader)
+	_population.configure(local_player)
+	_player_panel.add_content(_population, Vector2(0, 52))
+
+	# The income breakdown stays parented to the Credits counter — it is that
+	# counter's on-demand detail, and anchoring it anywhere else would let the two
+	# drift apart. It expands downward inside the panel.
+	_income_breakdown = IncomeBreakdownWidget.new()
+	_income_breakdown.bind(reader)
+	_income_breakdown.configure(config, local_player)
+	_income_breakdown.position = Vector2(96, -14)
+	_credits_counter.add_child(_income_breakdown)
+
+	# --- OPPONENT: same figures, muted, so the comparison is direct ------------
 	if config.show_opponent_ap:
+		_opponent_panel = HudPanel.new()
+		_opponent_panel.configure("OPPONENT", Vector2(184, 88))
+		_opponent_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		_opponent_panel.position = Vector2(-200, 12)
+		add_child(_opponent_panel)
+
+		_ap_counter_opponent = ApCounterWidget.new()
+		_ap_counter_opponent.bind(reader)
+		_ap_counter_opponent.configure(config, opponent, true) # muted opponent AP.
+		_opponent_panel.add_content(_ap_counter_opponent, Vector2(0, 0))
+
 		_credits_counter_opponent = CreditsCounterWidget.new()
 		_credits_counter_opponent.bind(reader)
 		_credits_counter_opponent.configure(config, opponent, true) # muted opponent Credits.
-		_credits_counter_opponent.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-		_credits_counter_opponent.position = Vector2(-160, 30)
-		add_child(_credits_counter_opponent)
+		_opponent_panel.add_content(_credits_counter_opponent, Vector2(0, 24))
 
 	_turn_banner = TurnBannerWidget.new()
 	_turn_banner.bind(reader)
@@ -124,25 +159,6 @@ func assemble(reader: GameStateReader, config: HUDConfig, cmd: CommandInterface,
 	_turn_banner.position = Vector2(-80, 12)
 	add_child(_turn_banner)
 
-	# The Credit income breakdown is anchored to the Credits counter (CR-3d — the
-	# income now funds the Credits pool, so the on-demand breakdown belongs to it,
-	# not the AP counter). Parented under the counter, offset just below its number.
-	_income_breakdown = IncomeBreakdownWidget.new()
-	_income_breakdown.bind(reader)
-	_income_breakdown.configure(config, local_player)
-	_income_breakdown.position = Vector2(0, 20)
-	_credits_counter.add_child(_income_breakdown)
-
-	# Population sits below the income popover rather than inside it: upkeep is a
-	# gradient the player can watch approach, the cap is a hard stop. Same pairing,
-	# different failure shapes — see PopulationWidget's class doc. Screen-anchored,
-	# not parented to the counter, so it stays put when the popover collapses.
-	_population = PopulationWidget.new()
-	_population.bind(reader)
-	_population.configure(local_player)
-	_population.position = Vector2(16, 122)
-	add_child(_population)
-
 	_action_log = ActionLogWidget.new()
 	_action_log.bind(reader)
 	_action_log.configure(config)
@@ -150,13 +166,18 @@ func assemble(reader: GameStateReader, config: HUDConfig, cmd: CommandInterface,
 	_action_log.position = Vector2(16, -160)
 	add_child(_action_log)
 
+	# --- ACTIONS: the two commit verbs, on a ground so they read as buttons -----
+	_actions_panel = HudPanel.new()
+	_actions_panel.configure("ACTIONS", Vector2(200, 66))
+	_actions_panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_actions_panel.position = Vector2(-216, -82)
+	add_child(_actions_panel)
+
 	_controls = HudControlsWidget.new()
 	_controls.bind(reader)
 	_controls.configure(config, local_player, buildable_types)
 	_controls.attach_interface(cmd)
-	_controls.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_controls.position = Vector2(-180, -48)
-	add_child(_controls)
+	_actions_panel.add_content(_controls, Vector2(0, 0))
 
 	_detail_panel = DetailPanelWidget.new()
 	_detail_panel.bind(reader)

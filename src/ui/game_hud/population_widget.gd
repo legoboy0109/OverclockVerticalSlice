@@ -104,9 +104,13 @@ func _draw() -> void:
 		color = AT_CAP_COLOR
 	elif is_near_cap():
 		color = NEAR_CAP_COLOR
-	draw_string(font, Vector2(4, 14), "pop %d/%d" % [population_value(), cap_value()],
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, color)
+	# ★ 2026-08-24: "POP", not "pop", at the same size as its AP/CR siblings. It
+	# sits in the same panel as them and is read the same way; a smaller lowercase
+	# label made the cap look like a footnote rather than the third hard limit on
+	# what the player can do this turn.
+	draw_string(font, Vector2(4, 18), "POP %d/%d" % [population_value(), cap_value()],
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 16, color)
 	var reason: String = cap_reason()
 	if reason != "":
-		draw_string(font, Vector2(4, 28), reason,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 10, AT_CAP_COLOR)
+		draw_string(font, Vector2(4, 34), reason,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, AT_CAP_COLOR)

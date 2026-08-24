@@ -79,8 +79,18 @@ func test_assembles_all_widgets_and_wires_their_parents() -> void:
 
 	# Screen-space Controls + audio are children of the CanvasLayer; the
 	# world-space glyph layer is parented onto the board.
-	assert_object(hud.ap_counter().get_parent()).is_equal(hud)
-	assert_object(hud.credits_counter().get_parent()).is_equal(hud)
+	#
+	# ★ 2026-08-24: the budget counters are now children of the YOU HudPanel rather
+	# than of the CanvasLayer directly — the readouts were regrouped into titled
+	# panels, so their parent is the panel and the panel's parent is the HUD. The
+	# assertion follows the grouping instead of being loosened, so it still fails if
+	# a counter is ever orphaned or reparented somewhere unexpected.
+	assert_bool(hud.ap_counter().get_parent() is HudPanel).is_true()
+	assert_object(hud.ap_counter().get_parent().get_parent()).is_equal(hud)
+	assert_bool(hud.credits_counter().get_parent() is HudPanel).is_true()
+	assert_object(hud.credits_counter().get_parent().get_parent()).is_equal(hud)
+	assert_object(hud.population_widget().get_parent()) \
+		.is_equal(hud.ap_counter().get_parent()) # same YOU panel
 	assert_object(hud.game_over_overlay().get_parent()).is_equal(hud)
 	assert_object(hud.audio().get_parent()).is_equal(hud)
 	assert_object(hud.glyph_layer().get_parent()).is_equal(board)

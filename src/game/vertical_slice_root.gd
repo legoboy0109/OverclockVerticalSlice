@@ -368,11 +368,23 @@ func _build_status_overlay() -> void:
 	_status_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_status_label.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_status_label.position = Vector2(0, -8)
-	_status_label.add_theme_font_size_override("font_size", 13)
+	_status_label.position = Vector2(0, -26)
+	_status_label.add_theme_font_size_override("font_size", 14)
 	_status_label.add_theme_color_override("font_color", Color(0.92, 0.95, 1.0))
-	_status_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.9))
-	_status_label.add_theme_constant_override("outline_size", 4)
+	# ★ 2026-08-24: a real backing plate, not just an outline. This block carries the
+	# selected build/produce type, its live cost and the whole control legend — the
+	# text a player reads most while learning the game — and it was drawing straight
+	# onto the board, so it competed with terrain and sprites for the same pixels.
+	# The 4px outline was a workaround for having no ground; a panel is the fix.
+	# Matches HudPanel's palette so the two read as one HUD rather than two.
+	var backing := StyleBoxFlat.new()
+	backing.bg_color = HudPanel.BACKING
+	backing.border_color = HudPanel.BORDER
+	backing.set_border_width_all(1)
+	backing.set_content_margin_all(10)
+	backing.content_margin_left = 18
+	backing.content_margin_right = 18
+	_status_label.add_theme_stylebox_override("normal", backing)
 	_status_layer.add_child(_status_label)
 
 
