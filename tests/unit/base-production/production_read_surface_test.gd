@@ -96,8 +96,8 @@ func _place(state: GameState, entity: EntityState) -> void:
 # and a selectable Defensive Structure -- wrapped in a GameStateReader.
 func _make_story_state() -> GameState:
 	var state := _make_state()
-	_place(state, _make_structure(1, 0, Vector2i(2, 2), StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 2))
-	_place(state, _make_structure(2, 0, Vector2i(4, 4), StructureTypes.PRODUCTION_OUTPOST, StructureState.BuildStatus.COMPLETED, 0, 1))
+	_place(state, _make_structure(1, 0, Vector2i(2, 2), StructureTypes.FACTORY, StructureState.BuildStatus.UNDER_CONSTRUCTION, 2))
+	_place(state, _make_structure(2, 0, Vector2i(4, 4), StructureTypes.BARRACKS, StructureState.BuildStatus.COMPLETED, 0, 1))
 	_place(state, _make_structure(3, 0, Vector2i(6, 6), StructureTypes.DEFENSIVE_STRUCTURE))
 	return state
 
@@ -109,8 +109,8 @@ func test_legal_build_tiles_matches_direct_base_production_query() -> void:
 	var state := _make_story_state()
 	var reader := GameStateReader.new(state)
 	# Act
-	var via_reader: Array[Vector2i] = reader.legal_build_tiles(0, StructureTypes.ECONOMY_OUTPOST)
-	var via_direct: Array[Vector2i] = BaseProduction.legal_build_tiles(state, 0, StructureTypes.ECONOMY_OUTPOST)
+	var via_reader: Array[Vector2i] = reader.legal_build_tiles(0, StructureTypes.FACTORY)
+	var via_direct: Array[Vector2i] = BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
 	# Assert -- non-vacuous (friendly structures give candidate tiles) and equal.
 	assert_int(via_reader.size()).is_greater(0)
 	assert_array(via_reader).is_equal(via_direct)
@@ -120,13 +120,13 @@ func test_legal_build_tiles_mutation_does_not_perturb_state() -> void:
 	# Arrange
 	var state := _make_story_state()
 	var reader := GameStateReader.new(state)
-	var tiles: Array[Vector2i] = reader.legal_build_tiles(0, StructureTypes.ECONOMY_OUTPOST)
-	var before: Array[Vector2i] = BaseProduction.legal_build_tiles(state, 0, StructureTypes.ECONOMY_OUTPOST)
+	var tiles: Array[Vector2i] = reader.legal_build_tiles(0, StructureTypes.FACTORY)
+	var before: Array[Vector2i] = BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
 	# Act -- mutate the returned Array.
 	tiles.clear()
 	tiles.append(Vector2i(99, 99))
 	# Assert -- a fresh call from state is unaffected (no aliasing leak-back).
-	var after: Array[Vector2i] = BaseProduction.legal_build_tiles(state, 0, StructureTypes.ECONOMY_OUTPOST)
+	var after: Array[Vector2i] = BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
 	assert_array(after).is_equal(before)
 
 
@@ -203,8 +203,8 @@ func test_can_afford_build_matches_dual_cost_credits_and_ap_surcharge() -> void:
 	state.per_player[0].current_credits = 20000  # fund Credits (build_cost is Credits; ★ S6-02 ×100 rescale)
 	var reader := GameStateReader.new(state)
 	# Act
-	var via_reader: bool = reader.can_afford_build(0, StructureTypes.ECONOMY_OUTPOST)
-	var cost: int = BaseProduction.effective_build_cost(state, StructureTypes.ECONOMY_OUTPOST, 0)
+	var via_reader: bool = reader.can_afford_build(0, StructureTypes.FACTORY)
+	var cost: int = BaseProduction.effective_build_cost(state, StructureTypes.FACTORY, 0)
 	var via_direct: bool = Credits.can_afford(state, 0, cost) \
 		and AP.can_afford(state, 0, Balance.economy.build_ap_cost)
 	# Assert -- non-vacuous true (both pools afford) and matches the dual query.
@@ -218,7 +218,7 @@ func test_can_afford_build_false_when_ap_insufficient() -> void:
 	state.per_player[0].current_ap = 0
 	var reader := GameStateReader.new(state)
 	# Act / Assert
-	assert_bool(reader.can_afford_build(0, StructureTypes.ECONOMY_OUTPOST)).is_false()
+	assert_bool(reader.can_afford_build(0, StructureTypes.FACTORY)).is_false()
 
 
 func test_can_afford_produce_matches_dual_cost_credits_and_ap_surcharge() -> void:
@@ -265,7 +265,7 @@ func test_structure_info_cancel_refund_matches_base_production_cancel_refund_on_
 func test_structure_info_cancel_refund_equals_apply_cancels_actual_credit() -> void:
 	# Arrange -- an isolated Under-Construction structure and a clone to cancel.
 	var state := _make_state(0)
-	_place(state, _make_structure(1, 0, Vector2i(2, 2), StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1))
+	_place(state, _make_structure(1, 0, Vector2i(2, 2), StructureTypes.FACTORY, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1))
 	var reader := GameStateReader.new(state)
 	var preview: int = reader.structure_info(1)["cancel_refund"]
 
@@ -308,12 +308,12 @@ func test_structure_info_surfaces_type_build_status_and_units_produced_keys() ->
 	var reader := GameStateReader.new(state)
 	# Under-Construction Economy Outpost (id 1): UC, produced 0.
 	var uc: Dictionary = reader.structure_info(1)
-	assert_object(uc["type"]).is_same(StructureTypes.ECONOMY_OUTPOST)
+	assert_object(uc["type"]).is_same(StructureTypes.FACTORY)
 	assert_int(uc["build_status"]).is_equal(StructureState.BuildStatus.UNDER_CONSTRUCTION)
 	assert_int(uc["units_produced_this_turn"]).is_equal(0)
 	# Completed Production Outpost (id 2): COMPLETED, produced 1.
 	var done: Dictionary = reader.structure_info(2)
-	assert_object(done["type"]).is_same(StructureTypes.PRODUCTION_OUTPOST)
+	assert_object(done["type"]).is_same(StructureTypes.BARRACKS)
 	assert_int(done["build_status"]).is_equal(StructureState.BuildStatus.COMPLETED)
 	assert_int(done["units_produced_this_turn"]).is_equal(1)
 

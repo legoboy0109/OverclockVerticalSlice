@@ -102,6 +102,33 @@
 > - ★ The HQ's roster stays as-is (it produces the faction's basic unit only), so the existing
 >   "HQ makes Scout, outpost makes the rest" shape survives the rename.
 >
+> ### ✅ Implementation note — what actually shipped in S6-03 (2026-08-24)
+>
+> **The Economy Outpost was RENAMED to the Factory rather than deleted**, and the
+> Production Outpost renamed to the Barracks. Same outcome, less churn, and it is what the
+> user's art decision already implied — the Factory reuses the Economy Outpost's art, so
+> renaming the resource *is* the reuse rather than a separate step. 27 files referenced the
+> old constant; a rename touches them mechanically where a delete-and-recreate would have
+> required each one to choose a replacement.
+>
+> ★ **`max_count` is on `StructureTypeDef` with `0` meaning unlimited**, so adding the
+> field changed no existing behaviour until a type opted in — the whole suite stayed green
+> across the change. Enforced in `validate_build` **before** the affordability checks, so
+> the rejection reason names the cap rather than a coincidental shortage of Credits.
+> Counts completed **and** under-construction together (a max that ignored the queue would
+> do nothing).
+>
+> ⚠ **Carried, not done in S6-03:** the Airfield does not exist yet (no air units to
+> produce — `unit-classes.md` is wave 2), and `cap_bonus` on the Barracks is wired by
+> **S6-04** with the rest of the population-cap system. Shipped maximums are the Alliance
+> baseline: Barracks 3 · Factory 2 · Research Lab 1 · Defensive 3 · HQ 1.
+>
+> ⚠ **`completed_outpost_count()` is now dead product code** — income no longer calls it
+> and nothing else in `src/` does. It survives only because six tests still name it as
+> their subject. Superseded by the generic `structure_count()`. Removal is a tidy-up
+> candidate, deliberately not bundled into S6-03 so the gate-critical change stays
+> reviewable on its own.
+
 > ### New rules owed
 >
 > **BP-NEW-1 — Producers are class-matched.** A structure declares `produces_classes`. Barracks

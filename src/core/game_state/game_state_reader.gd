@@ -47,7 +47,7 @@
 ## var info := reader.unit_info(unit.entity_id)
 ## print(info["type"].display_name, " ", info["current_hp"], "/", info["hp"])
 ##
-## var tiles: Array[Vector2i] = reader.legal_build_tiles(0, StructureTypes.ECONOMY_OUTPOST)
+## var tiles: Array[Vector2i] = reader.legal_build_tiles(0, StructureTypes.FACTORY)
 ## var s_info := reader.structure_info(structure.entity_id)
 ## print(s_info["build_turns_remaining"], " turns left, refund ", s_info["cancel_refund"])
 ## [/codeblock]

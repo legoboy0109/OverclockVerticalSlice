@@ -31,7 +31,7 @@
 ## structure.entity_id = state.next_entity_id
 ## structure.owner = 0
 ## structure.position = Vector2i(3, 4)
-## structure.type = StructureTypes.ECONOMY_OUTPOST
+## structure.type = StructureTypes.FACTORY
 ## structure.current_hp = structure.type.hp
 ## structure.build_status = StructureState.BuildStatus.UNDER_CONSTRUCTION
 ## structure.build_turns_remaining = structure.type.build_time

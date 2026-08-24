@@ -231,16 +231,16 @@ func _move_cursor_to(root: VerticalSliceRoot, target: Vector2i) -> void:
 
 func test_cycle_buildable_changes_the_selected_type() -> void:
 	var root := _make_root()
-	assert_object(root.selected_buildable()).is_equal(StructureTypes.ECONOMY_OUTPOST)
+	assert_object(root.selected_buildable()).is_equal(StructureTypes.FACTORY)
 	root.cycle_buildable()
-	assert_object(root.selected_buildable()).is_equal(StructureTypes.PRODUCTION_OUTPOST)
+	assert_object(root.selected_buildable()).is_equal(StructureTypes.BARRACKS)
 
 
 func test_build_places_a_structure_at_a_legal_cursor_tile() -> void:
 	var root := _make_root()
 	var state := root.state()
 	state.per_player[0].current_ap = 20 # ensure the outpost is affordable.
-	var type: StructureTypeDef = root.selected_buildable() # ECONOMY_OUTPOST (index 0).
+	var type: StructureTypeDef = root.selected_buildable() # FACTORY (index 0).
 
 	var legal: Array[Vector2i] = GameStateReader.new(state).legal_build_tiles(0, type)
 	assert_bool(legal.is_empty()).is_false()          # there is a legal build tile.
@@ -361,7 +361,7 @@ func test_produce_uses_a_second_producer_when_the_hq_is_at_cap() -> void:
 	# type the OUTPOST makes (the HQ makes only Scout and is maxed): the roster is
 	# [Scout(HQ), Trooper, Heavy, Sniper(outpost)], so cycle off Scout onto an
 	# outpost type.
-	var outpost: StructureState = _place_structure(state, 30, 0, Vector2i(3, 5), StructureTypes.PRODUCTION_OUTPOST)
+	var outpost: StructureState = _place_structure(state, 30, 0, Vector2i(3, 5), StructureTypes.BARRACKS)
 	root.cycle_produce_type()
 	var utype: UnitTypeDef = root.selected_produce_type()
 	assert_bool(outpost.type.producible_types.has(utype)).is_true()
@@ -382,7 +382,7 @@ func test_produce_unit_type_selection_cycles_and_deploys_the_selected_type() -> 
 	state.per_player[0].current_ap = 20
 	# Own a Production Outpost (produces multiple types) so the roster has >1 entry
 	# (the HQ alone only makes one).
-	_place_structure(state, 30, 0, Vector2i(3, 5), StructureTypes.PRODUCTION_OUTPOST)
+	_place_structure(state, 30, 0, Vector2i(3, 5), StructureTypes.BARRACKS)
 
 	# Selection defaults to the roster's first type; V cycles it to a different one.
 	var first: UnitTypeDef = root.selected_produce_type()
@@ -410,7 +410,7 @@ func test_under_construction_producer_excluded_from_roster_until_complete() -> v
 	var root := _make_root()
 	var state := root.state()
 	state.per_player[0].current_ap = 20
-	var outpost: StructureState = _place_structure(state, 30, 0, Vector2i(3, 5), StructureTypes.PRODUCTION_OUTPOST)
+	var outpost: StructureState = _place_structure(state, 30, 0, Vector2i(3, 5), StructureTypes.BARRACKS)
 	outpost.build_status = StructureState.BuildStatus.UNDER_CONSTRUCTION
 	outpost.build_turns_remaining = 2
 

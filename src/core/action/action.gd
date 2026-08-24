@@ -75,6 +75,10 @@ enum Reason {
 	IN_DEFICIT,
 	# Disband targeting something that is not an own, living unit (UR-7).
 	NOT_OWN_UNIT,
+	# This structure type is already at its per-player maximum, counting both completed
+	# and under-construction instances (S6-03). Distinct from PRODUCTION_CAP_REACHED,
+	# which is a per-producer per-turn unit limit, not a structure-count limit.
+	STRUCTURE_MAX_REACHED,
 }
 
 ## Which verb this is — the dispatch key [method GameState.apply_action] uses

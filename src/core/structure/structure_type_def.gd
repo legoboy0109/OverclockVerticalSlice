@@ -18,7 +18,7 @@
 ## Usage:
 ## [codeblock]
 ## var hq_hp: int = StructureTypes.HQ.hp
-## var producible: Array[UnitTypeDef] = StructureTypes.PRODUCTION_OUTPOST.producible_types
+## var producible: Array[UnitTypeDef] = StructureTypes.BARRACKS.producible_types
 ## [/codeblock]
 class_name StructureTypeDef
 extends Resource
@@ -32,6 +32,19 @@ extends Resource
 ## ★ Structures that GENERATE value still pay. Exempting the Research Lab would make
 ## "build a Lab, research everything, sit" free, which is the unbounded-accumulation
 ## defect the PIVOT verdict diagnosed, wearing a different hat.
+## Maximum number of this structure a player may have at once — completed AND under
+## construction combined. ★ **0 means unlimited** (the pre-S6-03 behaviour), so adding
+## this field changes nothing until a type opts in.
+##
+## ★★ **This is the load-bearing half of the PIVOT fix at the rules layer.** The vertical
+## slice failed because the AI always had another thing worth building, so AP never
+## reached movement. With every structure capped, a player reaches a state with
+## **nothing left to build** — at which point AP has nowhere to go but manoeuvre.
+##
+## Per `base-production.md` these are per-FACTION values (Faction Identity domain D5);
+## until factions ship, the value here is the baseline for every player.
+@export var max_count: int = 0
+
 @export var upkeep: int = 0
 
 @export var build_cost: int

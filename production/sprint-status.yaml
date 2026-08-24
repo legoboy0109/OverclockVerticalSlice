@@ -106,14 +106,27 @@ stories:
     # Disband (UR-7) is the escape valve that makes UR-6 survivable: 1 AP, 50% refund.
 
   - id: "s6-03"
-    name: "Structure rework — Economy Outpost deleted, Barracks, Factory, per-faction maximums"
+    name: "Structure rework — Barracks/Factory rename, per-structure maximums"
     file: "design/gdd/base-production.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: "gameplay-programmer"
     estimate_days: 1.0
-    blocker: "s6-01"
-    completed: ""
+    blocker: ""
+    completed: "2026-08-24"
+    # ✅ DONE. Suite 1024/1024, 0 errors/failures/orphans; slice boots clean (exit 0).
+    # 13 new tests (structure_maximums_test.gd). ★ ZERO collateral churn, unlike s6-01/s6-02:
+    #   max_count defaults to 0 = unlimited, so adding the field changed nothing until a
+    #   type opted in; and RENAMING rather than deleting meant 27 referencing files updated
+    #   mechanically instead of each needing a replacement chosen.
+    # ★ Economy Outpost -> FACTORY (reuses its art, which is what the user's art decision
+    #   already implied), Production Outpost -> BARRACKS. Art files renamed too.
+    # ⚠ CARRIED, not done here: the Airfield (no air units to produce until unit-classes,
+    #   wave 2) and Barracks cap_bonus (s6-04 wires it with the cap system).
+    # ⚠ completed_outpost_count() is now DEAD product code -- income no longer calls it and
+    #   nothing in src/ does; superseded by the generic structure_count(). Left in place
+    #   only because 6 tests still name it as their subject. Removal is a tidy-up candidate,
+    #   deliberately NOT bundled here so the gate-critical change stays reviewable alone.
     # ★ The per-structure MAXIMUMS are the load-bearing part, not the rename. The PIVOT
     #   was caused by the AI always having another thing worth building. With every
     #   structure capped, an Alliance full build-out is 10 structures / 7,300 Credits and

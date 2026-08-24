@@ -30,7 +30,7 @@
 # GameStateFactory.make_state() for the per-player/AP skeleton, a real blank
 # GridState, and real throwaway UnitTypeDef/StructureTypeDef instances (never
 # the shared UnitTypes/StructureTypes registry singletons, except where
-# Resource-reference identity matters, e.g. StructureTypes.ECONOMY_OUTPOST for
+# Resource-reference identity matters, e.g. StructureTypes.FACTORY for
 # the cadence-cap dispatch gate).
 #
 # Deterministic: no RNG, no time, no file I/O. Each test builds its own
@@ -133,7 +133,7 @@ func _make_scout_type() -> UnitTypeDef:
 
 # A throwaway Economy-Outpost-shaped StructureTypeDef (build_cost 4, matches
 # the GDD's AC-15 worked example).
-func _make_economy_outpost_type(build_cost: int = 4) -> StructureTypeDef:
+func _make_factory_type(build_cost: int = 4) -> StructureTypeDef:
 	var type := StructureTypeDef.new()
 	type.display_name = "TestEconomyOutpost"
 	type.hp = 6
@@ -159,14 +159,14 @@ func test_economy_value_of_a_structure_build_is_zero_no_structure_raises_income(
 	# econ_tier_bonus, and re-anchoring CREDIT_TO_AP_RATE (1.0 -> 0.01, broken by the
 	# ×100 Credit rescale).
 	var state := _make_state()
-	var value: float = AI._economy_value(state, 0, _make_economy_outpost_type(4))
+	var value: float = AI._economy_value(state, 0, _make_factory_type(4))
 	assert_float(value).is_equal_approx(0.0, 0.0001)
 
 func test_action_score_first_outpost_is_approx_1_765() -> void:
-	# Arrange — economy_value ~=7.06 at build_cost 4 (ECONOMY_OUTPOST's real
+	# Arrange — economy_value ~=7.06 at build_cost 4 (FACTORY's real
 	# registry build_cost).
 	var value := 7.058973
-	var cost: int = StructureTypes.ECONOMY_OUTPOST.build_cost
+	var cost: int = StructureTypes.FACTORY.build_cost
 
 	# Act
 	var score: float = AI._action_score(value / float(cost), false)
@@ -174,7 +174,7 @@ func test_action_score_first_outpost_is_approx_1_765() -> void:
 	# Assert
 	# ★ S6-02: build_cost rescaled ×100 (4 -> 400). The score changes with it; both are
 	# derived here rather than restated so a future rescale cannot break them again.
-	assert_int(cost).is_equal(StructureTypes.ECONOMY_OUTPOST.build_cost)
+	assert_int(cost).is_equal(StructureTypes.FACTORY.build_cost)
 	assert_float(score).is_equal_approx(AI._action_score(value / float(cost), false), 0.0001)
 
 
@@ -189,13 +189,13 @@ func test_economy_value_tier1_outpost_strictly_greater_than_tier2_outpost() -> v
 
 	var state_tier2 := _make_state()
 	for i in range(4):
-		var outpost := _make_structure(100 + i, 0, StructureTypes.ECONOMY_OUTPOST, \
+		var outpost := _make_structure(100 + i, 0, StructureTypes.FACTORY, \
 			Vector2i(i, 0), StructureState.BuildStatus.COMPLETED)
 		_place(state_tier2, outpost)
 
 	# Act
-	var value_tier1: float = AI._economy_value(state_tier1, 0, StructureTypes.ECONOMY_OUTPOST)
-	var value_tier2: float = AI._economy_value(state_tier2, 0, StructureTypes.ECONOMY_OUTPOST)
+	var value_tier1: float = AI._economy_value(state_tier1, 0, StructureTypes.FACTORY)
+	var value_tier2: float = AI._economy_value(state_tier2, 0, StructureTypes.FACTORY)
 
 	# Assert — tier-1 (~7.06) strictly greater than tier-2 (~3.53); no
 	# flattening to an identical capped score.
@@ -486,7 +486,7 @@ func test_score_cancel_build_candidates_finds_under_construction_structure() -> 
 	# Arrange — an owned, under-construction Economy-Outpost-shaped structure
 	# (build_cost 4 -> refund 4*50/100 = 2).
 	var state := _make_state()
-	var structure_type := _make_economy_outpost_type(4)
+	var structure_type := _make_factory_type(4)
 	var structure := _make_structure(1, 0, structure_type, Vector2i(3, 3), \
 		StructureState.BuildStatus.UNDER_CONSTRUCTION)
 	_place(state, structure)
@@ -510,7 +510,7 @@ func test_score_cancel_build_candidates_ignores_completed_structure() -> void:
 	# (Rule 10: only Under-Construction structures can be voluntarily
 	# cancelled).
 	var state := _make_state()
-	var structure_type := _make_economy_outpost_type(4)
+	var structure_type := _make_factory_type(4)
 	var structure := _make_structure(1, 0, structure_type, Vector2i(3, 3), \
 		StructureState.BuildStatus.COMPLETED)
 	_place(state, structure)
@@ -527,7 +527,7 @@ func test_score_cancel_build_candidates_ignores_opponent_owned_structure() -> vo
 	# Arrange — an opponent's under-construction structure must never be
 	# offered as a cancel-build candidate for the active player.
 	var state := _make_state()
-	var structure_type := _make_economy_outpost_type(4)
+	var structure_type := _make_factory_type(4)
 	var structure := _make_structure(1, 1, structure_type, Vector2i(3, 3), \
 		StructureState.BuildStatus.UNDER_CONSTRUCTION)
 	_place(state, structure)
@@ -542,7 +542,7 @@ func test_score_cancel_build_candidates_ignores_opponent_owned_structure() -> vo
 
 # --- AC-30: cadence cap excludes economy candidates once the cap is reached -
 
-func test_score_build_and_economy_candidates_excludes_economy_outpost_once_cap_reached() -> void:
+func test_score_build_and_economy_candidates_excludes_factory_once_cap_reached() -> void:
 	# Arrange — a legal Economy-Outpost build tile exists and would clear
 	# PASS_THRESHOLD, but economy_investments_committed already equals
 	# max_economy_investments_per_turn (default 2).
@@ -555,14 +555,14 @@ func test_score_build_and_economy_candidates_excludes_economy_outpost_once_cap_r
 	var best := AI._Candidate.new()
 	best = AI._score_build_and_economy_candidates(state, hq, cap, best)
 
-	# Assert — no ECONOMY_OUTPOST candidate is enumerated; the best action (if
-	# any) must not be a build of ECONOMY_OUTPOST.
+	# Assert — no FACTORY candidate is enumerated; the best action (if
+	# any) must not be a build of FACTORY.
 	if best.action != null:
 		var build_action: BuildAction = best.action
-		assert_bool(build_action.structure_type == StructureTypes.ECONOMY_OUTPOST).is_false()
+		assert_bool(build_action.structure_type == StructureTypes.FACTORY).is_false()
 
 
-func test_score_build_and_economy_candidates_allows_economy_outpost_below_cap() -> void:
+func test_score_build_and_economy_candidates_allows_factory_below_cap() -> void:
 	# Arrange — same board, but economy_investments_committed is below the cap
 	# (0 < 2) -- an Economy Outpost candidate must be enumerable.
 	var state := _make_state(30)
@@ -573,14 +573,14 @@ func test_score_build_and_economy_candidates_allows_economy_outpost_below_cap() 
 	var best := AI._Candidate.new()
 	best = AI._score_build_and_economy_candidates(state, hq, 0, best)
 
-	# Assert — a candidate was found. Because ECONOMY_OUTPOST's action_score
+	# Assert — a candidate was found. Because FACTORY's action_score
 	# (~1.765) is the highest-value buildable in this scenario (no enemies to
 	# raise production_value-style scoring), the winning candidate should be
 	# the Economy Outpost build.
 	assert_object(best.action).is_not_null()
 	assert_bool(best.action is BuildAction).is_true()
 	var build_action: BuildAction = best.action
-	assert_bool(build_action.structure_type == StructureTypes.ECONOMY_OUTPOST).is_true()
+	assert_bool(build_action.structure_type == StructureTypes.FACTORY).is_true()
 
 
 func test_economy_investments_committed_is_a_pure_caller_passed_parameter() -> void:
@@ -603,7 +603,7 @@ func test_economy_investments_committed_is_a_pure_caller_passed_parameter() -> v
 	assert_bool(best_below_cap.action is BuildAction).is_true()
 	if best_at_cap.action != null:
 		var at_cap_build: BuildAction = best_at_cap.action
-		assert_bool(at_cap_build.structure_type == StructureTypes.ECONOMY_OUTPOST).is_false()
+		assert_bool(at_cap_build.structure_type == StructureTypes.FACTORY).is_false()
 
 
 # --- Edge: research stub returns no candidates, no error -------------------
@@ -695,7 +695,7 @@ func test_positional_scoring_never_competes_on_a_tile_that_enables_a_combo_attac
 # --- Regression: AI-turn freeze + build/cancel oscillation (2026-07-28) -------
 # Guards the enumeration-gate fixes behind the windowed AI-turn hang:
 #   (A)  _score_production_candidates skips a producer already at its per-turn cap
-#   (C1) _score_build_and_economy_candidates enumerates ONLY ECONOMY_OUTPOST
+#   (C1) _score_build_and_economy_candidates enumerates ONLY FACTORY
 #        (no non-economy fallback that the AI can't value + would cancel-churn)
 #   (C2) _score_cancel_build_candidates is suppressed once an economy investment
 #        is committed this turn (never cancels a just-built structure)
@@ -735,7 +735,7 @@ func test_score_production_candidates_allows_producer_one_below_cap() -> void:
 
 
 func test_score_build_enumerates_no_non_economy_fallback_at_cap() -> void:
-	# At the economy cadence cap, ECONOMY_OUTPOST is excluded. The other buildable
+	# At the economy cadence cap, FACTORY is excluded. The other buildable
 	# types (production/defensive/research) must NOT be enumerated as a fallback —
 	# they have no AI valuation and drove the build<->cancel oscillation — so no
 	# build candidate is produced at all here.
@@ -756,7 +756,7 @@ func test_score_cancel_build_suppressed_after_economy_investment_this_turn() -> 
 	# path (a prior-turn structure stays cancellable) is covered by
 	# test_score_cancel_build_candidates_finds_under_construction_structure.
 	var state := _make_state(60)
-	var outpost := _make_structure(1, 0, _make_economy_outpost_type(), Vector2i(5, 5), StructureState.BuildStatus.UNDER_CONSTRUCTION)
+	var outpost := _make_structure(1, 0, _make_factory_type(), Vector2i(5, 5), StructureState.BuildStatus.UNDER_CONSTRUCTION)
 	_place(state, outpost)
 
 	var best := AI._Candidate.new()

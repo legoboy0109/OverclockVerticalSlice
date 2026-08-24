@@ -62,7 +62,7 @@ func _add_completed_outpost(state: GameState, player: int) -> void:
 	structure.entity_id = state.next_entity_id
 	structure.owner = player
 	structure.position = Vector2i(structure.entity_id, 0) # unique, arbitrary — gridless
-	structure.type = StructureTypes.ECONOMY_OUTPOST
+	structure.type = StructureTypes.FACTORY
 	structure.current_hp = structure.type.hp
 	structure.build_status = StructureState.BuildStatus.COMPLETED
 	structure.build_turns_remaining = 0

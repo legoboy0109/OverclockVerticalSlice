@@ -124,7 +124,7 @@ func run_ai_turn(state: GameState) -> void:
 
 ## True iff [param action] counts toward the cadence cap
 ## [method AI.choose_action] gates on (ADR-0011 §1/§6, CR-5): a
-## [BuildAction] targeting [constant StructureTypes.ECONOMY_OUTPOST], or a
+## [BuildAction] targeting [constant StructureTypes.FACTORY], or a
 ## research-start action ([constant Action.Verb.RESEARCH] — forward-declared;
 ## the Research epic is not implemented in this corpus, so this branch is
 ## unreachable today but kept per ADR-0011 §3's literal loop shape, ready the
@@ -133,5 +133,5 @@ static func _is_economy_or_research(action: Action) -> bool:
 	if action.verb == Action.Verb.RESEARCH:
 		return true
 	if action is BuildAction:
-		return (action as BuildAction).structure_type == StructureTypes.ECONOMY_OUTPOST
+		return (action as BuildAction).structure_type == StructureTypes.FACTORY
 	return false

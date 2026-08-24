@@ -97,7 +97,7 @@ static func faction_token(faction: FactionDef) -> String:
 
 ## Converts a [member UnitTypeDef.display_name]/[member StructureTypeDef.display_name]
 ## to its art-tree type token: lowercased, spaces to underscores
-## ([code]"Production Outpost" -> "production_outpost"[/code]). The display name is
+## ([code]"Production Outpost" -> "barracks"[/code]). The display name is
 ## the only type identity either def carries — neither has a separate id field —
 ## so this is the adapter between the balance data and the art tree.
 static func type_token(display_name: String) -> String:

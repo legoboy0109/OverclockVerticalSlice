@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://0cfp1k3ldisf"
-path="res://.godot/imported/struct_production_outpost_boom_destroyed.png-9a187ccc588095fcd89e7aab1efd848f.ctex"
+uid="uid://b2qxxjlco5qu6"
+path="res://.godot/imported/struct_factory_idle_glow.png-241b34a5c30826bb8171ab8766e1a3f0.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/art/structures/struct_production_outpost_boom_destroyed.png"
-dest_files=["res://.godot/imported/struct_production_outpost_boom_destroyed.png-9a187ccc588095fcd89e7aab1efd848f.ctex"]
+source_file="res://assets/art/structures/struct_factory_idle_glow.png"
+dest_files=["res://.godot/imported/struct_factory_idle_glow.png-241b34a5c30826bb8171ab8766e1a3f0.ctex"]
 
 [params]
 

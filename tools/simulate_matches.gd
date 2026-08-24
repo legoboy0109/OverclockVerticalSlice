@@ -105,7 +105,7 @@ func _run_one_turn(state: GameState) -> void:
 		# here would silently simulate a different AI than the one that ships.
 		if action.verb == Action.Verb.RESEARCH \
 				or (action is BuildAction \
-					and (action as BuildAction).structure_type == StructureTypes.ECONOMY_OUTPOST):
+					and (action as BuildAction).structure_type == StructureTypes.FACTORY):
 			economy_investments += 1
 		if state.match_status == GameState.MatchStatus.GAME_OVER:
 			return

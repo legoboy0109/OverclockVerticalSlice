@@ -7,8 +7,9 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Production Outpost"
+display_name = "Barracks"
 hp = 14
+max_count = 3
 upkeep = 100
 build_cost = 900
 build_time = 2

@@ -63,8 +63,8 @@ const _REACHABILITY_MULTIPLIER_ISOLATED := 0.9
 ## is irrelevant to correctness (every entry is folded into the same
 ## running-best scan) but fixed for determinism (ADR-0003).
 const _BUILDABLE_STRUCTURE_TYPES: Array[StructureTypeDef] = [
-	StructureTypes.ECONOMY_OUTPOST,
-	StructureTypes.PRODUCTION_OUTPOST,
+	StructureTypes.FACTORY,
+	StructureTypes.BARRACKS,
 	StructureTypes.DEFENSIVE_STRUCTURE,
 	StructureTypes.RESEARCH_LAB,
 ]
@@ -834,7 +834,7 @@ static func _action_score(base_score: float, is_immediately_lethal: bool) -> flo
 ## 004) — walks [method BaseProduction.legal_build_tiles] for every
 ## [constant _BUILDABLE_STRUCTURE_TYPES] entry and scores every
 ## (structure_type, tile) pair, dispatching [method _economy_value] for
-## [constant StructureTypes.ECONOMY_OUTPOST] vs. [method _production_value]-style
+## [constant StructureTypes.FACTORY] vs. [method _production_value]-style
 ## scoring (a flat [code]1.0[/code] multiplier — a build has no
 ## [code]REACHABILITY_MULTIPLIER[/code] analogue; this mirrors
 ## [code]production_value[/code]'s "value anchors to the resource's own sunk
@@ -855,7 +855,7 @@ static func _action_score(base_score: float, is_immediately_lethal: bool) -> flo
 ##
 ## Cadence cap (AC-30): once [param economy_investments_committed] >=
 ## [code]AIBalance.ai.max_economy_investments_per_turn[/code], every
-## [constant StructureTypes.ECONOMY_OUTPOST] candidate is excluded from
+## [constant StructureTypes.FACTORY] candidate is excluded from
 ## enumeration entirely — the loop below never even constructs/scores one,
 ## never merely down-scores it. Non-economy buildable structures are
 ## unaffected by the cap (CR-5 / the GDD's cadence-cap scope is
@@ -866,13 +866,13 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 	var cap_reached: bool = economy_investments_committed >= AIBalance.ai.max_economy_investments_per_turn
 
 	for structure_type: StructureTypeDef in _BUILDABLE_STRUCTURE_TYPES:
-		# Only ECONOMY_OUTPOST has a real AI valuation (_economy_value). The other
+		# Only FACTORY has a real AI valuation (_economy_value). The other
 		# buildable types have no strategic model yet; enumerating them on the
 		# placeholder value==build_cost basis made the AI build structures it could
 		# not value and immediately cancel-build them for the refund — a
 		# build<->cancel oscillation that consumed the whole turn. Excluded until
 		# real valuations exist, mirroring the stubbed research enumeration.
-		if structure_type != StructureTypes.ECONOMY_OUTPOST:
+		if structure_type != StructureTypes.FACTORY:
 			continue
 		if cap_reached:
 			continue
@@ -908,7 +908,7 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 ## `economy_value(build_action)` (GDD Formulas, AC-15/AC-16):
 ## `raw_immediate_value(0) + Σ_{t=1}^{ECONOMY_HORIZON} marginal_ap_income(t) ×
 ## ECONOMY_DECAY^t`, uncapped. [param structure_type] is always
-## [constant StructureTypes.ECONOMY_OUTPOST] here (the caller's dispatch
+## [constant StructureTypes.FACTORY] here (the caller's dispatch
 ## gate) — kept as an explicit parameter (rather than hardcoding the type
 ## internally) so a future non-Outpost economy building, if one is ever added,
 ## slots in without a signature change. `raw_immediate_value` is fixed 0 (an
