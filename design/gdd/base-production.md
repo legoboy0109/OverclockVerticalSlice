@@ -118,6 +118,13 @@
 > Counts completed **and** under-construction together (a max that ignored the queue would
 > do nothing).
 >
+> ✅ **Structure stats fully aligned to this table in S6-10 (2026-08-24).** The Factory (S6-09),
+> Barracks and Defensive Structure had all been carrying pre-rework numbers — the ×100 rescale moved
+> the old values forward without re-deriving them against the new roster. All five structures now
+> match the table above. The Barracks change (900 → 600) was measured against the S6-06 regression
+> batch before landing rather than assumed proportional, because Barracks throughput is one of the
+> two levers that fixed that gate.
+>
 > ⚠ **Carried, not done in S6-03:** the Airfield does not exist yet (no air units to
 > produce — `unit-classes.md` is wave 2), and `cap_bonus` on the Barracks is wired by
 > **S6-04** with the rest of the population-cap system. Shipped maximums are the Alliance
