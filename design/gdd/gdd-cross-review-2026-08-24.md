@@ -6,7 +6,12 @@
 **Trigger**: `faction-identity.md` reshaped to framework v2; 7 new Tier-1 systems (#15–21); 6 faction
 GDDs authored; the economy re-based onto research; AP and Credits rescaled.
 
-## Verdict: ⛔ **FAIL** — 5 blocking issues (B-1, B-2, B-3, B-5 fixed in this pass; **B-4 open**)
+## Verdict: ⛔ **FAIL** — 5 blocking issues
+
+> **✅ ALL FIVE NOW RESOLVED.** B-1/B-2/B-3/B-5 were fixed in the review pass itself; **B-4 was
+> answered 2026-08-24 (S6-11)** by `design/legibility-budget.md`. W-1/W-4/W-5 closed by the S6-09
+> sweep. ★ One item remains outstanding and it is not a document fix: **S5-03, the Pillar-3 gate
+> itself, has still never been run** — the budget calibrates against it.
 
 > **FAIL here is not a judgement on the design.** It is the expected outcome of adding 13 documents
 > and rebuilding the economy in one pass without a propagation sweep. Three of the four blockers are
@@ -141,6 +146,8 @@ untouched.
 > Both were caught, but only by working through the arithmetic rather than by grepping for stale
 > names. **Any future rescale should audit conversion factors and rounding functions explicitly.**
 
+#### B-4 ✅ ANSWERED 2026-08-24 (S6-11) — see `design/legibility-budget.md`
+
 #### B-4 — Pillar 3 is a hard gate, and nothing owns whether the corpus still passes it
 
 **`game-concept.md` Pillar 3** ("Readable Board, Deep Decisions") is explicit: *"the
@@ -170,8 +177,37 @@ individually-reasonable channels can still be collectively unreadable.
 
 **Resolution — a design-direction call, not an edit.** Options: (a) run S5-03 on the current build
 before building any of it, establishing the baseline; (b) commission a legibility budget document
-that owns the total channel count; (c) accept and defer, with the gate re-run after wave 2. ★ **This
-is the user's call and is deliberately left open.**
+that owns the total channel count; (c) accept and defer, with the gate re-run after wave 2.
+
+> ### ✅ ANSWERED 2026-08-24 (S6-11) — **(b) then (a)**, in that order
+>
+> `design/legibility-budget.md` now owns the aggregate channel count. Summary:
+>
+> **★ The board is at seven always-on channels carrying five facts.** Read from the shipped
+> renderer, *act-state is triple-encoded* — `body_tint_for(destroyed, _is_actionable(e))`,
+> `mode_for(destroyed, _is_actionable(e))` and the has-acted glyph are three simultaneous
+> expressions of one boolean. That is deliberate accessibility redundancy and it is kept, but it
+> means the board's apparent crowding is **not all information**, and wave 2 has slack to spend
+> before it needs new visual language.
+>
+> **The budget:** cap **always-on facts at five**; route everything else to on-demand (selection /
+> pre-commit preview / command menu) or transient (targeting overlay, one at a time). The
+> allocation rule is *"a fact earns an always-on channel only if the player would mis-play
+> **before** interacting without it"* — which almost everything fails, correctly: Pillar 3 puts
+> complexity in the choices, and clicking a unit **is** the start of a choice.
+>
+> **Net effect on wave 2: +1 always-on fact (crew state), funded from the existing redundancy.**
+> Unit class merges into the silhouette family the art bible already mandates; rank rides the
+> ownership decal; damage type, resistances and abilities go on-demand; area shapes are transient.
+>
+> **The gate still has to run.** Five is defended by "this is what a full sprint achieved", which
+> is evidence about cost and none about readability. **S5-03 should run on the current build before
+> any wave-2 art**, and it is what sets the real number — three specific unknowns in §6 of the
+> budget each change the document. It is the cheapest measurement available and it gates the most
+> expensive work.
+>
+> ⚠ **Not cleared by this:** `unit-classes.md` UCOQ-1 (hovering aircraft vs. ADR-0013 Y-sort) is a
+> rendering-architecture question needing its own ADR, not a channel-budget question.
 
 ### ⚠ Warnings
 
@@ -321,7 +357,7 @@ Recorded as a *pass* because it is the kind of boundary that usually is not.
    and `damage-types.md` DT-9 now cross-references the correction so it is discoverable from both sides.
 3. ✅ **B-3 — DONE.** Income breakdown rewritten as `gross − upkeep = net`, absorbing `unit-upkeep.md`
    UR-8's three-figure contract, which previously had no home in the HUD spec.
-4. ⛔ **B-4 — OPEN.** A user decision on the Pillar-3 legibility budget. ★ **Not an edit.**
+4. ✅ **B-4 — ANSWERED (S6-11).** `design/legibility-budget.md`. ★ Still owes the **S5-03 playtest**, which calibrates the cap.
 5. ✅ **B-5 — DONE.** `CREDIT_TO_AP_RATE` 1.0 → 0.01. ★ **This one would have invalidated the next
    AI-vs-AI regression batch, which is the evidence the entire PIVOT fix depends on.**
 
@@ -402,5 +438,5 @@ documents as inconsistent. All 11 spot-checked values now match `data/`.
 
 | | |
 |---|---|
-| **B-4 — the Pillar 3 legibility budget** | Still the open blocker. Needs the user; unchanged by this sweep |
+| **B-4 — the Pillar 3 legibility budget** | ✅ **Answered 2026-08-24 (S6-11)** — `design/legibility-budget.md`. What remains is running **S5-03**, which is a playtest, not a document |
 | **Barracks / Defensive Structure stat drift** | Data says Barracks 900 and Defensive 600/1; `base-production.md`'s roster table says 600 and 500/2. Live balance values on a gate that has only just started passing — reconciling them either way is a **balance decision**, not a data correction |

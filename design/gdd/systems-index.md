@@ -7,6 +7,12 @@
 
 ---
 
+
+> ★ **`design/legibility-budget.md`** owns the aggregate count of simultaneous visual channels on
+> the board (answers cross-review B-4). Individual GDDs own *their* visual requirement; that
+> document owns the sum, and any GDD proposing a new **always-on** board channel must clear it.
+
+
 ## Overview
 
 OVERCLOCK is a 2D isometric sci-fi turn-based tactics game whose defining mechanic is a

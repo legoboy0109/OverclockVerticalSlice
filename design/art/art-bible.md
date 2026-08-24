@@ -1,5 +1,9 @@
 # OVERCLOCK — Art Bible
 
+> ★ **Channel budget:** this bible owns the legibility *principles*; `design/legibility-budget.md`
+> owns the *count* — how many facts a unit may broadcast at once, and which of wave 2's additions
+> are always-on versus on-demand. Where the two disagree on a principle, this document wins.
+
 *Created: 2026-07-23*
 *Status: Complete (all 9 sections authored 2026-07-23)*
 *Source Concept: design/gdd/game-concept.md*
