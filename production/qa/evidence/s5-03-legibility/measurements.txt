@@ -1,0 +1,84 @@
+==============================================================================
+S5-03 — ISO-LEGIBILITY GATE, MECHANICAL MEASUREMENTS
+==============================================================================
+
+[TEST 1] P1 Silhouette First — archetypes distinct by OUTLINE ALONE
+         Method: alpha -> binary mask, bbox-trimmed, scale-normalised, IoU.
+         Lower IoU = more distinct. Shape-only: colour plays no part.
+
+  Raw silhouette geometry (before normalisation):
+    archetype     w    h  aspect w/h  filled px
+    scout       148  149        0.99       8782
+    trooper     116  130        0.89       7777
+    heavy       139  148        0.94      11352
+    sniper       99  156        0.63       6104
+
+  Pairwise IoU (shape overlap after scale-normalising):
+       scout vs trooper   IoU 0.407
+       scout vs heavy     IoU 0.438
+       scout vs sniper    IoU 0.358
+     trooper vs heavy     IoU 0.438
+     trooper vs sniper    IoU 0.353
+       heavy vs sniper    IoU 0.462
+
+  Most-confusable pair: heavy / sniper at IoU 0.462
+
+[TEST 2] The bible's stated primary read: Scout LOW+HORIZONTAL vs
+         Sniper TALL+VERTICAL — 'aspect ratio alone tells them apart'.
+
+    scout  aspect 0.99  (148x149)
+    sniper aspect 0.63  (99x156)
+    separation factor: 1.57x  (PASS)
+
+[TEST 3] P2 Ownership — how much of each archetype actually CARRIES hue.
+         Ownership is hue-only in shipped art (S5-08), so a unit with little
+         saturated area has little ownership signal, regardless of ΔE.
+
+    archetype  faction   body px  saturated  % of body
+    scout      rush         8782       4001      45.6%
+    scout      boom         8782       3968      45.2%
+    trooper    rush         7777       3302      42.5%
+    trooper    boom         7777       3306      42.5%
+    heavy      rush        11352       7122      62.7%
+    heavy      boom        11352       7035      62.0%
+    sniper     rush         6104        835      13.7%
+    sniper     boom         6104        784      12.8%
+
+    Per-archetype mean hue coverage (ownership signal strength):
+      sniper      13.3%  ########
+      trooper     42.5%  ############################
+      scout       45.4%  ##############################
+      heavy       62.4%  #########################################
+
+    Spread: sniper (13.3%) to heavy (62.4%) — 4.7x difference in ownership signal.
+
+[TEST 4] P2 — does ownership survive FULL DESATURATION?
+         The art bible mandates a non-hue backup. S5-08 measured it absent.
+         Method: mean body colour per faction, then the same in grayscale.
+
+    scout      colour ΔE76   41.6   |  grayscale Δ  13.6/255  -> MARGINAL
+    trooper    colour ΔE76   46.1   |  grayscale Δ  14.5/255  -> MARGINAL
+    heavy      colour ΔE76   61.8   |  grayscale Δ  23.3/255  -> MARGINAL
+    sniper     colour ΔE76   12.9   |  grayscale Δ   2.7/255  -> FAIL
+
+    (Grayscale Δ thresholds: >=26 distinguishable, 13-26 marginal, <13 indistinguishable.)
+
+[TEST 5] §4.2 stage contrast — measured in the real captured frames,
+         not from swatches. Stage = modal background; actors = saturated px.
+
+    01-dense-all-actionable.png        contrast  2.63:1  ΔE  28.2  grayΔ  63.0  actors  1.4% of frame
+    02-dense-mixed-act-state.png       contrast  2.18:1  ΔE  23.3  grayΔ  50.2  actors  1.3% of frame
+    03-dense-all-spent.png             contrast  2.04:1  ΔE  22.0  grayΔ  46.8  actors  1.3% of frame
+    04-diagonal-stack.png              contrast  2.48:1  ΔE  26.8  grayΔ  59.5  actors  0.7% of frame
+    05-mirror-pairs.png                contrast  2.35:1  ΔE  25.0  grayΔ  56.0  actors  0.9% of frame
+
+    (WCAG AA large-text bar is 3.0:1; S4-01 locked the stage at 5.19:1 worst case.)
+
+[TEST 6] Pillar-1 read under crowding — actionable vs spent, measured on
+         the dense board rather than an isolated pair.
+
+    pixels visibly changed :  4.26% of frame
+    mean luminance (changed px): actionable 0.1089 -> spent 0.0504
+    act-state luminance ratio  : 1.58:1
+
+==============================================================================

@@ -183,6 +183,37 @@ visual decision is currently being made against an unverified assumption, and th
 today. Running the gate costs a session; discovering the answer after the art is authored costs the
 art.
 
+### ✅ The mechanical half ran, 2026-08-24 — `production/playtests/s5-03-iso-legibility-2026-08-24.md`
+
+| Unknown | Answer |
+|---|---|
+| Are the current five facts readable at a glance? | **Yes**, with one exception that is a unit-art defect rather than a channel-count problem — the Sniper carries 13.3% hue coverage against a roster mean of 50.1% and does not read as owned. **The cap of 5 stands.** |
+| Is act-state's triple coding necessary, or over-served? | ⚠️ **Necessary.** Brightness alone is a 1.58:1 ratio — thin on its own. See the revision below |
+| Does hue-carried ownership survive at playing distance? | **Partially.** It holds on 3 of 4 archetypes and fails on the fourth, and the cause is *coverage*, not hue choice. Still owes the human session |
+
+> ### ⚠️ REVISION — crew state is not free after all
+>
+> §3 allocated crew state to always-on and funded it from the act-state redundancy. **That
+> redundancy is thinner than this document assumed.** Measured, act-state's brightness channel alone
+> is only 1.58:1; the triple coding is doing real work rather than merely duplicating. Removing a
+> channel to pay for crew state would degrade the most frequently consulted fact in the game.
+>
+> **Treat crew state as needing new always-on budget, or move it on-demand.** This is the first
+> allocation in this document to be overturned by measurement, which is the process working.
+
+> ### ★★ A rule the measurement added, which this document did not anticipate
+>
+> Contrast in the real frames splits sharply: the **neon accent** clears the bar everywhere (4.26:1
+> at the dimmest, 7.17:1 typical, against a 3.0:1 requirement), while the **unit body** never clears
+> it (1.80–2.46:1). Units are dark chassis reading almost as stage, plus an accent doing 100% of the
+> legibility work. Therefore:
+>
+> **An archetype's accent coverage *is* its legibility. Coverage is the budget, not hue choice.**
+>
+> The Heavy (62% coverage) and the Sniper (13%) use the same palette and the same hues; one is
+> unmistakable and the other is unreadable. Every wave-2 unit must be measured against this before
+> being authored — `tools/analyse_legibility.py` computes it.
+
 ---
 
 ## 7. The calls that are still yours
