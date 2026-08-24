@@ -10,9 +10,8 @@
 ## and read via [code]Balance.economy[/code] — never threaded through call
 ## sites as an explicit parameter. Its ten fields fall in three groups
 ## (the 2026-08-05 AP↔Credits pivot added the last five):
-## [br]• [b]Credit-income curve[/b] (`base_income` .. `economy_tech_tier_threshold`)
-##   — read by [code]Credits.credit_income()[/code] (the diminishing-outpost income
-##   curve, re-denominated from AP into the banked Credits pool by the pivot).
+## [br]• [b]Credit-income curve[/b] (`base_income`, `econ_tier_bonus`, `max_economy_tier`)
+##   — read by [code]Credits.credit_income()[/code] (the research-tier income curve).
 ## [br]• [b]AP tactical budget[/b] (`flat_ap_per_turn`, `ap_carryover_cap`) — read by
 ##   [code]AP.reset_turn()[/code]. Flat per-turn, not income-driven.
 ## [br]• [b]AP logistics surcharges[/b] (`produce_ap_cost`, `build_ap_cost`,
@@ -25,45 +24,72 @@
 ## `BASE_INCOME_FLOOR` guard to the Alpha faction-asymmetry prototype
 ## (ADR-0012) — adding them now would be speculative, unexercised surface.
 ##
-## [b]Note:[/b] `ECONOMY_TECH_INCOME_BONUS` (the constant, value 1) is
-## deliberately NOT a field here — it is Research-owned, living in Research's
-## own config resource, per ADR-0006's Key Interfaces comment.
-##
 ## Usage:
 ## [codeblock]
 ## var cfg: EconomyConfig = Balance.economy
-## var outpost_bonus: int = cfg.outpost_bonus_tier1 * min(n, cfg.tier_threshold)
+## var income: int = cfg.base_income + cfg.econ_tier_bonus * tier
 ## [/codeblock]
 class_name EconomyConfig
 extends Resource
 
 # --- Credit-income curve (funds the banked Credits pool; ADR-0006) ---
+#
+# ★ RE-BASED 2026-08-24 (S6-01). Income was driven by a diminishing per-outpost
+# curve; the Economy Outpost is now DELETED and income comes from a finite
+# research spine. The removed fields were `outpost_bonus_tier1`,
+# `outpost_bonus_tier2`, `tier_threshold` and `economy_tech_tier_threshold`.
+#
+# WHY: production/vertical-slice/REPORT.md returned PIVOT. Credits were unbounded
+# (peak 5,724, still climbing linearly at turn 200), so economy actions always
+# outscored manoeuvring and no match ever resolved. The old curve tiered DOWN but
+# never stopped — a soft brake. Three research tiers is a hard stop.
+#
+# ★ All Credit quantities are ×100 vs the pre-2026-08-24 scale (user decision):
+# the extra granularity is what lets upkeep differentiate units that would
+# otherwise be forced onto the same integer.
 
-## Floor Credit income granted regardless of outpost count (n=0 case).
-@export var base_income: int = 10
+## Flat Credit income every player earns each turn regardless of board state.
+## ★ The board no longer contributes to income at all — this plus the tier term
+## is the whole formula.
+@export var base_income: int = 1000
 
-## Per-outpost Credit income for outposts within the first tier (n <= tier_threshold).
-@export var outpost_bonus_tier1: int = 2
+## Credit income added per completed economy research tier.
+@export var econ_tier_bonus: int = 500
 
-## Per-outpost Credit income for outposts beyond the first tier (n > tier_threshold).
-@export var outpost_bonus_tier2: int = 1
+## Number of economy tiers that exist. ★ THIS IS THE ECONOMY'S HARD CEILING:
+## income tops out at `base_income + econ_tier_bonus * max_economy_tier` (2,500)
+## and cannot grow further by any means. Raising it re-opens the unbounded-economy
+## defect the PIVOT verdict diagnosed — do not treat it as a routine tuning knob.
+@export var max_economy_tier: int = 3
 
-## Outpost count at which the bonus rate steps down from tier1 to tier2.
-@export var tier_threshold: int = 4
-
-## Outpost count at which Economy Tech's income bonus term caps out (owned by
-## AP & Credits Economy, read cross-system by Research's `economy_tech_income_bonus()`).
-@export var economy_tech_tier_threshold: int = 6
+## Credit cost of each economy tier, escalating: 1,000 / 2,000 / 3,500. Length must
+## equal [member max_economy_tier].
+##
+## [b]Temporarily housed here.[/b] Tier costs are Research-owned by design
+## (design/gdd/research-tech.md), but the Research system does not exist yet — only a
+## test stub. Parking them in the economy config keeps them data-driven and keeps the
+## AI's load-time lethal-floor invariant computable against a real number instead of a
+## literal. ★ Move to Research's own config resource when that system lands (S6-05+).
+##
+## Flat +[member econ_tier_bonus] per tier against an escalating cost gives diminishing
+## returns on investment without a diminishing benefit: each tier still feels like a
+## real upgrade, but the third pays back in ~7 turns against a 30-round match.
+@export var econ_tier_costs: PackedInt32Array = PackedInt32Array([1000, 2000, 3500])
 
 # --- AP tactical budget (the per-turn action-point pool; ADR-0006 pivot) ---
 
 ## Flat AP granted at every start-of-turn reset — the tactical budget floor.
 ## Not income-driven: AP does not scale with the economy (contrast the Credit curve).
-@export var flat_ap_per_turn: int = 10
+@export var flat_ap_per_turn: int = 30
 
 ## Max unspent AP that carries into the next turn (any excess is lost). Start-of-turn
-## AP = flat_ap_per_turn + min(leftover, ap_carryover_cap), so max AP = 15 at defaults.
-@export var ap_carryover_cap: int = 5
+## AP = flat_ap_per_turn + min(leftover, ap_carryover_cap), so max AP = 45 at defaults.
+## ★ Rescaled ×3 on 2026-08-24 (user decision) while AP ACTION costs were deliberately
+## left unchanged: at 10 AP an army above ~5 units had members standing idle every turn
+## regardless of player intent, which made larger rosters unusable. Accepted cost — AP is
+## now less scarce, which dilutes Pillar 1. The restoring dial is the *_ap_cost surcharges
+## below, NOT cutting this back (that re-creates the idle-army problem).
+@export var ap_carryover_cap: int = 15
 
 # --- AP logistics surcharges (economy-owned; read by B&P / Research per action) ---
 

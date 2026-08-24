@@ -310,10 +310,14 @@ func test_outpost_completing_at_real_start_turn_counts_same_turn_income() -> voi
 	# start_turn runs -- proves the pre-turn baseline is real, not zero.
 	assert_int(BaseProduction.completed_outpost_count(state, 0)).is_equal(2)
 	var cfg: EconomyConfig = Balance.economy
-	var income_at_n2: int = cfg.base_income \
-		+ cfg.outpost_bonus_tier1 * min(2, cfg.tier_threshold) \
-		+ cfg.outpost_bonus_tier2 * max(0, 2 - cfg.tier_threshold)
-	assert_int(Credits.credit_income(state, 0)).is_equal(income_at_n2)
+	# ★ S6-01 (2026-08-24): income no longer depends on outpost count at all.
+	# The AC this test was written for ("a completing outpost counts toward THIS
+	# turn's income") describes a mechanic that no longer exists. What survives --
+	# and is still worth pinning -- is the step ORDERING (step 3 build timers run
+	# strictly before step 4 income) and the completion event. The income
+	# assertions are inverted into a regression that the outpost curve is gone.
+	var income_before: int = Credits.credit_income(state, 0)
+	assert_int(income_before).is_equal(cfg.base_income) # tier 0, and structures contribute nothing
 
 	# Act -- the REAL start-of-turn sequence: step 3 (advance_build_timers)
 	# strictly before step 4 (Credits.add_income's income snapshot), same call.
@@ -336,16 +340,13 @@ func test_outpost_completing_at_real_start_turn_counts_same_turn_income() -> voi
 	# real fields, never a bare literal; tier1 covers n=3 since tier_threshold
 	# is 4 in the shipped config (asserted below so this test would fail loud,
 	# not silently mis-tier, if that config value ever changes).
-	assert_int(cfg.tier_threshold).is_greater_equal(3)
-	var income_at_n3: int = cfg.base_income \
-		+ cfg.outpost_bonus_tier1 * min(3, cfg.tier_threshold) \
-		+ cfg.outpost_bonus_tier2 * max(0, 3 - cfg.tier_threshold)
-	assert_int(income_at_n3).is_equal(income_at_n2 + cfg.outpost_bonus_tier1) # the "X + OUTPOST_BONUS_TIER1 this turn" AC wording.
-	assert_int(Credits.credit_income_breakdown(state, 0)["outpost"]).is_equal(cfg.outpost_bonus_tier1 * min(3, cfg.tier_threshold) + cfg.outpost_bonus_tier2 * max(0, 3 - cfg.tier_threshold))
-	assert_int(Credits.credit_income(state, 0)).is_equal(income_at_n3)
-	# Credits banked additively from the known 0 baseline -- current_credits ==
-	# credit_income exactly (Rule-6 ordering already reflected in n=3 above).
-	assert_int(state.per_player[0].current_credits).is_equal(income_at_n3)
+	# ★ ... and income is UNCHANGED by that completion. This is the regression that
+	# proves the outpost income curve is really gone: a structure finished during
+	# step 3 used to raise step 4's income by OUTPOST_BONUS_TIER1, and now does not.
+	assert_int(Credits.credit_income(state, 0)).is_equal(income_before)
+	assert_int(Credits.credit_income_breakdown(state, 0)["tiers"]).is_equal(0)
+	# Credits banked additively from the known 0 baseline.
+	assert_int(state.per_player[0].current_credits).is_equal(income_before)
 	# AP is flat + capped carryover, not income-driven -- leftover was 0 going
 	# in, so post-reset current_ap == flat_ap_per_turn exactly.
 	assert_int(state.per_player[0].current_ap).is_equal(cfg.flat_ap_per_turn)
@@ -375,9 +376,10 @@ func test_two_outposts_completing_same_start_turn_both_count() -> void:
 	assert_int(completing_b.build_status).is_equal(StructureState.BuildStatus.COMPLETED)
 	assert_int(BaseProduction.completed_outpost_count(state, 0)).is_equal(2)
 	var cfg: EconomyConfig = Balance.economy
-	var expected_income: int = cfg.base_income \
-		+ cfg.outpost_bonus_tier1 * min(2, cfg.tier_threshold) \
-		+ cfg.outpost_bonus_tier2 * max(0, 2 - cfg.tier_threshold)
+	# ★ S6-01: both completed in the same batch (the surviving ADR-0017 D1 /
+	# ADR-0008 ordering AC), and neither raised income -- structures no longer feed
+	# the Credit curve at all. Expected income is base only, at economy_tier 0.
+	var expected_income: int = cfg.base_income
 	# Banked additively from the known 0 baseline.
 	assert_int(state.per_player[0].current_credits).is_equal(expected_income)
 

@@ -416,7 +416,7 @@ func test_two_builds_same_turn_both_succeed_parallel_construction_ap_gated() -> 
 func test_economy_tech_does_not_discount_effective_build_cost_flat_four() -> void:
 	# Arrange -- player has researched Economy Tech.
 	var state := _make_state()
-	state.per_player[0].has_economy_tech = true
+	state.per_player[0].economy_tier = 1
 	# Act / Assert -- effective_build_cost is unmodified: flat 4 AP, no
 	# economy_outpost_discount hook.
 	assert_int(BaseProduction.effective_build_cost(state, StructureTypes.ECONOMY_OUTPOST, 0)).is_equal(4)

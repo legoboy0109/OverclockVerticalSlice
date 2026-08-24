@@ -142,22 +142,25 @@ func _make_economy_outpost_type(build_cost: int = 4) -> StructureTypeDef:
 	return type
 
 
-# --- AC-15: economy_value ~= 7.06, action_score (cost 4) ~= 1.765 -----------
+# --- AC-15 (S6-01: re-pointed off the deleted outpost income curve) ---------
 
-func test_economy_value_first_outpost_no_economy_tech_is_approx_7_06() -> void:
-	# Arrange — a player with 0 completed Economy Outposts building their
-	# first one (no Economy Tech) -> tier-1 marginal (+2 AP/turn) for all 6
-	# horizon turns (Balance.economy defaults: outpost_bonus_tier1=2,
-	# tier_threshold=4 -- outpost #1 is within tier 1).
+func test_economy_value_of_a_structure_build_is_zero_no_structure_raises_income() -> void:
+	# ★ S6-01 (2026-08-24): REPLACED test_economy_value_first_outpost_..._is_approx_7_06.
+	#
+	# That test asserted the AI valued a first Economy Outpost at ~7.06 AP-equivalent.
+	# The Economy Outpost is deleted and NO STRUCTURE RAISES CREDIT INCOME any more --
+	# income comes solely from research tiers. So the economic value of building
+	# anything is exactly zero, and that is the correct answer rather than a stub.
+	#
+	# ★ This is the PIVOT fix visible at the scoring layer: the AI kept choosing BUILD
+	# because building bought income. It no longer does, so it no longer should.
+	#
+	# ⚠ S6-05 owns the other half -- giving RESEARCH actions an economy_value from
+	# econ_tier_bonus, and re-anchoring CREDIT_TO_AP_RATE (1.0 -> 0.01, broken by the
+	# ×100 Credit rescale).
 	var state := _make_state()
-
-	# Act
-	var value: float = AI._economy_value(state, 0, StructureTypes.ECONOMY_OUTPOST)
-
-	# Assert — Sum_{t=1..6} 2 * 0.85^t = 2 * 3.529486... ~= 7.058973.
-	assert_float(value).is_equal_approx(7.058973, 0.001)
-	assert_float(value).is_equal_approx(7.06, 0.01)
-
+	var value: float = AI._economy_value(state, 0, _make_economy_outpost_type(4))
+	assert_float(value).is_equal_approx(0.0, 0.0001)
 
 func test_action_score_first_outpost_is_approx_1_765() -> void:
 	# Arrange — economy_value ~=7.06 at build_cost 4 (ECONOMY_OUTPOST's real
@@ -173,7 +176,7 @@ func test_action_score_first_outpost_is_approx_1_765() -> void:
 	assert_float(score).is_equal_approx(1.765, 0.01)
 
 
-# --- AC-16: tier-1 strictly outscores tier-2 --------------------------------
+# --- AC-16 (S6-01: inverted -- no structure produces income, so no tiers) ---
 
 func test_economy_value_tier1_outpost_strictly_greater_than_tier2_outpost() -> void:
 	# Arrange — tier-1 candidate: player already has 0 completed outposts (this
@@ -194,9 +197,18 @@ func test_economy_value_tier1_outpost_strictly_greater_than_tier2_outpost() -> v
 
 	# Assert — tier-1 (~7.06) strictly greater than tier-2 (~3.53); no
 	# flattening to an identical capped score.
-	assert_float(value_tier1).is_equal_approx(7.058973, 0.001)
-	assert_float(value_tier2).is_equal_approx(3.529486, 0.001)
-	assert_bool(value_tier1 > value_tier2).is_true()
+	# ★ S6-01 (2026-08-24): AC-16's tier-1-beats-tier-2 contrast tested the
+	# diminishing per-outpost income curve, which is DELETED. There is no marginal
+	# rank any more because no structure produces income at all -- so both
+	# candidates are worth exactly 0, and the AI correctly stops treating a build
+	# as an economic investment.
+	#
+	# ★ Kept (rather than deleted) as the regression that the curve is really gone:
+	# if any outpost-count-sensitive income term ever returns, these two diverge
+	# again and this test fails loudly.
+	assert_float(value_tier1).is_equal_approx(0.0, 0.0001)
+	assert_float(value_tier2).is_equal_approx(0.0, 0.0001)
+	assert_bool(is_equal_approx(value_tier1, value_tier2)).is_true()
 
 
 # --- AC-20: tiles-normalized advance -> Heavy and Scout score identically --

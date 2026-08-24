@@ -102,7 +102,7 @@ func test_credits_bank_additively_over_three_turns_while_ap_refreshes_flat() -> 
 	# --- Turn 1: the first start_turn establishes the baseline. ---
 	state.start_turn(0)
 	var income: int = Credits.credit_income(state, 0) # the fixed per-turn income I.
-	assert_int(Credits.credit_income_breakdown(state, 0)["econ_tech"]).is_equal(0) # Research reset -> clean.
+	assert_int(Credits.credit_income_breakdown(state, 0)["tiers"]).is_equal(0) # ★ S6-01: tier 0 -> no tier income.
 	assert_int(state.per_player[0].current_ap).is_equal(cfg.flat_ap_per_turn) # flat, leftover 0.
 	assert_int(state.per_player[0].current_credits).is_equal(income)           # banked 1x from 0.
 

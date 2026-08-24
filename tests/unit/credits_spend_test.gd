@@ -242,11 +242,11 @@ func test_credit_can_raise_current_credits_above_any_prior_value() -> void:
 # --- add_income(): banking — additive, no cap, no reset ---------------------
 
 func test_add_income_adds_credit_income_to_existing_balance() -> void:
-	# Arrange — a nonzero starting balance and one completed outpost giving
-	# income above the base floor (10 + tier1(2*1) = 12).
+	# Arrange — a nonzero starting balance and one economy tier researched, giving
+	# income above the base floor.
 	var state := GameStateFactory.make_state()
 	state.per_player[0].current_credits = 6
-	_add_completed_outposts(state, 0, 1)
+	state.per_player[0].economy_tier = 1
 	var income := Credits.credit_income(state, 0)
 	# Act
 	Credits.add_income(state, 0)
@@ -254,22 +254,21 @@ func test_add_income_adds_credit_income_to_existing_balance() -> void:
 	assert_int(state.per_player[0].current_credits).is_equal(6 + income)
 
 
-func test_add_income_with_zero_outposts_adds_base_income_10() -> void:
-	# Arrange
+func test_add_income_at_tier_zero_adds_base_income() -> void:
+	# ★ S6-01: income is research-tiered, not outpost-driven. At tier 0 a player
+	# banks exactly base_income.
 	var state := GameStateFactory.make_state()
 	state.per_player[0].current_credits = 0
-	_add_completed_outposts(state, 0, 0)
-	# Act
+	state.per_player[0].economy_tier = 0
 	Credits.add_income(state, 0)
-	# Assert — base_income floor (10) added to a zero balance.
-	assert_int(state.per_player[0].current_credits).is_equal(10)
+	assert_int(state.per_player[0].current_credits).is_equal(Balance.economy.base_income)
 
 
 func test_add_income_called_twice_accumulates_no_reset_between_calls() -> void:
-	# Arrange — two completed outposts: income = 10 + tier1(2*2) = 14 each call.
+	# Arrange — two economy tiers researched.
 	var state := GameStateFactory.make_state()
 	state.per_player[0].current_credits = 0
-	_add_completed_outposts(state, 0, 2)
+	state.per_player[0].economy_tier = 2
 	var income := Credits.credit_income(state, 0)
 	# Act — bank income twice in a row (simulating no discard/reset between banking).
 	Credits.add_income(state, 0)
@@ -285,11 +284,14 @@ func test_add_income_reads_correct_player_index_for_two_players_independently() 
 	var state := GameStateFactory.make_state(2, 0)
 	state.per_player[0].current_credits = 100
 	state.per_player[1].current_credits = 0
-	_add_completed_outposts(state, 0, 2)  # player 0 income -> 14
-	_add_completed_outposts(state, 1, 8)  # player 1 income -> 22
+	state.per_player[0].economy_tier = 1
+	state.per_player[1].economy_tier = 3
+	var income_0: int = Credits.credit_income(state, 0)
+	var income_1: int = Credits.credit_income(state, 1)
+	assert_int(income_0).is_not_equal(income_1)  # the two players must genuinely differ
 	# Act
 	Credits.add_income(state, 0)
 	Credits.add_income(state, 1)
 	# Assert — each player's balance reflects only their own banked income.
-	assert_int(state.per_player[0].current_credits).is_equal(114)
-	assert_int(state.per_player[1].current_credits).is_equal(22)
+	assert_int(state.per_player[0].current_credits).is_equal(100 + income_0)
+	assert_int(state.per_player[1].current_credits).is_equal(income_1)

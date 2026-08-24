@@ -912,33 +912,36 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 ## gate) — kept as an explicit parameter (rather than hardcoding the type
 ## internally) so a future non-Outpost economy building, if one is ever added,
 ## slots in without a signature change. `raw_immediate_value` is fixed 0 (an
-## Economy Outpost's `build_time` produces no immediate board effect the turn
-## it starts, GDD Formulas table) — never computed, just the literal.
+## a structure's `build_time` produces no immediate board effect the turn it
+## starts, GDD Formulas table) — never computed, just the literal.
 ##
-## `marginal_ap_income(t)` is [b]this candidate outpost's own marginal
-## contribution[/b] at future turn `t`, computed the same tiered way
-## [code]Credits.credit_income_breakdown[/code] does but isolated to the single
-## marginal outpost being evaluated: if this would be [param player]'s
-## outpost number [code]n+1[/code] (where [code]n[/code] =
-## [method BaseProduction.completed_outpost_count]) and [code]n+1 <=
-## EconomyConfig.tier_threshold[/code], it contributes
-## [code]outpost_bonus_tier1[/code]; otherwise [code]outpost_bonus_tier2[/code]
-## — the GDD's own AC-16 worked contrast (a strictly-higher tier-1 candidate
-## vs. a tier-2 candidate past the threshold). Economy Tech's income term is
-## deliberately never added here (Research is not implemented — the stub
-## scope named in this story's Implementation Notes; the marginal-income
-## computation below reads only [code]EconomyConfig[/code], never
-## [code]Research[/code]).
+## `marginal_credit_income(t)` is [b]this candidate's own marginal contribution[/b]
+## at future turn `t`. ★ [b]S6-01 (2026-08-24): it is now always 0 for a structure
+## build.[/b] The per-outpost income curve this once read is deleted; no structure
+## raises Credit income any more (see [method Credits.credit_income_breakdown]), so
+## building something is not an economic investment and must not be scored as one.
+## That is the PIVOT verdict's fix arriving at the scoring layer.
 ##
 ## No cap is applied anywhere in this sum (the GDD's 2026-07-22 decoupling
 ## note) — the dominant-strategy guardrail is [param economy_investments_committed]'s
 ## cadence cap in the caller, never a valuation ceiling here.
 static func _economy_value(lookahead: GameState, player: int, structure_type: StructureTypeDef) -> float:
-	var economy_cfg: EconomyConfig = Balance.economy
-	var n: int = BaseProduction.completed_outpost_count(lookahead, player)
-	var marginal_rank: int = n + 1 # This candidate would be the player's (n+1)th outpost.
-	var marginal_income: float = float(economy_cfg.outpost_bonus_tier1) if marginal_rank <= economy_cfg.tier_threshold \
-		else float(economy_cfg.outpost_bonus_tier2)
+	# ★ S6-01 (2026-08-24): re-pointed off the deleted per-outpost income curve.
+	#
+	# NO STRUCTURE RAISES CREDIT INCOME ANY MORE. Income comes solely from completed
+	# economy research tiers (Credits.credit_income_breakdown), so the marginal income
+	# of *building* anything is exactly zero — and this function is only ever called
+	# with a structure candidate (see the build-scoring loop above).
+	#
+	# Returning 0 here is CORRECT, not a stub: the AI should no longer treat any build
+	# as an economic investment, because none is. That is precisely the behaviour the
+	# PIVOT verdict wanted — the AI kept choosing BUILD because building bought income.
+	#
+	# ⚠ S6-05 owns the other half: giving RESEARCH actions an economy_value computed
+	# from econ_tier_bonus, and re-anchoring CREDIT_TO_AP_RATE (1.0 -> 0.01, broken by
+	# the ×100 Credit rescale). Until then the AI simply has no economic play to score,
+	# which is a *safe* failure direction — it under-invests rather than over-builds.
+	var marginal_income: float = 0.0
 
 	var raw_immediate_value: float = 0.0
 	var decayed_sum: float = 0.0
@@ -1024,8 +1027,13 @@ static func _attack_defense_tech_marginal_value(tech_bonus: float) -> float:
 ## researching player's completed [b]plus[/b] under-construction Economy
 ## Outposts (the caller's responsibility to compute — this function is pure
 ## arithmetic only, per the GDD's "counting in-flight outposts" fix).
-static func _economy_tech_marginal_value(economy_tech_income_bonus: int, projected_completed_outposts: int, economy_tech_tier_threshold: int) -> float:
-	return float(economy_tech_income_bonus) * float(mini(projected_completed_outposts, economy_tech_tier_threshold))
+## ★ S6-01 (2026-08-24): Economy Tech's income no longer scales with outpost count —
+## it is a flat [code]econ_tier_bonus[/code] per completed tier, and the outpost count
+## it multiplied against no longer exists. Kept as a one-line pass-through rather than
+## deleted so the call graph and its tests stay intact until S6-05 rewrites the research
+## scoring path properly.
+static func _economy_tech_marginal_value(econ_tier_bonus: int, _unused_projected: int, _unused_threshold: int) -> float:
+	return float(econ_tier_bonus)
 
 
 ## Per-under-construction-structure cancel-build candidate enumeration

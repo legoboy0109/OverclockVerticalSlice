@@ -60,11 +60,14 @@ stories:
     name: "Economy re-base — delete outpost income, add three research tiers"
     file: "design/gdd/ap-economy.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: "gameplay-programmer"
     estimate_days: 1.0
     blocker: ""
-    completed: ""
+    completed: "2026-08-24"
+    # ✅ DONE. Suite 979/979 (was 984 pre-change; net -5 because the outpost-curve
+    # tests were replaced by a smaller, sharper set). 0 failures, 0 orphans; slice
+    # boots clean (exit 0). Branch feat/s6-01-economy-rebase.
     # credit_income = BASE_INCOME(1000) + 500 per completed economy tier. Tiers cost
     # 1000/2000/3500, strictly sequential. Hard ceiling 2500 -- FINITE BY CONSTRUCTION,
     # which is the half of the PIVOT fix that bounds the RATE. Remove OUTPOST_BONUS_TIER1/2,

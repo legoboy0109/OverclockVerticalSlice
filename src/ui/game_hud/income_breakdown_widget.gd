@@ -3,17 +3,17 @@
 ## the Credits pool, so this belongs to the [CreditsCounterWidget] (it is parented
 ## under that counter by [method GameHud.assemble]). Renders
 ## [method GameStateReader.income_breakdown]'s PRE-LABELED fields
-## ([code]base[/code], [code]outpost[/code], [code]econ_tech[/code]) VERBATIM — read
+## ([code]base[/code], [code]tiers[/code]) VERBATIM — read
 ## through [method Credits.credit_income_breakdown] — the HUD never receives raw
-## inputs (outpost count, tech flag) and splits locally, and never re-derives a
+## inputs (tier count) and splits locally, and never re-derives a
 ## coefficient (Pass-Through Invariant).
 ##
 ## An on-demand popover: hover/click/keyboard-toggles the Credits counter. Starts
 ## expanded iff [member HUDConfig.income_breakdown_default_expanded].
 ##
 ## [b]Testable model[/b] (AC-8): [method breakdown] / [method base_value] /
-## [method outpost_value] / [method econ_tech_value] read the facade verbatim —
-## the n=0 (base only) and Econ-Tech-with-0-outposts (0, not implied) cases surface
+## [method tiers_value] read the facade verbatim —
+## the tier-0 (base only) case surfaces
 ## as literal zeros, never a phantom non-zero. [method _draw] renders them (advisory).
 ##
 ## Usage:
@@ -58,13 +58,12 @@ func breakdown() -> Dictionary:
 func base_value() -> int:
 	return breakdown().get("base", 0)
 
-## The tiered-outpost income term (verbatim; 0 with no outposts).
-func outpost_value() -> int:
-	return breakdown().get("outpost", 0)
-
-## The Economy-Tech income term (verbatim; 0 — not implied — with 0 outposts).
-func econ_tech_value() -> int:
-	return breakdown().get("econ_tech", 0)
+## The research-tier income term (verbatim; 0 at tier 0).
+## ★ Replaced `outpost_value()` on 2026-08-24 (S6-01) — the Economy Outpost is
+## deleted and income is research-driven. Returns 0 rather than a missing key so a
+## tier-0 player renders an explicit "no tiers yet", never a phantom bonus.
+func tiers_value() -> int:
+	return breakdown().get("tiers", 0)
 
 ## Whether the popover is currently expanded.
 func is_expanded() -> bool:

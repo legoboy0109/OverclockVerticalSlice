@@ -13,7 +13,7 @@
 ## [codeblock]
 ## var state := GameStateFactory.make_state(2, 0)      # 2 players, player 0 active
 ## state.per_player[0].current_ap = 10
-## state.per_player[0].has_economy_tech = true
+## state.per_player[0].economy_tier = 2
 ## [/codeblock]
 class_name GameStateFactory
 extends RefCounted
@@ -22,10 +22,10 @@ extends RefCounted
 ## Builds a bare [PlayerState] with the given starting AP and Economy-Tech flag.
 ## All other fields keep their class defaults (faction null, other tech flags
 ## false, not AI-controlled).
-static func make_player(current_ap: int = 0, has_economy_tech: bool = false) -> PlayerState:
+static func make_player(current_ap: int = 0, economy_tier: int = 0) -> PlayerState:
 	var player := PlayerState.new()
 	player.current_ap = current_ap
-	player.has_economy_tech = has_economy_tech
+	player.economy_tier = economy_tier
 	return player
 
 

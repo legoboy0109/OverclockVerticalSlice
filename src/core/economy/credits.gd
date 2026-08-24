@@ -2,8 +2,8 @@
 ##
 ## Foundation-layer system per ADR-0006 (the 2026-08-05 AP<->Credits pivot). The
 ## economic half of the two-pool economy: a banked war chest that accumulates
-## across turns, funded by the diminishing-outpost income curve that formerly
-## drove AP (re-denominated verbatim into Credits). Holds only pure/static
+## across turns, funded by a finite research-tier income curve (re-based
+## 2026-08-24 off the deleted Economy Outpost — see [method credit_income_breakdown]). Holds only pure/static
 ## functions that take a [GameState] explicitly — a line-for-line mirror of the
 ## [AP] tactical pool's afford/spend/read surface, plus the income formula it
 ## owns (moved here from [AP] by the pivot).
@@ -25,34 +25,41 @@ class_name Credits
 extends RefCounted
 
 
-## Returns [param player]'s Credit income decomposed into its three additive
-## terms — kept separate from [method credit_income] so the HUD income readout
-## (TR-hud-019, ADR-0016) renders a per-term breakdown that can never drift from
-## the total. Moved verbatim from the pre-pivot [code]AP.ap_income_breakdown[/code];
-## only the pool it denominates changed (AP -> Credits).
+## Returns [param player]'s Credit income decomposed into its two additive terms —
+## kept separate from [method credit_income] so the HUD income readout renders a
+## per-term breakdown that can never drift from the total.
 ##
-## `n` is [param player]'s completed-outpost count, floored to 0. `econ_tech` is
-## added [b]verbatim[/b] — it is already the fully-tiered, `has_economy_tech`-guarded,
-## capped term from [code]Research.economy_tech_income_bonus()[/code]; re-applying
-## `economy_tech_tier_threshold` here would double-apply the cap (the 2026-07-24
-## /architecture-review C3 regression: bonus 36 at n=6 instead of 6).
+## [b]★ RE-BASED 2026-08-24 (S6-01).[/b] This returned
+## [code]{base, outpost, econ_tech}[/code] and read a diminishing per-outpost curve.
+## The Economy Outpost is [b]deleted[/b]; income now comes from completed economy
+## research tiers only. The `outpost` and `econ_tech` keys are [b]removed, not
+## zeroed[/b] — a phantom key would let the HUD render a line for a mechanic that
+## no longer exists.
+##
+## [b]Why the shape changed at all:[/b] the vertical slice returned a PIVOT verdict —
+## Credits were unbounded (peak 5,724, still climbing linearly at turn 200), so
+## economy actions always outscored manoeuvring and no match ever resolved. The old
+## curve tiered *down* but never *stopped*. A finite tier count is a hard ceiling,
+## and it is the rate-bounding half of the fix (upkeep bounds the stock).
+##
+## [param player]'s tier is clamped into [code][0, max_economy_tier][/code]: income
+## must never keep growing past the ceiling, and a negative tier must never subtract.
 static func credit_income_breakdown(state: GameState, player: int) -> Dictionary:
 	var cfg: EconomyConfig = Balance.economy
-	var n: int = max(0, BaseProduction.completed_outpost_count(state, player))
-	var base: int = cfg.base_income
-	var outpost: int = cfg.outpost_bonus_tier1 * min(n, cfg.tier_threshold) \
-		+ cfg.outpost_bonus_tier2 * max(0, n - cfg.tier_threshold)
-	var econ_tech: int = Research.economy_tech_income_bonus(state, player)
-	return {"base": base, "outpost": outpost, "econ_tech": econ_tech}
+	var tier: int = clampi(state.per_player[player].economy_tier, 0, cfg.max_economy_tier)
+	return {"base": cfg.base_income, "tiers": cfg.econ_tier_bonus * tier}
 
 
 ## Returns [param player]'s total Credit income for this turn — the sum of
-## [method credit_income_breakdown]'s three terms. Pure, integer-only, O(1) plus
-## two O(1) forward-declared cross-system reads. Moved verbatim from the pre-pivot
-## [code]AP.income[/code].
+## [method credit_income_breakdown]'s two terms. Pure, integer-only, O(1) with no
+## cross-system reads at all (the old formula needed Base & Production's outpost
+## count and Research's tech term; it now needs neither).
+##
+## [b]Range: 1000 .. 2500.[/b] That upper bound is a hard ceiling reached by
+## researching every economy tier, and nothing in the game can raise it further.
 static func credit_income(state: GameState, player: int) -> int:
 	var b: Dictionary = credit_income_breakdown(state, player)
-	return b["base"] + b["outpost"] + b["econ_tech"]
+	return b["base"] + b["tiers"]
 
 
 ## Banks [param player]'s Credit income at start-of-turn (ADR-0006 Rule 6) —
@@ -61,8 +68,8 @@ static func credit_income(state: GameState, player: int) -> int:
 ## discard (contrast [method AP.reset_turn], which overwrites the flat AP pool).
 ##
 ## Called only from [code]GameState.start_turn[/code]'s step 4b (ADR-0008),
-## after step 3's build/research timer advance, so a just-completed Economy
-## Outpost counts toward this same turn's income. O(1) plus the O(1)
+## after step 3's build/research timer advance, so a just-completed economy
+## research tier counts toward this same turn's income. O(1) plus the O(1)
 ## [method credit_income] read. Runs once per player per turn — not on any
 ## per-action or per-frame path.
 static func add_income(state: GameState, player: int) -> void:
