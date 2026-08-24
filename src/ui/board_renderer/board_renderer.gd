@@ -145,6 +145,19 @@ const OVERLAY_Z_INDEX: int = 1
 ## out would break it in exactly the moment a player is deciding what to attack.
 ## Below, because it is a decal on the floor and an actor standing on the tile must
 ## occlude it.
+## The board cursor sits in the OVERLAY band, and its layer is added to the tree
+## immediately AFTER [member overlay_layer] so equal-z tree order draws it above
+## the move/attack previews and below every marker and occupant. That ordering is
+## the point: the cursor must remain visible while a preview is painted under it,
+## but a unit standing on the cursor tile must still read as standing ON the board
+## rather than under a lid.
+##
+## ★ It is a SEPARATE layer rather than another [enum OverlayClass] because
+## [CommandInterface] owns [method set_overlay]/[method clear_overlay] and clears
+## the whole overlay layer between previews — a cursor painted there would blink
+## out every time the player opened or closed a preview.
+const CURSOR_Z_INDEX: int = 1
+
 const MARKER_Z_INDEX: int = 2
 
 ## Coarse cross-tree z-index band for [member occupant_layer] (ADR-0013 §2).
@@ -277,6 +290,10 @@ var floor_layer: TileMapLayer
 ## directly, so this class stays the single choke point for overlay writes.
 var overlay_layer: TileMapLayer
 
+## The single-tile cursor layer (see [constant CURSOR_Z_INDEX]). Painted through
+## [method set_cursor]/[method clear_cursor]; never touched by the overlay API.
+var cursor_layer: TileMapLayer
+
 ## Y-sorted occupant group (ADR-0013 §2). [member Node2D.y_sort_enabled] is
 ## the sole depth-sort mechanism for children of this node — never a custom
 ## sort. See the class doc comment's scene-tree section for the
@@ -338,6 +355,9 @@ func _ready() -> void:
 	floor_layer = _build_iso_tilemap_layer("FloorTileMapLayer", FLOOR_Z_INDEX)
 	overlay_layer = _build_iso_tilemap_layer("OverlayTileMapLayer", OVERLAY_Z_INDEX)
 	_build_overlay_tile_source()
+	# Added AFTER the overlay layer on purpose — see CURSOR_Z_INDEX.
+	cursor_layer = _build_iso_tilemap_layer("CursorTileMapLayer", CURSOR_Z_INDEX)
+	_build_cursor_tile_source()
 	marker_layer = _build_marker_layer()
 	occupant_layer = _build_occupant_layer()
 	_build_floor_tile_source()
@@ -398,6 +418,62 @@ func _build_overlay_tile_source() -> void:
 		source.texture_region_size = tile_size
 		source.create_tile(Vector2i.ZERO)
 		overlay_layer.tile_set.add_source(source, class_id)
+
+
+## The cursor ring's colour. Warm near-white, deliberately outside the overlay
+## palette: cool-white is the go-tile language and red is attack, so the cursor
+## must not be mistaken for either. It marks where the PLAYER is looking, which is
+## not game state at all.
+const CURSOR_TINT: Color = Color(1.0, 0.96, 0.82, 0.95)
+
+## Ring thickness as a fraction of the tile's half-height. Thick enough to survive
+## the isometric foreshortening that squashes the diamond's top and bottom corners.
+const CURSOR_THICKNESS: float = 0.16
+
+
+## Bakes the cursor's atlas entry — an OUTLINE diamond, not a filled one, so the
+## terrain, any overlay beneath it and any unit standing on the tile all stay
+## readable through it (Pillar 3: the cursor may not hide what it points at).
+func _build_cursor_tile_source() -> void:
+	var source := TileSetAtlasSource.new()
+	source.texture = _build_diamond_outline_texture(TILE_TEXTURE_SIZE, CURSOR_TINT)
+	source.texture_region_size = TILE_TEXTURE_SIZE
+	source.create_tile(Vector2i.ZERO)
+	cursor_layer.tile_set.add_source(source, 0)
+
+
+## Bakes a 2:1 iso diamond OUTLINE at [param tile_size] in [param tint] — filled
+## only in the band between the diamond edge and an inset copy of it.
+func _build_diamond_outline_texture(tile_size: Vector2i, tint: Color) -> ImageTexture:
+	var image := Image.create(tile_size.x, tile_size.y, false, Image.FORMAT_RGBA8)
+	var half_width: float = tile_size.x * 0.5
+	var half_height: float = tile_size.y * 0.5
+	var inner: float = 1.0 - CURSOR_THICKNESS
+	for y: int in tile_size.y:
+		for x: int in tile_size.x:
+			var dx: float = absf(x + 0.5 - half_width)
+			var dy: float = absf(y + 0.5 - half_height)
+			# Same point-in-diamond metric as the filled build; the ring is the
+			# band where the metric sits between `inner` and 1.
+			var d: float = dx / half_width + dy / half_height
+			if d <= 1.0 and d >= inner:
+				image.set_pixel(x, y, tint)
+			else:
+				image.set_pixel(x, y, Color(0, 0, 0, 0))
+	return ImageTexture.create_from_image(image)
+
+
+## Paints the board cursor on [param tile], replacing any previous position.
+## Independent of the overlay API — a preview being opened or cleared never
+## disturbs it.
+func set_cursor(tile: Vector2i) -> void:
+	cursor_layer.clear()
+	cursor_layer.set_cell(cell_for(tile), 0, Vector2i.ZERO)
+
+
+## Removes the board cursor (mouse-driven play, or a menu taking focus).
+func clear_cursor() -> void:
+	cursor_layer.clear()
 
 
 ## Bakes a flat-tinted 2:1 iso diamond [ImageTexture] at [param tile_size],

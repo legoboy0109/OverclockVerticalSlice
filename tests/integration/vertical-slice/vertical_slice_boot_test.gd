@@ -486,7 +486,13 @@ func test_status_overlay_surfaces_selected_build_type_legend_and_updates_on_cycl
 	assert_str(root.status_text()).contains(first.display_name) # e.g. "Economy Outpost"
 	assert_str(root.status_text()).contains("[C] cycle")
 	assert_str(root.status_text()).contains("Produce [P]:")
-	assert_str(root.status_text()).contains("[Tab] end turn")
+	# ★ 2026-08-24: the legend now names the pad button beside every key, because a
+	# controller player cannot guess a mapping they cannot see.
+	assert_str(root.status_text()).contains("[Tab/Start] end turn")
+	assert_str(root.status_text()).contains("[Arrows/D-pad] cursor")
+	# ★ And costs are labelled CR + AP, not "AP" — build/produce spend BOTH, and the
+	# label claimed the wrong currency for the game's most common action.
+	assert_str(root.status_text()).contains(" CR + ")
 
 	# Cycling the build type updates the overlay to the next type in one keypress.
 	root.cycle_buildable()

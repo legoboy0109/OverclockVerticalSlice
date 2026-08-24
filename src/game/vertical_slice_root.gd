@@ -402,13 +402,20 @@ func _refresh_status() -> void:
 	if build_type != null:
 		var cost: int = BaseProduction.effective_build_cost(_state, build_type, LOCAL_PLAYER)
 		var afford: String = "affordable" if _reader.can_afford_build(LOCAL_PLAYER, build_type) else "too expensive"
-		lines.append("Build [B]: %s - %d AP (%s)    [C] cycle" % [build_type.display_name, cost, afford])
+		# ★ Was "%d AP" — a straight mislabel. effective_build_cost returns CREDITS;
+		# the AP part is a separate flat surcharge, and the action needs BOTH
+		# (ADR-0006 dual-cost, both-or-neither). The label never got updated when
+		# the economy split in two, so the game was telling the player the wrong
+		# currency for its single most common action.
+		lines.append("Build [B]: %s - %d CR + %d AP (%s)    [C] cycle" % [
+			build_type.display_name, cost, Balance.economy.build_ap_cost, afford])
 
 	var produce_type: UnitTypeDef = selected_produce_type()
 	if produce_type != null:
 		var pcost: int = Unit.effective_produce_cost(_state, produce_type, LOCAL_PLAYER)
 		var pafford: String = "affordable" if _reader.can_afford_produce(LOCAL_PLAYER, produce_type) else "too expensive"
-		lines.append("Produce [P]: %s - %d AP (%s)    [V] cycle" % [produce_type.display_name, pcost, pafford])
+		lines.append("Produce [P]: %s - %d CR + %d AP (%s)    [V] cycle" % [
+			produce_type.display_name, pcost, Balance.economy.produce_ap_cost, pafford])
 
 	var building: String = _building_producer_note()
 	if building != "":
@@ -417,7 +424,10 @@ func _refresh_status() -> void:
 	if _flash != "":
 		lines.append("(!) " + _flash) # why the last action did nothing.
 
-	lines.append("[Arrows] cursor  [Enter] select  [M] move/attack  [B]/[C] build/cycle  [P]/[V] produce/cycle  [Tab] end turn")
+	# Both input methods named on one line — a controller player should not have to
+	# guess which pad button maps to a key they can see.
+	lines.append("[Arrows/D-pad] cursor   [Enter/A] select   [M/X] move-attack   " +
+		"[B/Y] build  [C/LB] cycle   [P/B] produce  [V/RB] cycle   [Tab/Start] end turn")
 	_status_label.text = "\n".join(lines)
 
 
@@ -507,6 +517,7 @@ func _build_cursor() -> void:
 	_cursor = BoardCursor.new()
 	_cursor.grid_pos = HQ_A # start on the local player's HQ ...
 	_cmd.inspect(_state, _cursor.grid_pos) # ... and peek it into the detail panel.
+	_sync_cursor_highlight() # ... and paint it, so the board shows a cursor on turn 1.
 
 
 # --- Turn loop ---------------------------------------------------------------
@@ -637,20 +648,23 @@ func _unhandled_input(event: InputEvent) -> void:
 		move_cursor(Vector2i.RIGHT)
 	elif event.is_action_pressed(&"ui_accept"):
 		select_at_cursor()
-	elif event is InputEventKey and event.pressed and not event.echo:
-		match event.keycode:
-			KEY_M:
-				act_at_cursor()
-			KEY_B:
-				request_build_at_cursor()
-			KEY_C:
-				cycle_buildable()
-			KEY_P:
-				request_produce_at_cursor()
-			KEY_V:
-				cycle_produce_type()
-			KEY_TAB:
-				try_end_human_turn()
+	# ★ 2026-08-24: these six were raw `event.keycode` matches, which made every
+	# verb past "move the cursor and select" keyboard-only — a controller could
+	# navigate the board and then do nothing with it. They are named actions now,
+	# each carrying both its key and a pad button (see project.godot), so adding an
+	# input method never means hunting through a match statement again.
+	elif event.is_action_pressed(&"board_act"):
+		act_at_cursor()
+	elif event.is_action_pressed(&"board_build"):
+		request_build_at_cursor()
+	elif event.is_action_pressed(&"board_build_cycle"):
+		cycle_buildable()
+	elif event.is_action_pressed(&"board_produce"):
+		request_produce_at_cursor()
+	elif event.is_action_pressed(&"board_produce_cycle"):
+		cycle_produce_type()
+	elif event.is_action_pressed(&"board_end_turn"):
+		try_end_human_turn()
 	elif event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			_zoom_camera(CAMERA_ZOOM_STEP)      # wheel up: zoom in
@@ -678,7 +692,8 @@ func move_cursor(direction: Vector2i) -> bool:
 		_flash = "" # a new cursor move supersedes the last no-op's message.
 		_refresh_status()
 	_keep_cursor_in_view() # pan the camera if the cursor nears the view edge (zoomed in).
-	queue_redraw() # repaint the cursor highlight.
+	_sync_cursor_highlight()
+	queue_redraw() # repaint the selection overlay.
 	return true
 
 
@@ -991,14 +1006,27 @@ func _draw() -> void:
 	# real Sprite2D per entity under the board's Y-sorted occupant layer (Story 006).
 	# Drawing them here too would paint unsorted markers on top of the sprites.
 
-	# The keyboard cursor — a hollow diamond outline at the cursor tile.
-	if _cursor != null:
-		var c: Vector2 = _board.grid_to_screen(_cursor.grid_pos)
-		var cr: float = 14.0
-		draw_polyline(PackedVector2Array([
-			c + Vector2(0, -cr), c + Vector2(cr, 0), c + Vector2(0, cr),
-			c + Vector2(-cr, 0), c + Vector2(0, -cr),
-		]), Color(1.0, 1.0, 0.4), 2.0)
+	# ★ The cursor is NOT drawn here any more (2026-08-24). It was, and it was
+	# invisible for two compounding reasons:
+	#   1. `_board` is a CHILD of this node, so this `_draw` paints UNDER every one
+	#      of the board's TileMapLayers. The diamond was rendered beneath the floor.
+	#   2. It was a fixed 14px radius against a 128x64px tile — a fifth of a cell,
+	#      which would have been a dot even had it been on top.
+	# It now lives on the renderer's own CursorTileMapLayer via
+	# BoardRenderer.set_cursor(), which fixes both: correct z-band and a tile-sized
+	# ring baked at the tile's real dimensions.
+
+
+## Paints the board cursor at the cursor's current tile.
+##
+## The single call site for cursor rendering — every path that moves the cursor
+## ends here, so the highlight can never drift from [member BoardCursor.grid_pos].
+## Delegates to [method BoardRenderer.set_cursor], which owns its own TileMapLayer
+## precisely so an open move/attack preview cannot clear it.
+func _sync_cursor_highlight() -> void:
+	if _board == null or _cursor == null:
+		return
+	_board.set_cursor(_cursor.grid_pos)
 
 
 ## Highlights the selected own unit's reachable MOVE tiles (translucent fill) and
