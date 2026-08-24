@@ -71,13 +71,9 @@ var _buttons: Array[Button] = []
 var _quit_confirm: Control = null
 var _confirm_yes: Button = null
 
-## ⚠ The Settings screen has no spec and no implementation (main-menu.md Open
-## Question 3 defers it, and `post-gate-backlog.md` item 6 parks the control-binding
-## UI there). The entry is PRESENT and INERT rather than omitted: it is a specified
-## component of this screen, so removing it would silently deviate from an approved
-## spec, while wiring it to nothing would open a broken screen. Flip this the moment
-## a Settings scene exists.
-const SETTINGS_AVAILABLE: bool = false
+## ✅ Live since 2026-08-24 — [SettingsScreen] exists, so the entry is interactive.
+## It shipped inert for exactly one day, while the screen it links to did not exist.
+const SETTINGS_AVAILABLE: bool = true
 
 
 func _ready() -> void:
@@ -127,6 +123,8 @@ func _build() -> void:
 	]
 	_buttons[Entry.NEW_SKIRMISH].pressed.connect(_on_new_skirmish)
 	_buttons[Entry.QUIT].pressed.connect(_open_quit_confirm)
+	if SETTINGS_AVAILABLE:
+		_buttons[Entry.SETTINGS].pressed.connect(_open_settings)
 
 	var footer := Label.new()
 	footer.text = _version_stamp()
@@ -213,6 +211,17 @@ func _build_quit_confirm() -> void:
 	cancel.custom_minimum_size = Vector2(160, MIN_HIT_TARGET)
 	_confirm_yes.pressed.connect(_confirm_quit)
 	cancel.pressed.connect(close_quit_confirm)
+
+
+## Opens settings over the menu, and restores focus to the Settings entry on back —
+## both specs require "back returns to the screen you came from", and returning to
+## the top of the list would silently move the player.
+func _open_settings() -> void:
+	var screen := SettingsScreen.new()
+	add_child(screen)
+	screen.open_from(func() -> void:
+		screen.queue_free()
+		_buttons[Entry.SETTINGS].grab_focus())
 
 
 func _on_new_skirmish() -> void:

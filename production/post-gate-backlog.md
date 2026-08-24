@@ -162,7 +162,30 @@ accessibility claim is made publicly.
 
 ---
 
-## 6. Control-binding UI — deferred to the main menu (2026-08-24, user decision)
+## 6. ~~Control-binding UI~~ — ✅ DONE 2026-08-24 (S6-24)
+
+> **Shipped in `src/ui/settings/settings_screen.gd`**, reachable from the main menu and the pause
+> overlay. Rebinding for all 9 board actions across keyboard and gamepad independently, with
+> conflict warnings, persisted to `user://settings.cfg` via the new `GameSettings` store — the
+> project's first settings persistence of any kind.
+>
+> ★ **It immediately found a real defect.** End Turn had been bound to keycode `16777218` — Godot
+> 3's `KEY_TAB`; Godot 4's is `4194306`. The binding was not Tab, it was not anything, and nothing
+> caught it: the InputMap accepted the value and the tests asserted the on-screen legend text rather
+> than the binding. It took rendering a bindings table to see "Ctrl+" where "Tab" belonged. A
+> regression guard now asserts every shipped keycode resolves to a real key name.
+>
+> **Also delivered from the same commitments:** UI scale 75–150%, and reduced motion — wired to
+> `EntitySpriteFeed.glow_paused`, so it genuinely stops the slice's one ambient animation rather
+> than storing an inert preference.
+>
+> **Still open, and moved out of this item:** `InputConfig.menu_keyboard_nav_enabled` (ADR-0014 §6 —
+> there is still no `InputConfig` instance, and the ADR flags `FOCUS_CLICK` as its one unverified
+> engine claim); a pad binding for `board_cursor_cycle`, which still has none; and **the Settings
+> screen has no UX spec** — it was built from `accessibility-requirements.md` because
+> `main-menu.md` OQ-3 was never authored.
+
+### Original entry, kept for context
 
 **Decision: not built until the main menu exists.** Recorded here rather than attempted,
 because there is nowhere to put it — a rebinding screen with no menu to reach it from is a

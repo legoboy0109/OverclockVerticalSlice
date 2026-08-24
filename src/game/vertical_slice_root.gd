@@ -673,8 +673,16 @@ func _drive_ai_turns() -> void:
 ## [member EntitySpriteFeed.glow_paused] is the hook if a real pause screen ever
 ## needs it frozen.
 func _process(delta: float) -> void:
-	if _feed != null:
-		_feed.advance_glow(delta)
+	if _feed == null:
+		return
+	# ★ Reduced motion is not a stored-but-inert preference: the resting glow's
+	# breathe cycle is the slice's one continuous ambient animation, and
+	# `EntitySpriteFeed.glow_paused` freezes it at a steady value. Snap-Never-Tween
+	# means the glow is reinforcement riding on an instant snap, so freezing it
+	# loses no information — which is exactly why
+	# `accessibility-requirements.md` calls this row "cheap by design".
+	_feed.glow_paused = Settings.settings != null and Settings.settings.reduced_motion
+	_feed.advance_glow(delta)
 
 
 func _unhandled_input(event: InputEvent) -> void:

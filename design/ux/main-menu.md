@@ -4,14 +4,11 @@
 > **Author**: user + ux-designer
 > **Last Updated**: 2026-07-27
 >
-> ⛔ **Note added 2026-08-24 (no design change).** The **control-binding / rebinding UI** is
-> deferred until this menu is implemented, by user decision. It belongs under the **Settings**
-> screen this spec already routes to but does not itself specify. The precondition is done — all
-> seven board verbs are named InputMap actions with keyboard *and* gamepad bindings as of S6-17/20,
-> so there is now something concrete for such a screen to edit. Full context, the current binding
-> table, and two items travelling with it (`InputConfig.menu_keyboard_nav_enabled`, and a missing
-> pad binding for `board_cursor_cycle`) are in `production/post-gate-backlog.md` item 6.
-> **Whoever specs the Settings screen should start there.**
+> ✅ **Resolved 2026-08-24 (S6-24).** The Settings screen exists (`src/ui/settings/settings_screen.gd`)
+> and carries the control-binding UI this note deferred, plus UI scale and reduced motion. It is
+> still **unspecified** — built from the standing commitments in `accessibility-requirements.md`
+> rather than from a UX document, because OQ-3 was never authored. Worth writing that spec
+> retroactively if the screen grows.
 > **Journey Phase(s)**: Entry / cold boot (no player-journey.md yet — see Open Questions)
 > **Template**: UX Spec
 > **Scope**: Vertical Slice (S2-05). VS-minimal entry set; persistence/campaign deferred (Alpha+).
@@ -216,12 +213,9 @@ Tier: **Standard** (WCAG 2.1 AA + CVAA).
 
 - [x] Main menu appears within [X]ms of app launch — it is the boot scene; no measured target set.
 - [x] "New Skirmish" starts a fresh VS match and loads the board + HUD.
-- [ ] ⛔ **"Settings" opens the settings screen and returns to the menu on back** — the settings
-      screen has no spec and does not exist (OQ-3). The entry is **present and inert**, with a
-      tooltip saying so, rather than omitted (it is a specified component here) or wired to nothing
-      (which would open a broken screen). **This AC cannot pass until the Settings screen is
-      authored** — see `production/post-gate-backlog.md` item 6, which also parks the control-binding
-      UI there.
+- [x] ✅ **"Settings" opens the settings screen and returns to the menu on back** — `SettingsScreen`
+      landed 2026-08-24 (S6-24); back restores focus to the Settings entry. The entry was inert for
+      exactly one day.
 - [x] "Quit" shows a confirm prompt; confirming exits, cancelling returns to the menu — and returns
       focus to the Quit entry it came from, not the top of the menu.
 - [x] Keyboard/gamepad navigation reaches New Skirmish → Settings → Quit in order, each with a
@@ -244,5 +238,9 @@ Tier: **Standard** (WCAG 2.1 AA + CVAA).
 2. **New Skirmish → side/faction pick?** The VS is symmetric (scope.md §5), so New Skirmish can
    launch straight into the match with no pre-match pick. If the VS build wants a side choice or
    a map confirm, that's a tiny intermediate screen (flag, not authored here).
-3. **Settings screen is a separate spec** — not required by S2-05 (HUD/menu/pause only). This
-   menu links to it as a named dependency; author it when settings implementation is scheduled.
+3. ~~**Settings screen is a separate spec**~~ — ⚠ **Partially resolved 2026-08-24 (S6-24).** The
+   screen was IMPLEMENTED without a spec, from `accessibility-requirements.md`'s Standard-tier
+   commitments (full input remapping with conflict warnings, UI scale 75–150%, motion reduction).
+   **The spec still does not exist** — this is a real gap, not a closed question: the screen has no
+   authored layout, no acceptance criteria of its own, and nothing to review it against. Author it
+   if settings grow beyond these three groups.

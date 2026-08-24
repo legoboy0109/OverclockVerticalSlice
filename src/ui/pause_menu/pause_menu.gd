@@ -33,10 +33,10 @@ enum Entry { RESUME, RESTART, SETTINGS, QUIT_TO_MENU }
 ## Which confirm prompt is showing, if any.
 enum Confirm { NONE, RESTART, QUIT }
 
-## ⚠ Same call as the main menu's: the Settings screen has no spec and no
-## implementation (`pause.md` OQ-4, `main-menu.md` OQ-3). Present and inert beats
-## omitting a specified component or opening a screen that does not exist.
-const SETTINGS_AVAILABLE: bool = false
+## ✅ Live since 2026-08-24 — [SettingsScreen] exists. `pause.md` requires that
+## back from settings returns to THIS overlay, not to the match, which is why the
+## return destination is supplied by the caller rather than assumed by the screen.
+const SETTINGS_AVAILABLE: bool = true
 
 const ENTRY_WIDTH: float = 300.0
 
@@ -55,23 +55,13 @@ func _ready() -> void:
 	# CenterContainer centres the panel on the origin (it renders in the top-left
 	# corner). Both symptoms, one cause. Size is taken from the viewport and kept in
 	# sync on resize.
-	set_anchors_preset(Control.PRESET_FULL_RECT)
-	_fit_to_viewport()
-	get_viewport().size_changed.connect(_fit_to_viewport)
+	MenuStyle.fill_viewport(self)
 	# ★ Runs WHILE THE TREE IS PAUSED. Without this the overlay freezes with
 	# everything else and the player cannot press any of its buttons — the pause
 	# menu would be the one thing pause breaks.
 	process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	visible = false
 	_build()
-
-
-## Matches the overlay to the viewport. See [method _ready] for why this cannot be
-## left to anchors.
-func _fit_to_viewport() -> void:
-	var rect: Rect2 = get_viewport().get_visible_rect()
-	position = Vector2.ZERO
-	size = rect.size
 
 
 func _build() -> void:
@@ -114,6 +104,8 @@ func _build() -> void:
 	_buttons[Entry.RESUME].pressed.connect(request_resume)
 	_buttons[Entry.RESTART].pressed.connect(func() -> void: _open_confirm(Confirm.RESTART))
 	_buttons[Entry.QUIT_TO_MENU].pressed.connect(func() -> void: _open_confirm(Confirm.QUIT))
+	if SETTINGS_AVAILABLE:
+		_buttons[Entry.SETTINGS].pressed.connect(_open_settings)
 
 	_build_confirm()
 
@@ -181,6 +173,17 @@ func request_resume() -> void:
 	_confirm_kind = Confirm.NONE
 	_confirm_layer.visible = false
 	resume_requested.emit()
+
+
+## Opens settings over the pause overlay. Back returns HERE with focus on the
+## Settings entry — never into the match, which the player did not ask for.
+func _open_settings() -> void:
+	var screen := SettingsScreen.new()
+	screen.process_mode = Node.PROCESS_MODE_WHEN_PAUSED # the tree is paused
+	add_child(screen)
+	screen.open_from(func() -> void:
+		screen.queue_free()
+		_buttons[Entry.SETTINGS].grab_focus())
 
 
 func _open_confirm(kind: int) -> void:

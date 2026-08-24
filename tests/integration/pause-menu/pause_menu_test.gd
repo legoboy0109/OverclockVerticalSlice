@@ -39,15 +39,14 @@ func test_starts_closed_and_opens_with_resume_focused() -> void:
 	assert_int(p.focused_entry()).is_equal(PauseMenu.Entry.RESUME)
 
 
-func test_settings_is_present_but_inert() -> void:
-	# Same call as the main menu's: the Settings screen has no spec and does not
-	# exist (pause.md OQ-4). Present-but-inert beats omitting a specified component
-	# or opening a screen that is not there.
+func test_all_four_entries_are_interactive_now_that_settings_exists() -> void:
+	# ★ Settings was inert only while SettingsScreen did not exist. It landed
+	# 2026-08-24, so pause.md's Settings acceptance criterion can pass.
 	var p: PauseMenu = await _make_pause()
 	assert_bool(p.entry_interactive(PauseMenu.Entry.RESUME)).is_true()
 	assert_bool(p.entry_interactive(PauseMenu.Entry.RESTART)).is_true()
+	assert_bool(p.entry_interactive(PauseMenu.Entry.SETTINGS)).is_true()
 	assert_bool(p.entry_interactive(PauseMenu.Entry.QUIT_TO_MENU)).is_true()
-	assert_bool(p.entry_interactive(PauseMenu.Entry.SETTINGS)).is_false()
 
 
 # ==============================================================================

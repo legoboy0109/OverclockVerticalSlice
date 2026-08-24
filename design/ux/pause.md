@@ -217,10 +217,9 @@ Tier: **Standard**.
 - [x] "Restart Skirmish" shows a confirm; confirming reloads the VS map from turn 1.
 - [x] "Quit to Main Menu" shows a confirm; confirming returns to the main menu and the match is
       disposed.
-- [ ] ⛔ **"Settings" opens settings and returns to the pause overlay on back** — the settings
-      screen has no spec and does not exist (OQ-4). The entry is **present and inert** with a
-      tooltip, matching the main menu's identical call. **Cannot pass until the Settings screen is
-      authored** — `production/post-gate-backlog.md` item 6.
+- [x] ✅ **"Settings" opens settings and returns to the pause overlay on back** — `SettingsScreen`
+      landed 2026-08-24 (S6-24). It opens with `PROCESS_MODE_WHEN_PAUSED` (the tree is paused
+      beneath it) and back returns HERE with focus on the Settings entry, never into the match.
 - [x] Keyboard/gamepad navigation reaches Resume → Restart → Settings → Quit in order, each with a
       focus indicator distinct from mouse-hover. *(Settings is skipped while inert — `FOCUS_NONE`,
       the Standard Button pattern's stated treatment.)*
@@ -258,5 +257,6 @@ turn is therefore allowed and genuinely freezes it, which is the "simplest rule"
 3. **Freeze semantics** — the sim is turn-based and event-driven, so "pause" mostly means "block
    input + halt animations." Confirm no timer/tween relies on wall-clock that would desync on
    resume (Snap-Never-Tween makes this cheap).
-4. **Settings screen is a separate spec** — reached from here and from the main menu; not authored
-   under S2-05 (HUD/menu/pause only).
+4. ~~**Settings screen is a separate spec**~~ — ⚠ **Partially resolved 2026-08-24 (S6-24).** The
+   screen was implemented without a spec, from `accessibility-requirements.md`'s commitments. **The
+   spec itself still does not exist**; see `main-menu.md` OQ-3 for the same note.

@@ -12,8 +12,13 @@
 class_name MenuStyle
 extends RefCounted
 
-## The spec's "≥ 20px critical" floor for menu text.
-const ENTRY_FONT_SIZE: int = 22
+## ★ 24px, not 22. The UX specs (`main-menu.md`, `pause.md`) say "≥ 20px critical",
+## but `accessibility-requirements.md` — the authority on the committed Standard
+## tier — is stricter for menus specifically: "Minimum text size — menu UI ... 24px
+## minimum at 1080p". Two documents, two numbers; the tier commitment wins, and the
+## looser figure in the UX specs is the older one. Entries are already sized for
+## ~40% localization expansion, so raising this clips nothing.
+const ENTRY_FONT_SIZE: int = 24
 ## The spec's hit-target floor at 1080p. Entries exceed it; this is the bound.
 const MIN_HIT_TARGET: float = 44.0
 ## Sized for the localization pass's ~40% expansion, not the English width — a
@@ -90,6 +95,40 @@ static func apply(b: Button) -> void:
 	b.add_theme_stylebox_override("focus", focus)
 	b.add_theme_stylebox_override("pressed", pressed)
 	b.add_theme_stylebox_override("disabled", disabled)
+
+
+## Makes [param c] fill the viewport, and keeps it filling on resize.
+##
+## ★ Use this for any full-screen Control built with [code].new()[/code] rather
+## than instanced from a scene. [method Control.set_anchors_preset] alone is NOT
+## enough in two common cases, and it has now caught this project twice:
+## [br]• parented to a [CanvasLayer], which is not a Control and so offers no
+##   parent rect to anchor against;
+## [br]• built with [code].new()[/code], which has none of the anchor properties a
+##   [code].tscn[/code] root carries.
+##
+## In both the Control ends up at ZERO SIZE, and the symptoms do not look like a
+## sizing bug: a full-rect background covers nothing, and a [CenterContainer]
+## inside it centres its contents on the origin, so the panel appears in the
+## top-left corner. Same cause, two unrelated-looking faults.
+static func fill_viewport(c: Control) -> void:
+	c.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var viewport: Viewport = c.get_viewport()
+	if viewport == null:
+		return
+	c.position = Vector2.ZERO
+	c.size = viewport.get_visible_rect().size
+	# ★ The validity guard is load-bearing. A lambda's lifetime is not tied to the
+	# Control it closes over, so `size_changed` keeps invoking it after that Control
+	# is freed — and a screen opened and closed once then leaves a callable writing
+	# `position` to a freed object on the next window resize. It surfaced as an
+	# unrelated test failing on a null assignment, which is the least helpful place
+	# for it to show up.
+	viewport.size_changed.connect(func() -> void:
+		if not is_instance_valid(c):
+			return
+		c.position = Vector2.ZERO
+		c.size = c.get_viewport().get_visible_rect().size)
 
 
 ## A bordered plate for a panel or a modal prompt, in the shared palette.

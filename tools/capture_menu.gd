@@ -25,6 +25,16 @@ func _run() -> void:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 	_shot("02-quit-confirm")
+	menu.close_quit_confirm()
+	for i: int in 4:
+		await get_tree().process_frame
+	# --- the settings screen, opened the way the menu opens it ------------------
+	var screen := SettingsScreen.new()
+	menu.add_child(screen)
+	for i: int in 10:
+		await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	_shot("03-settings")
 	print("done")
 	get_tree().quit()
 

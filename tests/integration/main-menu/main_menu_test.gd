@@ -62,15 +62,14 @@ func test_new_skirmish_holds_focus_on_load() -> void:
 	).is_equal(MainMenu.Entry.NEW_SKIRMISH)
 
 
-func test_every_interactive_entry_is_focusable_and_settings_is_not() -> void:
+func test_every_entry_is_interactive_now_that_settings_exists() -> void:
+	# ★ Settings shipped INERT for one day, while the screen it links to did not
+	# exist. SettingsScreen landed 2026-08-24, so all three entries are live and
+	# main-menu.md's Settings acceptance criterion can finally pass.
 	var menu: MainMenu = await _make_menu()
 	assert_bool(menu.entry_interactive(MainMenu.Entry.NEW_SKIRMISH)).is_true()
+	assert_bool(menu.entry_interactive(MainMenu.Entry.SETTINGS)).is_true()
 	assert_bool(menu.entry_interactive(MainMenu.Entry.QUIT)).is_true()
-	# ⚠ Settings is present-but-inert on purpose: the Settings screen has no spec
-	# and no implementation (main-menu.md OQ-3 defers it). It is a specified
-	# component of this screen, so omitting it would deviate from an approved spec,
-	# while wiring it to nothing would open a broken screen.
-	assert_bool(menu.entry_interactive(MainMenu.Entry.SETTINGS)).is_false()
 
 
 func test_keyboard_focus_is_styled_distinctly_from_mouse_hover() -> void:
