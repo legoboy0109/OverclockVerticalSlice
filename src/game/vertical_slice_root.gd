@@ -466,8 +466,8 @@ func _refresh_status() -> void:
 	# Both input methods named on one line — a controller player should not have to
 	# guess which pad button maps to a key they can see.
 	lines.append("[Arrows/D-pad] cursor   [Enter/A] select   [M/X] move-attack   " +
-		"[B/Y] build  [C/LB] cycle   [P/B] produce  [V/RB] cycle   [Tab/Start] end turn   " +
-		"[`/Back] menu")
+		"[B/Y] build  [C/LB] cycle   [P/B] produce  [V/RB] cycle   [Tab/Back] end turn   " +
+		"[Esc/Start] pause   [`/R3] panel   [[ /L3] jump cursor")
 	_status_label.text = "\n".join(lines)
 
 
@@ -717,6 +717,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		toggle_menu_focus()
 	elif event.is_action_pressed(&"board_pause"):
 		open_pause()
+	elif event.is_action_pressed(&"board_cursor_cycle"):
+		jump_cursor()
 	elif event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			_zoom_camera(CAMERA_ZOOM_STEP)      # wheel up: zoom in
@@ -1155,6 +1157,39 @@ func _build_pause_menu() -> void:
 	_pause.resume_requested.connect(resume_from_pause)
 	_pause.restart_requested.connect(restart_match)
 	_pause.quit_to_menu_requested.connect(quit_to_main_menu)
+
+
+## Jumps the board cursor to the next highlighted tile, wrapping at the end.
+##
+## ★ [method BoardCursor.jump_to_next] has existed, implemented and unit-tested,
+## since ADR-0014 — and NOTHING CALLED IT. The action was declared in
+## `project.godot` and handled nowhere, so the feature was present in every layer
+## except the one that runs. That is the second hook found dead this way (the first
+## was `CommandInterface.notify_action_applied`); both were invisible because a
+## unit test proves a function works, not that anything invokes it.
+##
+## It matters most on a gamepad: stepping a cursor one tile at a time across a
+## 12x10 board to reach the far edge of a move range is the slowest thing a pad
+## player does, and this is the shortcut. The candidate set comes from
+## [method CommandInterface.salient_tiles], so a jump can only ever land on a tile
+## that is already highlighted.
+##
+## A no-op outside a preview (nothing is highlighted, so there is nothing to jump
+## between) and a no-op when the cursor is the only candidate.
+func jump_cursor() -> bool:
+	if _cursor == null or _cmd == null or _state.grid == null:
+		return false
+	var candidates: Array[Vector2i] = _cmd.salient_tiles()
+	if candidates.is_empty():
+		return false
+	var before: Vector2i = _cursor.grid_pos
+	_cursor.jump_to_next(candidates, _state.grid)
+	if _cursor.grid_pos == before:
+		return false
+	_cmd.inspect(_state, _cursor.grid_pos) # peek the new tile, as a step would
+	_keep_cursor_in_view()
+	_sync_cursor_highlight()
+	return true
 
 
 ## Paints the board cursor at its current tile.

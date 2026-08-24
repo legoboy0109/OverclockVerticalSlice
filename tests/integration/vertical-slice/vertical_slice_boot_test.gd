@@ -488,11 +488,18 @@ func test_status_overlay_surfaces_selected_build_type_legend_and_updates_on_cycl
 	assert_str(root.status_text()).contains("Produce [P]:")
 	# ★ 2026-08-24: the legend now names the pad button beside every key, because a
 	# controller player cannot guess a mapping they cannot see.
-	assert_str(root.status_text()).contains("[Tab/Start] end turn")
+	assert_str(root.status_text()).contains("[Tab/Back] end turn")
+	# ★ Every bound verb is named with BOTH inputs. An unnamed binding is an
+	# unreachable feature, which is exactly how cursor-jump sat unused: declared,
+	# unhandled, unbound on a pad, and absent from the legend.
+	assert_str(root.status_text()).contains("jump cursor")
+	assert_str(root.status_text()).contains("pause")
 	assert_str(root.status_text()).contains("[Arrows/D-pad] cursor")
-	# ★ The menu-focus toggle is named too — it is the ONLY way a gamepad reaches
-	# the HUD's buttons at all, so an unnamed binding is an unreachable feature.
-	assert_str(root.status_text()).contains("menu")
+	# ★ The HUD action-panel focus toggle is named too — it is the ONLY way a gamepad
+	# reaches the HUD's Build/End Turn buttons, so an unnamed binding is an
+	# unreachable feature. Reads "panel" since 2026-08-24, when "menu" became
+	# ambiguous with the pause menu that now exists.
+	assert_str(root.status_text()).contains("panel")
 	# ★ And costs are labelled CR + AP, not "AP" — build/produce spend BOTH, and the
 	# label claimed the wrong currency for the game's most common action.
 	assert_str(root.status_text()).contains(" CR + ")

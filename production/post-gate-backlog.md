@@ -179,11 +179,17 @@ accessibility claim is made publicly.
 > `EntitySpriteFeed.glow_paused`, so it genuinely stops the slice's one ambient animation rather
 > than storing an inert preference.
 >
+> **✅ `board_cursor_cycle` now has a pad binding (L3) — 2026-08-24.** It also turned out to have no
+> *handler*: `BoardCursor.jump_to_next()` was implemented and unit-tested under ADR-0014, the action
+> was declared in `project.godot`, and nothing anywhere called it. The feature existed in every layer
+> except the one that runs. Wired to `VerticalSliceRoot.jump_cursor()`, drawing its candidates from
+> the new `CommandInterface.salient_tiles()` — keyed on the same FSM switch the overlay renderer
+> uses, so a jump can only land on a tile that is already highlighted.
+>
 > **Still open, and moved out of this item:** `InputConfig.menu_keyboard_nav_enabled` (ADR-0014 §6 —
 > there is still no `InputConfig` instance, and the ADR flags `FOCUS_CLICK` as its one unverified
-> engine claim); a pad binding for `board_cursor_cycle`, which still has none; and **the Settings
-> screen has no UX spec** — it was built from `accessibility-requirements.md` because
-> `main-menu.md` OQ-3 was never authored.
+> engine claim); and **the Settings screen has no UX spec** — it was built from
+> `accessibility-requirements.md` because `main-menu.md` OQ-3 was never authored.
 
 ### Original entry, kept for context
 

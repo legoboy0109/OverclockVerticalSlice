@@ -952,6 +952,30 @@ func glyph_anchor(tile: Vector2i, glyph_class: int) -> Vector2:
 ## [br]- any other state (IDLE, ENTITY_SELECTED, PREVIEW_PRODUCE,
 ## PREVIEW_BUILD, GAME_OVER): [method BoardRenderer.clear_overlay] — no
 ## overlay belongs on the board outside an open Move/Attack preview.
+## The tiles the board cursor may jump between right now — the "salient tile set"
+## ADR-0014's [method BoardCursor.jump_to_next] is defined against.
+##
+## ★ Keyed on the SAME [enum CommandFSM.State] switch [method _render_overlays]
+## uses, deliberately: the set a player can cycle through must be exactly the set
+## that is highlighted on screen. Deriving them separately would let the two drift,
+## and a jump landing on an unhighlighted tile — or skipping a highlighted one — is
+## the kind of thing a player reads as the game being broken rather than as two
+## code paths disagreeing.
+##
+## Empty outside a preview, which makes cursor-jump a no-op there rather than an
+## error (see [method BoardCursor.jump_to_next]'s empty-candidates contract).
+func salient_tiles() -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	match _fsm_state:
+		CommandFSM.State.PREVIEW_MOVE:
+			for tile: Vector2i in _reachable:
+				out.append(tile)
+		CommandFSM.State.PREVIEW_ATTACK:
+			for tile: Vector2i in _targets:
+				out.append(tile)
+	return out
+
+
 func _render_overlays() -> void:
 	if _renderer == null:
 		return
