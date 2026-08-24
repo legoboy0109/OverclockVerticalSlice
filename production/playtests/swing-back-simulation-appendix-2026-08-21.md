@@ -407,3 +407,54 @@ Unbounded economy → AI paralysis → capacity. Each was a real defect, each wa
 and the AI genuinely could not build. But the pattern says the remaining question is not an
 engineering one, and the next change should be **chosen by design intent and then measured**,
 not guessed at again. The batch and `tools/DiagnoseAI.tscn` make any candidate cheap to test.
+
+---
+
+## ★★ S6-07 — SLOWER REINFORCEMENT — **the first real movement in this project's history**
+
+**Change**: a per-producer **production cooldown** (user's chosen lever, 2026-08-24). A
+producer that makes a unit cannot make another for `production_cooldown_turns`. Shipped at
+**2** on the HQ and the Barracks.
+
+**Why a cooldown rather than per-unit build times:** it slows the *rate* of replacement —
+which is what makes a loss cost ground — with one field and one check, rather than adding an
+under-construction lifecycle to units.
+
+### Result
+
+| # | Gate condition | Result | Previous |
+|---|---|---|---|
+| 1 | resolve on **play** | 0 / 21 | 0 / 21 |
+| 2 | ★★ **non-zero HQ damage** | ★★ **YES — 338 rows, lowest HQ 30/40** | ★ **ZERO, always** |
+| 3 | both seats | n/a | n/a |
+| 4 | peak banked Credits | **27,000** ⚠ | 1,750 |
+
+### ★★ Condition 2 flipped, and it had never moved before
+
+Across every prior measurement — 4,182 rows pre-fix, 1,260 after the economy work, 1,260
+after the capacity fix — **HQ damage was exactly zero**. It is now 338 rows, with an HQ taken
+to 30/40.
+
+**The attrition equilibrium was the cause.** Slowing replacement lets one side achieve the
+local superiority that instant reinforcement denied both, and somebody finally walks to an
+objective and hits it. ★ Three earlier hypotheses (unbounded economy → AI paralysis →
+capacity) each found a real defect and each fixed it; **none moved this number. This one
+did.**
+
+### Still failing, and now it is a MAGNITUDE problem rather than a DIRECTION one
+
+Damage reaches 10 of 40 hp and stalls: attackers get through, chip, and die before
+finishing. Pressure exists but does not sustain.
+
+**Credits regressed 1,750 → 27,000**, and that follows directly from the fix — production is
+gated behind a cooldown, so the AI banks what it cannot spend. A predictable second-order
+effect, not a new defect, but it means condition 4 needs a sink again.
+
+### Two candidate next steps, one batch each
+
+1. **Raise the cooldown to 3–4** — more pressure per exchange, at the risk of starving both
+   sides into a slower stalemate.
+2. ★ **Keep 2 and let Barracks raise throughput** — a player who *invests* reinforces faster.
+   Preferred on the reasoning that it turns the Credit surplus into the fix rather than a
+   side effect, and makes the population-cap/Barracks system load-bearing instead of
+   decorative. **User's call.**

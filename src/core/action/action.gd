@@ -79,6 +79,10 @@ enum Reason {
 	# PRODUCTION_CAP_REACHED, which is a per-producer per-TURN throughput limit; this is
 	# a limit on how many units may exist at once.
 	POPULATION_CAP_REACHED,
+	# The producer is still on its post-production cooldown (S6-07). Distinct from
+	# PRODUCTION_CAP_REACHED (a per-TURN throughput limit) -- this spans turns and is the
+	# lever that makes losing a unit cost TIME rather than a turn's Credits.
+	PRODUCER_ON_COOLDOWN,
 	# This structure type is already at its per-player maximum, counting both completed
 	# and under-construction instances (S6-03). Distinct from PRODUCTION_CAP_REACHED,
 	# which is a per-producer per-turn unit limit, not a structure-count limit.

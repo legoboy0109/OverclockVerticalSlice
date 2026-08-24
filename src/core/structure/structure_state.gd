@@ -69,6 +69,11 @@ enum BuildStatus { UNDER_CONSTRUCTION, COMPLETED }
 ## Units produced by this structure so far this owner-turn — producers only
 ## (`production_cap > 0`); `0`/unused on non-producer structure types. Reset
 ## to `0` at the owner's start-of-turn (ADR-0008 step 2).
+## Turns remaining before this producer may produce again (S6-07). Set to the type's
+## [member StructureTypeDef.production_cooldown_turns] on a successful produce, and
+## decremented once per owner-turn by [method Structure.reset_turn_flags].
+@export var production_cooldown_remaining: int = 0
+
 @export var units_produced_this_turn: int = 0
 
 ## Whether this structure has already fired this turn — the Defensive

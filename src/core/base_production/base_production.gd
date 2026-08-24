@@ -293,6 +293,12 @@ static func advance_build_timers(state: GameState, player: int) -> Array[Event]:
 		if e.owner != player or not (e is StructureState):
 			continue
 		var structure: StructureState = e
+		# ★ S6-07: tick the production cooldown here. This runs once per owner-turn,
+		# strictly before the economy step, which is exactly the cadence a per-turn timer
+		# wants — and it is real product code, unlike Structure.reset_turn_flags, which is
+		# currently satisfied by a TEST STUB (tests/helpers/stubs/structure_stub.gd).
+		if structure.production_cooldown_remaining > 0:
+			structure.production_cooldown_remaining -= 1
 		if structure.build_status != StructureState.BuildStatus.UNDER_CONSTRUCTION:
 			continue
 		structure.build_turns_remaining -= 1
@@ -585,6 +591,11 @@ static func validate_produce(state: GameState, action: ProduceAction) -> int:
 	# never forced to lose units, they simply cannot produce until back under.
 	if not Population.can_field(state, player, action.unit_type):
 		return Action.Reason.POPULATION_CAP_REACHED
+	# ★ S6-07: reinforcement rate limit (user decision 2026-08-24, "slower reinforcement").
+	# Distinct from PRODUCTION_CAP_REACHED, which is a per-turn throughput limit on a
+	# producer that is otherwise free to produce again next turn.
+	if producer.production_cooldown_remaining > 0:
+		return Action.Reason.PRODUCER_ON_COOLDOWN
 	# Dual-cost (ADR-0006 pivot): effective_produce_cost is the Credit main cost;
 	# produce also spends a PRODUCE_AP_COST AP surcharge. Legal iff BOTH afford.
 	var cost: int = Unit.effective_produce_cost(state, action.unit_type, player)
@@ -658,6 +669,9 @@ static func apply_produce(state: GameState, action: ProduceAction) -> Array[Even
 	assert(placed, "BaseProduction.apply_produce: Grid.place failed on a tile validate_produce accepted — legal_deploy_tiles/Grid desync.")
 
 	producer.units_produced_this_turn += 1
+	# ★ S6-07: arm the reinforcement cooldown. Set from the type so it stays data-driven
+	# and a value of 0 keeps the pre-S6-07 behaviour exactly.
+	producer.production_cooldown_remaining = producer.type.production_cooldown_turns
 
 	var evt := UnitDeployedEvent.new()
 	evt.entity_id = unit.entity_id
