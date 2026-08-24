@@ -8,6 +8,8 @@
 > allocates the budget those principles imply.
 > **Author**: main session, 2026-08-24 (S6-11)
 > **Not a system GDD** — it is a standard, so it does not carry the 8 required GDD sections.
+> **Readable version**: https://claude.ai/code/artifact/4adc45e0-12e4-4fcb-93e9-1c91a5a35fce
+> (this file stays the source of record; the page is a rendering of it)
 
 ---
 
