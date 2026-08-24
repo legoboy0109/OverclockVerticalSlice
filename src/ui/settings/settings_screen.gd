@@ -38,6 +38,8 @@ var _settings: GameSettings = null
 var _listening: Dictionary = {}
 
 var _bind_buttons: Dictionary = {}   ## "action.device" -> Button
+## "action.device" -> the small per-binding reset button beside it.
+var _reset_buttons: Dictionary = {}
 var _warning_label: Label = null
 var _scale_label: Label = null
 var _scale_slider: HSlider = null
@@ -106,6 +108,13 @@ func _build() -> void:
 	# layout does not jump when a warning appears — a shifting list is its own bug
 	column.add_child(_warning_label)
 
+	# States the reset affordance permanently, because a keyboard path nobody is
+	# told about is a keyboard path nobody uses.
+	var hint := _cell("Changed bindings are highlighted. Press \u21ba, or Delete on a "
+		+ "focused binding, to reset just that one.", 0.0, MenuStyle.FOOTER_TEXT)
+	hint.add_theme_font_size_override("font_size", 14)
+	column.add_child(hint)
+
 	column.add_child(_heading("DISPLAY", 20))
 	column.add_child(_scale_row())
 	column.add_child(_motion_row())
@@ -150,7 +159,54 @@ func _binding_row(action: StringName) -> HBoxContainer:
 		b.pressed.connect(func() -> void: _begin_listening(action, device))
 		_bind_buttons["%s.%d" % [action, device]] = b
 		row.add_child(b)
+		row.add_child(_reset_button(action, device))
 	return row
+
+
+## The per-binding reset affordance: restores ONE binding to its shipped default.
+##
+## ★ Two input paths, because one is not enough here. `technical-preferences.md`
+## requires every action be reachable by CLICK, and the Standard accessibility tier
+## requires keyboard/gamepad reach — a Delete-key-only clear fails the first, and a
+## mouse-only button fails the second.
+##
+## ★ It is deliberately [constant Control.FOCUS_NONE]: the keyboard/gamepad path is
+## the Delete key on the focused binding (see [method _input]), which is fewer
+## presses than tabbing past 9 extra stops. Making these focusable would grow the
+## table from 18 tab stops to 27 and slow down the input method that can least
+## afford it.
+##
+## Inert when the binding is not overridden — the Standard Button pattern's inert
+## state, present but non-interactive, never hidden. That is a feature rather than
+## clutter: the column doubles as the "which of these have I changed?" readout the
+## table otherwise has no way to give.
+func _reset_button(action: StringName, device: int) -> Button:
+	var r := Button.new()
+	r.text = "\u21ba" # ↺
+	r.tooltip_text = "Reset this binding to its default"
+	r.custom_minimum_size = Vector2(34, MenuStyle.MIN_HIT_TARGET)
+	r.focus_mode = Control.FOCUS_NONE
+	r.add_theme_font_size_override("font_size", 16)
+	MenuStyle.apply(r)
+	r.pressed.connect(func() -> void: clear_binding(action, device))
+	_reset_buttons["%s.%d" % [action, device]] = r
+	return r
+
+
+## Restores one binding to its shipped default, leaving every other customisation
+## alone. The single entry point for both the ↺ button and the Delete key.
+func clear_binding(action: StringName, device: int) -> bool:
+	if not _settings.is_overridden(action, device):
+		return false
+	_settings.clear_binding(action, device)
+	_settings.apply_bindings()
+	var saved: bool = _save_and_report()
+	_refresh_all()
+	if saved:
+		_warning_label.text = "%s (%s) reset to default." % [
+			GameSettings.ACTION_LABELS.get(action, String(action)),
+			"keyboard" if device == GameSettings.Device.KEYBOARD else "gamepad"]
+	return true
 
 
 func _scale_row() -> HBoxContainer:
@@ -193,7 +249,21 @@ func _begin_listening(action: StringName, device: int) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if _listening.is_empty() or not visible:
+	if not visible:
+		return
+	# Delete / gamepad X clears the FOCUSED binding — the keyboard and gamepad half
+	# of the per-binding reset. Only when not mid-rebind, or Delete would be
+	# swallowed instead of being bindable.
+	if _listening.is_empty() and event.is_pressed() and not event.is_echo():
+		var is_clear: bool = (event is InputEventKey
+				and (event as InputEventKey).keycode == KEY_DELETE)
+		if is_clear:
+			var focused: Dictionary = _focused_binding()
+			if not focused.is_empty():
+				clear_binding(focused["action"], focused["device"])
+				get_viewport().set_input_as_handled()
+			return
+	if _listening.is_empty():
 		return
 	if not event.is_pressed() or event.is_echo():
 		return
@@ -231,6 +301,16 @@ func _input(event: InputEvent) -> void:
 	elif not saved:
 		pass # _save_and_report already put the failure on the line
 	get_viewport().set_input_as_handled()
+
+
+## Which binding cell currently holds focus, or [code]{}[/code] if none does.
+func _focused_binding() -> Dictionary:
+	for key: String in _bind_buttons:
+		var b: Button = _bind_buttons[key]
+		if b.has_focus():
+			var parts: PackedStringArray = key.rsplit(".", true, 1)
+			return {"action": StringName(parts[0]), "device": int(parts[1])}
+	return {}
 
 
 # --- Display ------------------------------------------------------------------
@@ -288,8 +368,18 @@ func close() -> void:
 func _refresh_all() -> void:
 	for action: StringName in GameSettings.REBINDABLE:
 		for device: int in [GameSettings.Device.KEYBOARD, GameSettings.Device.GAMEPAD]:
-			var b: Button = _bind_buttons["%s.%d" % [action, device]]
+			var key: String = "%s.%d" % [action, device]
+			var b: Button = _bind_buttons[key]
 			b.text = binding_label(action, device)
+			var changed: bool = _settings.is_overridden(action, device)
+			# Overridden cells carry the accent, so "what have I changed?" is
+			# answerable at a glance rather than only by pressing Reset and seeing
+			# what moves. Not colour-alone: the ↺ beside it is live only here too.
+			b.add_theme_color_override("font_color",
+				MenuStyle.ACCENT if changed else MenuStyle.TEXT)
+			var r: Button = _reset_buttons[key]
+			r.disabled = not changed
+			r.modulate = Color.WHITE if changed else Color(0.45, 0.48, 0.54)
 	if _warning_label != null and _listening.is_empty():
 		_warning_label.text = ""
 	_refresh_display_labels()
@@ -318,6 +408,15 @@ func binding_label(action: StringName, device: int) -> String:
 ## The current warning/hint line ("" when there is nothing to say).
 func conflict_warning() -> String:
 	return _warning_label.text if _warning_label != null else ""
+
+## Whether [param action]/[param device] currently differs from the shipped default.
+func is_overridden(action: StringName, device: int) -> bool:
+	return _settings.is_overridden(action, device)
+
+## Whether the per-binding reset affordance is live for this cell.
+func reset_available(action: StringName, device: int) -> bool:
+	var r: Button = _reset_buttons.get("%s.%d" % [action, device])
+	return r != null and not r.disabled
 
 ## Whether a row is waiting for an input.
 func is_listening() -> bool:

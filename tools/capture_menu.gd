@@ -35,6 +35,18 @@ func _run() -> void:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 	_shot("03-settings")
+
+	# Override two bindings so the "changed" marking and the live reset affordance
+	# are both visible — the default state shows neither.
+	Settings.settings.set_binding(&"board_act", GameSettings.Device.KEYBOARD, KEY_F1)
+	Settings.settings.set_binding(&"board_build", GameSettings.Device.GAMEPAD, 11)
+	screen._refresh_all()
+	for i: int in 6:
+		await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	_shot("04-settings-overridden")
+	Settings.settings.reset_to_defaults()
+	Settings.settings.apply_all()
 	print("done")
 	get_tree().quit()
 

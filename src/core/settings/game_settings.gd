@@ -152,6 +152,33 @@ func set_binding(action: StringName, device: int, code: int) -> void:
 	_overrides[action][device] = code
 
 
+## True iff [param action]/[param device] carries a player override, i.e. it
+## differs from what the project shipped. Drives both the per-binding reset
+## affordance and the "which of these have I changed?" read the settings table
+## otherwise has no way to give.
+func is_overridden(action: StringName, device: int) -> bool:
+	return _overrides.has(action) and _overrides[action].has(device)
+
+
+## Clears the override on ONE binding, restoring just that one to its shipped
+## default and leaving every other customisation alone.
+##
+## ★ Added 2026-08-24. [method reset_to_defaults] was the only revert, which meant
+## a player who mis-bound a single control had to discard every other change they
+## had made to fix it — an all-or-nothing undo for a per-row mistake. The settings
+## spec flagged it as an open question; this closes it.
+##
+## A no-op when the binding is not overridden, so the caller need not check first.
+func clear_binding(action: StringName, device: int) -> void:
+	if not _overrides.has(action):
+		return
+	_overrides[action].erase(device)
+	# Drop the action entirely once its last override goes, so `has_overrides()`
+	# and the saved file both stop mentioning a binding that is back to default.
+	if _overrides[action].is_empty():
+		_overrides.erase(action)
+
+
 ## Pushes every binding into the live [InputMap]. Rebuilds each action from
 ## scratch rather than appending, so a rebind replaces rather than accumulates.
 func apply_bindings() -> void:

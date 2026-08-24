@@ -193,9 +193,15 @@ accessibility claim is made publicly.
 > settings with no indication. Two new patterns (Value Slider, Setting Toggle) were added to
 > `interaction-patterns.md` as part of the fix.
 >
-> **Still open from its Open Questions:** no per-change undo (Reset is all-or-nothing), and `ui_*`
-> actions being unrebindable — which prevents lockout but also blocks a legitimate
-> motor-accessibility need.
+> **✅ Per-binding reset shipped 2026-08-24 (S6-28)**, closing that spec's OQ-2. ↺ (click) or Delete
+> (focused binding), at **cell** granularity — a player who mis-binds their gamepad keeps their
+> keyboard binding for the same action. Changed bindings are now visibly marked, which also gives the
+> table the "what have I changed?" readout it never had.
+>
+> **Still open from its Open Questions:** `ui_*` actions being unrebindable — which prevents lockout
+> but also blocks a legitimate motor-accessibility need; and no *chronological* undo (any binding can
+> return to its default, but not to a previous non-default value — needs a change history, nobody has
+> asked for it).
 >
 > **Still open from this item:** `InputConfig.menu_keyboard_nav_enabled` (ADR-0014 §6 — there is
 > still no `InputConfig` instance, and the ADR flags `FOCUS_CLICK` as its one unverified engine

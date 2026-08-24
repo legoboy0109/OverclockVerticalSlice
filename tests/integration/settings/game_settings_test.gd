@@ -248,3 +248,76 @@ func test_save_returns_an_error_the_caller_can_act_on() -> void:
 		"error surfacing depends on a non-OK return"
 	).is_not_equal(OK)
 	assert_str(original).is_equal(GameSettings.PATH) # unchanged by this test
+
+
+# ==============================================================================
+# Per-binding reset (settings.md OQ-2).
+# ==============================================================================
+
+func test_clearing_one_binding_leaves_every_other_customisation_alone() -> void:
+	# ★ The whole point. Reset to Defaults was the only revert, so a player who
+	# mis-bound ONE control had to discard every other change they had made to fix
+	# it — an all-or-nothing undo for a per-row mistake.
+	var s := _fresh()
+	var act_default: int = s.binding(&"board_act", GameSettings.Device.KEYBOARD)
+	s.set_binding(&"board_act", GameSettings.Device.KEYBOARD, KEY_F1)
+	s.set_binding(&"board_build", GameSettings.Device.KEYBOARD, KEY_F2)
+	s.set_binding(&"board_pause", GameSettings.Device.GAMEPAD, 11)
+
+	s.clear_binding(&"board_act", GameSettings.Device.KEYBOARD)
+
+	assert_int(s.binding(&"board_act", GameSettings.Device.KEYBOARD)).is_equal(act_default)
+	assert_int(s.binding(&"board_build", GameSettings.Device.KEYBOARD)).override_failure_message(
+		"clearing one binding must not disturb another"
+	).is_equal(KEY_F2)
+	assert_int(s.binding(&"board_pause", GameSettings.Device.GAMEPAD)).is_equal(11)
+
+
+func test_clearing_one_device_leaves_the_other_device_alone() -> void:
+	# Per-CELL, not per-row: a player who mis-binds their gamepad must not lose the
+	# keyboard binding for the same action, or it is the same bug at smaller scale.
+	var s := _fresh()
+	s.set_binding(&"board_build", GameSettings.Device.KEYBOARD, KEY_F3)
+	s.set_binding(&"board_build", GameSettings.Device.GAMEPAD, 11)
+
+	s.clear_binding(&"board_build", GameSettings.Device.GAMEPAD)
+
+	assert_int(s.binding(&"board_build", GameSettings.Device.KEYBOARD)).is_equal(KEY_F3)
+	assert_bool(s.is_overridden(&"board_build", GameSettings.Device.GAMEPAD)).is_false()
+
+
+func test_is_overridden_tracks_a_binding_through_change_and_reset() -> void:
+	var s := _fresh()
+	assert_bool(s.is_overridden(&"board_pause", GameSettings.Device.KEYBOARD)).is_false()
+	s.set_binding(&"board_pause", GameSettings.Device.KEYBOARD, KEY_F4)
+	assert_bool(s.is_overridden(&"board_pause", GameSettings.Device.KEYBOARD)).is_true()
+	s.clear_binding(&"board_pause", GameSettings.Device.KEYBOARD)
+	assert_bool(s.is_overridden(&"board_pause", GameSettings.Device.KEYBOARD)).is_false()
+
+
+func test_clearing_the_last_override_leaves_no_trace_in_the_saved_file() -> void:
+	# ★ Otherwise a player who changes a binding and changes it back still has a
+	# settings file pinning that action to today's default forever, and would never
+	# receive a future change to the shipped control scheme.
+	var s := _fresh()
+	s.set_binding(&"board_act", GameSettings.Device.KEYBOARD, KEY_F5)
+	assert_bool(s.has_overrides()).is_true()
+	s.clear_binding(&"board_act", GameSettings.Device.KEYBOARD)
+	assert_bool(s.has_overrides()).override_failure_message(
+		"clearing the last override must leave the settings file mentioning nothing"
+	).is_false()
+
+	assert_int(s.save()).is_equal(OK)
+	var loaded := GameSettings.new()
+	loaded.load_saved()
+	assert_bool(loaded.has_overrides()).is_false()
+	_fresh().save()
+
+
+func test_clearing_an_unmodified_binding_is_a_harmless_no_op() -> void:
+	# So the caller never has to check first, and a stray Delete does nothing.
+	var s := _fresh()
+	var before: int = s.binding(&"board_produce", GameSettings.Device.KEYBOARD)
+	s.clear_binding(&"board_produce", GameSettings.Device.KEYBOARD)
+	assert_int(s.binding(&"board_produce", GameSettings.Device.KEYBOARD)).is_equal(before)
+	assert_bool(s.has_overrides()).is_false()

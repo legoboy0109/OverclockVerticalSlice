@@ -1,8 +1,9 @@
 # UX Spec: Settings Screen
 
 > **Status**: Reviewed — **APPROVED** (`/ux-review` 2026-08-24, re-run after 4 blocking issues
-> fixed; 0 blocking remaining). ⚠ Written **retroactively** — see the banner below, which is not
-> superseded by the approval.
+> fixed; 0 blocking remaining). **Revised 2026-08-24 (S6-28)** to add per-binding reset, closing
+> OQ-2 — affected sections re-checked against the review checklist, no new findings.
+> ⚠ Written **retroactively** — see the banner below, which is not superseded by the approval.
 > **Author**: main session, from standing commitments
 > **Last Updated**: 2026-08-24
 > **Journey Phase(s)**: Pre-play configuration (from the main menu) and in-match interrupt (from
@@ -110,6 +111,7 @@ currently ~12 rows.
 | Column headers | Controls | text | "KEYBOARD" / "GAMEPAD" | No | — |
 | Action label | Controls | text | e.g. "Move / Attack" | No | — |
 | Binding button | Controls | button | current input name, or "—" | Yes | **Standard Button** |
+| Per-binding reset (↺) | Controls | button | "↺" | Yes (click only — see Interaction Map) | **Standard Button** (inert state) |
 | Hint / conflict line | Controls | text | prompt or ⚠ warning | No | — |
 | UI Scale | Display | slider + value | 75–150%, shown as % | Yes | **Value Slider** |
 | Reduced Motion | Display | toggle | on/off | Yes | **Setting Toggle** |
@@ -123,8 +125,8 @@ currently ~12 rows.
  │  SETTINGS                                         │
  │  CONTROLS                                         │
  │                     KEYBOARD      GAMEPAD         │
- │  Move / Attack      [   M    ]   [  Pad 2  ]      │
- │  Build              [   B    ]   [  Pad 3  ]      │
+ │  Move / Attack      [   M    ]↺  [  Pad 2  ]↺     │
+ │  Build              [   B    ]↺  [  Pad 3  ]↺     │
  │  Cycle Build Type   [   C    ]   [  Pad 9  ]      │
  │  Produce            [   P    ]   [  Pad 1  ]      │
  │  Cycle Unit Type    [   V    ]   [ Pad 10  ]      │
@@ -133,6 +135,8 @@ currently ~12 rows.
  │  Focus Action Panel [QuoteLeft]  [  Pad 8  ]      │
  │  Jump Cursor        [BracketLeft][  Pad 7  ]      │
  │  ⚠ Also bound to: Pause                           │
+ │  Changed bindings are highlighted. Press ↺, or    │
+ │  Delete on a focused binding, to reset just that. │
  │                                                   │
  │  DISPLAY                                          │
  │  UI Scale           [───●────────]   100%         │
@@ -152,6 +156,7 @@ currently ~12 rows.
 | Listening | A binding button pressed | That button reads "PRESS…"; hint line names which input family is expected |
 | Conflict | A bind duplicates another action's | ⚠ line names every other action using that input; **the bind still applies** |
 | Reset | "Reset to Defaults" | All overrides cleared; hint line confirms |
+| **Changed** | A binding differs from the shipped default | That cell's text takes the accent colour and its ↺ becomes live. Unchanged cells keep default text and an inert ↺ |
 | **Save failed** | Any change, when `user://settings.cfg` cannot be written | ⚠ line names the file, the error code, and that the change applies now but will not survive exit. The change is **not** rolled back |
 
 No loading state (settings load at boot). No empty state (the controls table is never empty — the
@@ -174,7 +179,9 @@ the player just asked for would compound one failure with a second surprise.
 | (listening) | cancel | Esc | table restores | nothing changed |
 | UI Scale | adjust | drag · arrows when focused | live rescale, % updates | applied, saved |
 | Reduced Motion | toggle | click · Enter · gamepad A | toggle state | applied, saved |
-| Reset to Defaults | activate | click · Enter · gamepad A | table repopulates | overrides cleared, saved |
+| Per-binding reset (↺) | reset one binding | **click** | that cell reverts; hint line names what was reset | one override cleared, saved |
+| (focused binding) | reset one binding | **Delete** | same | one override cleared, saved |
+| Reset to Defaults | activate | click · Enter · gamepad A | table repopulates | **all** overrides cleared, saved |
 | Back | activate | click · Enter · Esc · gamepad A · **gamepad B / Cancel** | screen closes | returns to caller |
 
 Focus order: the controls table top-to-bottom (keyboard column, then gamepad), then UI Scale,
@@ -188,8 +195,22 @@ bindings impossible: every swap passes through a state where both actions want t
 ⚠ line names what else uses it and the player decides.
 
 **2. Changes apply and save immediately — there is no OK/Cancel.** A player rebinding a control they
-cannot press needs to *test* it, and an un-applied change cannot be tested. The cost is that there
-is no "revert my last change"; **Reset to Defaults is the only undo**, which is coarse.
+cannot press needs to *test* it, and an un-applied change cannot be tested. The undo is therefore
+**per binding**, not per session: ↺ or Delete restores one cell to its default, leaving every other
+customisation intact. Reset to Defaults remains as the all-or-nothing option. The residual cost is
+that there is still no *chronological* undo — you can revert any binding to its default, but not to
+whatever you had it on two changes ago.
+
+**2a. The reset affordance has two input paths, and needs both.** `technical-preferences.md` requires
+every action be reachable by **click**; the Standard tier requires keyboard/gamepad reach. A
+Delete-only clear fails the first, a mouse-only ↺ fails the second. So: ↺ for the mouse, Delete on
+the focused binding for keyboard and pad.
+
+★ The ↺ buttons are deliberately **not focusable**. Making them so would take the controls table
+from 18 tab stops to 27 — slowing the input method that can least afford it, to duplicate a path
+Delete already covers in one press. They are visible-but-inert when there is nothing to reset, which
+is the Standard Button pattern's stated treatment and doubles as the **"which of these have I
+changed?"** readout the table otherwise has no way to give.
 
 **3. Esc during a rebind cancels rather than binding Esc.** Otherwise the only way out of a
 listening row is to bind something, which traps a player who opened it by mistake. The cost:
@@ -263,7 +284,9 @@ And respects the same floors as the other screens:
 
 Keyboard focus is styled distinctly from mouse hover by colour **and** border weight, so the
 distinction is not colour-only. No information anywhere on this screen is carried by colour alone —
-every row is labelled text, and the ⚠ line states its warning in words.
+every row is labelled text, the ⚠ line states its warning in words, and the **changed-binding
+highlight is paired with a live ↺** so the accent colour is never the only signal that a binding
+differs from its default.
 
 ★ **A player can lock themselves out of nothing.** `ui_accept`, `ui_cancel` and the directional
 actions are not rebindable, so no sequence of changes can leave a player unable to operate this
@@ -317,6 +340,12 @@ which is unusual enough to state rather than leave as a blank section.
 - [x] UI scale adjusts between 75% and 150% and persists.
 - [x] Reduced motion persists and visibly stops the resting glow animation.
 - [x] Reset to Defaults clears every override.
+- [x] A single binding can be reset on its own, by click (↺) and by keyboard/gamepad (Delete on the
+      focused binding), without disturbing any other customisation — including the same action's
+      binding on the other device.
+- [x] Bindings that differ from their default are visibly marked, and the mark is not colour-alone.
+- [x] Resetting the last remaining override leaves the saved file mentioning no bindings at all, so
+      the player continues to inherit future changes to the shipped control scheme.
 - [x] A settings file that is missing, out of range, or references a deleted action degrades
       cleanly rather than erroring.
 - [x] A failed save tells the player, names the file, and does not roll back the change.
@@ -338,9 +367,13 @@ which is unusual enough to state rather than leave as a blank section.
    unnoticed — three of the four were never *decided*, only never *noticed*. The reviewer did not
    challenge Back-focused-on-open, the absence of OK/Cancel, or the flat controls list; those stand,
    but they stand unchallenged rather than endorsed.
-2. **No per-change undo.** Reset to Defaults is the only revert, and it is all-or-nothing. A player
-   who mis-binds one control loses every other customisation to fix it. A per-row "clear" would be
-   cheap and is not implemented.
+2. ~~**No per-change undo**~~ — ✅ **fixed 2026-08-24 (S6-28).** Per-binding reset via ↺ (click) or
+   Delete (focused binding), at **cell** granularity rather than per row — a player who mis-binds
+   their gamepad keeps their keyboard binding for the same action, which per-row would have thrown
+   away and would have been the same bug at smaller scale.
+   ⚠ **Residual:** there is still no *chronological* undo. Any binding can be returned to its
+   default, but not to a previous non-default value. That needs a change history and is not
+   implemented; nobody has asked for it.
 3. ~~**A failed save is silent**~~ — ✅ **fixed 2026-08-24** (review B-1). Every save routes through
    one funnel that surfaces the error on the hint line and pushes it to the log; the change is not
    rolled back. Routed through a single site precisely because four separate call sites is how it
