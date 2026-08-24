@@ -47,6 +47,28 @@ const HANDICAPS: Array[int] = [0, 1, 2, 3]
 ## allocates for HQs.
 const BONUS_ID_BASE: int = 500
 
+## ★ S5-04: symmetric openings for the CLOSE-game cell.
+##
+## The handicap axis above produces *decided* games by construction -- a side handed
+## extra units is ahead from turn 0, so those cells measure whether an advantage
+## CONVERTS, not whether a game can swing. Only the +0 mirror is a genuinely close
+## game, and it was effectively n=1: `variant` reached the board solely through
+## [method _bonus_tile], which is inside the handicap loop, so at handicap 0 all
+## three "variants" were byte-identical runs of one deterministic match.
+##
+## These give the mirror cell real variety without giving either side an edge: each
+## entry seeds BOTH players one Trooper at mirrored tiles, and the starting player
+## alternates. Fair openings, different games.
+##
+## Handicap cells are deliberately left untouched so the S6-06 gate numbers stay
+## comparable across batches.
+const MIRROR_OPENINGS: Array[Vector2i] = [
+	Vector2i(0, 0),   # no seed units -- the original bare-HQ mirror, preserved as a baseline
+	Vector2i(2, -1),  # seeded forward and high
+	Vector2i(2, 1),   # seeded forward and low
+	Vector2i(3, 0),   # seeded further forward, level
+]
+
 
 func _ready() -> void:
 	_run()
@@ -58,7 +80,11 @@ func _run() -> void:
 		for favoured: int in [0, 1]:
 			if handicap == 0 and favoured == 1:
 				continue # symmetric is the same game twice; run it once.
-			for variant: int in 3:
+			# ★ S5-04: the mirror cell runs one game per symmetric opening (each a
+			# genuinely different close game); handicap cells keep their original
+			# three variants so gate numbers stay comparable batch to batch.
+			var count: int = MIRROR_OPENINGS.size() if handicap == 0 else 3
+			for variant: int in count:
 				game += 1
 				_play(game, favoured, handicap, variant)
 	print("SIM_DONE")
@@ -158,7 +184,11 @@ func _build_match(favoured: int, handicap: int, variant: int) -> GameState:
 	map.hq_tiles = [HQ_A, HQ_B]
 	map.deploy_tiles = []
 
-	var state: GameState = GameState.start_match(map, 0)
+	# ★ S5-04: alternate the starting player across mirror openings. On a symmetric
+	# board with a deterministic AI, who moves first is the only asymmetry there is,
+	# and it is a real one -- so it belongs in the sample rather than being fixed.
+	var starting_player: int = (variant % 2) if handicap == 0 else 0
+	var state: GameState = GameState.start_match(map, starting_player)
 	# Mirror the slice: the round cap is armed there, so simulating without it would
 	# measure a configuration that no longer ships.
 	state.max_rounds = VerticalSliceRoot.VS_MAX_ROUNDS
@@ -176,6 +206,28 @@ func _build_match(favoured: int, handicap: int, variant: int) -> GameState:
 		s.current_hp = StructureTypes.HQ.hp
 		s.build_status = StructureState.BuildStatus.COMPLETED
 		state.entities_by_id[s.entity_id] = s
+
+	# ★ S5-04 mirror seeding: BOTH players get the same unit at mirrored tiles, so
+	# the position differs between variants while staying exactly fair.
+	if handicap == 0 and variant < MIRROR_OPENINGS.size():
+		var off: Vector2i = MIRROR_OPENINGS[variant]
+		if off != Vector2i.ZERO:
+			for player: int in 2:
+				var dir: int = 1 if player == 0 else -1
+				var tile := Vector2i(HQ_A.x + off.x * dir if player == 0 \
+						else HQ_B.x + off.x * dir, HQ_A.y + off.y)
+				if not state.grid.in_bounds(tile.x, tile.y):
+					continue
+				if state.grid.occupant_at(tile.x, tile.y) != GridState.EMPTY_OCCUPANT:
+					continue
+				var seed_unit := UnitState.new()
+				seed_unit.entity_id = BONUS_ID_BASE + 900 + player
+				seed_unit.owner = player
+				seed_unit.position = tile
+				seed_unit.type = UnitTypes.TROOPER
+				seed_unit.current_hp = UnitTypes.TROOPER.hp
+				state.grid.place(seed_unit.entity_id, tile.x, tile.y)
+				state.entities_by_id[seed_unit.entity_id] = seed_unit
 
 	for i: int in handicap:
 		var tile: Vector2i = _bonus_tile(favoured, i, variant)
