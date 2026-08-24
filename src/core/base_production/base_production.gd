@@ -485,29 +485,53 @@ static func apply_cancel(state: GameState, action: CancelBuildAction) -> Array[E
 
 ## Returns every legal deploy tile for a unit produced by [param producer]
 ## (ADR-0017 D4, TR-baseprod-008) — a pure, [b]live[/b] query, never cached.
-## The candidate universe is the four cardinal neighbours of the producer at
-## manhattan==1 (scanned N->E->S->W via [method _neighbors_in_fixed_order]),
-## each kept only if in-bounds, passable, and unoccupied — exactly what
-## [method GridState.is_passable] already answers (it folds bounds + non-Impassable
+## The candidate universe is every tile within [member BaseProductionConfig.deploy_radius] manhattan
+## steps of the producer, kept only if in-bounds, passable and unoccupied — exactly
+## what [method GridState.is_passable] answers (it folds bounds + non-Impassable
 ## terrain + empty-occupant into one O(1) check). The trailing
 ## [code]sort_custom(_by_tile_index)[/code] makes the returned order canonical
 ## (ADR-0003/ADR-0009 determinism discipline), mirroring
 ## [method legal_build_tiles]' ordering.
 ##
-## [param unit_type] does not change deploy legality in the VS (every unit needs
-## the same empty adjacent tile to stand on) — accepted for signature alignment
-## with ADR-0011/0015's forward declarations and future terrain rules; unused
-## today.
+## [b]★ The radius was 1 until 2026-08-24, and that was a game-ending defect.[/b]
+## At radius 1 a producer has at most FOUR deploy tiles, so four enemy units
+## standing on them ended that player's game permanently: production is the only
+## route back onto the board, and it was closed with no counterplay. S5-04 measured
+## the consequence — a +1-Trooper advantage produced ZERO lead changes across six
+## games, against 6.75 in an even match — and
+## `s5-04-one-unit-cliff-diagnosis-2026-08-24.md` traced it to exactly this
+## function. Radius 2 gives up to 12 tiles, so a lock needs more units than the
+## population cap allows.
 ##
-## O(4) neighbour scan plus an O(4 log 4) sort — bounded and cheap
-## (control-manifest Performance Guardrail); safe to recompute every preview
-## frame.
+## [b]Distance, not reachability.[/b] The scan is a manhattan-radius test and does
+## NOT path around occupied tiles — a unit may deploy "over" a besieging enemy to a
+## free tile behind it. That is deliberate and is the whole point: a
+## flood-fill-through-passable-tiles version would be blocked by the same four
+## enemies and would reproduce the defect exactly.
+##
+## ⚠ Consequence to know: a destination separated from the producer by IMPASSABLE
+## terrain is still legal if it is within 2 steps. No VS map uses impassable
+## terrain, so nothing exercises it today; a map that does will want a
+## line-of-deployment rule here. Flagged rather than pre-solved.
+##
+## [param unit_type] does not change deploy legality in the VS (every unit needs
+## the same empty tile to stand on) — accepted for signature alignment with
+## ADR-0011/0015' forward declarations and future terrain rules; unused today.
+##
+## O(r²) scan (12 candidate tiles at radius 2) plus a bounded sort — cheap
+## (control-manifest Performance Guardrail); safe to recompute every preview frame.
 static func legal_deploy_tiles(state: GameState, producer: StructureState, _unit_type: UnitTypeDef) -> Array[Vector2i]:
 	var grid: GridState = state.grid
+	var radius: int = StructureBalance.base_production.deploy_radius
 	var out: Array[Vector2i] = []
-	for n: Vector2i in _neighbors_in_fixed_order(producer.position):
-		if grid.in_bounds(n.x, n.y) and grid.is_passable(n.x, n.y):
-			out.append(n)
+	for dy: int in range(-radius, radius + 1):
+		var span: int = radius - absi(dy)
+		for dx: int in range(-span, span + 1):
+			if dx == 0 and dy == 0:
+				continue # the producer's own tile
+			var t := Vector2i(producer.position.x + dx, producer.position.y + dy)
+			if grid.in_bounds(t.x, t.y) and grid.is_passable(t.x, t.y):
+				out.append(t)
 	out.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return grid.index(a.x, a.y) < grid.index(b.x, b.y))
 	return out
 

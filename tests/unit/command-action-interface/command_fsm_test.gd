@@ -400,12 +400,24 @@ func test_menu_model_structure_produce_no_deploy_space_disabled_not_erroring() -
 	var producer_type := _make_structure_type(6, 1, [unit_type])
 	var producer := _place_structure(state, 1, 0, Vector2i(5, 5), producer_type)
 	state.per_player[0].current_ap = 10
-	# Occupy all 4 cardinal neighbors so legal_deploy_tiles() is empty.
+	# Occupy the producer's ENTIRE deploy radius so legal_deploy_tiles() is empty.
+	# ★ S6-16: this filled only the four cardinal neighbours, which stopped being
+	# sufficient when the deploy radius moved 1 -> 2 to fix the one-unit cliff
+	# (s5-04-one-unit-cliff-diagnosis). Derived from the config so it keeps
+	# testing "no deploy space" rather than "four specific tiles".
 	var blocker_type := _make_unit_type()
-	_place_unit(state, 2, 0, Vector2i(5, 4), blocker_type)
-	_place_unit(state, 3, 0, Vector2i(6, 5), blocker_type)
-	_place_unit(state, 4, 0, Vector2i(5, 6), blocker_type)
-	_place_unit(state, 5, 0, Vector2i(4, 5), blocker_type)
+	var radius: int = StructureBalance.base_production.deploy_radius
+	var next_id: int = 2
+	for dy: int in range(-radius, radius + 1):
+		var span: int = radius - absi(dy)
+		for dx: int in range(-span, span + 1):
+			if dx == 0 and dy == 0:
+				continue
+			_place_unit(state, next_id, 0, Vector2i(5 + dx, 5 + dy), blocker_type)
+			next_id += 1
+	assert_array(BaseProduction.legal_deploy_tiles(state, producer, unit_type)) \
+		.override_failure_message("the arrangement must actually leave no deploy space") \
+		.is_empty()
 
 	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, producer)
 	var produce_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.PRODUCE)

@@ -98,16 +98,57 @@ func _make_produce_action(producer_id: int, unit_type: UnitTypeDef, tile: Vector
 
 # --- legal_deploy_tiles ------------------------------------------------------
 
-func test_legal_deploy_tiles_returns_four_open_neighbours_in_canonical_index_order() -> void:
-	# Arrange -- a Completed Production Outpost alone on an open board.
+func test_legal_deploy_tiles_returns_the_open_radius_in_canonical_index_order() -> void:
+	# Arrange -- a Completed Barracks alone on an open board.
 	var state := _make_state()
 	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.BARRACKS)
 	_place(state, producer)
 	# Act
 	var tiles := BaseProduction.legal_deploy_tiles(state, producer, UnitTypes.TROOPER)
-	# Assert -- all four manhattan==1 neighbours, sorted by y*width+x ascending:
-	# (5,4)=53, (4,5)=64, (6,5)=66, (5,6)=77.
-	assert_array(tiles).is_equal([Vector2i(5, 4), Vector2i(4, 5), Vector2i(6, 5), Vector2i(5, 6)])
+
+	# ★ S6-16: the radius moved 1 -> 2. At radius 1 a producer had only four deploy
+	# tiles, and four enemy units standing on them ended that player's game
+	# permanently (see s5-04-one-unit-cliff-diagnosis). Derived from the config
+	# rather than hardcoded, so the shape follows the knob.
+	var radius: int = StructureBalance.base_production.deploy_radius
+	var expected: Array[Vector2i] = []
+	for dy: int in range(-radius, radius + 1):
+		var span: int = radius - absi(dy)
+		for dx: int in range(-span, span + 1):
+			if dx != 0 or dy != 0:
+				expected.append(Vector2i(5 + dx, 5 + dy))
+	expected.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		return state.grid.index(a.x, a.y) < state.grid.index(b.x, b.y))
+
+	assert_array(tiles).is_equal(expected)
+	assert_int(tiles.size()).override_failure_message(
+		"a producer must have more deploy tiles than an army can occupy — at 4 the " +
+		"spawn ring could be locked out permanently"
+	).is_greater(StructureBalance.base_production.cap_hard_ceiling / 2)
+
+
+func test_a_full_enemy_ring_no_longer_locks_production_out() -> void:
+	# ★★ The regression guard for the one-unit cliff. Four enemies on every
+	# manhattan-1 tile used to mean the owner could never produce again, with no
+	# counterplay and no amount of economy able to help. Now they only close the
+	# inner ring; the outer ring is still open.
+	var state := _make_state()
+	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.BARRACKS)
+	_place(state, producer)
+	var next_id: int = 20
+	for n: Vector2i in [Vector2i(5, 4), Vector2i(4, 5), Vector2i(6, 5), Vector2i(5, 6)]:
+		_place(state, _make_unit(next_id, 1, UnitTypes.SCOUT, n))
+		next_id += 1
+
+	var tiles := BaseProduction.legal_deploy_tiles(state, producer, UnitTypes.TROOPER)
+	assert_array(tiles).override_failure_message(
+		"a besieged producer must still have somewhere to deploy — this is the " +
+		"defect that made a one-unit advantage unrecoverable"
+	).is_not_empty()
+	# Every surviving tile is on the outer ring; the inner four are occupied.
+	for t: Vector2i in tiles:
+		var d: int = absi(t.x - 5) + absi(t.y - 5)
+		assert_int(d).is_equal(2)
 
 
 # The three exclusion reasons (occupied / Impassable / off-board) are tested in
@@ -123,8 +164,11 @@ func test_legal_deploy_tiles_excludes_only_the_occupied_neighbour() -> void:
 	_place(state, _make_unit(2, 0, UnitTypes.SCOUT, Vector2i(6, 5)))
 	# Act
 	var tiles := BaseProduction.legal_deploy_tiles(state, producer, UnitTypes.TROOPER)
-	# Assert -- exactly the other three neighbours remain, in canonical order.
-	assert_array(tiles).is_equal([Vector2i(5, 4), Vector2i(4, 5), Vector2i(5, 6)])
+	# Assert -- ★ S6-16: the excluded tile is gone and its siblings remain. Asserting
+	# the FULL list coupled this test to the deploy radius, which is not its subject:
+	# it pins the occupied-tile exclusion path.
+	assert_array(tiles).not_contains([Vector2i(6, 5)])
+	assert_array(tiles).contains([Vector2i(5, 4), Vector2i(4, 5), Vector2i(5, 6)])
 
 
 func test_legal_deploy_tiles_excludes_only_the_impassable_neighbour() -> void:
@@ -135,8 +179,9 @@ func test_legal_deploy_tiles_excludes_only_the_impassable_neighbour() -> void:
 	state.grid.terrain[state.grid.index(6, 5)] = GridState.Terrain.IMPASSABLE
 	# Act
 	var tiles := BaseProduction.legal_deploy_tiles(state, producer, UnitTypes.TROOPER)
-	# Assert -- exactly the other three neighbours remain, in canonical order.
-	assert_array(tiles).is_equal([Vector2i(5, 4), Vector2i(4, 5), Vector2i(5, 6)])
+	# Assert -- ★ S6-16: radius-agnostic, as above; this pins the Impassable path.
+	assert_array(tiles).not_contains([Vector2i(6, 5)])
+	assert_array(tiles).contains([Vector2i(5, 4), Vector2i(4, 5), Vector2i(5, 6)])
 
 
 func test_legal_deploy_tiles_excludes_only_the_offboard_neighbour() -> void:
@@ -147,8 +192,11 @@ func test_legal_deploy_tiles_excludes_only_the_offboard_neighbour() -> void:
 	_place(state, producer)
 	# Act
 	var tiles := BaseProduction.legal_deploy_tiles(state, producer, UnitTypes.TROOPER)
-	# Assert -- (0,4)=48, (1,5)=61, (0,6)=72 remain; the off-board W is gone.
-	assert_array(tiles).is_equal([Vector2i(0, 4), Vector2i(1, 5), Vector2i(0, 6)])
+	# Assert -- ★ S6-16: radius-agnostic; this pins the off-board path.
+	assert_array(tiles).contains([Vector2i(0, 4), Vector2i(1, 5), Vector2i(0, 6)])
+	for t: Vector2i in tiles:
+		assert_bool(state.grid.in_bounds(t.x, t.y)).override_failure_message(
+			"legal_deploy_tiles returned an off-board tile: %s" % t).is_true()
 
 
 func test_legal_deploy_tiles_excludes_offboard_neighbours_at_high_board_edge() -> void:
@@ -160,9 +208,13 @@ func test_legal_deploy_tiles_excludes_offboard_neighbours_at_high_board_edge() -
 	_place(state, producer)
 	# Act
 	var tiles := BaseProduction.legal_deploy_tiles(state, producer, UnitTypes.TROOPER)
-	# Assert -- (11,10)=131 and (10,11)=142 remain (ascending index); both
-	# off-board upper-bound neighbours (E (12,11), S (11,12)) gone.
-	assert_array(tiles).is_equal([Vector2i(11, 10), Vector2i(10, 11)])
+	# Assert -- ★ S6-16: radius-agnostic; this pins the UPPER-bound off-board path
+	# (the low-edge test above covers the lower bound).
+	assert_array(tiles).contains([Vector2i(11, 10), Vector2i(10, 11)])
+	for t: Vector2i in tiles:
+		assert_bool(state.grid.in_bounds(t.x, t.y)).override_failure_message(
+			"legal_deploy_tiles returned an off-board tile at the upper bound: %s" % t
+		).is_true()
 
 
 # --- Production (Rule 7): the happy path -------------------------------------
@@ -245,14 +297,27 @@ func test_produce_at_production_cap_is_rejected_independently_of_ap() -> void:
 
 
 func test_produce_with_no_empty_adjacent_tile_is_blocked_no_ap_spent() -> void:
-	# Arrange -- producer with all four neighbours occupied by other units.
+	# Arrange -- producer with its ENTIRE deploy radius occupied.
+	# ★ S6-16: filled only the four cardinal neighbours until the radius moved
+	# 1 -> 2 (s5-04-one-unit-cliff-diagnosis). Derived from the config so this keeps
+	# testing "produce is rejected when there is genuinely nowhere to stand".
 	var state := _make_state(100)
 	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.BARRACKS)
 	_place(state, producer)
-	_place(state, _make_unit(2, 0, UnitTypes.SCOUT, Vector2i(5, 4)))
-	_place(state, _make_unit(3, 0, UnitTypes.SCOUT, Vector2i(6, 5)))
-	_place(state, _make_unit(4, 0, UnitTypes.SCOUT, Vector2i(5, 6)))
-	_place(state, _make_unit(5, 0, UnitTypes.SCOUT, Vector2i(4, 5)))
+	var radius: int = StructureBalance.base_production.deploy_radius
+	var next_id: int = 2
+	for dy: int in range(-radius, radius + 1):
+		var span: int = radius - absi(dy)
+		for dx: int in range(-span, span + 1):
+			if dx == 0 and dy == 0:
+				continue
+			# ★ Owned by the OPPONENT. Owner 0 blockers were fine at four tiles but at
+			# twelve they blow player 0's own population cap, and validate_produce
+			# then rejects with POPULATION_CAP_REACHED before it ever reaches the
+			# deploy check -- a false green for this test's actual subject. Enemy
+			# blockers are also the realistic case: this is a siege.
+			_place(state, _make_unit(next_id, 1, UnitTypes.SCOUT, Vector2i(5 + dx, 5 + dy)))
+			next_id += 1
 	# Precondition -- no legal deploy tile exists.
 	assert_array(BaseProduction.legal_deploy_tiles(state, producer, UnitTypes.TROOPER)).is_empty()
 	# Act -- attempt to produce onto one of the occupied neighbours.

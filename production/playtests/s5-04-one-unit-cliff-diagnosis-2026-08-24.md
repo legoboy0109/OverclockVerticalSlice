@@ -3,7 +3,8 @@
 > **Follows**: `s5-04-swing-back-2026-08-24.md` §3
 > **Tool**: `tools/DiagnoseCliff.tscn` · **Trace**: `production/qa/evidence/s5-04-cliff-trace.txt`
 > **Date**: 2026-08-24
-> **Status**: ⛔ **Root cause found. It is one rule, and it is not a balance problem.**
+> **Status**: ✅ **Root cause found and FIXED (option A, S6-16).** The latch is gone; the cliff is
+> narrower but not eliminated — see the outcome section at the end.
 
 ---
 
@@ -152,3 +153,49 @@ a comeback mechanic — the leader still wins — it just stops one unit of adva
 **★ This is a design-direction call, not a technical one, so it is yours.** Whichever way it goes,
 re-run `tools/SimulateMatches.tscn` and `tools/analyse_swing.py` afterwards: if the +1 cell starts
 showing lead changes above zero, the latch is gone. That is the measurable test for the fix.
+
+
+---
+
+## ✅ Outcome — option A implemented, 2026-08-24 (S6-16)
+
+`BaseProductionConfig.deploy_radius = 2`; `legal_deploy_tiles` scans a manhattan radius instead of
+the four cardinal neighbours. Up to 12 candidate tiles, so a lock would need more units than
+`cap_hard_ceiling` permits.
+
+**The latch is gone.** Re-running the same trace, with all four inner-ring tiles enemy-occupied from
+turn 22, the underdog still has 8 deploy tiles and keeps producing:
+
+```
+turn 22 | deploy 8 | ... | ring ENEMY/ENEMY/ENEMY/ENEMY
+turn 26 | deploy 8 | OK  | ring ENEMY/ENEMY/ENEMY/ENEMY
+turn 28 | u:1      |     | ring ENEMY/ENEMY/ENEMY/ENEMY   ← back on the board
+```
+
+### Measured effect (+1 handicap cell, 6 games)
+
+| | Before | After |
+|---|---:|---:|
+| Losing player has units on the board | 10.3 % of turns | **23.1 %** |
+| Units the losing player produced | 18 | **33** |
+| Dead banked Credits (peak) | 7,500 | **3,200** |
+| Mean game length | 29.2 turns | 32.5 turns |
+| Peak banked Credits, whole batch | 9,400 | **3,500** |
+
+The S6-06 gate is unaffected: 18/22 resolve by HQ destruction, 18/18 material advantage converts,
+both seats win.
+
+### ⚠️ What it did NOT fix — stated plainly
+
+**The +1 cell still shows zero lead changes.** I named that as the measurable test for this fix, and
+it did not move.
+
+The honest reading: **the latch and the cliff were not the same thing.** The latch was a defect — a
+player unable to act at all while holding 6,500 Credits, with no counterplay at any price. That is
+fixed, and the losing player's ability to participate roughly doubled. But being *able* to play is
+not the same as being able to *come back*, and one Trooper of advantage still converts every time.
+
+That residue is arguably the design working as intended — `game-concept.md` rejects comeback
+mechanics explicitly, and S5-04's requirement 1 (no decided game reverses) is *supposed* to pass.
+Whether a **skill** route back from one unit down should exist is a live design question, and it is
+now separable from the bug that was masking it.

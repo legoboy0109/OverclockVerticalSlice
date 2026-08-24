@@ -118,6 +118,36 @@
 > Counts completed **and** under-construction together (a max that ignored the queue would
 > do nothing).
 >
+> ### ⛔ RULE CHANGE — deploy radius 1 → 2 (S6-16, 2026-08-24)
+>
+> **The body below says a unit deploys to a tile at `manhattan_distance == 1`. That is superseded:
+> the radius is now `manhattan_distance <= 2`, read from
+> `BaseProductionConfig.deploy_radius`.**
+>
+> ★ **Radius 1 was a game-ending defect, not a tuning value.** A producer has at most four tiles at
+> radius 1, so **four enemy units standing on them ended that player's game permanently** — production
+> is the only route back onto the board, and it was closed with no counterplay available at any price.
+> S5-04 measured the consequence (a +1-unit advantage produced **zero** lead changes across six games
+> against 6.75 in an even match) and `s5-04-one-unit-cliff-diagnosis-2026-08-24.md` traced it here.
+>
+> At radius 2 a producer has up to **12** candidate tiles — more than the population cap allows an
+> opponent to field, so the lock is unreachable rather than merely harder.
+>
+> **Distance, not reachability.** The scan does not path around occupied tiles: a unit may deploy
+> *over* a besieging enemy to a free tile behind it. This is deliberate — a
+> flood-fill-through-passable version is blocked by the same four enemies and reproduces the defect
+> exactly. ⚠ Consequence: a tile separated from the producer by IMPASSABLE terrain is still legal if
+> within 2 steps. No VS map uses impassable terrain; a map that does will want a
+> line-of-deployment rule.
+>
+> **Measured effect** (+1 handicap cell, 6 games, before → after): the losing player has units on the
+> board **10.3% → 23.1%** of turns, produces **18 → 33** units, and its dead banked Credits fall
+> **7,500 → 3,200**. The S6-06 gate is unaffected (18/22 resolve, 18/18 conversion).
+>
+> ⚠ **What this did NOT fix:** the +1 cell still shows **zero lead changes**. Removing the latch gave
+> the losing player agency; it did not create a comeback window. That remaining gap is the design's
+> deliberate no-rubber-band stance, and is a separate question from this defect.
+
 > ✅ **Structure stats fully aligned to this table in S6-10 (2026-08-24).** The Factory (S6-09),
 > Barracks and Defensive Structure had all been carrying pre-rework numbers — the ×100 rescale moved
 > the old values forward without re-deriving them against the new roster. All five structures now
@@ -309,7 +339,7 @@ map** — the base stops being a back-corner bank and becomes a front line you b
 7. **Producing a unit.** A **Completed** producer spends the unit's `produce_cost` **Credits** (Unit-owned
    value) **and** `PRODUCE_AP_COST` AP — a **both-or-neither** commit (legal only if the player can afford
    both) — and creates the unit **instantly** (Unit System: units have no build time) on a
-   **player-chosen empty, passable tile adjacent (`manhattan_distance == 1`) to the producer**. The unit
+   **player-chosen empty, passable tile within `manhattan_distance <= deploy_radius` (2) of the producer** ⛔ *(was `== 1`; see the S6-16 rule change above)*. The unit
    must be in that producer's `producible_types`. A structure may produce at most `production_cap` units
    **per turn** (`units_produced_this_turn`, reset at the owner's start-of-turn). If no empty adjacent
    tile exists, production is blocked (no unit spawns onto an occupied/off-board/Impassable tile).
@@ -539,7 +569,7 @@ not by a placement assumption.
   build timer unaffected — damage does not delay completion (hp and build progress are independent).
 
 **Production & deploy:**
-- **If a producer has no empty passable tile adjacent (`manhattan==1`)**: production is **blocked** — no
+- **If a producer has no empty passable tile within `deploy_radius` (2)** ⛔ *(was `manhattan==1`)*: production is **blocked** — no
   unit can spawn onto an occupied, off-board, or Impassable tile (the unit would have nowhere to stand).
 - **If a producer has already produced `production_cap` units this turn** (HQ 2 / Production Outpost 4):
   further production from it is **rejected** this turn, even with Credits and AP to spare —
