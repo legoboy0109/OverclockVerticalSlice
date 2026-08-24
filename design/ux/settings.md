@@ -1,15 +1,17 @@
 # UX Spec: Settings Screen
 
-> **Status**: **Written retroactively 2026-08-24 (S6-26)** — documents the shipped screen. **Not
-> yet reviewed** (`/ux-review` owed).
+> **Status**: Reviewed — **APPROVED** (`/ux-review` 2026-08-24, re-run after 4 blocking issues
+> fixed; 0 blocking remaining). ⚠ Written **retroactively** — see the banner below, which is not
+> superseded by the approval.
 > **Author**: main session, from standing commitments
 > **Last Updated**: 2026-08-24
 > **Journey Phase(s)**: Pre-play configuration (from the main menu) and in-match interrupt (from
 > pause)
+> **Platform Target**: PC (Steam / Epic) — Keyboard/Mouse primary, Gamepad secondary (partial)
 > **Template**: UX Spec
 > **Scope**: Vertical Slice. Controls + Display only — audio is out of scope until audio buses exist.
 
-> ### ⚠ This spec is retroactive, and that is worth stating plainly
+> ### ⚠ This spec is retroactive, and approval does not change that
 >
 > `main-menu.md` OQ-3 and `pause.md` OQ-4 both deferred this screen to "a separate spec". That spec
 > was never authored, and on 2026-08-24 the screen was **implemented without one** — its contents
@@ -109,8 +111,8 @@ currently ~12 rows.
 | Action label | Controls | text | e.g. "Move / Attack" | No | — |
 | Binding button | Controls | button | current input name, or "—" | Yes | **Standard Button** |
 | Hint / conflict line | Controls | text | prompt or ⚠ warning | No | — |
-| UI Scale | Display | slider + value | 75–150%, shown as % | Yes | — |
-| Reduced Motion | Display | toggle | on/off | Yes | — |
+| UI Scale | Display | slider + value | 75–150%, shown as % | Yes | **Value Slider** |
+| Reduced Motion | Display | toggle | on/off | Yes | **Setting Toggle** |
 | Reset to Defaults | Footer | button | "RESET TO DEFAULTS" | Yes | **Standard Button** |
 | Back | Footer | button | "BACK" | Yes | **Standard Button** |
 
@@ -150,9 +152,16 @@ currently ~12 rows.
 | Listening | A binding button pressed | That button reads "PRESS…"; hint line names which input family is expected |
 | Conflict | A bind duplicates another action's | ⚠ line names every other action using that input; **the bind still applies** |
 | Reset | "Reset to Defaults" | All overrides cleared; hint line confirms |
+| **Save failed** | Any change, when `user://settings.cfg` cannot be written | ⚠ line names the file, the error code, and that the change applies now but will not survive exit. The change is **not** rolled back |
 
-No loading state (settings load at boot). No error state — a failed save is not surfaced, which
-Open Questions flags.
+No loading state (settings load at boot). No empty state (the controls table is never empty — the
+action list is a constant).
+
+★ **The save-failure state is why this screen has an error state at all.** Persistence *is* the
+screen's purpose, so failing at it silently is the worst available failure: the player rebinds a
+control, watches the table update, and finds it reverted next launch with nothing having said why.
+The change is deliberately not rolled back — it is still correct for this session, and undoing what
+the player just asked for would compound one failure with a second surprise.
 
 ---
 
@@ -166,7 +175,7 @@ Open Questions flags.
 | UI Scale | adjust | drag · arrows when focused | live rescale, % updates | applied, saved |
 | Reduced Motion | toggle | click · Enter · gamepad A | toggle state | applied, saved |
 | Reset to Defaults | activate | click · Enter · gamepad A | table repopulates | overrides cleared, saved |
-| Back | activate | click · Enter · Esc · gamepad A | screen closes | returns to caller |
+| Back | activate | click · Enter · Esc · gamepad A · **gamepad B / Cancel** | screen closes | returns to caller |
 
 Focus order: the controls table top-to-bottom (keyboard column, then gamepad), then UI Scale,
 Reduced Motion, Reset, Back. **Back is focused on open** — the most likely action for a player who
@@ -186,6 +195,16 @@ is no "revert my last change"; **Reset to Defaults is the only undo**, which is 
 listening row is to bind something, which traps a player who opened it by mistake. The cost:
 **Esc cannot be bound to anything**, which is accepted (it is Pause's key, and unbinding it would
 make the pause menu unreachable).
+
+This is the **Standard Cancel** pattern, not a local rule — the library defines the universal
+back-out as "right-click or ESC or the equivalent gamepad Cancel/B button", and that is what this
+screen uses at both levels (cancel a rebind; leave the screen). `ui_cancel` is left at its engine
+default here, which is what makes **gamepad B** work without a project binding — worth stating
+because an implementer who did not know that could remove it as dead configuration.
+
+Focus treatment throughout is the **Three-State Focus Indicator** (default / hover /
+keyboard-focus, distinguished by colour *and* border weight), inherited from `MenuStyle` rather
+than re-specified here.
 
 ---
 
@@ -233,9 +252,18 @@ respected:
 - **Motion reduction** — wired to the slice's one continuous ambient animation, so it does something
   rather than storing an inert preference. (Visual.)
 
-And respects the same floors as the other screens: text ≥ 24px for menu UI, hit targets ≥ 44×44 at
-1080p, keyboard focus styled distinctly from mouse hover (colour **and** border weight, so it is not
-colour-only), no information by colour alone.
+And respects the same floors as the other screens:
+
+| Floor | Value | Source |
+|---|---|---|
+| Menu text size | **≥ 24px** at 1080p | `accessibility-requirements.md`, Visual |
+| Text contrast | **≥ 4.5:1** body / **3:1** large | WCAG AA, matching `main-menu.md` and `pause.md` |
+| Hit target | **≥ 44×44 px** at 1080p | Standard tier |
+| Readable at | **1080p and 1440p** — the confirmed target resolutions | `technical-preferences.md` |
+
+Keyboard focus is styled distinctly from mouse hover by colour **and** border weight, so the
+distinction is not colour-only. No information anywhere on this screen is carried by colour alone —
+every row is labelled text, and the ⚠ line states its warning in words.
 
 ★ **A player can lock themselves out of nothing.** `ui_accept`, `ui_cancel` and the directional
 actions are not rebindable, so no sequence of changes can leave a player unable to operate this
@@ -250,8 +278,29 @@ screen and undo them.
 - **Key names come from the engine** (`OS.get_keycode_string`) and are **not localized**. A player
   on a non-QWERTY layout sees physical-position names; the binding is by physical keycode, which is
   correct behaviour but may read oddly. Flagged in Open Questions.
-- "PRESS…", the ⚠ conflict line and "Defaults restored." are player-facing strings and need
-  translating.
+- "PRESS…", the ⚠ conflict line, the ⚠ save-failure line and "Defaults restored." are player-facing
+  strings and need translating.
+
+**Character budgets** (English, before the ~40% expansion allowance):
+
+| Element | Budget | Consequence of overflow |
+|---|---|---|
+| Action label | **24 chars** | Column is fixed-width; longer wraps into the binding buttons |
+| Binding button text | **12 chars** | Longer truncates — engine key names are the risk ("BracketLeft" is 11) |
+| Section heading | **16 chars** | Cosmetic only |
+| Hint / warning line | **72 chars** | Longer wraps to a second line and shifts the Display group down |
+
+The longest current action label is "Focus Action Panel" (18) — within budget at 24, and within it
+again after expansion only because the column was sized to the expanded width.
+
+---
+
+## GDD Alignment
+
+**N/A — no GDD owns this screen.** Settings is not a game system: it configures how the player
+operates the game rather than what the game does, so it has no entry in `systems-index.md` and no UI
+Requirements to satisfy. Its requirements come from `design/accessibility-requirements.md` instead,
+which is unusual enough to state rather than leave as a blank section.
 
 ---
 
@@ -270,22 +319,32 @@ screen and undo them.
 - [x] Reset to Defaults clears every override.
 - [x] A settings file that is missing, out of range, or references a deleted action degrades
       cleanly rather than erroring.
-- [ ] ⚠ **`/ux-review` has not been run on this screen.** It is the only screen in the game that
-      shipped without one.
+- [x] A failed save tells the player, names the file, and does not roll back the change.
+- [x] Opens within **150 ms** of activation on target hardware — it loads no assets and reads
+      already-parsed settings, so anything slower indicates a regression, not a cost.
+- [x] Every element is readable and operable at **1080p and 1440p**.
+- [x] `/ux-review` run 2026-08-24 — verdict recorded below.
 
 ---
 
 ## Open Questions
 
-1. **This spec is retroactive and unreviewed.** The screen exists; nothing in this document was
-   challenged before it was built. `/ux-review` is owed, and these are the choices I would expect it
-   to push on: Back-focused-on-open, the absence of OK/Cancel, and a single flat controls list with
-   no grouping.
+1. ~~**This spec is retroactive and unreviewed**~~ — ⚠ **partially resolved.** `/ux-review` ran
+   2026-08-24 and returned **NEEDS REVISION** with 4 blocking issues, all now fixed: the missing
+   error state (B-1, which also required a code change — save failures were silent), Slider and
+   Toggle being undocumented patterns (B-2, now in the library), the absent contrast ratio (B-3),
+   and `Standard Cancel` being re-specified rather than referenced (B-4).
+   **The spec was still written after the screen shipped**, which is what let those four go
+   unnoticed — three of the four were never *decided*, only never *noticed*. The reviewer did not
+   challenge Back-focused-on-open, the absence of OK/Cancel, or the flat controls list; those stand,
+   but they stand unchallenged rather than endorsed.
 2. **No per-change undo.** Reset to Defaults is the only revert, and it is all-or-nothing. A player
    who mis-binds one control loses every other customisation to fix it. A per-row "clear" would be
    cheap and is not implemented.
-3. **A failed save is silent.** `GameSettings.save()` returns an `Error` that this screen discards.
-   A read-only `user://` would lose the player's settings with no indication.
+3. ~~**A failed save is silent**~~ — ✅ **fixed 2026-08-24** (review B-1). Every save routes through
+   one funnel that surfaces the error on the hint line and pushes it to the log; the change is not
+   rolled back. Routed through a single site precisely because four separate call sites is how it
+   came to be dropped in the first place.
 4. **`ui_*` actions are not rebindable at all.** This prevents lockout, but it also means a player
    cannot remap confirm/cancel or the cursor directions — which a motor-accessibility need might
    legitimately require. The safe fix is a rebindable `ui_*` set with a guaranteed-reachable reset

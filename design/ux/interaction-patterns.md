@@ -31,6 +31,8 @@ This library catalogs the reusable interaction patterns for OVERCLOCK's in-match
 | Snap, Never Tween | Feedback (base convention) | Committed values snap instantly; only previews use static (non-motion) differentiation |
 | Standard Button | Input (base control) | Base clickable-control state set (default/hover/keyboard-focus/pressed/inert) other patterns compose with |
 | Scroll List | Data Display / Input | Read-only, append-driven scrollable list (newest on top, oldest drops at capacity) |
+| Value Slider | Input | Continuous numeric setting with a live-applied value and a readable numeric echo |
+| Setting Toggle | Input | Binary on/off setting, applied immediately, labelled by state not by colour |
 
 ---
 
@@ -355,6 +357,64 @@ Screens/interactions visible in the GDDs/ADRs that will need their own patterns,
 - **Action Log Display** (game-hud.md) — the ring-buffer *data model* is architected (ADR-0016 §5), but no pattern yet covers how entries visually append/scroll/age.
 - **On-Demand Reveal Toggle** (game-hud.md) — the income-breakdown's hover-or-click expand/collapse behavior needs its own pattern once a second on-demand element exists (currently a one-off).
 - **Audio Feedback Priority** (ADR-0016 §7) — a single-owner dispatch with a total priority order (GameOver > turn-stinger > completion-cue > AP-fill) and ducking exists architecturally, but has no UX-facing pattern describing what the player actually hears/when.
+
+### Value Slider
+
+**Category**: Input
+**Used In**: Settings screen (UI Scale). The base pattern for any continuous numeric setting.
+
+**Description**: A draggable track for a bounded numeric value, paired with a **numeric echo** of the
+current value. Added 2026-08-24 when `/ux-review` found the settings screen had invented one: the
+library had no slider, so the next screen needing one would have invented a second.
+
+**Specification**:
+- States: composes *Standard Button*'s state set (default / hover / keyboard-focus / pressed /
+  inert) on the grab handle — a slider is a control, and gets the same focus treatment as one.
+- **A slider is never the only readout of its own value.** A numeric echo sits beside it (e.g.
+  "100%"), because a handle position communicates *approximately* and a settings value is exact. It
+  also gives the value to a player who cannot judge the handle's position precisely.
+- **Applies live, on change** — not on release and not on a confirm step. A setting the player
+  cannot see take effect is one they cannot evaluate.
+- Keyboard/gamepad: arrows adjust by one `step` when focused. The step must be coarse enough that
+  crossing the whole range is not tedious (a 75–150% range at 0.05 is 15 presses, not 75).
+- Bounds are enforced at the model, not the widget — a value arriving from a hand-edited config file
+  must be clamped on load, or the widget renders a state the player cannot get back from.
+- Accessibility: reachable and adjustable by keyboard/gamepad, never drag-only. The numeric echo is
+  what makes it usable without fine motor control.
+
+**When to Use**: A bounded, continuous, immediately-applicable value.
+**When NOT to Use**: Discrete choices (use a toggle or a list) or anything needing confirmation
+before it takes effect.
+
+**Reference**: `src/ui/settings/settings_screen.gd` (UI Scale row).
+
+---
+
+### Setting Toggle
+
+**Category**: Input
+**Used In**: Settings screen (Reduced Motion). The base pattern for any binary preference.
+
+**Description**: An on/off control for a preference that applies immediately. Added alongside *Value
+Slider* and for the same reason.
+
+**Specification**:
+- States: composes *Standard Button*'s set; the on/off state is carried by the control's own
+  position/fill **and** its label — never by colour alone (the Non-Hue Semantic Layer applies to
+  settings UI exactly as it does to the board).
+- **Applies immediately**, like *Value Slider*. No OK/Cancel.
+- The label states **what the setting is**, not what pressing it will do ("Reduced Motion", not
+  "Turn on reduced motion") — so the row reads the same whichever state it is in.
+- Accessibility: reachable by keyboard/gamepad; the state must be discernible without colour and
+  without relying on animation to show the transition.
+
+**When to Use**: A binary preference with no destructive consequence.
+**When NOT to Use**: Anything destructive or hard to reverse — that wants a confirm step (see
+*Hold-to-Confirm Refund* for the in-match equivalent).
+
+**Reference**: `src/ui/settings/settings_screen.gd` (Reduced Motion row).
+
+---
 
 ---
 

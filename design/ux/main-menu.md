@@ -237,6 +237,7 @@ Tier: **Standard** (WCAG 2.1 AA + CVAA).
    launch straight into the match with no pre-match pick. If the VS build wants a side choice or
    a map confirm, that's a tiny intermediate screen (flag, not authored here).
 3. ~~**Settings screen is a separate spec**~~ — ✅ **Resolved 2026-08-24 (S6-26):**
-   `design/ux/settings.md`. ⚠ Written **retroactively**, after the screen shipped, and **not yet
-   reviewed** — it is the only screen in the game without a `/ux-review`. It documents the built
-   behaviour and flags the choices a reviewer would be expected to challenge.
+   `design/ux/settings.md` — **APPROVED** (`/ux-review` 2026-08-24, after 4 blocking issues were
+   fixed). ⚠ Still written **retroactively**: the review found three issues that had never been
+   *decided*, only never *noticed*, one of which was a silent data-loss bug in the code. Approval
+   closes the gap; it does not undo the ordering.

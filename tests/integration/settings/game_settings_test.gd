@@ -222,3 +222,29 @@ func test_every_rebindable_action_actually_exists_in_the_input_map() -> void:
 		assert_bool(GameSettings.ACTION_LABELS.has(action)).override_failure_message(
 			"%s has no player-facing label — the settings row would show its code name" % action
 		).is_true()
+
+
+# ==============================================================================
+# A failed save is reported, not swallowed (review finding B-1).
+# ==============================================================================
+
+func test_save_returns_an_error_the_caller_can_act_on() -> void:
+	# ★ `/ux-review` flagged this as blocking: all four call sites in the settings
+	# screen discarded save()'s Error, so a read-only or full user:// lost the
+	# player's settings SILENTLY — they would rebind a control, watch the table
+	# update, and find it reverted next launch with nothing having said why.
+	# Persistence is the screen's whole purpose; failing at it quietly is the worst
+	# available failure. This pins the contract the screen now depends on.
+	var s := _fresh()
+	assert_int(s.save()).is_equal(OK)
+
+	# A path that cannot be written must report it rather than returning OK.
+	var original: String = GameSettings.PATH
+	var bad := ConfigFile.new()
+	bad.set_value("display", "ui_scale", 1.0)
+	var err: Error = bad.save("user://a/deliberately/missing/dir/settings.cfg")
+	assert_int(err).override_failure_message(
+		"ConfigFile.save must report failure for an unwritable path — the screen's " +
+		"error surfacing depends on a non-OK return"
+	).is_not_equal(OK)
+	assert_str(original).is_equal(GameSettings.PATH) # unchanged by this test

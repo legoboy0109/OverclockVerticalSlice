@@ -186,10 +186,15 @@ accessibility claim is made publicly.
 > the new `CommandInterface.salient_tiles()` — keyed on the same FSM switch the overlay renderer
 > uses, so a jump can only land on a tile that is already highlighted.
 >
-> **✅ The Settings screen now has a spec** — `design/ux/settings.md`, written retroactively
-> 2026-08-24 (S6-26). ⚠ It owes a `/ux-review`, and its own Open Questions carry the follow-ups that
-> came out of writing it: no per-change undo (Reset is all-or-nothing), a silent save failure, and
-> `ui_*` actions being unrebindable — which prevents lockout but also blocks a legitimate
+> **✅ The Settings screen has a spec, now APPROVED** — `design/ux/settings.md`, written
+> retroactively 2026-08-24 (S6-26) and reviewed the same day (S6-27). The review returned NEEDS
+> REVISION with 4 blocking issues; all fixed, including a **real silent data-loss bug**: every
+> `save()` call site discarded the returned `Error`, so an unwritable `user://` lost the player's
+> settings with no indication. Two new patterns (Value Slider, Setting Toggle) were added to
+> `interaction-patterns.md` as part of the fix.
+>
+> **Still open from its Open Questions:** no per-change undo (Reset is all-or-nothing), and `ui_*`
+> actions being unrebindable — which prevents lockout but also blocks a legitimate
 > motor-accessibility need.
 >
 > **Still open from this item:** `InputConfig.menu_keyboard_nav_enabled` (ADR-0014 §6 — there is

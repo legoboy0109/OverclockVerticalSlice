@@ -219,7 +219,7 @@ func _input(event: InputEvent) -> void:
 	var clashes: Array[StringName] = _settings.conflicts(code, device, action)
 	_settings.set_binding(action, device, code)
 	_settings.apply_bindings()
-	_settings.save()
+	var saved: bool = _save_and_report()
 	_listening.clear()
 	_refresh_all()
 	if not clashes.is_empty():
@@ -228,6 +228,8 @@ func _input(event: InputEvent) -> void:
 		for c: StringName in clashes:
 			names.append(String(GameSettings.ACTION_LABELS.get(c, String(c))))
 		_warning_label.text = "⚠ Also bound to: %s" % ", ".join(names)
+	elif not saved:
+		pass # _save_and_report already put the failure on the line
 	get_viewport().set_input_as_handled()
 
 
@@ -236,21 +238,44 @@ func _input(event: InputEvent) -> void:
 func _on_scale_changed(value: float) -> void:
 	_settings.ui_scale = value
 	_settings.apply_display()
-	_settings.save()
+	_save_and_report()
 	_refresh_display_labels()
 
 
 func _on_motion_toggled(pressed: bool) -> void:
 	_settings.reduced_motion = pressed
-	_settings.save()
+	_save_and_report()
 
 
 func _on_reset() -> void:
 	_settings.reset_to_defaults()
 	_settings.apply_all()
-	_settings.save()
+	var saved: bool = _save_and_report()
 	_refresh_all()
-	_warning_label.text = "Defaults restored."
+	if saved:
+		_warning_label.text = "Defaults restored."
+
+
+## Saves, and puts a failure on the hint line rather than swallowing it.
+##
+## ★ Added 2026-08-24 after `/ux-review` raised it as blocking. Every call site
+## discarded [method GameSettings.save]'s [enum Error], so a read-only or full
+## `user://` lost the player's settings SILENTLY — they would rebind a control,
+## see the table update, and find it reverted on next launch with nothing having
+## said why. The screen's whole purpose is persistence; failing at it quietly is
+## the worst way for it to fail.
+##
+## Routed through one funnel so a future call site cannot forget the failure path,
+## which is how the original four came to drop it.
+func _save_and_report() -> bool:
+	var err: Error = _settings.save()
+	if err == OK:
+		return true
+	# Names the file, because "could not save" with no location is unactionable.
+	_warning_label.text = "⚠ Could not save settings to %s (error %d). Changes apply now but will be lost on exit." % [
+		GameSettings.PATH, err]
+	push_error("SettingsScreen: save failed (%d) writing %s" % [err, GameSettings.PATH])
+	return false
 
 
 func close() -> void:
