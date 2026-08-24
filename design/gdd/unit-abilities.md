@@ -84,7 +84,7 @@ it gets a unit that is cheaper, or tougher, or that also does something else.**
 | `REPAIR` | Restore `REPAIR_AMOUNT` hp to one friendly unit. Cannot exceed max hp; cannot target self | 2 | **100** | 1 | 1 | Solar healer; Protectorate support |
 | `DEMOLISH` | Attack with `DEMOLISH_BONUS` added vs **structures only**. No effect on units | 3 | 0 | 1 | 2 | Protectorate demolitions |
 | `SELF_DESTRUCT` | Destroy self; deal `SELF_DESTRUCT_DAMAGE` in a `BURST` centred on self. ★ Hits friendlies (DT-8) | 1 | 0 | 0 | — (`uses_per_match` 1) | Solar suicide bomber |
-| `CAPTURE_VEHICLE` | Take ownership of an **unpiloted** ground vehicle on an adjacent tile. Subject to the new owner's population cap | 3 | 0 | 1 | 1 | ★ Independents pirate |
+| `CAPTURE_VEHICLE` | ★ **Board** an adjacent **unpiloted ground** vehicle: the actor moves into it and becomes its pilot, and ownership transfers with them. Ground only — an aircraft cannot be boarded. Subject to the new owner's population cap | 3 | 0 | 1 | 1 | ★ Independents pirate |
 | `PARADROP` | Deploy a carried unit to any empty tile within `PARADROP_RANGE` of the transport, ignoring terrain and pathing | 3 | 0 | 3 | 2 | Solar paratrooper transport |
 | `EMBARK` / `DISEMBARK` | Load into / unload from an adjacent transport. See `transport-and-pilots.md` | 1 | 0 | 1 | 0 | Alliance, Solar, Protectorate transports |
 | `FORTIFY` | Gain `FORTIFY_DEFENSE` defense until the start of this unit's next turn. Ends if the unit moves | 1 | 0 | 0 | 0 | Machinist's Union early defence; Empire vehicles |
@@ -100,6 +100,23 @@ it gets a unit that is cheaper, or tougher, or that also does something else.**
 | `PARADROP_RANGE` | **3** tiles | |
 | `FORTIFY_DEFENSE` | **+2** | Against a 2–6 attack band, a real but not absolute tilt |
 | `SPOT_BONUS` | **+1** tile | |
+
+> ### ★ `CAPTURE_VEHICLE` resolves as boarding, not as a remote seizure
+>
+> **Revised 2026-08-24** to match the direction's *"moving onto an unpiloted vehicle"*. The actor
+> does not seize the vehicle from a distance — **it climbs in and becomes the crew.** Mechanically
+> this is `EMBARK` into an enemy vehicle, plus an ownership transfer.
+>
+> Three things fall out of that, all of them good:
+> 1. **The captor is now inside the tank**, so it is itself exposed to a `targets_crew` attack. The
+>    vehicle can be stolen straight back by the same trick. ★ Symmetry that costs no extra rules.
+> 2. **The captor is off the board as a separate unit** — it is cargo now (TP-1), untargetable
+>    directly, and its own body is not available for anything else.
+> 3. **No new occupancy rule is needed.** The tile stays one-occupant; the vehicle is the occupant
+>    and the pirate is inside it.
+>
+> **Ground only.** An aircraft in flight cannot be boarded, which also means no faction's air is at
+> risk of theft — a limit worth stating before someone designs around it.
 
 > ★ **`CAPTURE_VEHICLE` is the entry to watch.** It is the only ability that transfers ownership of
 > an existing asset, which means its value scales with *the opponent's* investment rather than the
@@ -192,7 +209,9 @@ activate(unit, ability, target):
 | AC-10 | GIVEN `DEMOLISH` on a structure, THEN damage equals `max(1, atk + DEMOLISH_BONUS − defense)` | Logic |
 | AC-11 | GIVEN `SELF_DESTRUCT`, THEN every unit in the burst including friendlies takes damage, and the user is destroyed after damage resolves | Integration |
 | AC-12 | GIVEN `CAPTURE_VEHICLE` on a piloted vehicle, THEN it is rejected | Integration |
-| AC-13 | GIVEN `CAPTURE_VEHICLE` on an unpiloted vehicle with a free population slot, THEN ownership transfers and the vehicle counts against the new owner's cap | Integration |
+| AC-13 | GIVEN `CAPTURE_VEHICLE` on an adjacent unpiloted **ground** vehicle with a free population slot, THEN the actor becomes its pilot, ownership transfers, and the actor is thereafter carried (untargetable directly) | Integration |
+| AC-13b | GIVEN `CAPTURE_VEHICLE` targeting an **aircraft**, THEN it is rejected | Logic |
+| AC-13c | GIVEN a captured vehicle whose new pilot is killed by a `targets_crew` attack, THEN the vehicle becomes unpiloted again and is capturable by either side | Integration |
 | AC-14 | GIVEN `CAPTURE_VEHICLE` with the new owner at cap, THEN it is rejected | Integration |
 | AC-15 | GIVEN identical state and identical activation, THEN results are identical across runs (no RNG) | Logic |
 | AC-16 | GIVEN any ability, THEN a preview is available whose stated outcome matches the applied outcome | Integration |
