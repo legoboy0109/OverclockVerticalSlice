@@ -34,6 +34,23 @@
 class_name HudControlsWidget
 extends HudReactiveControl
 
+## Emitted when the player activates Build — by click, keyboard or gamepad. The
+## widget never acts on it; the owning scene routes it, exactly as it already
+## routes the keyboard path.
+signal build_requested
+## Emitted when the player activates End Turn, from any input method.
+signal end_turn_requested
+
+## ★ Real [Button] children since 2026-08-24. These were `draw_string` calls: the
+## HUD rendered the words "Build" and "End Turn" and NOTHING could activate them —
+## not a mouse click, not a key, not a pad. `request_build()` had no caller outside
+## the test suite. ADR-0014 §6 makes interactive Controls the project convention
+## precisely because a real Control brings click focus, keyboard focus, focus
+## traversal and the theme's own focus/hover StyleBoxes with it, none of which can
+## be retrofitted onto drawn text.
+var _build_button: Button = null
+var _end_turn_button: Button = null
+
 var _config: HUDConfig = null
 var _local_player: int = 0
 
@@ -52,6 +69,79 @@ func configure(config: HUDConfig, local_player: int, buildable_types: Array[Stru
 	_config = config
 	_local_player = local_player
 	_buildable_types = buildable_types if not buildable_types.is_empty() else _default_buildable_types()
+	_ensure_buttons()
+
+
+## Creates the two interactive controls, once. Focus traversal is wired between
+## them (ADR-0014 §6: `focus_neighbor_*`, not hand-rolled arbitration), so a pad or
+## keyboard moves between them with the same directions that drive the board — the
+## engine's own input-consumption order decides which of the two is listening, and
+## no "who owns this keypress" flag is needed anywhere.
+func _ensure_buttons() -> void:
+	if _build_button != null:
+		return
+	_build_button = _make_button("Build", "BuildButton", Vector2(0, 0))
+	_end_turn_button = _make_button("End Turn", "EndTurnButton", Vector2(76, 0))
+	_build_button.pressed.connect(func() -> void:
+		if request_build():
+			build_requested.emit())
+	_end_turn_button.pressed.connect(func() -> void:
+		if request_end_turn():
+			end_turn_requested.emit())
+	# Linear order in both axes: the two sit side by side, and a player pushing
+	# up/down on a pad expects to stay put rather than fall out of the group.
+	#
+	# ★ RELATIVE sibling paths, not `get_path()`. `configure()` (which calls this)
+	# can run BEFORE the widget enters the scene tree, and `get_path()` on a node
+	# outside the tree does not yield a path that resolves later — the neighbours
+	# silently pointed at nothing and traversal did not work at all. A relative path
+	# is resolved when focus actually moves, so it does not care when it was set.
+	_build_button.focus_neighbor_right = NodePath("../EndTurnButton")
+	_end_turn_button.focus_neighbor_left = NodePath("../BuildButton")
+	_build_button.focus_next = NodePath("../EndTurnButton")
+	_end_turn_button.focus_previous = NodePath("../BuildButton")
+
+
+func _make_button(text: String, node_name: String, at: Vector2) -> Button:
+	var b := Button.new()
+	b.name = node_name
+	b.text = text
+	b.position = at
+	b.custom_minimum_size = Vector2(72, 26)
+	b.focus_mode = Control.FOCUS_ALL
+	b.add_theme_font_size_override("font_size", 12)
+	add_child(b)
+	return b
+
+
+## Moves keyboard/gamepad focus onto the first control in the group. The entry
+## point a pad uses to reach the menu at all — with no Control focused every
+## direction press goes to the board cursor (ADR-0014 §2), which is correct and
+## also means something has to hand focus over deliberately.
+func focus_first() -> bool:
+	if _build_button == null or not controls_live():
+		return false
+	_build_button.grab_focus()
+	return true
+
+
+## True while either control holds keyboard/gamepad focus — the owning scene reads
+## this to know whether the board or the menu is currently being driven.
+func has_menu_focus() -> bool:
+	if _build_button == null:
+		return false
+	return _build_button.has_focus() or _end_turn_button.has_focus()
+
+
+## Releases menu focus, handing every direction press back to the board cursor.
+## Named `release_menu_focus` rather than `release_focus` — the latter is a native
+## Control method, and shadowing it is a parse error under this project's
+## warnings-as-errors setting.
+func release_menu_focus() -> void:
+	if _build_button != null and _build_button.has_focus():
+		_build_button.release_focus()
+	if _end_turn_button != null and _end_turn_button.has_focus():
+		_end_turn_button.release_focus()
 
 
 ## Reads CAI's [constant CommandFSM.State.PREVIEW_BUILD] for the Build pressed
@@ -122,18 +212,32 @@ func request_end_turn() -> bool:
 	return controls_live()
 
 
-func _draw() -> void:
-	var font: Font = ThemeDB.fallback_font
-	if font == null:
+## Pushes the live/inert and affordability state onto the real controls.
+##
+## ★ [method controls_focus_mode] already computed FOCUS_ALL vs FOCUS_NONE and
+## NOTHING APPLIED IT — the value was returned to tests and dropped on the floor.
+## ADR-0014 §6 requires present-but-inert controls to set `focus_mode = FOCUS_NONE`
+## rather than suppressing a focus ring per frame; that is what this does. Without
+## it a pad could focus End Turn during the opponent's turn and press it.
+func _sync_button_state() -> void:
+	if _build_button == null:
 		return
 	var live: bool = controls_live()
-	# Build: dimmed when unaffordable, pressed cue while PREVIEW_BUILD; both
-	# controls dimmed further when inert (advisory treatment).
-	var build_col: Color = Color.WHITE if build_affordable() else Color(0.5, 0.5, 0.5)
+	var mode: int = controls_focus_mode()
+	_build_button.focus_mode = mode
+	_end_turn_button.focus_mode = mode
+	_build_button.disabled = not live
+	_end_turn_button.disabled = not live
 	if not live:
-		build_col = build_col.darkened(0.4)
-	if build_pressed_cue():
-		draw_rect(Rect2(Vector2(2, 2), Vector2(60, 20)), Color(0.2, 0.5, 1.0, 0.4))
-	draw_string(font, Vector2(6, 18), "Build", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, build_col)
-	var end_col: Color = Color.WHITE if live else Color(0.4, 0.4, 0.4)
-	draw_string(font, Vector2(70, 18), "End Turn", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, end_col)
+		release_menu_focus() # never leave focus parked on an inert control
+	# Affordability is advisory, not a lock: AC-16 keeps Build openable while
+	# unaffordable so the player can still see WHAT they cannot afford.
+	_build_button.modulate = Color.WHITE if build_affordable() else Color(0.62, 0.62, 0.66)
+	_build_button.button_pressed = build_pressed_cue()
+
+
+func _draw() -> void:
+	# Nothing is drawn here any more — the two controls are real Buttons, so the
+	# theme renders them along with their hover and focus StyleBoxes (ADR-0014 §6:
+	# "distinct StyleBoxes on the default Theme — no custom focus-ring wiring").
+	_sync_button_state()

@@ -73,6 +73,13 @@ func _run() -> void:
 				await get_tree().process_frame
 			await RenderingServer.frame_post_draw
 			_shot("03-unit-selected-move-range")
+	# --- Focus the menu, as a gamepad would with Back/Select -------------------
+	if slice.has_method("toggle_menu_focus"):
+		slice.toggle_menu_focus()
+		for i: int in 4:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		_shot("04-menu-focused")
 	print("done")
 	get_tree().quit()
 

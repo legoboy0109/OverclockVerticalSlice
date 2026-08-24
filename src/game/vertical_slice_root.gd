@@ -330,6 +330,25 @@ func _build_hud() -> void:
 	# actually places (the widget would otherwise fall back to the same default).
 	_hud.assemble(_reader, HudBalance.hud, _cmd, _board, LOCAL_PLAYER, _buildables)
 	add_child(_hud)
+	_wire_hud_controls() # after assemble — the widgets do not exist until then.
+
+
+## Routes the HUD's action buttons into the SAME methods the keyboard uses, rather
+## than giving clicks and pad presses their own path.
+##
+## ★ Until 2026-08-24 the "Build" and "End Turn" controls were `draw_string` calls:
+## the words were painted and nothing could activate them by any input method.
+## `HudControlsWidget.request_build()` had no caller outside the test suite. They
+## are real [Button]s now, and these two connections are what make them do
+## something — deliberately landing on `request_build_at_cursor()` and
+## `try_end_human_turn()`, the exact entry points [B] and [Tab] already use, so a
+## click, a key and a pad press cannot drift apart in behaviour.
+func _wire_hud_controls() -> void:
+	var controls: HudControlsWidget = _hud.controls()
+	if controls == null:
+		return
+	controls.build_requested.connect(func() -> void: request_build_at_cursor())
+	controls.end_turn_requested.connect(func() -> void: try_end_human_turn())
 
 
 ## The non-HQ structures the player can build (mirrors HudControlsWidget's own
@@ -438,7 +457,8 @@ func _refresh_status() -> void:
 	# Both input methods named on one line — a controller player should not have to
 	# guess which pad button maps to a key they can see.
 	lines.append("[Arrows/D-pad] cursor   [Enter/A] select   [M/X] move-attack   " +
-		"[B/Y] build  [C/LB] cycle   [P/B] produce  [V/RB] cycle   [Tab/Start] end turn")
+		"[B/Y] build  [C/LB] cycle   [P/B] produce  [V/RB] cycle   [Tab/Start] end turn   " +
+		"[`/Back] menu")
 	_status_label.text = "\n".join(lines)
 
 
@@ -676,6 +696,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		cycle_produce_type()
 	elif event.is_action_pressed(&"board_end_turn"):
 		try_end_human_turn()
+	elif event.is_action_pressed(&"board_menu_focus"):
+		toggle_menu_focus()
 	elif event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			_zoom_camera(CAMERA_ZOOM_STEP)      # wheel up: zoom in
@@ -1036,6 +1058,31 @@ func _tiles_for_cost(unit: UnitState, ap_cost: int) -> int:
 # The cursor moved to `BoardRenderer.set_cursor()` on its own layer for the same
 # reason. Nothing should be drawn in this node's `_draw()` again — if it must
 # appear over the board, it belongs on a layer inside the board.
+
+
+## Moves keyboard/gamepad focus between the board and the HUD's action controls,
+## and returns whether focus now sits on the menu.
+##
+## ★ This is what makes the menu reachable on a pad at all. ADR-0014 §2 arbitrates
+## board-cursor vs menu traversal structurally: a focused [Control] consumes a
+## direction press before [method _unhandled_input] sees it, so the two can never
+## collide — but the flip side is that with NOTHING focused every direction goes to
+## the board, and a controller has no way to reach a button. A mouse can just click
+## one; a pad needs this.
+##
+## Deliberately a TOGGLE rather than a one-way grab: a player who focuses the menu
+## must be able to get back to the board with the same button they arrived on.
+## Being stuck in a two-button panel with no way out is the worst version of this
+## feature, and it is the easy one to ship.
+func toggle_menu_focus() -> bool:
+	if _hud == null or _hud.controls() == null:
+		return false
+	var controls: HudControlsWidget = _hud.controls()
+	if controls.has_menu_focus():
+		controls.release_menu_focus()
+		_sync_cursor_highlight() # the board is driving again — show it.
+		return false
+	return controls.focus_first()
 
 
 ## Paints the board cursor at its current tile.

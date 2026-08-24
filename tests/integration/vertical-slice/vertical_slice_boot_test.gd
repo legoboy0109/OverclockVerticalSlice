@@ -490,6 +490,9 @@ func test_status_overlay_surfaces_selected_build_type_legend_and_updates_on_cycl
 	# controller player cannot guess a mapping they cannot see.
 	assert_str(root.status_text()).contains("[Tab/Start] end turn")
 	assert_str(root.status_text()).contains("[Arrows/D-pad] cursor")
+	# ★ The menu-focus toggle is named too — it is the ONLY way a gamepad reaches
+	# the HUD's buttons at all, so an unnamed binding is an unreachable feature.
+	assert_str(root.status_text()).contains("menu")
 	# ★ And costs are labelled CR + AP, not "AP" — build/produce spend BOTH, and the
 	# label claimed the wrong currency for the game's most common action.
 	assert_str(root.status_text()).contains(" CR + ")
