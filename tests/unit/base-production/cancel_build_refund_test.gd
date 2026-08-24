@@ -122,15 +122,18 @@ func test_cancel_under_construction_barracks_credits_4_removes_and_empties_tile(
 
 
 func test_cancel_under_construction_defensive_structure_credits_3_removes_and_empties_tile() -> void:
-	# Arrange -- Defensive Structure (build_cost 6 -> refund 3).
+	# Arrange -- Defensive Structure. ★ S6-10: build_cost 600 -> 500, so the refund
+	# moved 300 -> 250. Derived from the type now: this test's subject is that cancel
+	# refunds floor(build_cost x CANCEL_REFUND_RATE), not what that structure costs.
 	var state := _make_state()
 	var tile := Vector2i(5, 5)
 	var structure := _make_structure(1, 0, tile, StructureTypes.DEFENSIVE_STRUCTURE)
 	_place(state, structure)
 	# Act
 	BaseProduction.apply_cancel(state, _make_cancel_action(structure.entity_id))
-	# Assert -- floor(6*0.5) = 3; removal dimensions checked per-type.
-	assert_int(state.per_player[0].current_credits).is_equal(300)  # ★ S6-02: ×100 Credit rescale
+	# Assert -- floor(build_cost x 0.5); removal dimensions checked per-type.
+	assert_int(state.per_player[0].current_credits).is_equal(
+		BaseProduction.cancel_refund(StructureTypes.DEFENSIVE_STRUCTURE.build_cost))
 	assert_bool(state.entities_by_id.has(structure.entity_id)).is_false()
 	assert_int(state.grid.occupant_at(tile.x, tile.y)).is_equal(GridState.EMPTY_OCCUPANT)
 

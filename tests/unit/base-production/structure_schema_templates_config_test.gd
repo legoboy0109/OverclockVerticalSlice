@@ -62,7 +62,12 @@ func test_factory_template_matches_stat_table() -> void:
 func test_barracks_template_matches_stat_table() -> void:
 	var po := StructureTypes.BARRACKS
 	assert_int(po.hp).is_equal(14)
-	assert_int(po.build_cost).is_equal(900)  # ★ S6-02: ×100 Credit rescale
+	# ★ S6-10: 900 -> 600, aligning with `base-production.md`'s roster table. The 900
+	# was the ×100 rescale of the pre-rework 9 and had never been re-derived against
+	# the new roster. This one is load-bearing -- Barracks throughput was one of the
+	# two levers that fixed the S6-06 resolution gate -- so it was measured against
+	# the regression batch rather than assumed safe.
+	assert_int(po.build_cost).is_equal(600)
 	assert_int(po.build_time).is_equal(2)
 	assert_int(po.production_cap).is_equal(4)
 	assert_int(po.defense).is_equal(0)
@@ -76,8 +81,11 @@ func test_barracks_template_matches_stat_table() -> void:
 func test_defensive_structure_template_matches_stat_table() -> void:
 	var ds := StructureTypes.DEFENSIVE_STRUCTURE
 	assert_int(ds.hp).is_equal(10)
-	assert_int(ds.build_cost).is_equal(600)  # ★ S6-02: ×100 Credit rescale
-	assert_int(ds.build_time).is_equal(1)
+	# ★ S6-10: 600/1 -> 500/2 per the roster table. The extra build turn is the
+	# meaningful half: a turret that completes the turn after you pay for it is a
+	# reaction, and the table prices it as a commitment.
+	assert_int(ds.build_cost).is_equal(500)
+	assert_int(ds.build_time).is_equal(2)
 	assert_int(ds.production_cap).is_equal(0)
 	assert_int(ds.attack).is_equal(4)
 	assert_int(ds.attack_range).is_equal(2)

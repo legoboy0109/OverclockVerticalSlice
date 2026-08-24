@@ -40,12 +40,11 @@
 #   S6-04  Barracks cap_bonus; population cap.
 #   S6-09  Factory re-statted to its design values and pulled from the build roster.
 #
-# ⚠ KNOWN DRIFT, DELIBERATELY LEFT: barracks build_cost is 900 here and in the data,
-#   but base-production.md's roster table says 600; defensive_structure is 600/1 here
-#   against the table's 500/2. Those are live balance values on a regression gate that
-#   has only just started passing (Barracks throughput was one of the two levers that
-#   fixed it), so changing them is a balance decision, not a data correction. Flagged
-#   for a direction call rather than silently reconciled either way.
+#   S6-10  Barracks 900 -> 600 and defensive_structure 600/1 -> 500/2, aligning the
+#          last two structures with base-production.md's roster table. Escalated as a
+#          balance decision in S6-09 and approved by the user; measured against the
+#          S6-06 regression batch rather than assumed safe, because Barracks
+#          throughput is one of the two levers that fixed that gate.
 #
 # ==============================================================================
 
@@ -232,7 +231,7 @@ entities:
       - design/gdd/game-hud.md                 # hp 14 cited as the PIP_MAX_HP upper-bound reference (keep PIP_MAX_HP <= 14) (2026-07-22)
       - design/gdd/population-cap.md           # grants cap_per_barracks infantry cap (S6-04)
     hp: 14
-    build_cost: 900           # ×100 rescale (S6-02, was 9). ⚠ base-production.md's roster table says 600 — see the drift note in the S6 REWORK header
+    build_cost: 600           # 2026-08-24 (S6-10): aligned to base-production.md's roster table. Was 900 (the ×100 rescale of the pre-rework 9), never re-derived against the new roster
     build_time: 2             # owner-turns; 2-turn exposed rebuild window is the brake
     upkeep: 100               # NEW (S6-02)
     max_count: 3              # NEW (S6-03) — per-faction maximum; Alliance baseline
@@ -254,8 +253,8 @@ entities:
       - design/gdd/base-production.md
       - design/gdd/combat-resolution.md        # attacks via Combat DIRECT; can_counterattack; targetable
     hp: 10
-    build_cost: 600           # ×100 rescale (S6-02, was 6). ⚠ base-production.md's roster table says 500 / build_time 2 — see the drift note in the S6 REWORK header
-    build_time: 1
+    build_cost: 500           # 2026-08-24 (S6-10): aligned to the roster table. Was 600 (×100 of the pre-rework 6)
+    build_time: 2             # 2026-08-24 (S6-10): was 1. A turret that completes the turn after you pay is a reaction; the table prices it as a commitment
     upkeep: 100               # NEW (S6-02)
     max_count: 3              # NEW (S6-03) — per-faction maximum; Alliance baseline
     attack: 4                 # effective_attack term when it fires (NOT research-buffed in VS)
