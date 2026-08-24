@@ -206,17 +206,43 @@ Tier: **Standard**.
 
 ## Acceptance Criteria
 
-- [ ] Pressing Esc/Pause during a match opens the overlay within [X]ms with the board frozen and
-      dimmed beneath, Resume focused.
-- [ ] "Resume" (or Esc again) returns to the exact prior match state with no change.
-- [ ] "Restart Skirmish" shows a confirm; confirming reloads the VS map from turn 1.
-- [ ] "Quit to Main Menu" shows a confirm; confirming returns to the main menu and the match is
+> ✅ **Implemented 2026-08-24 (S6-23).** `src/ui/pause_menu/pause_menu.gd`, built onto the slice's
+> own CanvasLayer above the HUD. Covered by `tests/integration/pause-menu/pause_menu_test.gd`
+> (11 tests). Screenshots in `production/qa/evidence/slice-ui/05-paused.png` and `06-*`.
+
+- [x] Pressing Esc/Pause during a match opens the overlay with the board frozen and dimmed
+      beneath, Resume focused.
+- [x] "Resume" (or Esc again) returns to the exact prior match state with no change — nothing is
+      written while paused, so resuming is only un-pausing.
+- [x] "Restart Skirmish" shows a confirm; confirming reloads the VS map from turn 1.
+- [x] "Quit to Main Menu" shows a confirm; confirming returns to the main menu and the match is
       disposed.
-- [ ] "Settings" opens settings and returns to the pause overlay on back.
-- [ ] Keyboard/gamepad navigation reaches Resume → Restart → Settings → Quit in order, each with a
-      focus indicator distinct from mouse-hover.
-- [ ] Destructive actions (Restart, Quit) cannot fire without a confirm step.
-- [ ] With reduced-motion enabled, the overlay appears instantly with no lost information.
+- [ ] ⛔ **"Settings" opens settings and returns to the pause overlay on back** — the settings
+      screen has no spec and does not exist (OQ-4). The entry is **present and inert** with a
+      tooltip, matching the main menu's identical call. **Cannot pass until the Settings screen is
+      authored** — `production/post-gate-backlog.md` item 6.
+- [x] Keyboard/gamepad navigation reaches Resume → Restart → Settings → Quit in order, each with a
+      focus indicator distinct from mouse-hover. *(Settings is skipped while inert — `FOCUS_NONE`,
+      the Standard Button pattern's stated treatment.)*
+- [x] Destructive actions cannot fire without a confirm step, and Esc from a confirm backs out to
+      the pause menu rather than into the match.
+- [ ] ⚠ **With reduced-motion enabled, the overlay appears instantly with no lost information** —
+      trivially true because **no enter flourish was built** (Snap-Never-Tween makes the overlay
+      interactive immediately, and the spec calls the flourish decorative). Re-open if one is added;
+      there is no settings store to read a preference from either.
+
+### Answers to this spec's own open questions
+
+**OQ-2 / OQ-3 — freeze semantics.** Resolved by using **engine pause** (`get_tree().paused`) rather
+than a hand-rolled input flag: input stops reaching the board, tweens and timers stop, and no
+wall-clock state can desync across a pause. The overlay runs with `PROCESS_MODE_WHEN_PAUSED` so it
+stays interactive.
+
+★ **One real defect this surfaced.** `SceneTree.create_timer()` defaults to `process_always = true`,
+i.e. it keeps firing while the tree is paused — and the AI's commit pacing used the default. Pausing
+mid-AI-turn would have left the opponent quietly playing on behind the overlay, which is exactly the
+failure OQ-2 asked about. `AITurnDriver.run_ai_turn` now passes `false`. Pause during the opponent's
+turn is therefore allowed and genuinely freezes it, which is the "simplest rule" OQ-2 proposed.
 
 ---
 

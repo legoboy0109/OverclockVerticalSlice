@@ -152,51 +152,13 @@ func _make_entry(parent: Node, text: String, interactive: bool) -> Button:
 	b.add_theme_color_override("font_color", ENTRY_TEXT if interactive else ENTRY_TEXT_INERT)
 	b.focus_mode = Control.FOCUS_ALL if interactive else Control.FOCUS_NONE
 	b.disabled = not interactive
+	MenuStyle.apply(b) # shared five-state StyleBox set — one implementation, two menus
 	if not interactive:
 		# Says WHY rather than just refusing. A dead-looking entry with no
 		# explanation reads as a bug; this reads as a scope boundary.
 		b.tooltip_text = "Settings are not implemented yet."
-	_apply_focus_and_hover_styles(b)
 	parent.add_child(b)
 	return b
-
-
-## Gives the button DISTINCT hover and keyboard-focus treatments.
-##
-## ★ The Three-State Focus Indicator convention, and the reason it is set
-## explicitly rather than left to the default theme: a mouse user and a pad user
-## need to see different things, and a single shared highlight would tell a pad
-## user nothing about where focus is while the mouse happens to rest elsewhere.
-func _apply_focus_and_hover_styles(b: Button) -> void:
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.075, 0.095, 0.130, 0.95)
-	normal.border_color = Color(0.30, 0.36, 0.44)
-	normal.set_border_width_all(1)
-	normal.set_content_margin_all(10)
-
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.120, 0.150, 0.195, 0.98)
-	hover.border_color = Color(0.48, 0.56, 0.66)
-
-	# Focus: the accent hue and a thicker rule — legible at a glance and unlike
-	# hover in both colour AND weight, so the two never read as the same state.
-	var focus := normal.duplicate() as StyleBoxFlat
-	focus.bg_color = Color(0.150, 0.105, 0.080, 0.98)
-	focus.border_color = TITLE_HUE
-	focus.set_border_width_all(3)
-
-	var pressed := normal.duplicate() as StyleBoxFlat
-	pressed.bg_color = Color(0.190, 0.130, 0.095, 1.0)
-
-	var disabled := normal.duplicate() as StyleBoxFlat
-	disabled.bg_color = Color(0.055, 0.070, 0.095, 0.95)
-	disabled.border_color = Color(0.20, 0.24, 0.30)
-
-	b.add_theme_stylebox_override("normal", normal)
-	b.add_theme_stylebox_override("hover", hover)
-	b.add_theme_stylebox_override("focus", focus)
-	b.add_theme_stylebox_override("pressed", pressed)
-	b.add_theme_stylebox_override("disabled", disabled)
 
 
 func _build_quit_confirm() -> void:

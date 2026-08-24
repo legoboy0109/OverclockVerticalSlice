@@ -53,6 +53,9 @@ const HQ_B: Vector2i = Vector2i(9, 5)
 
 ## The human player is 0; the AI is player 1 (VS 1v1, ADR-0011).
 const LOCAL_PLAYER: int = 0
+
+## Where "Quit to Main Menu" goes (`design/ux/pause.md` exit table).
+const MAIN_MENU_SCENE: String = "res://scenes/main_menu.tscn"
 const AI_PLAYER: int = 1
 
 ## Round cap for the vertical slice, arming [member GameState.max_rounds] (user
@@ -122,6 +125,11 @@ var _ai_running: bool = false
 ## OWN tile via [method GameState.entity_at], never the board's
 ## [method BoardRenderer.pick_at].
 var _cursor: BoardCursor = null
+
+## The in-match pause overlay (`design/ux/pause.md`). Built here rather than inside
+## [GameHud] because the destructive paths it offers — restart, quit to menu — are
+## match-lifecycle concerns this node owns, and the HUD owns none of them.
+var _pause: PauseMenu = null
 
 ## The player's buildable structure roster (also handed to the HUD so its Build
 ## affordability set matches). KEY_B places [member _selected_buildable] at the
@@ -331,6 +339,7 @@ func _build_hud() -> void:
 	_hud.assemble(_reader, HudBalance.hud, _cmd, _board, LOCAL_PLAYER, _buildables)
 	add_child(_hud)
 	_wire_hud_controls() # after assemble — the widgets do not exist until then.
+	_build_pause_menu()
 
 
 ## Routes the HUD's action buttons into the SAME methods the keyboard uses, rather
@@ -698,6 +707,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		try_end_human_turn()
 	elif event.is_action_pressed(&"board_menu_focus"):
 		toggle_menu_focus()
+	elif event.is_action_pressed(&"board_pause"):
+		open_pause()
 	elif event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			_zoom_camera(CAMERA_ZOOM_STEP)      # wheel up: zoom in
@@ -1083,6 +1094,59 @@ func toggle_menu_focus() -> bool:
 		_sync_cursor_highlight() # the board is driving again — show it.
 		return false
 	return controls.focus_first()
+
+
+## Opens the pause overlay and freezes the match beneath it.
+##
+## ★ Freeze is [b]engine pause[/b] (`get_tree().paused`), not a hand-rolled input
+## flag, which answers `pause.md`'s open questions 2 and 3 in one move: input stops
+## reaching this node, tweens and timers stop, and no wall-clock state can desync
+## across the pause. The overlay itself runs with
+## [constant Node.PROCESS_MODE_WHEN_PAUSED] so it stays interactive.
+##
+## The AI's commit pacing needed a matching fix — [SceneTree] timers default to
+## `process_always = true`, so with the default the opponent went on taking its
+## turn behind the overlay. See [method AITurnDriver.run_ai_turn].
+func open_pause() -> void:
+	if _pause == null or _pause.is_open():
+		return
+	_pause.open()
+	get_tree().paused = true
+
+
+## Un-freezes and returns to the exact prior match state. No state was written
+## while paused, so there is nothing to reconcile — resuming is only un-pausing.
+func resume_from_pause() -> void:
+	get_tree().paused = false
+
+
+## Discards the match and reloads the slice from turn 1 (pause.md "Restart
+## Skirmish"). Un-pauses FIRST: a reloaded scene inherits a paused tree, and the
+## fresh match would open frozen with no overlay to un-freeze it.
+func restart_match() -> void:
+	get_tree().paused = false
+	get_tree().reload_current_scene()
+
+
+## Abandons the match and returns to the main menu (pause.md "Quit to Main Menu").
+## Un-pauses for the same reason as [method restart_match].
+func quit_to_main_menu() -> void:
+	get_tree().paused = false
+	get_tree().change_scene_to_file(MAIN_MENU_SCENE)
+
+
+## Builds the pause overlay on its own [CanvasLayer], above the HUD's, so nothing
+## in the HUD can ever draw over the thing that is meant to be modal.
+func _build_pause_menu() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 100
+	layer.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	add_child(layer)
+	_pause = PauseMenu.new()
+	layer.add_child(_pause)
+	_pause.resume_requested.connect(resume_from_pause)
+	_pause.restart_requested.connect(restart_match)
+	_pause.quit_to_menu_requested.connect(quit_to_main_menu)
 
 
 ## Paints the board cursor at its current tile.

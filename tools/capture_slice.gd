@@ -80,6 +80,20 @@ func _run() -> void:
 			await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		_shot("04-menu-focused")
+	# --- Pause over the live board --------------------------------------------
+	if slice.has_method("open_pause"):
+		slice.open_pause()
+		for i: int in 6:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		_shot("05-paused")
+		# ...and the destructive confirm, which is the gate that matters.
+		slice._pause._open_confirm(PauseMenu.Confirm.QUIT)
+		for i: int in 4:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		_shot("06-pause-quit-confirm")
+		get_tree().paused = false
 	print("done")
 	get_tree().quit()
 

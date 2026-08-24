@@ -115,7 +115,14 @@ func run_ai_turn(state: GameState) -> void:
 		if state.match_status == GameState.MatchStatus.GAME_OVER:
 			return
 
-		await get_tree().create_timer(AIBalance.ai.commit_pacing_sec).timeout
+		# ★ `process_always = false` (2026-08-24). SceneTree timers default to
+		# process_always = TRUE, i.e. they keep firing while the tree is paused — so
+		# with the default the AI would go on taking its turn behind the pause
+		# overlay, quietly playing a game the player thinks is frozen. `pause.md`
+		# flagged freeze semantics as an open question for the architecture team;
+		# this is the answer for the one place the slice actually sleeps. The pacing
+		# delay is presentation, so it should honour engine pause.
+		await get_tree().create_timer(AIBalance.ai.commit_pacing_sec, false).timeout
 
 	var end_turn := EndTurnAction.new()
 	end_turn.player = state.active_player
