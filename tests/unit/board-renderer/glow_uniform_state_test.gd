@@ -61,7 +61,7 @@ func test_every_vs_type_now_has_a_shipped_glow_mask() -> void:
 			assert_bool(ResourceLoader.exists(path)).override_failure_message(
 				"missing glow mask: %s" % path
 			).is_true()
-	for name: String in ["hq", "production_outpost", "economy_outpost",
+	for name: String in ["hq", "barracks", "factory",
 			"defensive_structure", "research_lab"]:
 		var path := "res://assets/art/structures/struct_%s_idle_glow.png" % name
 		assert_bool(ResourceLoader.exists(path)).override_failure_message(

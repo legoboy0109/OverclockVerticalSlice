@@ -26,14 +26,19 @@ func test_config_balance_economy_loads_as_economy_config() -> void:
 # --- Credit-income curve knobs (the original five; re-denominated to Credits) -
 
 func test_config_credit_income_curve_knobs_at_adr0006_defaults() -> void:
-	# Act
+	# ★ S6-01 (2026-08-24): the five outpost-curve constants were DELETED with the
+	# Economy Outpost. Income is now base + a finite research-tier bonus, and all
+	# Credit quantities are ×100. See design/gdd/ap-economy.md.
 	var cfg: EconomyConfig = Balance.economy
-	# Assert -- the five income-curve constants (ap-economy.md Formulas table).
-	assert_int(cfg.base_income).is_equal(10)
-	assert_int(cfg.outpost_bonus_tier1).is_equal(2)
-	assert_int(cfg.outpost_bonus_tier2).is_equal(1)
-	assert_int(cfg.tier_threshold).is_equal(4)
-	assert_int(cfg.economy_tech_tier_threshold).is_equal(6)
+	assert_int(cfg.base_income).is_equal(1000)
+	assert_int(cfg.econ_tier_bonus).is_equal(500)
+	assert_int(cfg.max_economy_tier).is_equal(3)
+	assert_int(cfg.econ_tier_costs.size()).is_equal(cfg.max_economy_tier)
+	assert_int(cfg.econ_tier_costs[0]).is_equal(1000)
+
+	# ★ The regression that matters: the income ceiling is HARD and finite.
+	# An unbounded economy is what the PIVOT verdict diagnosed.
+	assert_int(cfg.base_income + cfg.econ_tier_bonus * cfg.max_economy_tier).is_equal(2500)
 
 
 # --- AP tactical budget knobs (pivot: flat per-turn + capped carryover) ------
@@ -43,8 +48,8 @@ func test_config_ap_tactical_budget_knobs_at_pivot_defaults() -> void:
 	var cfg: EconomyConfig = Balance.economy
 	# Assert -- the tactical budget (ap-economy.md Rule 1/2). Max start-of-turn AP
 	# is flat_ap_per_turn + ap_carryover_cap = 15 at these defaults.
-	assert_int(cfg.flat_ap_per_turn).is_equal(10)
-	assert_int(cfg.ap_carryover_cap).is_equal(5)
+	assert_int(cfg.flat_ap_per_turn).is_equal(30)
+	assert_int(cfg.ap_carryover_cap).is_equal(15)
 
 
 # --- AP logistics surcharges (pivot: the tempo half of the dual-cost gate) ---

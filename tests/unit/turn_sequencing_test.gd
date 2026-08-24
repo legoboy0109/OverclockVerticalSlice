@@ -59,7 +59,7 @@ func _add_under_construction_outpost(state: GameState, player: int) -> void:
 	structure.entity_id = state.next_entity_id
 	structure.owner = player
 	structure.position = Vector2i(structure.entity_id, 0) # unique, arbitrary — no grid in play
-	structure.type = StructureTypes.ECONOMY_OUTPOST
+	structure.type = StructureTypes.FACTORY
 	structure.current_hp = structure.type.hp
 	structure.build_status = StructureState.BuildStatus.UNDER_CONSTRUCTION
 	structure.build_turns_remaining = 1
@@ -86,7 +86,7 @@ func _make_map(hq_a: Vector2i = Vector2i(1, 1), hq_b: Vector2i = Vector2i(6, 6))
 # --- AC1: start_match sets active/round=1/in-progress/AP=income, one start-of-turn --
 
 func test_start_match_sets_active_player_round_1_in_progress_flat_ap_and_credit_income() -> void:
-	# Arrange — no outposts/tech, so credit_income is just base_income (10).
+	# Arrange — economy_tier 0, so credit_income is just base_income.
 	var map_def := _make_map()
 	# Act
 	var state: GameState = GameState.start_match(map_def, 0)
@@ -95,10 +95,11 @@ func test_start_match_sets_active_player_round_1_in_progress_flat_ap_and_credit_
 	assert_int(state.round_number).is_equal(1)
 	assert_int(state.match_status).is_equal(GameState.MatchStatus.IN_PROGRESS)
 	# AP is a flat per-turn budget (not income-driven); leftover 0 on a fresh state.
-	assert_int(state.per_player[0].current_ap).is_equal(10)
-	# Credit income is banked at step 4b (base_income, no outposts).
+	# ★ S6-01: derived from config, not restated -- the ×3 AP rescale broke the literal.
+	assert_int(state.per_player[0].current_ap).is_equal(Balance.economy.flat_ap_per_turn)
+	# Credit income is banked at step 4b (base_income at tier 0).
 	assert_int(state.per_player[0].current_credits).is_equal(Credits.credit_income(state, 0))
-	assert_int(state.per_player[0].current_credits).is_equal(10)
+	assert_int(state.per_player[0].current_credits).is_equal(Balance.economy.base_income)
 
 
 func test_start_match_with_player_1_starting_sets_active_player_1_and_its_economy() -> void:
@@ -111,7 +112,7 @@ func test_start_match_with_player_1_starting_sets_active_player_1_and_its_econom
 	assert_int(state.active_player).is_equal(1)
 	assert_int(state.starting_player).is_equal(1)
 	assert_int(state.round_number).is_equal(1)
-	assert_int(state.per_player[1].current_ap).is_equal(10)  # flat AP budget
+	assert_int(state.per_player[1].current_ap).is_equal(Balance.economy.flat_ap_per_turn)  # flat AP budget
 	assert_int(state.per_player[1].current_credits).is_equal(Credits.credit_income(state, 1))
 	# Player 0 never had a start-of-turn run — still at PlayerState's class defaults.
 	assert_int(state.per_player[0].current_ap).is_equal(0)
@@ -126,24 +127,27 @@ func test_end_turn_action_through_apply_action_carries_outgoing_ap_switches_acti
 	# round-trip (0 -> 1 -> 0), since only player 0's own reset applies their carry.
 	var state := GameStateFactory.make_state(2, 0)
 	state.starting_player = 0
-	state.per_player[0].current_ap = 4  # unspent, under the carryover cap (5)
+	# ★ S6-01: derived from config, not restated — the ×3 AP rescale broke the literals.
+	var cfg: EconomyConfig = Balance.economy
+	var carried: int = maxi(1, cfg.ap_carryover_cap - 2)  # strictly under the cap
+	state.per_player[0].current_ap = carried
 	# Act 1 — player 0 ends turn (0 -> 1), through the real pipeline.
 	var a0 := EndTurnAction.new()
 	a0.player = 0
 	var r0: ActionResult = state.apply_action(a0)
 	# Assert — outgoing AP is NOT zeroed (no discard); active switched; opponent got flat AP.
 	assert_bool(r0.ok).is_true()
-	assert_int(state.per_player[0].current_ap).is_equal(4)  # carried, not discarded
+	assert_int(state.per_player[0].current_ap).is_equal(carried)  # carried, not discarded
 	assert_int(state.active_player).is_equal(1)
-	assert_int(state.per_player[1].current_ap).is_equal(10)  # opponent flat reset (leftover 0)
+	assert_int(state.per_player[1].current_ap).is_equal(cfg.flat_ap_per_turn)  # opponent flat reset (leftover 0)
 	# Act 2 — player 1 ends turn (1 -> 0), so player 0's OWN reset runs.
 	var a1 := EndTurnAction.new()
 	a1.player = 1
 	var r1: ActionResult = state.apply_action(a1)
-	# Assert — player 0's reset consumed the carried 4: flat 10 + min(4, 5) = 14.
+	# Assert — player 0's reset consumed the carry: flat + min(carried, cap).
 	assert_bool(r1.ok).is_true()
 	assert_int(state.active_player).is_equal(0)
-	assert_int(state.per_player[0].current_ap).is_equal(14)  # carryover applied
+	assert_int(state.per_player[0].current_ap).is_equal(cfg.flat_ap_per_turn + mini(carried, cfg.ap_carryover_cap))
 
 
 # --- AC3: round increment fires only on loop-back to starting_player --------
@@ -231,17 +235,25 @@ func test_third_end_turn_wraps_round_to_3_on_second_loop_back() -> void:
 # --- AC4: step order 1->2->3->4, step-4 income observes step-3 completion ---
 
 func test_start_turn_step4b_credit_income_observes_step3_same_turn_completion() -> void:
-	# Arrange — one real Under-Construction outpost (1 turn remaining) for
-	# player 0; base_income=10, tier1 bonus=2/outpost, so it completing THIS
-	# turn's step 3 -> credit_income 12.
+	# ★ S6-01 (2026-08-24): this test's original subject -- "a structure completing in
+	# step 3 raises step 4b's income the same turn" -- no longer exists. Income is
+	# research-tiered and reads nothing from the board.
+	#
+	# What SURVIVES and is still worth pinning is the step ORDER itself (step 3 build
+	# timers run before step 4b income, and the completion event flows out), plus the
+	# regression that a completion does NOT move income. Inverted rather than deleted.
 	var state := GameStateFactory.make_state(2, 0)
 	_add_under_construction_outpost(state, 0)
 	# Act — run start_turn directly for player 0 (steps 1-4 in order).
 	var events: Array = state.start_turn(0)
-	# Assert — step 4b's Credit income already reflects the step-3 completion.
-	assert_int(state.per_player[0].current_credits).is_equal(12)
+	# Assert — income is base only; the step-3 completion contributed nothing to it.
+	# ★ S6-02: what banks is NET income (gross - upkeep), not gross. These fixtures own
+	# entities that now pay upkeep, so the expectation derives from Upkeep rather than
+	# from Credits alone. A test asserting gross here would be asserting a bug.
+	assert_int(state.per_player[0].current_credits) \
+		.is_equal(maxi(0, Balance.economy.base_income - Upkeep.total_upkeep(state, 0)))
 	# AP is flat (leftover 0), independent of the economy.
-	assert_int(state.per_player[0].current_ap).is_equal(10)
+	assert_int(state.per_player[0].current_ap).is_equal(Balance.economy.flat_ap_per_turn)
 	# The completion event flowed out of start_turn.
 	assert_int(events.size()).is_equal(1)
 	assert_bool(events[0] is StructureCompletedEvent).is_true()
@@ -262,7 +274,7 @@ func test_income_total_same_regardless_of_which_system_supplies_the_completion()
 	# start_turn to accept an orderable Array[Callable] for step 3 (see
 	# tech-debt).
 	var state_build_first := GameStateFactory.make_state(2, 0)
-	_add_under_construction_outpost(state_build_first, 0) # completes this turn -> +2 tier1 outpost bonus -> 12
+	_add_under_construction_outpost(state_build_first, 0) # completes this turn (no income effect since S6-01)
 	var events_a: Array = state_build_first.start_turn(0)
 
 	Research.reset()
@@ -271,12 +283,21 @@ func test_income_total_same_regardless_of_which_system_supplies_the_completion()
 	Research.queue_completion(0, 2) # bonus term set to 2, matching the outpost case
 	var events_b: Array = state_research_first.start_turn(0)
 
-	# Assert — both orderings/sources land on the same total Credit income (base 10 + 2);
-	# AP is flat 10 in both (economy-independent).
-	assert_int(state_build_first.per_player[0].current_credits).is_equal(12)
-	assert_int(state_research_first.per_player[0].current_credits).is_equal(12)
-	assert_int(state_build_first.per_player[0].current_ap).is_equal(10)
-	assert_int(state_research_first.per_player[0].current_ap).is_equal(10)
+	# ★ S6-01 (2026-08-24): both step-3 sources now contribute NOTHING to income --
+	# outposts are deleted from the curve and the Research stub's old bonus term is
+	# gone. The surviving, and still meaningful, claim is that income is identical
+	# regardless of what completed in step 3, which is a stronger statement of the
+	# same additive-and-interchangeable property the test was written for.
+	# AP is flat in both (economy-independent).
+	# ★ S6-02: what banks is NET (gross - upkeep). The build-first fixture owns a
+	# completing outpost that now pays upkeep; the research-first one owns nothing.
+	# Both are still derived from the same rule, which is the point of the test.
+	assert_int(state_build_first.per_player[0].current_credits) \
+		.is_equal(maxi(0, Balance.economy.base_income - Upkeep.total_upkeep(state_build_first, 0)))
+	assert_int(state_research_first.per_player[0].current_credits) \
+		.is_equal(maxi(0, Balance.economy.base_income - Upkeep.total_upkeep(state_research_first, 0)))
+	assert_int(state_build_first.per_player[0].current_ap).is_equal(Balance.economy.flat_ap_per_turn)
+	assert_int(state_research_first.per_player[0].current_ap).is_equal(Balance.economy.flat_ap_per_turn)
 	assert_int(events_a.size()).is_equal(1)
 	assert_int(events_b.size()).is_equal(1)
 
@@ -300,8 +321,14 @@ func test_step2_flag_reset_and_step3_timers_both_complete_before_step4_when_both
 	assert_bool(unit.has_attacked).is_false()
 	# Step 3 produced both completions; step 4b's Credit income observes both same turn.
 	assert_int(events.size()).is_equal(2)
-	assert_int(state.per_player[0].current_credits).is_equal(15) # 10 base + 2 outpost + 3 econ_tech
-	assert_int(state.per_player[0].current_ap).is_equal(10) # flat, economy-independent
+	# ★ S6-01: income is base + research tiers only. The outpost completing in step 3
+	# and the queued Research stub term BOTH contribute nothing -- income no longer
+	# reads the board. The step-3-before-step-4 ordering is still proven by the two
+	# completion events above.
+	# ★ S6-02: NET banks, not gross -- the outpost that just completed pays upkeep.
+	assert_int(state.per_player[0].current_credits) \
+		.is_equal(maxi(0, Balance.economy.base_income - Upkeep.total_upkeep(state, 0)))
+	assert_int(state.per_player[0].current_ap).is_equal(Balance.economy.flat_ap_per_turn) # flat, economy-independent
 
 
 # --- Step 2 dispatch: active player's entities reset, opponent's untouched --

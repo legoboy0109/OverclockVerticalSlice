@@ -38,10 +38,10 @@ func test_hq_template_matches_stat_table() -> void:
 	assert_bool(hq.producible_types.has(UnitTypes.SCOUT)).is_true()
 
 
-func test_economy_outpost_template_matches_stat_table() -> void:
-	var eo := StructureTypes.ECONOMY_OUTPOST
+func test_factory_template_matches_stat_table() -> void:
+	var eo := StructureTypes.FACTORY
 	assert_int(eo.hp).is_equal(8)
-	assert_int(eo.build_cost).is_equal(4)
+	assert_int(eo.build_cost).is_equal(400)  # ★ S6-02: ×100 Credit rescale
 	assert_int(eo.build_time).is_equal(1)
 	assert_int(eo.production_cap).is_equal(0)
 	assert_int(eo.producible_types.size()).is_equal(0)
@@ -49,10 +49,10 @@ func test_economy_outpost_template_matches_stat_table() -> void:
 	assert_bool(eo.can_counterattack).is_false()
 
 
-func test_production_outpost_template_matches_stat_table() -> void:
-	var po := StructureTypes.PRODUCTION_OUTPOST
+func test_barracks_template_matches_stat_table() -> void:
+	var po := StructureTypes.BARRACKS
 	assert_int(po.hp).is_equal(14)
-	assert_int(po.build_cost).is_equal(9)
+	assert_int(po.build_cost).is_equal(900)  # ★ S6-02: ×100 Credit rescale
 	assert_int(po.build_time).is_equal(2)
 	assert_int(po.production_cap).is_equal(4)
 	assert_int(po.defense).is_equal(0)
@@ -66,7 +66,7 @@ func test_production_outpost_template_matches_stat_table() -> void:
 func test_defensive_structure_template_matches_stat_table() -> void:
 	var ds := StructureTypes.DEFENSIVE_STRUCTURE
 	assert_int(ds.hp).is_equal(10)
-	assert_int(ds.build_cost).is_equal(6)
+	assert_int(ds.build_cost).is_equal(600)  # ★ S6-02: ×100 Credit rescale
 	assert_int(ds.build_time).is_equal(1)
 	assert_int(ds.production_cap).is_equal(0)
 	assert_int(ds.attack).is_equal(4)
@@ -79,7 +79,7 @@ func test_research_lab_template_matches_stat_table_and_is_structure_state() -> v
 	var lab := StructureTypes.RESEARCH_LAB
 	# Research-owned stat values (Rule 2b), B&P-owned lifecycle.
 	assert_int(lab.hp).is_equal(12)
-	assert_int(lab.build_cost).is_equal(8)
+	assert_int(lab.build_cost).is_equal(800)  # ★ S6-02: ×100 Credit rescale
 	assert_int(lab.build_time).is_equal(2)
 	assert_int(lab.production_cap).is_equal(0)
 	assert_int(lab.producible_types.size()).is_equal(0)
@@ -95,7 +95,7 @@ func test_template_read_twice_is_the_same_shared_object() -> void:
 	# Resource-ref identity: reading the registry const twice yields the SAME
 	# object (immutable, never re-instantiated) — ADR-0007's identity discipline.
 	assert_bool(StructureTypes.HQ == StructureTypes.HQ).is_true()
-	assert_object(StructureTypes.ECONOMY_OUTPOST).is_same(StructureTypes.ECONOMY_OUTPOST)
+	assert_object(StructureTypes.FACTORY).is_same(StructureTypes.FACTORY)
 
 
 # --- AC-lifecycle: BuildStatus enum + per-instance @export fields ------------
@@ -126,7 +126,7 @@ func test_per_instance_fields_are_export_carrying_survive_duplicate() -> void:
 	s.entity_id = 7
 	s.owner = 1
 	s.position = Vector2i(3, 4)
-	s.type = StructureTypes.PRODUCTION_OUTPOST
+	s.type = StructureTypes.BARRACKS
 	s.current_hp = 11
 	s.build_status = StructureState.BuildStatus.COMPLETED
 	s.build_turns_remaining = 2
@@ -137,7 +137,7 @@ func test_per_instance_fields_are_export_carrying_survive_duplicate() -> void:
 	assert_int(copy.entity_id).is_equal(7)
 	assert_int(copy.owner).is_equal(1)
 	assert_that(copy.position).is_equal(Vector2i(3, 4))
-	assert_object(copy.type).is_same(StructureTypes.PRODUCTION_OUTPOST)  # path-having template shared, not copied
+	assert_object(copy.type).is_same(StructureTypes.BARRACKS)  # path-having template shared, not copied
 	assert_int(copy.current_hp).is_equal(11)
 	assert_int(copy.build_status).is_equal(StructureState.BuildStatus.COMPLETED)
 	assert_int(copy.build_turns_remaining).is_equal(2)

@@ -45,7 +45,7 @@ func _make_controls(reader: GameStateReader, local_player: int) -> HudControlsWi
 func test_build_enabled_when_affordable_dimmed_when_not_but_always_opens() -> void:
 	var state := _make_state(0) # local player 0 active.
 	state.per_player[0].current_ap = 100 # affords the AP surcharge ...
-	state.per_player[0].current_credits = 100 # ... and the Credit main cost (dual-cost pivot).
+	state.per_player[0].current_credits = 100000 # ... and the Credit main cost (★ S6-02 ×100 rescale).
 	var reader := GameStateReader.new(state)
 	var controls := _make_controls(reader, 0)
 

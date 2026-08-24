@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://meov3m55ulbf"
-path="res://.godot/imported/struct_economy_outpost_rush_idle.png-c7268491954c5f9c302aa7756dfadab8.ctex"
+uid="uid://cguk7mhhitx45"
+path="res://.godot/imported/struct_factory_rush_destroyed.png-168496a980537ff02a3dab066c51d94b.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/art/structures/struct_economy_outpost_rush_idle.png"
-dest_files=["res://.godot/imported/struct_economy_outpost_rush_idle.png-c7268491954c5f9c302aa7756dfadab8.ctex"]
+source_file="res://assets/art/structures/struct_factory_rush_destroyed.png"
+dest_files=["res://.godot/imported/struct_factory_rush_destroyed.png-168496a980537ff02a3dab066c51d94b.ctex"]
 
 [params]
 

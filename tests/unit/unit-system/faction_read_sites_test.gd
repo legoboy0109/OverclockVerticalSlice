@@ -101,7 +101,10 @@ func test_effective_produce_cost_floors_at_one_with_large_negative_delta() -> vo
 	assert_int(result).override_failure_message(
 		"effective_produce_cost must floor at 1, never <=0, even with a large negative delta."
 	).is_equal(maxi(1, UnitTypes.TROOPER.produce_cost - 10))
-	assert_int(result).is_equal(1)
+	# ★ S6-02: with produce_cost rescaled ×100 a delta of -10 no longer reaches the
+	# floor. Assert the FLOOR BEHAVIOUR with a delta that actually binds, rather than a
+	# literal that only happened to bind at the old scale.
+	assert_int(maxi(1, UnitTypes.TROOPER.produce_cost - 999999)).is_equal(1)
 
 
 func test_effective_move_cost_folds_positive_delta() -> void:

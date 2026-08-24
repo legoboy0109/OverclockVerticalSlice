@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c4qja7pmdbnux"
-path="res://.godot/imported/struct_production_outpost_boom_idle.png-c4c519987f00d2903bebd4f4961b376e.ctex"
+path="res://.godot/imported/struct_barracks_boom_idle.png-74951d67ed5d854f36bc89000daf2735.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/art/structures/struct_production_outpost_boom_idle.png"
-dest_files=["res://.godot/imported/struct_production_outpost_boom_idle.png-c4c519987f00d2903bebd4f4961b376e.ctex"]
+source_file="res://assets/art/structures/struct_barracks_boom_idle.png"
+dest_files=["res://.godot/imported/struct_barracks_boom_idle.png-74951d67ed5d854f36bc89000daf2735.ctex"]
 
 [params]
 

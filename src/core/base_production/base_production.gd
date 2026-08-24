@@ -33,7 +33,7 @@
 ##
 ## Usage:
 ## [codeblock]
-## var tiles: Array[Vector2i] = BaseProduction.legal_build_tiles(state, 0, StructureTypes.ECONOMY_OUTPOST)
+## var tiles: Array[Vector2i] = BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
 ## var n: int = BaseProduction.completed_outpost_count(state, 0)
 ## [/codeblock]
 class_name BaseProduction
@@ -156,6 +156,15 @@ static func validate_build(state: GameState, action: BuildAction) -> int:
 	# Dual-cost (ADR-0006 pivot): effective_build_cost is the Credit main cost;
 	# build also spends a BUILD_AP_COST AP surcharge. Legal iff BOTH afford.
 	var cost: int = effective_build_cost(state, action.structure_type, player)
+	# ★ S6-02 (unit-upkeep.md UR-6): a player in deficit cannot expand. Checked
+	# BEFORE affordability so the reason names the real cause -- a deficit player
+	# may well be unable to afford the build too, but the deficit is why.
+	if state.per_player[player].in_deficit:
+		return Action.Reason.IN_DEFICIT
+	# ★ S6-03: per-structure maximum. Checked BEFORE affordability so the reason names the
+	# real cause -- a player at their maximum may also be broke, but the cap is why.
+	if not can_build_more(state, player, action.structure_type):
+		return Action.Reason.STRUCTURE_MAX_REACHED
 	if not Credits.can_afford(state, player, cost):
 		return Action.Reason.CANT_AFFORD_CREDITS
 	if not AP.can_afford(state, player, Balance.economy.build_ap_cost):
@@ -284,6 +293,12 @@ static func advance_build_timers(state: GameState, player: int) -> Array[Event]:
 		if e.owner != player or not (e is StructureState):
 			continue
 		var structure: StructureState = e
+		# ★ S6-07: tick the production cooldown here. This runs once per owner-turn,
+		# strictly before the economy step, which is exactly the cadence a per-turn timer
+		# wants — and it is real product code, unlike Structure.reset_turn_flags, which is
+		# currently satisfied by a TEST STUB (tests/helpers/stubs/structure_stub.gd).
+		if structure.production_cooldown_remaining > 0:
+			structure.production_cooldown_remaining -= 1
 		if structure.build_status != StructureState.BuildStatus.UNDER_CONSTRUCTION:
 			continue
 		structure.build_turns_remaining -= 1
@@ -297,13 +312,39 @@ static func advance_build_timers(state: GameState, player: int) -> Array[Event]:
 			events.append(evt)
 	return events
 
+## Counts how many of [param structure_type] [param player] currently holds, counting
+## [b]both[/b] completed and under-construction instances (S6-03).
+##
+## ★ Under-construction ones MUST count, or the maximum does nothing: a player could
+## queue any number simultaneously and only be stopped once they finished. This mirrors
+## `population-cap.md` PC-3's identical reasoning for queued units.
+##
+## Pure, O(n) over entities.
+static func structure_count(state: GameState, player: int, structure_type: StructureTypeDef) -> int:
+	var count: int = 0
+	for e: EntityState in state.entities():
+		if e.owner != player or not (e is StructureState):
+			continue
+		if (e as StructureState).type == structure_type:
+			count += 1
+	return count
+
+
+## Whether [param player] may build another [param structure_type] without exceeding its
+## [member StructureTypeDef.max_count]. A `max_count` of 0 means unlimited.
+static func can_build_more(state: GameState, player: int, structure_type: StructureTypeDef) -> bool:
+	if structure_type.max_count <= 0:
+		return true
+	return structure_count(state, player, structure_type) < structure_type.max_count
+
+
 
 ## The Credit-income contract (ADR-0006 forward-declared, TR-baseprod-007) —
 ## replaces [code]base_production_stub.gd[/code]'s test-controllable stand-in;
 ## [code]Credits.credit_income_breakdown[/code] calls this cross-system exactly as
 ## it called the stub (repointed from [code]AP.ap_income_breakdown[/code] by the
 ## pivot). Counts [param player]'s alive, owned structures where
-## [member StructureState.type] [code]==[/code] [constant StructureTypes.ECONOMY_OUTPOST]
+## [member StructureState.type] [code]==[/code] [constant StructureTypes.FACTORY]
 ## (Resource-reference identity, never a string/enum compare) AND
 ## [member StructureState.build_status] [code]==[/code]
 ## [constant StructureState.BuildStatus.COMPLETED]. Excludes: opponent-owned,
@@ -321,7 +362,7 @@ static func completed_outpost_count(state: GameState, player: int) -> int:
 		if e.owner != player or not (e is StructureState):
 			continue
 		var structure: StructureState = e
-		if structure.type == StructureTypes.ECONOMY_OUTPOST and structure.build_status == StructureState.BuildStatus.COMPLETED:
+		if structure.type == StructureTypes.FACTORY and structure.build_status == StructureState.BuildStatus.COMPLETED:
 			count += 1
 	return count
 
@@ -545,9 +586,24 @@ static func validate_produce(state: GameState, action: ProduceAction) -> int:
 		return Action.Reason.NOT_PRODUCIBLE
 	if producer.units_produced_this_turn >= effective_production_cap(state, producer, player):
 		return Action.Reason.PRODUCTION_CAP_REACHED
+	# ★ S6-04: the infantry cap (population-cap.md PC-2). Checked at PRODUCTION only --
+	# a player already above their cap (possible after a Barracks is destroyed, PC-6) is
+	# never forced to lose units, they simply cannot produce until back under.
+	if not Population.can_field(state, player, action.unit_type):
+		return Action.Reason.POPULATION_CAP_REACHED
+	# ★ S6-07: reinforcement rate limit (user decision 2026-08-24, "slower reinforcement").
+	# Distinct from PRODUCTION_CAP_REACHED, which is a per-turn throughput limit on a
+	# producer that is otherwise free to produce again next turn.
+	if producer.production_cooldown_remaining > 0:
+		return Action.Reason.PRODUCER_ON_COOLDOWN
 	# Dual-cost (ADR-0006 pivot): effective_produce_cost is the Credit main cost;
 	# produce also spends a PRODUCE_AP_COST AP surcharge. Legal iff BOTH afford.
 	var cost: int = Unit.effective_produce_cost(state, action.unit_type, player)
+	# ★ S6-02 (unit-upkeep.md UR-6): a player in deficit cannot expand. Checked
+	# BEFORE affordability so the reason names the real cause -- a deficit player
+	# may well be unable to afford the build too, but the deficit is why.
+	if state.per_player[player].in_deficit:
+		return Action.Reason.IN_DEFICIT
 	if not Credits.can_afford(state, player, cost):
 		return Action.Reason.CANT_AFFORD_CREDITS
 	if not AP.can_afford(state, player, Balance.economy.produce_ap_cost):
@@ -613,6 +669,9 @@ static func apply_produce(state: GameState, action: ProduceAction) -> Array[Even
 	assert(placed, "BaseProduction.apply_produce: Grid.place failed on a tile validate_produce accepted — legal_deploy_tiles/Grid desync.")
 
 	producer.units_produced_this_turn += 1
+	# ★ S6-07: arm the reinforcement cooldown. Set from the type so it stays data-driven
+	# and a value of 0 keeps the pre-S6-07 behaviour exactly.
+	producer.production_cooldown_remaining = producer.type.production_cooldown_turns
 
 	var evt := UnitDeployedEvent.new()
 	evt.entity_id = unit.entity_id

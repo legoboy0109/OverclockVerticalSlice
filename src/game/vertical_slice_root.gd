@@ -337,7 +337,7 @@ func _build_hud() -> void:
 ## default roster so the HUD affordability + the KEY_B build stay in lockstep).
 func _buildable_roster() -> Array[StructureTypeDef]:
 	return [
-		StructureTypes.ECONOMY_OUTPOST, StructureTypes.PRODUCTION_OUTPOST,
+		StructureTypes.FACTORY, StructureTypes.BARRACKS,
 		StructureTypes.DEFENSIVE_STRUCTURE, StructureTypes.RESEARCH_LAB,
 	]
 

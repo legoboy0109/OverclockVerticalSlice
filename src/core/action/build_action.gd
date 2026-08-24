@@ -18,7 +18,7 @@
 ## [codeblock]
 ## var action := BuildAction.new()
 ## action.player = state.active_player
-## action.structure_type = StructureTypes.ECONOMY_OUTPOST
+## action.structure_type = StructureTypes.FACTORY
 ## action.tile = Vector2i(3, 4)
 ## var result: ActionResult = state.apply_action(action)
 ## [/codeblock]

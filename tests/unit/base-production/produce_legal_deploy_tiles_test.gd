@@ -48,7 +48,7 @@ func _make_grid() -> GridState:
 # ever being the limiter, unless a test drives it lower. Both players' faction
 # is pinned to Neutral (make_state leaves it null; effective_produce_cost would
 # otherwise dereference a null FactionDef).
-func _make_state(current_ap: int = 100, current_credits: int = 100) -> GameState:
+func _make_state(current_ap: int = 100, current_credits: int = 100000) -> GameState:  # ★ S6-02: ×100 Credit rescale — 100 no longer funds a single unit
 	var state := GameStateFactory.make_state(2, 0)
 	state.grid = _make_grid()
 	for i: int in state.per_player.size():
@@ -101,7 +101,7 @@ func _make_produce_action(producer_id: int, unit_type: UnitTypeDef, tile: Vector
 func test_legal_deploy_tiles_returns_four_open_neighbours_in_canonical_index_order() -> void:
 	# Arrange -- a Completed Production Outpost alone on an open board.
 	var state := _make_state()
-	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.PRODUCTION_OUTPOST)
+	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.BARRACKS)
 	_place(state, producer)
 	# Act
 	var tiles := BaseProduction.legal_deploy_tiles(state, producer, UnitTypes.TROOPER)
@@ -118,7 +118,7 @@ func test_legal_deploy_tiles_returns_four_open_neighbours_in_canonical_index_ord
 func test_legal_deploy_tiles_excludes_only_the_occupied_neighbour() -> void:
 	# Arrange -- producer at open (5,5); its E neighbour (6,5) is occupied.
 	var state := _make_state()
-	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.PRODUCTION_OUTPOST)
+	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.BARRACKS)
 	_place(state, producer)
 	_place(state, _make_unit(2, 0, UnitTypes.SCOUT, Vector2i(6, 5)))
 	# Act
@@ -130,7 +130,7 @@ func test_legal_deploy_tiles_excludes_only_the_occupied_neighbour() -> void:
 func test_legal_deploy_tiles_excludes_only_the_impassable_neighbour() -> void:
 	# Arrange -- producer at open (5,5); its E neighbour (6,5) is Impassable terrain.
 	var state := _make_state()
-	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.PRODUCTION_OUTPOST)
+	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.BARRACKS)
 	_place(state, producer)
 	state.grid.terrain[state.grid.index(6, 5)] = GridState.Terrain.IMPASSABLE
 	# Act
@@ -143,7 +143,7 @@ func test_legal_deploy_tiles_excludes_only_the_offboard_neighbour() -> void:
 	# Arrange -- producer against the left edge at (0,5); its W neighbour (-1,5)
 	# is off-board. N/E/S stay in-bounds and open.
 	var state := _make_state()
-	var producer := _make_structure(1, 0, Vector2i(0, 5), StructureTypes.PRODUCTION_OUTPOST)
+	var producer := _make_structure(1, 0, Vector2i(0, 5), StructureTypes.BARRACKS)
 	_place(state, producer)
 	# Act
 	var tiles := BaseProduction.legal_deploy_tiles(state, producer, UnitTypes.TROOPER)
@@ -156,7 +156,7 @@ func test_legal_deploy_tiles_excludes_offboard_neighbours_at_high_board_edge() -
 	# off-board on the UPPER bounds (the low-edge test above only exercises the
 	# lower bound). N (11,10) and W (10,11) stay in-bounds and open.
 	var state := _make_state()
-	var producer := _make_structure(1, 0, Vector2i(GRID_SIZE - 1, GRID_SIZE - 1), StructureTypes.PRODUCTION_OUTPOST)
+	var producer := _make_structure(1, 0, Vector2i(GRID_SIZE - 1, GRID_SIZE - 1), StructureTypes.BARRACKS)
 	_place(state, producer)
 	# Act
 	var tiles := BaseProduction.legal_deploy_tiles(state, producer, UnitTypes.TROOPER)
@@ -173,7 +173,7 @@ func test_produce_spends_both_pools_creates_active_unit_on_tile_and_increments_c
 	# pools land at 0 after the commit.
 	var cost: int = UnitTypes.TROOPER.produce_cost
 	var state := _make_state(Balance.economy.produce_ap_cost, cost)
-	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.PRODUCTION_OUTPOST)
+	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.BARRACKS)
 	_place(state, producer)
 	var tile := Vector2i(6, 5)
 	var action := _make_produce_action(producer.entity_id, UnitTypes.TROOPER, tile)
@@ -228,8 +228,8 @@ func test_produce_type_not_in_producible_types_is_rejected_resource_ref_membersh
 func test_produce_at_production_cap_is_rejected_independently_of_ap() -> void:
 	# Arrange -- producer already at cap (4) but with plenty of AP to spare.
 	var state := _make_state(100)
-	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.PRODUCTION_OUTPOST)
-	producer.units_produced_this_turn = StructureTypes.PRODUCTION_OUTPOST.production_cap
+	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.BARRACKS)
+	producer.units_produced_this_turn = StructureTypes.BARRACKS.production_cap
 	_place(state, producer)
 	var tile := Vector2i(6, 5)
 	var action := _make_produce_action(producer.entity_id, UnitTypes.TROOPER, tile)
@@ -247,7 +247,7 @@ func test_produce_at_production_cap_is_rejected_independently_of_ap() -> void:
 func test_produce_with_no_empty_adjacent_tile_is_blocked_no_ap_spent() -> void:
 	# Arrange -- producer with all four neighbours occupied by other units.
 	var state := _make_state(100)
-	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.PRODUCTION_OUTPOST)
+	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.BARRACKS)
 	_place(state, producer)
 	_place(state, _make_unit(2, 0, UnitTypes.SCOUT, Vector2i(5, 4)))
 	_place(state, _make_unit(3, 0, UnitTypes.SCOUT, Vector2i(6, 5)))
@@ -268,7 +268,7 @@ func test_produce_with_no_empty_adjacent_tile_is_blocked_no_ap_spent() -> void:
 func test_produce_from_under_construction_producer_is_rejected_requires_completed() -> void:
 	# Arrange -- an Under-Construction Production Outpost.
 	var state := _make_state(100)
-	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.PRODUCTION_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION)
+	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.BARRACKS, StructureState.BuildStatus.UNDER_CONSTRUCTION)
 	_place(state, producer)
 	var tile := Vector2i(6, 5)
 	var action := _make_produce_action(producer.entity_id, UnitTypes.TROOPER, tile)
@@ -286,7 +286,7 @@ func test_produce_from_under_construction_producer_is_rejected_requires_complete
 func test_produce_commit_revalidation_rejects_when_producer_no_longer_completed() -> void:
 	# Arrange -- validate passes at preview time.
 	var state := _make_state(100)
-	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.PRODUCTION_OUTPOST)
+	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.BARRACKS)
 	_place(state, producer)
 	var tile := Vector2i(6, 5)
 	var action := _make_produce_action(producer.entity_id, UnitTypes.TROOPER, tile)
@@ -308,7 +308,7 @@ func test_produce_commit_revalidation_rejects_when_producer_no_longer_completed(
 func test_produce_commit_revalidation_rejects_when_deploy_tile_occupied_between_preview_and_commit() -> void:
 	# Arrange -- a legal deploy tile at preview time, then occupied before commit.
 	var state := _make_state(100)
-	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.PRODUCTION_OUTPOST)
+	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.BARRACKS)
 	_place(state, producer)
 	var tile := Vector2i(6, 5)
 	var action := _make_produce_action(producer.entity_id, UnitTypes.TROOPER, tile)
@@ -333,7 +333,7 @@ func test_produce_commit_revalidation_rejects_when_deploy_tile_occupied_between_
 func test_effective_production_cap_base_zero_stays_zero_no_producer_via_faction() -> void:
 	# Arrange -- an Economy Outpost (base production_cap 0, a non-producer).
 	var state := _make_state()
-	var econ := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.ECONOMY_OUTPOST)
+	var econ := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.FACTORY)
 	_place(state, econ)
 	# Act / Assert -- base 0 stays 0 (early-return branch); a non-producer is
 	# never promoted into a producer by any faction delta.
@@ -343,12 +343,12 @@ func test_effective_production_cap_base_zero_stays_zero_no_producer_via_faction(
 func test_effective_production_cap_base_positive_equals_base_under_neutral() -> void:
 	# Arrange -- producers with base cap >= 1 under Neutral (delta 0).
 	var state := _make_state()
-	var outpost := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.PRODUCTION_OUTPOST)
+	var outpost := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.BARRACKS)
 	var hq := _make_structure(2, 0, Vector2i(8, 8), StructureTypes.HQ)
 	_place(state, outpost)
 	_place(state, hq)
 	# Act / Assert -- max(1, base + 0) == base exactly (Neutral no-op).
-	assert_int(BaseProduction.effective_production_cap(state, outpost, 0)).is_equal(StructureTypes.PRODUCTION_OUTPOST.production_cap)
+	assert_int(BaseProduction.effective_production_cap(state, outpost, 0)).is_equal(StructureTypes.BARRACKS.production_cap)
 	assert_int(BaseProduction.effective_production_cap(state, hq, 0)).is_equal(StructureTypes.HQ.production_cap)
 
 
@@ -366,7 +366,7 @@ func test_produce_from_enemy_owned_producer_is_rejected_illegal_target() -> void
 	# Arrange -- a Completed Production Outpost owned by player 1, while player 0
 	# is active.
 	var state := _make_state()
-	var enemy_producer := _make_structure(1, 1, Vector2i(5, 5), StructureTypes.PRODUCTION_OUTPOST)
+	var enemy_producer := _make_structure(1, 1, Vector2i(5, 5), StructureTypes.BARRACKS)
 	_place(state, enemy_producer)
 	var action := _make_produce_action(enemy_producer.entity_id, UnitTypes.TROOPER, Vector2i(6, 5))
 	# Act / Assert -- the active player cannot produce from an enemy's structure.
@@ -379,7 +379,7 @@ func test_produce_from_non_producer_with_empty_producible_types_is_rejected() ->
 	# unit type (distinct from the HQ "wrong type" case). NOT_PRODUCIBLE fires
 	# before the cap gate (gate order: Completed -> producible -> cap).
 	var state := _make_state(100)
-	var econ := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.ECONOMY_OUTPOST)
+	var econ := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.FACTORY)
 	_place(state, econ)
 	var action := _make_produce_action(econ.entity_id, UnitTypes.TROOPER, Vector2i(6, 5))
 	# Act / Assert

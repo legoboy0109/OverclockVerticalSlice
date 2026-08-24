@@ -17,7 +17,7 @@
 extends Node
 
 const HQ: StructureTypeDef = preload("res://data/structures/hq.tres")
-const ECONOMY_OUTPOST: StructureTypeDef = preload("res://data/structures/economy_outpost.tres")
-const PRODUCTION_OUTPOST: StructureTypeDef = preload("res://data/structures/production_outpost.tres")
+const FACTORY: StructureTypeDef = preload("res://data/structures/factory.tres")
+const BARRACKS: StructureTypeDef = preload("res://data/structures/barracks.tres")
 const DEFENSIVE_STRUCTURE: StructureTypeDef = preload("res://data/structures/defensive_structure.tres")
 const RESEARCH_LAB: StructureTypeDef = preload("res://data/structures/research_lab.tres")

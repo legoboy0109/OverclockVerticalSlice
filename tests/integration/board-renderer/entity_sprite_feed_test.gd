@@ -156,13 +156,13 @@ func test_unit_texture_path_follows_the_naming_convention() -> void:
 
 func test_structure_texture_path_follows_the_naming_convention() -> void:
 	# Arrange — the multi-word display name must snake_case into the art token.
-	var outpost := _make_structure(1, 1, Vector2i.ZERO, StructureTypes.PRODUCTION_OUTPOST)
+	var outpost := _make_structure(1, 1, Vector2i.ZERO, StructureTypes.BARRACKS)
 
 	# Act
 	var path := EntitySpriteCatalog.texture_path(outpost, Factions.BOOM, "e")
 
 	# Assert
-	assert_str(path).is_equal("res://assets/art/structures/struct_production_outpost_boom_idle.png")
+	assert_str(path).is_equal("res://assets/art/structures/struct_barracks_boom_idle.png")
 	assert_bool(ResourceLoader.exists(path)).is_true()
 
 
@@ -490,8 +490,8 @@ func test_every_vs_type_now_has_shipped_art() -> void:
 		_make_unit(3, 0, Vector2i(2, 0), UnitTypes.HEAVY),
 		_make_unit(4, 0, Vector2i(3, 0), UnitTypes.SNIPER),
 		_make_structure(5, 0, Vector2i(4, 0), StructureTypes.HQ),
-		_make_structure(6, 0, Vector2i(5, 0), StructureTypes.PRODUCTION_OUTPOST),
-		_make_structure(7, 0, Vector2i(6, 0), StructureTypes.ECONOMY_OUTPOST),
+		_make_structure(6, 0, Vector2i(5, 0), StructureTypes.BARRACKS),
+		_make_structure(7, 0, Vector2i(6, 0), StructureTypes.FACTORY),
 		_make_structure(8, 0, Vector2i(7, 0), StructureTypes.DEFENSIVE_STRUCTURE),
 		_make_structure(9, 0, Vector2i(8, 0), StructureTypes.RESEARCH_LAB),
 	]
@@ -594,7 +594,7 @@ func test_structures_are_fitted_to_their_one_tile_footprint() -> void:
 	var feed := _make_feed(renderer)
 	var entities: Array[EntityState] = [
 		_make_structure(1, 0, Vector2i(2, 2), StructureTypes.HQ),
-		_make_structure(2, 1, Vector2i(5, 5), StructureTypes.PRODUCTION_OUTPOST),
+		_make_structure(2, 1, Vector2i(5, 5), StructureTypes.BARRACKS),
 	]
 
 	# Act

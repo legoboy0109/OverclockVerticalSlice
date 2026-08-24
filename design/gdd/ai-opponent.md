@@ -4,7 +4,7 @@
 > **AP** (flat tactical budget, 10/turn, capped carryover 5) pays for move/attack plus a small AP surcharge
 > on economic actions; **Credits** (banked, uncapped) pay the main cost of produce/build/research. The AI
 > scored every candidate on one "value-per-AP" scale (CR-3); with two currencies that scale is preserved by
-> converting Credits to AP-equivalent through a new tuning knob **`CREDIT_TO_AP_RATE`** (default **1.0** — Credit
+> converting Credits to AP-equivalent through a new tuning knob **`CREDIT_TO_AP_RATE`** (default ★ **0.01** since the 2026-08-24 rescale; was 1.0 — see the revision banner — Credit
 > costs equal the old AP costs, a natural 1:1 anchor). **Cost** becomes `ap_cost + credit_cost × CREDIT_TO_AP_RATE`;
 > every **value** term that was a sunk-cost or future-income figure is now denominated in Credits and multiplied by
 > the rate to land in AP-equivalent (`combat_value`, `production_value`, `economy_value`, `research_value`).
@@ -25,6 +25,80 @@
 > **Author**: user + agents; two-resource pivot propagation (main session)
 > **Last Updated**: 2026-08-05 (two-currency scoring pivot — AP-equivalent scale via `CREDIT_TO_AP_RATE`; dual affordability gate; banked-Credit saving)
 > **Implements Pillar**: Pillar 2 — Tempo Is the Skill (primary); upholds Pillar 1 (no AI-only shortcuts around AP **or Credits**) and Pillar 3 (acts through the same query/commit interfaces as the player)
+
+> ## ★★★ REVISION BANNER — economy re-based, and the rescale broke the currency anchor (2026-08-24)
+>
+> **Status: IN REVISION.** Two blocking corrections from `gdd-cross-review-2026-08-24.md`.
+>
+> ### ★★ B-5 — `CREDIT_TO_AP_RATE` must change from **1.0** to **0.01**
+>
+> This document's whole scoring scale rests on one stated anchor:
+>
+> > *"the pivot re-denominated the produce/build/research costs into Credits at the **same numbers**
+> > they used to cost in AP, [so] 1 Credit is worth exactly 1 old-AP of investment, giving a clean
+> > 1:1 anchor."*
+>
+> **The 2026-08-24 rescale destroyed that anchor.** All Credit quantities were multiplied by **100**;
+> AP *action costs* were deliberately left unchanged. So every Credit-denominated term —
+> `economy_value`, `research_value`, `production_value`, and `combat_value` via
+> `credit_cost_opponent_paid_for` — inflates **100×**, while the AP-native positional terms
+> (`POSITIONAL_VALUE_PER_TILE_CLOSED` ≈ 0.16, `PASS_THRESHOLD` 0.15) do not move at all.
+>
+> ★★ **Left at 1.0, the AI would value building and killing roughly one hundred times a march.**
+> That is not a rounding problem — it is *precisely the failure mechanism the PIVOT verdict
+> diagnosed* (economy outscoring manoeuvre by 12–20×), amplified by another two orders of magnitude.
+> Every AI-vs-AI regression run at rate 1.0 after the rescale would be measuring an agent that
+> cannot manoeuvre at all.
+>
+> **`CREDIT_TO_AP_RATE` therefore becomes 0.01** (range 0.005–0.02), which restores the ratio the
+> 1:1 anchor was chosen to express. ★ **Every worked example, output range and threshold margin in
+> this document was computed at rate 1.0 against ×1 Credits, and all of them still hold** — because
+> `0.01 × 100 = 1`, the products are unchanged. **The numbers below are correct; only the constant
+> that produces them moved.**
+>
+> ★ **General lesson, recorded because it will recur:** a "purely proportional" rescale is *not*
+> safe for any constant that **converts between two units scaled by different factors.** Two such
+> constants have now been caught — this one, and `UPKEEP_DIVISOR` (`unit-upkeep.md`), whose `ceil`
+> silently drifted. Audit conversion factors and rounding functions on every future rescale.
+>
+> ### ★ B-1 — `economy_value` scores a structure that no longer exists
+>
+> The Economy Outpost is **deleted** (`base-production.md`, 2026-08-24) and income is now driven by
+> **research tiers** (`ap-economy.md`, `research-tech.md`). `economy_value` below is titled *"value
+> of building an Economy Outpost"* and its `marginal_credit_income(t)` reads the deleted
+> `OUTPOST_BONUS_TIER1/TIER2` curve.
+>
+> **The projection machinery is unchanged and still correct** — `ECONOMY_HORIZON` (6),
+> `ECONOMY_DECAY` (0.85) and the decayed-sum shape all survive. **Only the subject changes:**
+>
+> ```
+> economy_value(action) = raw_immediate_value
+>                       + Σ_{t=1..ECONOMY_HORIZON} marginal_credit_income(t)
+>                                                  × CREDIT_TO_AP_RATE × ECONOMY_DECAY^t
+>
+> where, for an economy-tier research action:
+>   marginal_credit_income(t) = ECON_TIER_BONUS (500)   for every t, flat and permanent
+>   raw_immediate_value       = 0                        (the tier takes research_time to complete)
+> ```
+>
+> **Worked, at the corrected rate:** a tier contributes +500 Credits/turn.
+> `Σ_{t=1..6} 500 × 0.01 × 0.85^t = 5 × 3.6297 ≈ **18.1** AP-equivalent`, against a `combat_value`
+> range topping out near 13.5. ★ **An economy tier now scores above a good kill but within the same
+> order of magnitude** — which is the relationship the design wants, and is what the old
+> outpost-at-7.06 figure expressed before the economy changed shape.
+>
+> ★ **A consequence worth stating: there are only three economy actions in the whole match.** Under
+> the old model the AI could build outposts indefinitely, and `MAX_ECONOMY_INVESTMENTS_PER_TURN`
+> existed as a back-up guard against runaway booming. With a finite three-tier tree that guard is
+> **largely moot** — the AI simply runs out of economy actions, which is the PIVOT fix working at
+> the scoring layer as well as the rules layer.
+>
+> ### Also stale in this document, non-blocking
+>
+> - `completed_outpost_count()` in CR-4's query list and the Base & Production interaction row — the query has no subject. Replace with the research-tier state.
+> - `combat_value`'s worst-case *"a full-hp kill on a Production Outpost: 9 × 1.0 × (14/14)"* — the structure is now the **Barracks** and its cost is 600, not 9.
+> - The `MAX_ECONOMY_INVESTMENTS_PER_TURN` rationale (see above).
+> - ★ **OQ-15 (`faction-identity.md`) remains the larger open item:** none of this addresses the fact that the AI cannot play six different armies on one set of weights.
 
 ## Overview
 
@@ -179,7 +253,7 @@ production_value(unit_type, deploy_tile) =
 | `unit_type` | enum | {scout, trooper, heavy, sniper} | The candidate unit to produce |
 | `deploy_tile` | tile ref | any `legal_deploy_tile` | Where the new unit would be placed |
 | `produce_cost(unit_type)` | int | 2–7 | The unit's own registered **Credit** cost (Scout 2, Trooper 4, Heavy 7, Sniper 5) — a produced unit is a stored asset, so its value anchors directly to this (× `CREDIT_TO_AP_RATE` for AP-equivalent), not a separately-invented "power score" |
-| `CREDIT_TO_AP_RATE` | float | 0.5–2.0 (default 1.0) | AI-internal exchange rate valuing 1 Credit in AP-equivalent terms — converts the Credit `produce_cost` anchor onto the shared AP scale (Tuning Knobs) |
+| `CREDIT_TO_AP_RATE` | float | ★ 0.005–0.02 (default **0.01**) | AI-internal exchange rate valuing 1 Credit in AP-equivalent terms — converts the Credit `produce_cost` anchor onto the shared AP scale (Tuning Knobs) |
 | `REACHABILITY_MULTIPLIER` | float | {0.9, 1.0, 1.1} | Small board-context adjustment: **1.1** if the unit, from `deploy_tile`, is within `attack_range + soft_move_cap` reach of at least one live enemy unit or structure in this turn's clone (can contribute to the active fight immediately); **1.0** if it cannot reach any enemy yet but the two sides are **in contact** — *operationally defined* as: some friendly entity and some enemy entity are each within the other's `attack_range + soft_move_cap` reach (the sides can engage next turn); **0.9** if no side is in contact (isolated / opening-turn production). This three-way test is deterministic and constructable by a tester from board state alone — no vague "active fight" judgment. |
 | `production_value` | float | 1.8 – 7.7 | AP-equivalent value of producing this unit (at `CREDIT_TO_AP_RATE = 1.0`; scales with the rate) |
 
@@ -189,7 +263,12 @@ production_value(unit_type, deploy_tile) =
 
 ---
 
-### `economy_value` — AP-equivalent value of building an Economy Outpost
+### `economy_value` — AP-equivalent value of an economy investment
+
+> ⚠ **The prose and symbol table below are pre-2026-08-24 and describe the deleted Economy Outpost.
+> The corrected formula and its worked example are in the revision banner at the top of this
+> document. Retained here until `/propagate-design-change` rewrites the section, so the reasoning
+> behind `ECONOMY_HORIZON` and `ECONOMY_DECAY` is not lost.**
 
 **Expression:**
 
@@ -205,7 +284,7 @@ economy_value(build_action) =
 | `raw_immediate_value` | float | fixed 0 | An Economy Outpost has `build_time = 1`, so it produces no immediate board effect the turn it's started — always 0 for this action type |
 | `ECONOMY_HORIZON` | int | fixed 6 | Number of future turns of projected income counted toward this build's value |
 | `marginal_credit_income(t)` | float | 0–3 | The `credit_income` gain this outpost contributes at future turn `t`, per AP & Credits Economy's tiered formula (`OUTPOST_BONUS_TIER1`=2 for this player's outposts 1–4, `OUTPOST_BONUS_TIER2`=1 for 5+, plus `ECONOMY_TECH_INCOME_BONUS`=1 if the player already has Economy Tech and this outpost is within `ECONOMY_TECH_TIER_THRESHOLD`). **Credit** income now, × `CREDIT_TO_AP_RATE` in the sum above |
-| `CREDIT_TO_AP_RATE` | float | 0.5–2.0 (default 1.0) | Converts the projected Credit-income stream to AP-equivalent (Tuning Knobs) |
+| `CREDIT_TO_AP_RATE` | float | ★ 0.005–0.02 (default **0.01**) | Converts the projected Credit-income stream to AP-equivalent (Tuning Knobs) |
 | `ECONOMY_DECAY` | float | fixed 0.85 | Per-turn discount applied to future income — later turns count for progressively less, reflecting that value realized sooner is worth more in a tempo race |
 | `economy_value` | float | 0 – ~7.1 | AP-equivalent value of this build (at `CREDIT_TO_AP_RATE = 1.0`) — now *varies* with the outpost's actual marginal income (no cap), so the AI can rank a strong buy above a weak one (see worked example) |
 
@@ -245,7 +324,7 @@ Reuses `ECONOMY_DECAY` from `economy_value` (one shared per-turn discount curve)
 | `research_time(tech)` | int | 3–4 | Turns before the tech's effect goes live (Attack 3, Defense 4, Economy 3) — delay-shifts the summation's start index |
 | `TECH_VALUE_HORIZON` | int | fixed 10 | Horizon for **permanent** army-wide buffs (Attack, Defense) — longer than `ECONOMY_HORIZON` because a permanent stat buff keeps paying for the whole remaining game, not just a 6-turn window |
 | `marginal_tech_value(tech, t)` | float | 0–6 | Per-turn AP-equivalent value once live. For Attack/Defense Tech: `(RESEARCH_ATK_BONUS or DEFENSE_TECH_BONUS) / HP_PER_AP × ATTACKS_LANDED_PER_TURN_ESTIMATE` — a combat value already in AP-equivalent (**no** `CREDIT_TO_AP_RATE` factor). For Economy Tech: `ECONOMY_TECH_INCOME_BONUS × min(projected_completed_outposts, ECONOMY_TECH_TIER_THRESHOLD) × CREDIT_TO_AP_RATE` — `ECONOMY_TECH_INCOME_BONUS` is now a **Credit**/turn bonus (reusing AP & Credits Economy's income model), so it is converted; `projected_completed_outposts` = the player's completed **plus under-construction** Economy Outposts (so researching Economy Tech *while a boom is in flight*, the sequencing base-production.md calls the better play, is not wrongly scored at 0) |
-| `CREDIT_TO_AP_RATE` | float | 0.5–2.0 (default 1.0) | Converts Economy Tech's projected Credit-income term (and the Credit `research_cost` in the denominator) to AP-equivalent; does **not** apply to the Attack/Defense combat term (Tuning Knobs) |
+| `CREDIT_TO_AP_RATE` | float | ★ 0.005–0.02 (default **0.01**) | Converts Economy Tech's projected Credit-income term (and the Credit `research_cost` in the denominator) to AP-equivalent; does **not** apply to the Attack/Defense combat term (Tuning Knobs) |
 | `HP_PER_AP` | float | fixed 1.5 | Global hp-to-AP exchange rate (also used by `combat_value` via `preview_damage` economics) — anchored to the roster's best hp/AP unit efficiency (Trooper, Scout at 1.5). This is the hp↔AP anchor for the *combat* buff value and is unaffected by the Credit split |
 | `ATTACKS_LANDED_PER_TURN_ESTIMATE` | float | 0.5–2 (default 1.5) | A stated, auditable assumption for how many attacks this player lands per turn on average — converts a flat attack-stat buff into a per-turn AP-equivalent rate. **Set to a defensible mid-range 1.5** ("about three attacks every two turns"), *not* reverse-engineered to clear a threshold (the earlier 1.8 was — see the revised tuning flag below). Still needs validation against real playtest attack-frequency data (OQ-2) |
 | `projected_completed_outposts` | int | 0–~12 | The Economy-Tech-researching player's completed **+ under-construction** Economy Outposts, read live — the `n` fed to Economy Tech's `marginal_tech_value` |
@@ -292,7 +371,7 @@ where base_score(action) = ap_equivalent_value(action) / ap_equivalent_cost(acti
 | `action` | action ref | any candidate from CR-2's enumeration | The candidate action being scored this loop iteration |
 | `ap_equivalent_value(action)` | float | 0 – ~13.5 | Verb-dispatched value from the four formulas above (Credit-denominated value terms already × `CREDIT_TO_AP_RATE`) |
 | `ap_equivalent_cost(action)` | float | 1 – 11 | `action.ap_cost + action.credit_cost × CREDIT_TO_AP_RATE`. `ap_cost`: `attack_cost`=2, `DEFENSIVE_ATTACK_COST`=1, `move_path_cost` (all AP-native, `credit_cost` 0), or the economic AP surcharge `PRODUCE_AP_COST`=1 / `BUILD_AP_COST`=2 / the tech's `ap_surcharge` (base `RESEARCH_AP_COST` = 1, VS techs = 1). `credit_cost`: 0 for move/attack, or the Credit `produce_cost`/`build_cost`/`research_cost` for economic actions |
-| `CREDIT_TO_AP_RATE` | float | 0.5–2.0 (default 1.0) | The AI's Credit→AP exchange rate applied to both the value terms and the cost's Credit leg (Tuning Knobs) |
+| `CREDIT_TO_AP_RATE` | float | ★ 0.005–0.02 (default **0.01**) | The AI's Credit→AP exchange rate applied to both the value terms and the cost's Credit leg (Tuning Knobs) |
 | `is_immediately_lethal(action)` | bool | {true, false} | True only for an attack where `is_kill = true` on `combat_value`'s inner computation (CR-7's trigger condition) |
 | `LETHAL_FLOOR_BONUS` | float | 2.5–5 (default 3.5) | Fixed score floor guaranteeing a finishing blow is never outscored by a marginal economy play, per CR-7. Must stay above the highest ordinary non-lethal `action_score` the roster can produce — which, since `economy_value` is now **uncapped** (2026-07-22 decoupling), is the first-outpost economy build, whose `action_score` **ceiling scales with `ECONOMY_HORIZON` and `ECONOMY_DECAY`**: `economy_ceiling_score = OUTPOST_BONUS_TIER1 × Σ_{t=1}^{ECONOMY_HORIZON} ECONOMY_DECAY^t / economy_outpost.build_cost`. At defaults this is ≈1.77; at safe-range maxima (`ECONOMY_HORIZON`=10, `ECONOMY_DECAY`=0.95) it rises to ≈3.81. **Invariant: `LETHAL_FLOOR_BONUS` must exceed `economy_ceiling_score` for the current `ECONOMY_HORIZON`/`ECONOMY_DECAY`** — if either of those knobs is raised, recompute the ceiling and raise `LETHAL_FLOOR_BONUS` to stay above it, or CR-7 silently fails (a non-lethal build outscores a finishing blow). See the same-named row and the cross-knob note in Tuning Knobs |
 | `action_score` | float | 0 – ~7 (uncapped upward in theory, bounded in practice by roster stats and `LETHAL_FLOOR_BONUS`) | The one shared number CR-2's commit step compares across every candidate, of every verb |
@@ -392,7 +471,7 @@ loop continues while max(action_score(candidate) for candidate in legal_affordab
 | Knob | Default | Safe range | What it affects / what breaks at extremes |
 |---|---|---|---|
 | `HP_PER_AP` | 1.5 | 1.0–2.0 | Global hp-to-AP exchange rate anchoring `combat_value` and `research_value`'s Attack/Defense Tech term. Lower values bias the AI toward booming (undervalues combat); higher values bias it toward rushing (overvalues combat). 1.5 matches the roster's best hp/AP efficiency (Trooper, Scout). Unaffected by the Credit split — it is the hp↔AP anchor, distinct from `CREDIT_TO_AP_RATE`'s Credit↔AP anchor. |
-| `CREDIT_TO_AP_RATE` | 1.0 | 0.5–2.0 | **New (two-currency pivot, 2026-08-05).** The AI's internal exchange rate valuing **1 Credit in AP-equivalent terms** — the single knob that reconciles the two-resource economy back onto CR-3's one scale. Multiplies **every Credit-denominated cost and value**: the Credit leg of `ap_equivalent_cost` (produce/build/research prices), and the sunk-cost / future-income value terms in `combat_value`, `production_value`, `economy_value`, and Economy-Tech `research_value`. Default **1.0** because the pivot re-denominated produce/build/research costs into Credits at the *same numbers* they cost in AP, giving a natural 1:1 anchor at which every worked example reproduces the single-pool numbers. **If too high** (>1): the AI over-values Credits — it over-prioritizes economy/production and buildings-worth kills, hoards tempo, and (critically) its economy `action_score` ceiling rises, so **the `LETHAL_FLOOR_BONUS` invariant must be re-checked** (the AP-equivalent economy ceiling is `economy_ceiling_score × CREDIT_TO_AP_RATE`; at rate 2.0 the ≈1.765 ceiling becomes ≈3.53, brushing the 3.5 floor). **If too low** (<1): the AI under-values Credits — it under-invests in economy/tech and over-fights, plausibly "raced by an accountant"'s opposite (a combat-forward AI that never booms). Playtest-tune (OQ-11); if moved off 1.0, re-validate the lethal-floor invariant and the Defense-Tech pass margin. |
+| `CREDIT_TO_AP_RATE` | ★ **0.01** *(was 1.0; corrected for the ×100 Credit rescale — see revision banner)* | 0.5–2.0 | **New (two-currency pivot, 2026-08-05).** The AI's internal exchange rate valuing **1 Credit in AP-equivalent terms** — the single knob that reconciles the two-resource economy back onto CR-3's one scale. Multiplies **every Credit-denominated cost and value**: the Credit leg of `ap_equivalent_cost` (produce/build/research prices), and the sunk-cost / future-income value terms in `combat_value`, `production_value`, `economy_value`, and Economy-Tech `research_value`. Default **1.0** because the pivot re-denominated produce/build/research costs into Credits at the *same numbers* they cost in AP, giving a natural 1:1 anchor at which every worked example reproduces the single-pool numbers. **If too high** (>1): the AI over-values Credits — it over-prioritizes economy/production and buildings-worth kills, hoards tempo, and (critically) its economy `action_score` ceiling rises, so **the `LETHAL_FLOOR_BONUS` invariant must be re-checked** (the AP-equivalent economy ceiling is `economy_ceiling_score × CREDIT_TO_AP_RATE`; at rate 2.0 the ≈1.765 ceiling becomes ≈3.53, brushing the 3.5 floor). **If too low** (<1): the AI under-values Credits — it under-invests in economy/tech and over-fights, plausibly "raced by an accountant"'s opposite (a combat-forward AI that never booms). Playtest-tune (OQ-11); if moved off 1.0, re-validate the lethal-floor invariant and the Defense-Tech pass margin. |
 | `KILL_DENIAL_RATE` | 0.5 | 0.3–0.7 | Fraction of a kill victim's sunk **Credit** cost credited as bonus `combat_value` (× `CREDIT_TO_AP_RATE`). Too low undervalues finishing blows relative to trading; too high over-prioritizes low-value kills (e.g. chasing a fleeing Scout) over higher-ROI economy plays. |
 | `ECONOMY_HORIZON` | 6 turns | 4–10 | Future turns of **Credit** income counted toward `economy_value` and Economy Tech's `research_value`. Too short undervalues booming (combat-forward AI); too long over-weights it. (Permanent Attack/Defense buffs use `TECH_VALUE_HORIZON` instead, not this.) **⚠ Cross-knob invariant:** raising this raises `economy_value`'s uncapped ceiling — re-verify `LETHAL_FLOOR_BONUS` still exceeds the *AP-equivalent* `economy_ceiling_score × CREDIT_TO_AP_RATE` (formula in that row) or CR-7 breaks. |
 | `TECH_VALUE_HORIZON` | 10 turns | 6–15 | Horizon for permanent army-wide buffs (Attack/Defense Tech) — longer than `ECONOMY_HORIZON` because a permanent buff pays for the whole remaining game. Too short (≤7) re-breaks Defense Tech (pushes it back below `PASS_THRESHOLD`); too long over-weights teching vs. combat/economy. |
@@ -490,4 +569,4 @@ Each criterion is independently verifiable by a QA tester without reading this G
 | OQ-8 | **One-ply baitability (ship-and-validate, per creative-director).** The greedy density model has no lookahead, so a human can dangle a cheap unit to lure an AI unit into a losing next-turn trade. Deliberately **not** fixed for the VS — the simple heuristic is the stated scope, and the new retreat term blunts the worst cases *for already-wounded units*. **Caveat (2026-07-22 re-review):** `SETUP_ADVANCE_BONUS` is itself a *new* source of baitable positions — it actively pulls a **healthy** unit toward tiles that threaten next turn, which is exactly the tile profile a bait works from, and retreat only triggers after the unit is already wounded (one turn too late to have prevented a bad trade). So the new terms blunt some cases and mildly widen others; net baitability remains an accepted VS risk. If playtest shows the exploit is discovered fast and collapses the "credible rival" feel, the scoped fix is a bounded 1-ply counter-check on the top few candidates (simulate the opponent's single best counter, discount a candidate that creates a clearly-losing exchange) — a heuristic filter, not full search. | game-designer | First playtest; implement the 1-ply filter only if the exploit proves corrosive |
 | OQ-9 | **AC-34's win-rate gate depends on infrastructure with no owning artifact.** AC-34 (win-rate band vs. a reference opponent) needs a *designated skill-band reference opponent build* and a *match-running harness with a stated match count* — neither exists anywhere in this corpus, and OQ-4 puts difficulty tiers out of scope. This is a heavier, differently-shaped dependency than the query/`apply_action` test seams AC-5/6b/24 need (those are narrow seams inside the existing AI; this needs a whole second AI-adjacent artifact). AC-34 therefore remains **aspirational Config/Data-advisory** — it is not scaffoldable or runnable today and must not be counted among the "testable now" ACs. | game-designer / qa-lead | Before AC-34 can be *executed* (not before implementation) — define the reference opponent + harness |
 | OQ-10 | **Wounded-unit oscillation is closed in-doc, but the exclusion is a blunt instrument.** The advance/retreat oscillation risk (a wounded unit fleeing to just outside threat range, then being scored back toward the front next turn) is resolved by the Edge-Cases wounded-unit exclusion (a wounded, threatened unit generates *only* a retreat candidate). This is deliberately coarse — it can also suppress a *correct* aggressive move by a wounded-but-valuable unit (e.g. a wounded Sniper that should still take a free lethal shot). Move+attack combos and lethal attacks are unaffected (only bare advance/`SETUP_ADVANCE` candidates are excluded), so the common case is safe, but validate in playtest that the exclusion doesn't make wounded units read as passive. | ai-programmer / game-designer | First playtest |
-| OQ-11 | **`CREDIT_TO_AP_RATE` tuning + lethal-floor re-validation (two-currency pivot, 2026-08-05).** The new `CREDIT_TO_AP_RATE` (default 1.0) is the single knob reconciling the AP/Credit split onto CR-3's one scale. 1.0 is a *derived anchor* (Credit costs equal the old AP costs), not a playtest-tuned value: whether the AI should value 1 Credit as *exactly* 1 AP once the economy actually accumulates a war chest is an open empirical question — banking may make a saved Credit worth more or less than a flat AP in felt play. **Two coupled re-validations are mandatory before this leaves default:** (1) the **lethal-floor invariant** — `LETHAL_FLOOR_BONUS` must exceed the AP-equivalent economy ceiling `economy_ceiling_score × CREDIT_TO_AP_RATE`; at rate 1.0 this holds (≈1.77 < 3.5), but the invariant is now *linear in the rate*, so a rate raised above ≈1.98 violates it at default `LETHAL_FLOOR_BONUS` (AC-38 guards this) and any rate change requires recomputing the ceiling and possibly raising the floor. (2) the **Defense-Tech pass margin** — the pivot's research `ap_surcharge` (base `RESEARCH_AP_COST` = 1, VS techs = 1) leaves Defense Tech clearing `PASS_THRESHOLD` by ~11.7% (0.1675 vs 0.15, AC-17a) — a healthy buffer, but still the doc's tightest research margin, so a rate that lowers Economy-Tech/economy scores, a `PASS_THRESHOLD` nudge above ~0.167, or any tech raising its `ap_surcharge` above the base 1 (a Research-owned per-tech option) can push a tech below the bar. *(Note: had the surcharge stayed at the earlier base 2, this margin would be only ~2.4% — the base-1 decision is what makes it comfortable.)* Tune `CREDIT_TO_AP_RATE` against the S4-05-style tempo playtest jointly with AP & Credits Economy's own pivot knobs (`FLAT_AP_PER_TURN`, the `*_AP_COST` surcharges), and re-run the lethal-floor + Defense-Tech checks whenever it, `ECONOMY_HORIZON`, `ECONOMY_DECAY`, or any tech's `ap_surcharge` moves. | ai-programmer / economy-designer / game-designer | First tempo playtest (S4-05); before shipping any non-1.0 rate |
+| OQ-11 | ★★ **RE-ANCHORED 2026-08-24 — the default is now 0.01, not 1.0** (see the revision banner: the ×100 Credit rescale broke the 1:1 derived anchor, and 0.01 restores the exact ratio the anchor expressed). **Both coupled re-validations below were re-checked at the new rate and BOTH STILL HOLD**, because `0.01 × 100 = 1` leaves every product unchanged: (1) the **lethal-floor invariant** — an economy-tier action now scores `18.1 / (1,000×0.01 + 1) = 18.1/11 ≈ **1.65**`, comfortably under `LETHAL_FLOOR_BONUS` 3.5 (the old outpost figure was ≈1.77, so the headroom actually *widened*); (2) the **Defense-Tech pass margin** at ~0.1675 vs `PASS_THRESHOLD` 0.15 is unchanged, since both terms scale together. ★ The invariant remains **linear in the rate**, so it is now violated above ≈ **0.0198** rather than ≈1.98 — the same 198× headroom, expressed in the new units. **Original text follows.** The `CREDIT_TO_AP_RATE` (was default 1.0) is the single knob reconciling the AP/Credit split onto CR-3's one scale. 1.0 is a *derived anchor* (Credit costs equal the old AP costs), not a playtest-tuned value: whether the AI should value 1 Credit as *exactly* 1 AP once the economy actually accumulates a war chest is an open empirical question — banking may make a saved Credit worth more or less than a flat AP in felt play. **Two coupled re-validations are mandatory before this leaves default:** (1) the **lethal-floor invariant** — `LETHAL_FLOOR_BONUS` must exceed the AP-equivalent economy ceiling `economy_ceiling_score × CREDIT_TO_AP_RATE`; at rate 1.0 this holds (≈1.77 < 3.5), but the invariant is now *linear in the rate*, so a rate raised above ≈1.98 violates it at default `LETHAL_FLOOR_BONUS` (AC-38 guards this) and any rate change requires recomputing the ceiling and possibly raising the floor. (2) the **Defense-Tech pass margin** — the pivot's research `ap_surcharge` (base `RESEARCH_AP_COST` = 1, VS techs = 1) leaves Defense Tech clearing `PASS_THRESHOLD` by ~11.7% (0.1675 vs 0.15, AC-17a) — a healthy buffer, but still the doc's tightest research margin, so a rate that lowers Economy-Tech/economy scores, a `PASS_THRESHOLD` nudge above ~0.167, or any tech raising its `ap_surcharge` above the base 1 (a Research-owned per-tech option) can push a tech below the bar. *(Note: had the surcharge stayed at the earlier base 2, this margin would be only ~2.4% — the base-1 decision is what makes it comfortable.)* Tune `CREDIT_TO_AP_RATE` against the S4-05-style tempo playtest jointly with AP & Credits Economy's own pivot knobs (`FLAT_AP_PER_TURN`, the `*_AP_COST` surcharges), and re-run the lethal-floor + Defense-Tech checks whenever it, `ECONOMY_HORIZON`, `ECONOMY_DECAY`, or any tech's `ap_surcharge` moves. | ai-programmer / economy-designer / game-designer | First tempo playtest (S4-05); before shipping any non-1.0 rate |

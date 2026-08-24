@@ -53,7 +53,7 @@ func _make_grid() -> GridState:
 
 # Both players Neutral (produce's Unit.effective_produce_cost dereferences
 # state.faction_of(owner)); active_player 0 (the acting player for every verb here).
-func _make_state(current_ap: int = 20, current_credits: int = 20) -> GameState:
+func _make_state(current_ap: int = 20, current_credits: int = 20000) -> GameState:  # ★ S6-02: ×100 Credit rescale
 	var state := GameStateFactory.make_state(2, 0)
 	state.grid = _make_grid()
 	for i: int in state.per_player.size():
@@ -223,7 +223,7 @@ func test_cross_clone_build_yields_field_wise_equal_states() -> void:
 	_place(source, _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5)))
 	var a: GameState = source.clone()
 	var b: GameState = source.clone()
-	var action := _make_build_action(StructureTypes.ECONOMY_OUTPOST, Vector2i(6, 5))
+	var action := _make_build_action(StructureTypes.FACTORY, Vector2i(6, 5))
 	# Act -- identical build on each clone.
 	BaseProduction.apply_build(a, action)
 	BaseProduction.apply_build(b, action)
@@ -235,7 +235,7 @@ func test_cross_clone_build_yields_field_wise_equal_states() -> void:
 func test_cross_clone_produce_yields_field_wise_equal_states() -> void:
 	# Arrange -- a Completed Production Outpost; two clones.
 	var source := _make_state()
-	_place(source, _make_structure(1, 0, Vector2i(5, 5), StructureTypes.PRODUCTION_OUTPOST))
+	_place(source, _make_structure(1, 0, Vector2i(5, 5), StructureTypes.BARRACKS))
 	var a: GameState = source.clone()
 	var b: GameState = source.clone()
 	var action := _make_produce_action(1, UnitTypes.TROOPER, Vector2i(6, 5))
@@ -252,7 +252,7 @@ func test_cross_clone_cancel_yields_field_wise_equal_states() -> void:
 	# Arrange -- an Under-Construction structure to cancel; two clones (AP 0 so
 	# the refund credit is observable and must match).
 	var source := _make_state(0)
-	_place(source, _make_structure(1, 0, Vector2i(5, 5), StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1))
+	_place(source, _make_structure(1, 0, Vector2i(5, 5), StructureTypes.FACTORY, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1))
 	var a: GameState = source.clone()
 	var b: GameState = source.clone()
 	var action := _make_cancel_action(1)
@@ -290,7 +290,7 @@ func test_clone_isolation_build_leaves_source_unchanged() -> void:
 	_place(source, _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5)))
 	var snapshot: GameState = source.clone() # pre-action snapshot
 	var c: GameState = source.clone()
-	var action := _make_build_action(StructureTypes.ECONOMY_OUTPOST, Vector2i(6, 5))
+	var action := _make_build_action(StructureTypes.FACTORY, Vector2i(6, 5))
 	# Act -- build only on the clone.
 	BaseProduction.apply_build(c, action)
 	# Assert -- the clone gained the structure; the source is untouched (never
@@ -303,7 +303,7 @@ func test_clone_isolation_build_leaves_source_unchanged() -> void:
 func test_clone_isolation_cancel_leaves_source_structure_intact() -> void:
 	# Arrange -- an Under-Construction structure in the source.
 	var source := _make_state(0)
-	_place(source, _make_structure(1, 0, Vector2i(5, 5), StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1))
+	_place(source, _make_structure(1, 0, Vector2i(5, 5), StructureTypes.FACTORY, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1))
 	var snapshot: GameState = source.clone()
 	var c: GameState = source.clone()
 	var action := _make_cancel_action(1)
@@ -346,7 +346,7 @@ func test_clone_isolation_structure_attack_leaves_source_unchanged() -> void:
 # / has_attacked / current_hp) + nonzero AP pools + grid occupancy.
 func _negative_base() -> GameState:
 	var state := _make_state(7)
-	_place(state, _make_structure(1, 0, Vector2i(5, 5), StructureTypes.PRODUCTION_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 2))
+	_place(state, _make_structure(1, 0, Vector2i(5, 5), StructureTypes.BARRACKS, StructureState.BuildStatus.UNDER_CONSTRUCTION, 2))
 	return state
 
 

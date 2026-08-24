@@ -41,7 +41,7 @@
 ## [codeblock]
 ## var hud := GameHud.new()
 ## hud.assemble(reader, HudBalance.hud, command_interface, board_renderer, 0,
-##         [StructureTypes.ECONOMY_OUTPOST])
+##         [StructureTypes.FACTORY])
 ## world_root.add_child(hud) # CanvasLayer renders its widgets over the board.
 ## [/codeblock]
 class_name GameHud

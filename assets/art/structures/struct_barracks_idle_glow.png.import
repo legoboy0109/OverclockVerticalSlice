@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://chhcgde4wrgw4"
-path="res://.godot/imported/struct_economy_outpost_boom_idle.png-3bd4b6e244c92fb3af7c0981756df90b.ctex"
+uid="uid://caok58flawpvx"
+path="res://.godot/imported/struct_barracks_idle_glow.png-cbbc084e90f75c622fda3ecc868567ea.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/art/structures/struct_economy_outpost_boom_idle.png"
-dest_files=["res://.godot/imported/struct_economy_outpost_boom_idle.png-3bd4b6e244c92fb3af7c0981756df90b.ctex"]
+source_file="res://assets/art/structures/struct_barracks_idle_glow.png"
+dest_files=["res://.godot/imported/struct_barracks_idle_glow.png-cbbc084e90f75c622fda3ecc868567ea.ctex"]
 
 [params]
 

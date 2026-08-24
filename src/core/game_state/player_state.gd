@@ -49,10 +49,28 @@ extends Resource
 ## true, never reset to false.
 @export var has_defense_tech: bool = false
 
-## One-time permanent unlock flag. Sole writer: Research (later stories); once
-## true, never reset to false.
-@export var has_economy_tech: bool = false
+## Count of completed economy research tiers (0..EconomyConfig.max_economy_tier).
+## Sole writer: Research. Monotonic — tiers are never lost once completed.
+##
+## [b]Replaced the `has_economy_tech` boolean on 2026-08-24[/b] when Credit income
+## was re-based off the (now deleted) Economy Outpost curve onto a finite,
+## strictly-sequential research spine — see [method Credits.credit_income].
+## A boolean could not express a three-step curve, and a curve is the point:
+## it gives the economy a HARD ceiling, which is the rate-bounding half of the
+## vertical slice's PIVOT fix.
+@export var economy_tier: int = 0
 
 ## True if this player is controlled by the AI opponent (ADR-0011). Set once
 ## at Setup; immutable after Setup->PlayerTurn.
+## True while this player's upkeep exceeds their income AND their bank is empty
+## (`unit-upkeep.md` UR-6). Sole writer: [method Upkeep.apply_turn_economy], once per
+## player per turn at the start-of-turn economy step.
+##
+## ★ Deliberately STORED, not derived. UR-6 evaluates the lock once at the economy
+## step and holds it for the whole turn even if the player disbands back into
+## solvency — a lock that flickers within a turn is unreadable, and re-deriving it
+## after every action invites a confusing dance around the boundary. The disband
+## still counts: it resolves the deficit for the NEXT turn.
+@export var in_deficit: bool = false
+
 @export var is_ai_controlled: bool = false

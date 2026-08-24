@@ -63,7 +63,7 @@ func attach_interface(cmd: Object) -> void:
 
 func _default_buildable_types() -> Array[StructureTypeDef]:
 	return [
-		StructureTypes.ECONOMY_OUTPOST, StructureTypes.PRODUCTION_OUTPOST,
+		StructureTypes.FACTORY, StructureTypes.BARRACKS,
 		StructureTypes.DEFENSIVE_STRUCTURE, StructureTypes.RESEARCH_LAB,
 	]
 

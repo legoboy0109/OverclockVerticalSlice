@@ -42,6 +42,70 @@
 > **Creative Director Review (CD-GDD-ALIGN)**: SKIPPED — Lean review mode (not a phase gate). Review pillar alignment manually or in the independent `/design-review`.
 > **Priority / Layer**: Vertical Slice / Core (system #8)
 
+> ## ★★ REVISION BANNER — research becomes the economy (2026-08-24)
+>
+> **Status: IN REVISION.** User decision, 2026-08-24: **economy growth is linked to research
+> instead of to Economy Outposts, and the Economy Outpost is deleted.** This document's Economy
+> Tech is no longer *a* source of income — it is now **the only one**.
+>
+> ### What changes here
+>
+> **Economy Tech becomes a three-tier line, not a single tech.**
+>
+> | Tech | `research_cost` (Credits) | `ap_surcharge` | `research_time` | Effect |
+> |---|---:|---:|---:|---|
+> | **Economy Tier I** | **1,000** | 1 | 1 turn | `credit_income` **+500** (1,000 → 1,500) |
+> | **Economy Tier II** | **2,000** | 1 | 2 turns | `credit_income` **+500** (1,500 → 2,000) |
+> | **Economy Tier III** | **3,500** | 1 | 3 turns | `credit_income` **+500** (2,000 → 2,500) |
+>
+> - Tiers are **strictly sequential**: II requires I, III requires II. This is what makes the
+>   economy a *curve you climb* rather than a menu, and it gives the Holy Cosmic Empire's *"linear
+>   tech tree"* identity a shape the base game already speaks.
+> - **Flat +500 per tier, escalating cost.** Diminishing returns on investment without a diminishing
+>   benefit — each tier still feels like a real upgrade, but Tier III (7-turn payback against a
+>   30-round match) is a genuine commitment rather than an automatic purchase.
+> - **The economy ceiling is 2,500 Credits/turn, and it is HARD.** Once Tier III is held there is no
+>   further economic growth available at any price. ★ This is the structural change; everything else
+>   here is bookkeeping.
+>
+> ### What is superseded
+>
+> The old `economy_tech_income_bonus(player)` formula — `ECONOMY_TECH_INCOME_BONUS × min(n,
+> ECONOMY_TECH_TIER_THRESHOLD)`, scaling with completed Economy Outpost count — is **removed
+> entirely**. There is no `n`. The § "Economy Tech's boom-scaling income effect" and the §
+> "Compounding sanity check" both existed to bound a term that multiplied against outpost count; **both
+> are obsolete, and the risk they guarded against no longer exists.** That is a real simplification,
+> not a loss.
+>
+> Attack Tech and Defense Tech are **unchanged**.
+>
+> ### ★ Consequences worth stating plainly
+>
+> 1. **The Research Lab is now the economic spine of the game.** It is the only route to income
+>    growth, which makes it the highest-value structure on the board and a natural attack target.
+>    The game has been measured failing to give players reasons to attack; this creates one.
+> 2. **Destroying a Research Lab mid-research** already voids progress under this doc's existing
+>    interrupt rule. That rule is now *much* more consequential and should be re-read with fresh eyes
+>    rather than inherited.
+> 3. ★ **The Empire's vulnerability needs re-differentiating.** *"Highly vulnerable to tech base
+>    disruption"* was meant to be the Holy Cosmic Empire's distinguishing weakness. Under this change
+>    **every** faction is vulnerable to losing its Research Lab. The Empire's version must go further —
+>    `promotion-veterancy.md` PV-7's rank decay is the mechanism, and it is what keeps the identity
+>    distinct. See RTOQ-NEW-1.
+> 4. **Faction income deltas (D4) now key to tier bonuses**, not to an outpost curve. The
+>    intercept-vs-slope distinction from `faction-identity.md` survives in a cleaner form:
+>    **intercept** = a delta on `BASE_INCOME` (felt from turn 1, e.g. the Independents' limited
+>    economy); **slope** = a delta on `ECON_TIER_BONUS` or on tier costs (compounds as you climb,
+>    e.g. the Machinist's Union's late-game arc).
+>
+> ### New open questions
+>
+> | # | Question | Owner |
+> |---|---|---|
+> | ~~RTOQ-NEW-1~~ | ✅ **RESOLVED 2026-08-24 in `factions/holy-cosmic-empire.md`.** Everyone loses income *growth*; **only the Empire loses what it has already built.** Killing an Alliance Lab caps their future; killing the Empire's **Cathedral** un-develops their present — every unit drops one rank per turn until it is rebuilt (PV-7). ★ It is the only mechanism in the game that takes value **back**, which is what makes the Empire's stated vulnerability sharper than the shared one rather than identical to it. Doctrine bonuses deliberately persist — one vulnerability mechanic, clearly legible | ✅ closed |
+> | RTOQ-NEW-2 | **Should Attack/Defense Tech also tier?** Economy now has three tiers; a single flat Attack Tech alongside looks inconsistent, and a tiered combat line would give the Empire's "power increasing based on the linear tech tree" somewhere to live | systems-designer |
+> | RTOQ-NEW-3 | ★ **Is a 2,500 ceiling right?** At the pre-rescale scale it was 25, close to the old ~26 practical ceiling, so existing balance intuition roughly carries over. But the old ceiling was reached by *building*, which cost map space and time, while this one is reached by *researching*, which costs only Credits and turns. The curve to reach it is quite different even though the endpoint is similar | economy-designer |
+
 ## Overview
 
 Research / Tech is OVERCLOCK's progression lever: a small, flat set of three permanent unlocks —

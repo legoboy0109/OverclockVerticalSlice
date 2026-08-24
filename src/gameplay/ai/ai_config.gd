@@ -28,6 +28,25 @@ extends Resource
 
 ## Global hp-to-AP exchange rate anchoring `combat_value` and
 ## `research_value`'s Attack/Defense Tech term.
+## ★★ Converts one Credit into AP-equivalent terms, so CR-3's single scoring scale can
+## compare an economic action against a tactical one (`ai-opponent.md`).
+##
+## [b]0.01, and the value is derived rather than tuned.[/b] The 2026-08-24 rescale
+## multiplied every Credit quantity by 100 while deliberately leaving AP *action* costs
+## alone, so 1 Credit is worth 1/100th of what it was against an unchanged AP cost.
+##
+## ★ [b]Left at 1.0 this is not a rounding error, it is the PIVOT defect returning.[/b]
+## Credit-denominated VALUE terms (a target's `produce_cost`, a unit's `produce_cost`)
+## scale ×100 while AP-native terms (`positional_value_per_tile_closed` 0.16) do not — so
+## a kill would outscore a march by ~100×, the AI would only ever trade, and the
+## regression batch would report that the economy fix had failed when it had not.
+##
+## ★ [b]Do NOT apply it to a term that is already AP-equivalent[/b] — notably
+## [member hq_siege_value], which is a weight rather than a Credit quantity. Converting it
+## twice would restore exactly the "armies trade in the middle and never siege" behaviour
+## the verdict diagnosed.
+@export var credit_to_ap_rate: float = 0.01
+
 @export var hp_per_ap: float = 1.5
 
 ## Fraction of a kill victim's sunk AP credited as bonus `combat_value`.
@@ -78,7 +97,25 @@ extends Resource
 
 ## `ap_cost_opponent_paid_for` weight for the enemy HQ (which has no
 ## `build_cost`) — a siege-priority weight, not a sunk-cost figure.
-@export var hq_siege_value: int = 12
+## ★★ RAISED 12 -> 60 (S6-07c, user's lever: "make the objective outscore trading").
+##
+## At 12, a 5-damage HQ chip scored **0.75** against **3.00** for killing a full-hp Trooper,
+## so a unit standing beside an enemy HQ would break off and fight rather than finish the
+## job. Four measured batches showed damage reaching 21 of 40 hp and stalling for exactly
+## that reason. **48 is the arithmetic break-even; 60 gives a ~25% margin** so the objective
+## wins clearly rather than by a rounding error.
+##
+## ⚠ [b]This number compensates for a modelling flaw rather than fixing it, and that is worth
+## knowing before it is tuned again.[/b] [method AI._combat_value] scales value by
+## `hp_removed / max_hp`, which is right for a UNIT — a half-dead unit is still a unit, and
+## damage to it is worth roughly its share of the whole. It is wrong for a WIN CONDITION: an
+## HQ at 1 hp is nearly a victory, not "1/40th of a structure". The proportional form makes
+## every individual chip look small no matter how close the game is to ending.
+##
+## ★ The principled fix is to value HQ damage as progress toward victory (superlinear, or
+## flat-per-hp) rather than as a share of the target's health. Recorded as the next thing to
+## do here if 60 proves either too weak or too suicidal.
+@export var hq_siege_value: int = 60
 
 ## Score per tile of distance closed toward the ENEMY HQ, for a bare advance that is
 ## not closing on the nearest enemy — [b]the siege drive[/b].

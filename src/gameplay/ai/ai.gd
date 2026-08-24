@@ -63,8 +63,8 @@ const _REACHABILITY_MULTIPLIER_ISOLATED := 0.9
 ## is irrelevant to correctness (every entry is folded into the same
 ## running-best scan) but fixed for determinism (ADR-0003).
 const _BUILDABLE_STRUCTURE_TYPES: Array[StructureTypeDef] = [
-	StructureTypes.ECONOMY_OUTPOST,
-	StructureTypes.PRODUCTION_OUTPOST,
+	StructureTypes.FACTORY,
+	StructureTypes.BARRACKS,
 	StructureTypes.DEFENSIVE_STRUCTURE,
 	StructureTypes.RESEARCH_LAB,
 ]
@@ -639,8 +639,36 @@ static func _consider_attack(lookahead: GameState, attacker: EntityState, target
 ## target, including a non-lethal HQ chip, because [param hp_removed] is never
 ## 0 (Combat's [code]MIN_DAMAGE=1[/code] floor on any legal, landed attack) and
 ## [method _ap_cost_opponent_paid_for] is never 0/undefined for any target kind.
+## Converts a Credit quantity into AP-equivalent terms (CR-3's single scale).
+## ★ Apply ONLY to genuinely Credit-denominated values. Terms that are already
+## AP-equivalent weights — [member AIConfig.hq_siege_value], the positional rates — must
+## never pass through here, or they are converted twice.
+static func credits_to_ap(credits: float) -> float:
+	return credits * AIBalance.ai.credit_to_ap_rate
+
+
+## AP-equivalent cost of a dual-cost economic action: the AP surcharge plus the Credit
+## main cost converted onto the same scale. ★ This is what an economic action's score must
+## be divided by — dividing by the raw Credit cost silently uses two different units.
+static func ap_equivalent_cost(credit_cost: int, ap_surcharge: int) -> float:
+	return float(ap_surcharge) + credits_to_ap(float(credit_cost))
+
+
+## The opponent's sunk cost in [param target], expressed in AP-equivalent terms.
+##
+## ★ The HQ branch returns [member AIConfig.hq_siege_value] — already an AP-equivalent
+## WEIGHT, not a Credit quantity — so it is returned unconverted. Everything else returns a
+## Credit `produce_cost`/`build_cost` and IS converted. Getting this split wrong in either
+## direction re-creates a PIVOT-class defect: convert the HQ too and sieging becomes 100×
+## less attractive than trading; skip the units and the reverse.
+static func _opponent_paid_ap_equivalent(target: EntityState) -> float:
+	if target is StructureState and (target as StructureState).is_hq():
+		return float(AIBalance.ai.hq_siege_value)
+	return credits_to_ap(float(_ap_cost_opponent_paid_for(target)))
+
+
 static func _combat_value(hp_removed: int, is_kill: bool, target: EntityState) -> float:
-	var ap_cost_opponent_paid: float = float(_ap_cost_opponent_paid_for(target))
+	var ap_cost_opponent_paid: float = _opponent_paid_ap_equivalent(target)
 	var target_max_hp: float = float(_max_hp_of(target))
 	var value: float = ap_cost_opponent_paid * (float(hp_removed) / target_max_hp)
 	if is_kill:
@@ -744,10 +772,25 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 		if not Credits.can_afford(lookahead, producer.owner, cost) \
 				or not AP.can_afford(lookahead, producer.owner, Balance.economy.produce_ap_cost):
 			continue
+		# ★ S6-05: mirror the gates apply_action enforces, so the driver never generates a
+		# candidate that will be rejected on commit (CR-4 -- the AI pays the same costs and
+		# obeys the same rules as the player, and a reject loop stalls its turn).
+		if lookahead.per_player[producer.owner].in_deficit:
+			continue
+		if not Population.can_field(lookahead, producer.owner, unit_type):
+			continue
 		for tile: Vector2i in deploy_tiles:
 			var multiplier: float = _reachability_multiplier(lookahead, producer.owner, tile, unit_type)
-			var value: float = _production_value(unit_type, multiplier)
-			var score: float = _action_score(value / float(cost), false)
+			# ★ S6-05: both sides on the AP-equivalent scale. Dividing a Credit-denominated
+			# value by a raw Credit cost happened to cancel, so produce scoring survived the
+			# rescale by luck rather than by design -- and it left produce incomparable with
+			# move/attack, which are AP-native. Now both convert explicitly.
+			var value: float = credits_to_ap(_production_value(unit_type, multiplier))
+			# ★ Denominator uses LIFETIME cost, not the purchase price -- otherwise the AI
+			# under-prices every unit and over-builds into the deficit lock.
+			var denom: float = float(Balance.economy.produce_ap_cost) \
+				+ credits_to_ap(lifetime_credit_cost(unit_type))
+			var score: float = _action_score(value / denom, false)
 			if _is_better(score, cost, producer.entity_id, best.score, best.ap_cost, best.entity_id):
 				var action := ProduceAction.new()
 				action.player = producer.owner
@@ -764,6 +807,17 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 ## pre-selected by [method _reachability_multiplier] — kept as a separate,
 ## directly-testable function so the worked example (Trooper 4 ×
 ## 1.1 = 4.4, AC-14) is checkable without re-deriving the band selection.
+## ★ S6-05: a unit's cost to its owner is its purchase price PLUS the upkeep it will drain
+## for the rest of the match (`unit-upkeep.md` UOQ-4). Valuing it at the purchase price
+## alone is what makes an AI over-build into deficit -- it sees a Heavy as 700 Credits when
+## it is really 700 + 300/turn for as long as it lives.
+##
+## Uses [member AIConfig.economy_horizon] as the assumed remaining lifetime, reusing the
+## same horizon the economy projection already uses rather than inventing a second one.
+static func lifetime_credit_cost(unit_type: UnitTypeDef) -> float:
+	return float(unit_type.produce_cost) + float(unit_type.upkeep) * float(AIBalance.ai.economy_horizon)
+
+
 static func _production_value(unit_type: UnitTypeDef, multiplier: float) -> float:
 	return float(unit_type.produce_cost) * multiplier
 
@@ -834,7 +888,7 @@ static func _action_score(base_score: float, is_immediately_lethal: bool) -> flo
 ## 004) — walks [method BaseProduction.legal_build_tiles] for every
 ## [constant _BUILDABLE_STRUCTURE_TYPES] entry and scores every
 ## (structure_type, tile) pair, dispatching [method _economy_value] for
-## [constant StructureTypes.ECONOMY_OUTPOST] vs. [method _production_value]-style
+## [constant StructureTypes.FACTORY] vs. [method _production_value]-style
 ## scoring (a flat [code]1.0[/code] multiplier — a build has no
 ## [code]REACHABILITY_MULTIPLIER[/code] analogue; this mirrors
 ## [code]production_value[/code]'s "value anchors to the resource's own sunk
@@ -855,7 +909,7 @@ static func _action_score(base_score: float, is_immediately_lethal: bool) -> flo
 ##
 ## Cadence cap (AC-30): once [param economy_investments_committed] >=
 ## [code]AIBalance.ai.max_economy_investments_per_turn[/code], every
-## [constant StructureTypes.ECONOMY_OUTPOST] candidate is excluded from
+## [constant StructureTypes.FACTORY] candidate is excluded from
 ## enumeration entirely — the loop below never even constructs/scores one,
 ## never merely down-scores it. Non-economy buildable structures are
 ## unaffected by the cap (CR-5 / the GDD's cadence-cap scope is
@@ -866,13 +920,26 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 	var cap_reached: bool = economy_investments_committed >= AIBalance.ai.max_economy_investments_per_turn
 
 	for structure_type: StructureTypeDef in _BUILDABLE_STRUCTURE_TYPES:
-		# Only ECONOMY_OUTPOST has a real AI valuation (_economy_value). The other
-		# buildable types have no strategic model yet; enumerating them on the
-		# placeholder value==build_cost basis made the AI build structures it could
-		# not value and immediately cancel-build them for the refund — a
-		# build<->cancel oscillation that consumed the whole turn. Excluded until
-		# real valuations exist, mirroring the stubbed research enumeration.
-		if structure_type != StructureTypes.ECONOMY_OUTPOST:
+		# ★★ S6-06: gate on "can we actually VALUE this?", not on identity.
+		#
+		# This read `if structure_type != StructureTypes.ECONOMY_OUTPOST: continue`, and the
+		# guard was sound at the time: the other buildable types had no strategic model, and
+		# enumerating them on a placeholder value==build_cost basis made the AI build things
+		# it could not value and immediately cancel-build them for the refund — a
+		# build<->cancel oscillation that consumed the whole turn.
+		#
+		# ★ But S6-03 renamed ECONOMY_OUTPOST -> FACTORY *mechanically*, and the filter came
+		# with it — so the AI stayed hard-locked to the one structure whose value S6-01 had
+		# just zeroed, and was structurally incapable of building a BARRACKS no matter what
+		# it was worth. That is why the S6-06 batch showed `best_build` = 0.000 in every
+		# single turn, and why both armies stayed at the base cap of 4 forever.
+		#
+		# Gating on a positive valuation keeps the original guard's intent exactly — a type
+		# with no model still scores 0 and is still skipped — while letting any type that
+		# gains a real valuation participate automatically. The Research Lab and Defensive
+		# Structure remain excluded today because they genuinely have no model yet.
+		var prospective_value: float = _economy_value(lookahead, player, structure_type)
+		if prospective_value <= 0.0:
 			continue
 		if cap_reached:
 			continue
@@ -887,13 +954,23 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 		if not Credits.can_afford(lookahead, player, cost) \
 				or not AP.can_afford(lookahead, player, Balance.economy.build_ap_cost):
 			continue
+		# ★ S6-05: mirror validate_build's gates (see the produce path).
+		if lookahead.per_player[player].in_deficit:
+			continue
+		if not BaseProduction.can_build_more(lookahead, player, structure_type):
+			continue
 
 		var tiles: Array[Vector2i] = BaseProduction.legal_build_tiles(lookahead, player, structure_type)
 		if tiles.is_empty():
 			continue
 
-		var value: float = _economy_value(lookahead, player, structure_type)
-		var score: float = _action_score(value / float(cost), false)
+		# ★ S6-05: AP-equivalent denominator (see the produce path). _economy_value already
+		# returns 0 for a structure build since S6-01 -- no structure raises income -- so this
+		# scores 0 today. The conversion is here so that when research actions gain an
+		# economy_value it lands on the same scale as everything else.
+		var value: float = prospective_value
+		var denom: float = ap_equivalent_cost(cost, Balance.economy.build_ap_cost)
+		var score: float = _action_score(value / denom, false)
 		var candidate_entity_id: int = _lowest_owned_entity_id(lookahead, player)
 		if _is_better(score, cost, candidate_entity_id, best.score, best.ap_cost, best.entity_id):
 			var action := BuildAction.new()
@@ -904,41 +981,129 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 
 	return best
 
+## AP-equivalent value of what [param structure_type] would actually put on the board
+## (S6-07). Returns 0 for anything that neither grants cap nor produces units.
+##
+## [b]Model:[/b] `min(throughput_over_horizon, headroom_after_building) × marginal_unit_cost`.
+## [br]• `throughput_over_horizon` — a producer on cooldown C yields one unit per (C+1)
+##   turns, so over [member AIConfig.economy_horizon] turns it yields `horizon / (C+1)`.
+## [br]• `headroom_after_building` — you cannot use slots you are not allowed to fill, so
+##   the population cap bounds the whole thing.
+## [br]• `marginal_unit_cost` — the cheapest unit the player can produce; what a slot is
+##   worth is what they would put in it.
+##
+## ★★ [b]This REPLACED a utilisation-scaled model, and the reason is a trap worth
+## recording.[/b] The first version scaled capacity value by
+## `current_population / effective_cap`, which correctly stopped the AI building
+## infrastructure it could not use — but created a self-limiting loop the S6-07 batch
+## exposed: armies could not grow (units died as fast as they were made), so utilisation
+## stayed low, so a Barracks looked worthless, so throughput stayed low, so armies could
+## not grow. The AI built ~0.4 Barracks per match. **A gate that keys on the symptom of the
+## problem it is meant to solve will hold the problem in place.**
+##
+## Valuing THROUGHPUT instead breaks the loop: a Barracks is worth building because it
+## reinforces faster, whether or not the army is currently at its ceiling. Over-building is
+## still bounded — by [member StructureTypeDef.max_count] (a hard 3) and by the headroom
+## term — which is a structural bound rather than a behavioural one.
+static func _capacity_value(lookahead: GameState, player: int, structure_type: StructureTypeDef) -> float:
+	var produces: bool = not structure_type.producible_types.is_empty()
+	if structure_type.cap_bonus <= 0 and not produces:
+		return 0.0
+	var marginal_cost: float = _cheapest_producible_cost(lookahead, player)
+	if marginal_cost <= 0.0:
+		return 0.0
+
+	var cap: int = Population.effective_cap(lookahead, player)
+	var used: int = Population.current_population(lookahead, player)
+	# Headroom this structure would leave once built — you cannot use slots you are not
+	# allowed to fill, so this bounds everything below.
+	var headroom: int = maxi(0, (cap + structure_type.cap_bonus) - used)
+	if headroom <= 0:
+		return 0.0
+
+	# Units this producer would actually put on the board over the horizon. A producer on
+	# cooldown C yields one unit per (C+1) turns.
+	var throughput: float = 0.0
+	if produces:
+		var period: float = float(structure_type.production_cooldown_turns + 1)
+		throughput = float(AIBalance.ai.economy_horizon) / period
+
+	var usable: float = minf(throughput, float(headroom))
+	if structure_type.cap_bonus > 0 and not produces:
+		usable = float(mini(structure_type.cap_bonus, headroom))
+	if usable <= 0.0:
+		return 0.0
+	return credits_to_ap(usable * marginal_cost)
+
+
+## Credit cost of the cheapest unit [param player] can currently produce anywhere, or 0.0 if
+## they have no completed producer. The floor on what a freed cap slot is worth.
+static func _cheapest_producible_cost(lookahead: GameState, player: int) -> float:
+	var cheapest: float = 0.0
+	for e: EntityState in lookahead.entities():
+		if e.owner != player or not (e is StructureState):
+			continue
+		var st: StructureState = e as StructureState
+		if st.type == null or st.build_status != StructureState.BuildStatus.COMPLETED:
+			continue
+		for unit_type: UnitTypeDef in st.type.producible_types:
+			var c: float = float(Unit.effective_produce_cost(lookahead, unit_type, player))
+			if cheapest <= 0.0 or c < cheapest:
+				cheapest = c
+	return cheapest
+
+
 
 ## `economy_value(build_action)` (GDD Formulas, AC-15/AC-16):
 ## `raw_immediate_value(0) + Σ_{t=1}^{ECONOMY_HORIZON} marginal_ap_income(t) ×
 ## ECONOMY_DECAY^t`, uncapped. [param structure_type] is always
-## [constant StructureTypes.ECONOMY_OUTPOST] here (the caller's dispatch
+## [constant StructureTypes.FACTORY] here (the caller's dispatch
 ## gate) — kept as an explicit parameter (rather than hardcoding the type
 ## internally) so a future non-Outpost economy building, if one is ever added,
 ## slots in without a signature change. `raw_immediate_value` is fixed 0 (an
-## Economy Outpost's `build_time` produces no immediate board effect the turn
-## it starts, GDD Formulas table) — never computed, just the literal.
+## a structure's `build_time` produces no immediate board effect the turn it
+## starts, GDD Formulas table) — never computed, just the literal.
 ##
-## `marginal_ap_income(t)` is [b]this candidate outpost's own marginal
-## contribution[/b] at future turn `t`, computed the same tiered way
-## [code]Credits.credit_income_breakdown[/code] does but isolated to the single
-## marginal outpost being evaluated: if this would be [param player]'s
-## outpost number [code]n+1[/code] (where [code]n[/code] =
-## [method BaseProduction.completed_outpost_count]) and [code]n+1 <=
-## EconomyConfig.tier_threshold[/code], it contributes
-## [code]outpost_bonus_tier1[/code]; otherwise [code]outpost_bonus_tier2[/code]
-## — the GDD's own AC-16 worked contrast (a strictly-higher tier-1 candidate
-## vs. a tier-2 candidate past the threshold). Economy Tech's income term is
-## deliberately never added here (Research is not implemented — the stub
-## scope named in this story's Implementation Notes; the marginal-income
-## computation below reads only [code]EconomyConfig[/code], never
-## [code]Research[/code]).
+## `marginal_credit_income(t)` is [b]this candidate's own marginal contribution[/b]
+## at future turn `t`. ★ [b]S6-01 (2026-08-24): it is now always 0 for a structure
+## build.[/b] The per-outpost income curve this once read is deleted; no structure
+## raises Credit income any more (see [method Credits.credit_income_breakdown]), so
+## building something is not an economic investment and must not be scored as one.
+## That is the PIVOT verdict's fix arriving at the scoring layer.
 ##
 ## No cap is applied anywhere in this sum (the GDD's 2026-07-22 decoupling
 ## note) — the dominant-strategy guardrail is [param economy_investments_committed]'s
 ## cadence cap in the caller, never a valuation ceiling here.
 static func _economy_value(lookahead: GameState, player: int, structure_type: StructureTypeDef) -> float:
-	var economy_cfg: EconomyConfig = Balance.economy
-	var n: int = BaseProduction.completed_outpost_count(lookahead, player)
-	var marginal_rank: int = n + 1 # This candidate would be the player's (n+1)th outpost.
-	var marginal_income: float = float(economy_cfg.outpost_bonus_tier1) if marginal_rank <= economy_cfg.tier_threshold \
-		else float(economy_cfg.outpost_bonus_tier2)
+	# ★ S6-06 (2026-08-24): CAPACITY value — the term whose absence caused the gate failure.
+	#
+	# S6-01 zeroed this function with reasoning that was right about INCOME and wrong about
+	# VALUE: "no structure raises Credit income, so building is not an economic investment."
+	# True — but since S6-04 a BARRACKS raises the population cap, and the AI had a term for
+	# income value and none for capacity. So it never built one, its cap stayed at the base
+	# 4, its army never grew, both sides ground mid-map with three units each, and 0/21 games
+	# resolved with zero HQ damage. Diagnosed with tools/DiagnoseAI.tscn: `best_build` was
+	# 0.000 in every single traced turn.
+	var capacity: float = _capacity_value(lookahead, player, structure_type)
+	if capacity > 0.0:
+		return capacity
+
+	# ★ S6-01 (2026-08-24): re-pointed off the deleted per-outpost income curve.
+	#
+	# NO STRUCTURE RAISES CREDIT INCOME ANY MORE. Income comes solely from completed
+	# economy research tiers (Credits.credit_income_breakdown), so the marginal income
+	# of *building* anything is exactly zero — and this function is only ever called
+	# with a structure candidate (see the build-scoring loop above).
+	#
+	# Returning 0 here is CORRECT, not a stub: the AI should no longer treat any build
+	# as an economic investment, because none is. That is precisely the behaviour the
+	# PIVOT verdict wanted — the AI kept choosing BUILD because building bought income.
+	#
+	# ⚠ S6-05 owns the other half: giving RESEARCH actions an economy_value computed
+	# from econ_tier_bonus, and re-anchoring CREDIT_TO_AP_RATE (1.0 -> 0.01, broken by
+	# the ×100 Credit rescale). Until then the AI simply has no economic play to score,
+	# which is a *safe* failure direction — it under-invests rather than over-builds.
+	var marginal_income: float = 0.0
 
 	var raw_immediate_value: float = 0.0
 	var decayed_sum: float = 0.0
@@ -1024,8 +1189,13 @@ static func _attack_defense_tech_marginal_value(tech_bonus: float) -> float:
 ## researching player's completed [b]plus[/b] under-construction Economy
 ## Outposts (the caller's responsibility to compute — this function is pure
 ## arithmetic only, per the GDD's "counting in-flight outposts" fix).
-static func _economy_tech_marginal_value(economy_tech_income_bonus: int, projected_completed_outposts: int, economy_tech_tier_threshold: int) -> float:
-	return float(economy_tech_income_bonus) * float(mini(projected_completed_outposts, economy_tech_tier_threshold))
+## ★ S6-01 (2026-08-24): Economy Tech's income no longer scales with outpost count —
+## it is a flat [code]econ_tier_bonus[/code] per completed tier, and the outpost count
+## it multiplied against no longer exists. Kept as a one-line pass-through rather than
+## deleted so the call graph and its tests stay intact until S6-05 rewrites the research
+## scoring path properly.
+static func _economy_tech_marginal_value(econ_tier_bonus: int, _unused_projected: int, _unused_threshold: int) -> float:
+	return float(econ_tier_bonus)
 
 
 ## Per-under-construction-structure cancel-build candidate enumeration

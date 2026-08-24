@@ -46,6 +46,117 @@
 > **Creative Director Review (CD-GDD-ALIGN)**: SKIPPED — Lean review mode (not a phase gate). Review pillar alignment manually or in the independent `/design-review`.
 > **Priority / Layer**: Vertical Slice / Core (system #7)
 
+> ## ★★ REVISION BANNER — structure roster rebuilt (2026-08-24)
+>
+> **Status: IN REVISION.** Three user decisions on 2026-08-24 reshape this document's core subject:
+>
+> 1. **The Economy Outpost is DELETED.** Income moves to research (`ap-economy.md`,
+>    `research-tech.md`). The structure whose only job was generating Credits has no job.
+> 2. **The Production Outpost becomes the BARRACKS** — it produces infantry *and* raises the
+>    infantry cap, and a faction may build at most `max_barracks` of them.
+> 3. **Production is split by unit class.** Barracks make infantry; a **Factory** makes ground
+>    vehicles; an **Airfield** makes aircraft. Each has its own per-faction maximum.
+>
+> ### The new structure roster
+>
+> | Structure | Produces | Also does | Max per faction | `build_cost` | `build_time` | `upkeep` |
+> |---|---|---|---:|---:|---:|---:|
+> | **HQ** | the faction's basic unit | is the win condition | 1 (fixed) | — | — | **0** |
+> | **Barracks** *(was Production Outpost)* | `INFANTRY` | ★ **+`cap_per_barracks` infantry cap** | `max_barracks` (3) | **600** | 2 | **100** |
+> | **Factory** *(new)* | `GROUND_VEHICLE` | — | `max_factories` (2) | **1,000** | 3 | **200** |
+> | **Airfield** *(new)* | `AIR` | — | `max_airfields` (1) | **1,200** | 3 | **200** |
+> | **Research Lab** | — | ★ **the entire economy** | 1 | **800** | 2 | **200** |
+> | **Defensive Structure** | — | fires on enemies | `max_defensive` (3) | **500** | 2 | **100** |
+> | ~~**Economy Outpost**~~ | ~~—~~ | ~~+2 Credit income~~ | **DELETED** | ~~600~~ | ~~1~~ | ~~100~~ |
+>
+> *(Maximums shown are the Democratic Alliance baseline. Every one is a faction lever, D5.)*
+>
+> ### ★★ Why the per-faction maximums are the important part
+>
+> This is not tidiness. `production/vertical-slice/REPORT.md` returned **PIVOT** because the AI kept
+> choosing `BUILD` over manoeuvring — economy actions outscored movement by **12–20×** and, with
+> unbounded Credits, were always affordable. **The fix is to run out of things to build.**
+>
+> With every structure capped, an Alliance player's *complete* build-out is:
+>
+> ```
+> 3 Barracks (1,800) + 2 Factory (2,000) + 1 Airfield (1,200) + 1 Lab (800) + 3 Defensive (1,500)
+>   =  7,300 Credits · 10 structures · total upkeep 1,400 · then nothing left to build, ever.
+> ```
+>
+> Against an income ceiling of **2,500**, that build-out leaves **1,100 Credits/turn** for an army —
+> which will not sustain a full 10-infantry cap at a roster mean upkeep of ~200. ★ **Maxing every
+> structure is deliberately not affordable.** The player must choose between infrastructure and army,
+> which is a real decision, and it is the decision the game currently does not make anyone face.
+>
+> A realistic build (2 Barracks, 1 Factory, 1 Lab = 600 upkeep) leaves **1,900** for an army of ~9.
+> That is the intended shape.
+>
+> ### What is superseded in this document
+>
+> - § **`economy_outpost_payback`** — obsolete; the structure is gone.
+> - `completed_outpost_count` / `credit_income` coupling — obsolete; income is research-keyed.
+> - Every Economy-Outpost row in the stat table, its ACs, and its edge cases.
+> - **Production Outpost** references retarget to **Barracks**; its `production_cap` semantics are
+>   unchanged, but it gains a `cap_bonus`.
+> - ★ The HQ's roster stays as-is (it produces the faction's basic unit only), so the existing
+>   "HQ makes Scout, outpost makes the rest" shape survives the rename.
+>
+> ### ✅ Implementation note — what actually shipped in S6-03 (2026-08-24)
+>
+> **The Economy Outpost was RENAMED to the Factory rather than deleted**, and the
+> Production Outpost renamed to the Barracks. Same outcome, less churn, and it is what the
+> user's art decision already implied — the Factory reuses the Economy Outpost's art, so
+> renaming the resource *is* the reuse rather than a separate step. 27 files referenced the
+> old constant; a rename touches them mechanically where a delete-and-recreate would have
+> required each one to choose a replacement.
+>
+> ★ **`max_count` is on `StructureTypeDef` with `0` meaning unlimited**, so adding the
+> field changed no existing behaviour until a type opted in — the whole suite stayed green
+> across the change. Enforced in `validate_build` **before** the affordability checks, so
+> the rejection reason names the cap rather than a coincidental shortage of Credits.
+> Counts completed **and** under-construction together (a max that ignored the queue would
+> do nothing).
+>
+> ⚠ **Carried, not done in S6-03:** the Airfield does not exist yet (no air units to
+> produce — `unit-classes.md` is wave 2), and `cap_bonus` on the Barracks is wired by
+> **S6-04** with the rest of the population-cap system. Shipped maximums are the Alliance
+> baseline: Barracks 3 · Factory 2 · Research Lab 1 · Defensive 3 · HQ 1.
+>
+> ⚠ **`completed_outpost_count()` is now dead product code** — income no longer calls it
+> and nothing else in `src/` does. It survives only because six tests still name it as
+> their subject. Superseded by the generic `structure_count()`. Removal is a tidy-up
+> candidate, deliberately not bundled into S6-03 so the gate-critical change stays
+> reviewable on its own.
+
+> ### New rules owed
+>
+> **BP-NEW-1 — Producers are class-matched.** A structure declares `produces_classes`. Barracks
+> `{INFANTRY}`, Factory `{GROUND_VEHICLE}`, Airfield `{AIR}`. A produce order for a class no
+> producer covers is rejected — and a faction with no Airfield in its roster simply cannot field
+> aircraft, which is a legitimate identity statement (`unit-classes.md` UC-9).
+>
+> **BP-NEW-2 — Structure maximums are hard and per-faction.** `can_build(structure)` requires
+> `completed + under_construction < max_for(structure, faction)`. Rejected at the build call site
+> with a reason naming the maximum. A cancelled or destroyed structure frees its slot immediately.
+>
+> **BP-NEW-3 — The Barracks grants cap only while COMPLETED and alive.** Consistent with
+> `population-cap.md` PC-5/PC-6: destroying a Barracks lowers the enemy's infantry cap, and units
+> above the new cap are not destroyed — the owner is production-locked until attrition resolves it.
+>
+> **BP-NEW-4 — ★ A vehicle cannot be produced without a slot for its crew.** Producing a
+> `requires_pilot` unit requires an available infantry slot (`population-cap.md` PC-8, PCOQ-4), so
+> armour competes with infantry for the same ceiling. Whether the crew is produced *with* the
+> vehicle or separately is **PCOQ-4, unresolved.**
+>
+> ### New open questions
+>
+> | # | Question | Owner |
+> |---|---|---|
+> | BPOQ-NEW-1 | ★ **Does the deleted Economy Outpost leave an early-game hole?** Its old job was also *"something useful to spend early Credits on"*. Now the early build order is Barracks → Lab → army, which is fewer meaningful choices in the opening. Watch the first five turns in playtest specifically | game-designer |
+> | ~~BPOQ-NEW-2~~ | ✅ **RESOLVED 2026-08-24 (user): reuse the Economy Outpost art for the Factory.** The seven shipped files (`struct_economy_outpost_{rush,boom,neutral}_{idle,destroyed}.png` + `_idle_glow.png`) are re-pointed rather than retired — **zero new generations**, and the silhouette reads as industrial either way. Owed: rename the runtime files and their `.import` sidecars to `struct_factory_*`, update the asset manifest and the entity inventory, and correct `design/assets/specs/` so the spec describes a vehicle factory rather than an income building | ✅ closed |
+> | BPOQ-NEW-3 | **Are Factory and Airfield both needed at first?** Air carries a real Pillar-3 risk (`unit-classes.md` UCOQ-1) and needs a renderer spike. Recommend shipping the Factory first and holding the Airfield until air is proven to render legibly | producer |
+
 ## Overview
 
 Base & Production is OVERCLOCK's economic and army-generating engine: the data-driven structures a

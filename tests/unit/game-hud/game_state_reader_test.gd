@@ -167,8 +167,7 @@ func test_game_state_reader_income_breakdown_matches_credits_call_verbatim() -> 
 	var actual: Dictionary = reader.income_breakdown(0)
 
 	assert_int(actual["base"]).is_equal(expected["base"])
-	assert_int(actual["outpost"]).is_equal(expected["outpost"])
-	assert_int(actual["econ_tech"]).is_equal(expected["econ_tech"])
+	assert_int(actual["tiers"]).is_equal(expected["tiers"])
 
 
 func test_game_state_reader_entities_and_entity_at_match_game_state_verbatim() -> void:

@@ -1,277 +1,123 @@
-# Story 001: Credit Income Formula, EconomyConfig & Balance Autoload.
+# Story S6-01: Economy re-base — research-tiered Credit income.
 #
-# Covers the acceptance criteria in
-# production/epics/ap-economy/story-001-ap-income-econconfig-balance.md against
-# Credits.credit_income()/Credits.credit_income_breakdown(), using GameStateFactory
-# for state setup, real Completed Economy Outposts (Base & Production Story 002's
-# real BaseProduction.completed_outpost_count) for the outpost term, and the
-# Research test stub for the economy-tech term (ADR-0006). No RNG, no
-# time-dependent asserts, no file I/O; each test builds a fresh state (so its
-# own outpost count is exactly what it places) and resets the Research stub
-# for isolation.
+# Replaces the outpost-curve suite this file used to hold. The Economy Outpost was
+# DELETED and Credit income is now driven entirely by completed economy research
+# tiers (design/gdd/ap-economy.md + research-tech.md, revised 2026-08-24).
 #
-# Migration note (Base & Production Story 002): this suite originally drove
-# BaseProduction.set_completed_outpost_count()/BaseProduction.reset() against
-# base_production_stub.gd (deleted by that story — its class_name BaseProduction
-# collides with the real class). completed_outpost_count() now derives from
-# actual StructureState entities, so every former stub call site below is
-# replaced by _add_completed_outposts(state, player, n), placing n real,
-# alive, owned, Completed Economy Outposts directly in state.entities_by_id
-# (no grid needed — Credit income never touches the grid). Every worked-example
-# income assertion is preserved exactly (n=0->10, n=2->14, n=4->18, n=5->19,
-# n=6->26 w/ tech, n=8->22/28, n=12->26/32, etc.) — only the count's SOURCE
-# changed, never the formula or its expected outputs.
+# WHY the old suite is gone rather than migrated: it asserted a formula
+# (base + tier1*min(n,T) + tier2*max(0,n-T) + capped econ-tech term) whose every
+# term after `base` no longer exists. There is no `n`. Its worked examples
+# (n=2 -> 14, n=6 w/tech -> 26, the double-cap regression at n=6 vs n=7) tested a
+# curve that has no subject. Preserved in git history at the previous commit.
 #
-# Migration note (2026-08-05 AP<->Credits pivot): this suite originally drove
-# AP.income()/AP.ap_income_breakdown() (ap_income_test.gd). The formula and
-# every worked-example expected value are UNCHANGED by the pivot — only the
-# pool it funds moved from AP (a flat, non-income-driven tactical budget as of
-# this same pivot) to Credits (the new banked economic pool). Every call site
-# below is a mechanical AP.income -> Credits.credit_income /
-# AP.ap_income_breakdown -> Credits.credit_income_breakdown rename; no
-# expected value changed.
+# WHY the economy moved: production/vertical-slice/REPORT.md returned PIVOT --
+# Credits were unbounded (peak 5,724, still climbing linearly at turn 200), so
+# building always outscored fighting and no match ever resolved. A finite
+# three-tier research tree is a HARD ceiling where the old tiering outpost curve
+# was only a soft brake that flattened but never stopped.
 #
 # Naming follows tests/README.md: [system]_[feature]_test.gd + test_[scenario]_[expected].
 extends GdUnitTestSuite
 
 
-func before_test() -> void:
-	Research.reset()
+func _state_with_tier(tier: int) -> GameState:
+	var state: GameState = GameStateFactory.make_state(2, 0)
+	state.per_player[0].economy_tier = tier
+	return state
 
 
-# Places n alive, owned, Completed Economy Outpost StructureStates directly
-# into state.entities_by_id at unique, deterministic tiles (no grid in play —
-# Credits.credit_income()/BaseProduction.completed_outpost_count() never touch the grid).
-func _add_completed_outposts(state: GameState, player: int, n: int) -> void:
-	for _i: int in n:
-		var structure := StructureState.new()
-		structure.entity_id = state.next_entity_id
-		structure.owner = player
-		structure.position = Vector2i(structure.entity_id, 0) # unique, arbitrary
-		structure.type = StructureTypes.ECONOMY_OUTPOST
-		structure.current_hp = structure.type.hp
-		structure.build_status = StructureState.BuildStatus.COMPLETED
-		structure.build_turns_remaining = 0
-		state.entities_by_id[structure.entity_id] = structure
-		state.next_entity_id += 1
+# --- The curve itself: 1000 / 1500 / 2000 / 2500 ---
+
+func test_credit_income_tier0_returns_base_income_only() -> void:
+	assert_int(Credits.credit_income(_state_with_tier(0), 0)).is_equal(1000)
 
 
-# --- No Economy Tech: worked examples from the GDD Formulas section --------
-
-func test_credit_income_no_tech_n0_returns_10_base_floor() -> void:
-	# Arrange
-	var state := GameStateFactory.make_state()
-	_add_completed_outposts(state, 0, 0)
-	# Act
-	var result := Credits.credit_income(state, 0)
-	# Assert
-	assert_int(result).is_equal(10)
+func test_credit_income_tier1_returns_1500() -> void:
+	assert_int(Credits.credit_income(_state_with_tier(1), 0)).is_equal(1500)
 
 
-func test_credit_income_no_tech_n2_returns_14() -> void:
-	# Arrange
-	var state := GameStateFactory.make_state()
-	_add_completed_outposts(state, 0, 2)
-	# Act / Assert
-	assert_int(Credits.credit_income(state, 0)).is_equal(14)
+func test_credit_income_tier2_returns_2000() -> void:
+	assert_int(Credits.credit_income(_state_with_tier(2), 0)).is_equal(2000)
 
 
-func test_credit_income_no_tech_n4_returns_18_at_tier_threshold() -> void:
-	# Arrange — n == TIER_THRESHOLD (4), boundary value.
-	var state := GameStateFactory.make_state()
-	_add_completed_outposts(state, 0, 4)
-	# Act / Assert
-	assert_int(Credits.credit_income(state, 0)).is_equal(18)
+func test_credit_income_tier3_returns_2500_the_hard_ceiling() -> void:
+	assert_int(Credits.credit_income(_state_with_tier(3), 0)).is_equal(2500)
 
 
-func test_credit_income_no_tech_n5_returns_19_fifth_outpost_adds_tier2_rate() -> void:
-	# Arrange — one past TIER_THRESHOLD: the 5th outpost adds +1 (tier2), not +2.
-	var state := GameStateFactory.make_state()
-	_add_completed_outposts(state, 0, 5)
-	# Act / Assert
-	assert_int(Credits.credit_income(state, 0)).is_equal(19)
+# --- The ceiling is HARD. This is the PIVOT fix's rate-bound half. ---
+
+func test_credit_income_above_max_tier_still_returns_the_ceiling() -> void:
+	# A tier value beyond max_economy_tier must not keep paying. The whole point of
+	# re-basing onto research is that the economy STOPS growing.
+	assert_int(Credits.credit_income(_state_with_tier(4), 0)).is_equal(2500)
+	assert_int(Credits.credit_income(_state_with_tier(99), 0)).is_equal(2500)
 
 
-func test_credit_income_no_tech_n8_returns_22() -> void:
-	# Arrange
-	var state := GameStateFactory.make_state()
-	_add_completed_outposts(state, 0, 8)
-	# Act / Assert
-	assert_int(Credits.credit_income(state, 0)).is_equal(22)
+func test_credit_income_negative_tier_clamps_to_base() -> void:
+	assert_int(Credits.credit_income(_state_with_tier(-1), 0)).is_equal(1000)
 
 
-func test_credit_income_no_tech_n12_returns_26() -> void:
-	# Arrange
-	var state := GameStateFactory.make_state()
-	_add_completed_outposts(state, 0, 12)
-	# Act / Assert
-	assert_int(Credits.credit_income(state, 0)).is_equal(26)
+# --- Breakdown integrity (the HUD reads this, it must never drift from the total) ---
+
+func test_credit_income_breakdown_sums_to_income_exactly_at_every_tier() -> void:
+	for tier: int in [0, 1, 2, 3]:
+		var state: GameState = _state_with_tier(tier)
+		var b: Dictionary = Credits.credit_income_breakdown(state, 0)
+		assert_int(int(b["base"]) + int(b["tiers"])) \
+			.is_equal(Credits.credit_income(state, 0))
 
 
-# --- Economy Tech held: worked examples, tech term added verbatim ----------
-
-func test_credit_income_econ_tech_held_n2_returns_16() -> void:
-	# Arrange
-	var state := GameStateFactory.make_state()
-	state.per_player[0].has_economy_tech = true
-	_add_completed_outposts(state, 0, 2)
-	Research.set_economy_tech_income_bonus(0, 2)  # already-capped: 1 * min(2,6)
-	# Act / Assert
-	assert_int(Credits.credit_income(state, 0)).is_equal(16)
-
-
-func test_credit_income_econ_tech_held_n4_returns_22() -> void:
-	# Arrange
-	var state := GameStateFactory.make_state()
-	state.per_player[0].has_economy_tech = true
-	_add_completed_outposts(state, 0, 4)
-	Research.set_economy_tech_income_bonus(0, 4)  # 1 * min(4,6)
-	# Act / Assert
-	assert_int(Credits.credit_income(state, 0)).is_equal(22)
+func test_credit_income_breakdown_has_exactly_two_terms() -> void:
+	# base + tiers. The `outpost` and `econ_tech` terms are GONE, not zeroed --
+	# a phantom key would let the HUD render a line for a mechanic that no longer exists.
+	var b: Dictionary = Credits.credit_income_breakdown(_state_with_tier(2), 0)
+	assert_int(b.size()).is_equal(2)
+	assert_bool(b.has("base")).is_true()
+	assert_bool(b.has("tiers")).is_true()
+	assert_bool(b.has("outpost")).is_false()
+	assert_bool(b.has("econ_tech")).is_false()
 
 
-func test_credit_income_econ_tech_held_n6_returns_26_at_econ_tech_tier_threshold() -> void:
-	# Arrange — n == ECONOMY_TECH_TIER_THRESHOLD (6), boundary value.
-	var state := GameStateFactory.make_state()
-	state.per_player[0].has_economy_tech = true
-	_add_completed_outposts(state, 0, 6)
-	Research.set_economy_tech_income_bonus(0, 6)  # 1 * min(6,6)
-	# Act / Assert
-	assert_int(Credits.credit_income(state, 0)).is_equal(26)
+func test_credit_income_breakdown_tier0_reports_zero_tiers_not_a_missing_key() -> void:
+	var b: Dictionary = Credits.credit_income_breakdown(_state_with_tier(0), 0)
+	assert_int(int(b["tiers"])).is_equal(0)
 
 
-# Regression guard for the 2026-07-24 /architecture-review C3 bug: the tech
-# term must stay capped at the ECONOMY_TECH_TIER_THRESHOLD value (6) past the
-# threshold, proving Credits adds it verbatim and never re-applies min(n, threshold)
-# a second time (which would square the tier factor: 36 instead of 6 at n=6).
-func test_credit_income_econ_tech_held_n6_vs_n7_cap_reengages_diminishing_returns() -> void:
-	# Arrange — n=6 (at cap) vs n=7 (one past cap): two INDEPENDENT states (the
-	# outpost count now derives from real structures placed once per state,
-	# not a mutable stub setter), each stubbing the SAME already-capped
-	# econ_tech term (6), per Research stub's design contract.
-	var state_at_6 := GameStateFactory.make_state()
-	state_at_6.per_player[0].has_economy_tech = true
-	_add_completed_outposts(state_at_6, 0, 6)
-	Research.set_economy_tech_income_bonus(0, 6)
-	var income_at_6 := Credits.credit_income(state_at_6, 0)
+# --- Per-player isolation ---
 
-	var state_at_7 := GameStateFactory.make_state()
-	state_at_7.per_player[0].has_economy_tech = true
-	_add_completed_outposts(state_at_7, 0, 7)
-	Research.set_economy_tech_income_bonus(0, 6)  # still capped at 6, not 7
-	var income_at_7 := Credits.credit_income(state_at_7, 0)
-
-	# Assert — 26 vs 27 (not 36 vs 6, the double-cap regression shape).
-	assert_int(income_at_6).is_equal(26)
-	assert_int(income_at_7).is_equal(27)
+func test_credit_income_reads_each_player_tier_independently() -> void:
+	var state: GameState = GameStateFactory.make_state(2, 0)
+	state.per_player[0].economy_tier = 3
+	state.per_player[1].economy_tier = 0
+	assert_int(Credits.credit_income(state, 0)).is_equal(2500)
+	assert_int(Credits.credit_income(state, 1)).is_equal(1000)
 
 
-func test_credit_income_econ_tech_held_n8_returns_28() -> void:
-	# Arrange
-	var state := GameStateFactory.make_state()
-	state.per_player[0].has_economy_tech = true
-	_add_completed_outposts(state, 0, 8)
-	Research.set_economy_tech_income_bonus(0, 6)  # capped at threshold
-	# Act / Assert
-	assert_int(Credits.credit_income(state, 0)).is_equal(28)
+# --- Income no longer depends on the board at all ---
+
+func test_credit_income_is_independent_of_owned_structures() -> void:
+	# The defining property of the re-base: building things does NOT raise income.
+	# This is the regression that proves the outpost curve is really gone -- if any
+	# structure-count term survived anywhere, this test fails.
+	var bare: GameState = _state_with_tier(1)
+	var built: GameState = _state_with_tier(1)
+	for i: int in range(8):
+		var st: StructureState = StructureState.new()
+		st.entity_id = 900 + i
+		st.owner = 0
+		st.position = Vector2i(i, 0)
+		st.type = StructureTypes.RESEARCH_LAB
+		st.build_status = StructureState.BuildStatus.COMPLETED
+		built.entities_by_id[st.entity_id] = st
+	assert_int(Credits.credit_income(built, 0)).is_equal(Credits.credit_income(bare, 0))
 
 
-func test_credit_income_econ_tech_held_n12_returns_32() -> void:
-	# Arrange
-	var state := GameStateFactory.make_state()
-	state.per_player[0].has_economy_tech = true
-	_add_completed_outposts(state, 0, 12)
-	Research.set_economy_tech_income_bonus(0, 6)  # capped at threshold
-	# Act / Assert
-	assert_int(Credits.credit_income(state, 0)).is_equal(32)
+# --- Banking still works on the new curve ---
 
-
-# --- Credits is flag-agnostic: it adds the Research term verbatim, no own gating --
-
-func test_credit_income_flag_true_but_research_term_zero_adds_no_fabricated_bonus() -> void:
-	# Credits.credit_income() never reads has_economy_tech itself — per ADR-0006
-	# the flag gating lives entirely inside Research.economy_tech_income_bonus().
-	# This pins Credits' flag-agnostic, purely-additive behavior: even with the
-	# flag set TRUE, if Research returns a 0 term (e.g. just-researched, no
-	# outposts yet), Credits adds exactly 0 and never fabricates a tech bonus of
-	# its own. (The real AC-5 "flag must not default true" regression is a
-	# Research-layer concern — see story-001 Completion Notes.)
-	var state := GameStateFactory.make_state()
-	state.per_player[0].has_economy_tech = true
-	_add_completed_outposts(state, 0, 8)
-	Research.set_economy_tech_income_bonus(0, 0)  # flag TRUE, but term is 0
-	# Act / Assert — base 10 + outpost 12 + econ_tech 0 = 22, no fabricated bonus.
-	assert_int(Credits.credit_income(state, 0)).is_equal(22)
-
-
-# --- Negative-count defense -------------------------------------------------
-
-func test_credit_income_negative_outpost_count_clamps_to_zero_returns_base_income() -> void:
-	# Arrange — real completed_outpost_count() is a non-negative count by
-	# construction (it counts real structures, never returns a raw negative),
-	# so Credits.credit_income()'s max(0, n) clamp is now exercised indirectly
-	# by simply having zero completed outposts (n=0) — the clamp's observable
-	# behavior (never dip below base_income) is identical to the n=0 case; a
-	# genuinely negative n is no longer constructible from the real contract,
-	# so this test now pins "zero outposts -> exactly base_income," the same
-	# observable floor the AC protects.
-	var state := GameStateFactory.make_state()
-	_add_completed_outposts(state, 0, 0)
-	# Act / Assert
-	assert_int(Credits.credit_income(state, 0)).is_equal(10)
-
-
-# --- Per-player indexing ----------------------------------------------------
-
-func test_credit_income_reads_correct_player_index_for_two_players_independently() -> void:
-	# Guards against a parameter-threading / hardcoded-index bug: credit_income(state,
-	# player) must resolve the passed player's own outpost count, not player 0's.
-	# Two players with different counts must yield independent incomes.
-	var state := GameStateFactory.make_state(2, 0)
-	_add_completed_outposts(state, 0, 2)  # player 0 -> 14
-	_add_completed_outposts(state, 1, 8)  # player 1 -> 22
-	# Act / Assert — each player's income reflects only their own count.
-	assert_int(Credits.credit_income(state, 0)).is_equal(14)
-	assert_int(Credits.credit_income(state, 1)).is_equal(22)
-
-
-# --- Breakdown/total consistency -------------------------------------------
-
-func test_credit_income_breakdown_sums_to_income_exactly() -> void:
-	# Arrange
-	var state := GameStateFactory.make_state()
-	state.per_player[0].has_economy_tech = true
-	_add_completed_outposts(state, 0, 5)
-	Research.set_economy_tech_income_bonus(0, 5)
-	# Act
-	var breakdown := Credits.credit_income_breakdown(state, 0)
-	var total := Credits.credit_income(state, 0)
-	# Assert — the breakdown decomposes the exact same total, term-for-term.
-	assert_int(breakdown["base"]).is_equal(10)
-	assert_int(breakdown["outpost"]).is_equal(9)  # tier1(2*4) + tier2(1*1)
-	assert_int(breakdown["econ_tech"]).is_equal(5)
-	assert_int(breakdown["base"] + breakdown["outpost"] + breakdown["econ_tech"]).is_equal(total)
-	assert_int(total).is_equal(24)
-
-
-# --- VS Neutral default: exactly three terms, no fourth (decision A) -------
-
-# BASE_INCOME_FLOOR / faction delta fold: ADR-0006 Risks explicitly defers this
-# to the Alpha faction-asymmetry prototype (ADR-0012) — not implemented in
-# this story. See story-001's Completion Notes.
-func test_credit_income_has_exactly_three_terms_no_fourth_term_under_neutral_default() -> void:
-	# Arrange — VS Neutral default: no faction assigned (per_player[0].faction
-	# stays null, the Neutral-equivalent no-op state), no fold code exists in
-	# Credits at all under decision A. The breakdown must contain exactly the
-	# three ADR-0006 terms — no fourth key, no hidden fold contribution.
-	var state := GameStateFactory.make_state()
-	_add_completed_outposts(state, 0, 4)
-	# Act
-	var breakdown := Credits.credit_income_breakdown(state, 0)
-	# Assert — exactly 3 keys, and the shipped numbers are unchanged (18 total).
-	assert_int(breakdown.size()).is_equal(3)
-	assert_bool(breakdown.has("base")).is_true()
-	assert_bool(breakdown.has("outpost")).is_true()
-	assert_bool(breakdown.has("econ_tech")).is_true()
-	assert_int(breakdown["base"] + breakdown["outpost"] + breakdown["econ_tech"]).is_equal(18)
-	assert_int(Credits.credit_income(state, 0)).is_equal(18)
+func test_add_income_banks_the_tiered_amount() -> void:
+	var state: GameState = _state_with_tier(2)
+	state.per_player[0].current_credits = 0
+	Credits.add_income(state, 0)
+	assert_int(state.per_player[0].current_credits).is_equal(2000)
+	Credits.add_income(state, 0)
+	assert_int(state.per_player[0].current_credits).is_equal(4000)

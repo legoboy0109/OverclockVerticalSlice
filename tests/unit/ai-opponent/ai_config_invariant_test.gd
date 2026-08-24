@@ -25,16 +25,17 @@ extends GdUnitTestSuite
 
 # --- Test fixture helpers ----------------------------------------------------
 
+# ★ S6-01 (2026-08-24): re-pointed off the deleted per-outpost income curve onto the
+# research-tier model. The ratio is UNCHANGED and so is every expected value below --
+# econ_tier_bonus/first_tier_cost = 500/1000 = 0.5, exactly as the old
+# outpost_bonus_tier1/build_cost = 2/4 did. The invariant's meaning is identical
+# (the AI's lethal floor must exceed the best economic score available); only its
+# subject moved from "the first outpost" to "the first economy tier".
 func _default_economy() -> EconomyConfig:
 	var cfg := EconomyConfig.new()
-	cfg.outpost_bonus_tier1 = 2
+	cfg.econ_tier_bonus = 500
+	cfg.econ_tier_costs = PackedInt32Array([1000, 2000, 3500])
 	return cfg
-
-
-func _first_outpost(build_cost: int) -> StructureTypeDef:
-	var def := StructureTypeDef.new()
-	def.build_cost = build_cost
-	return def
 
 
 # --- 15-field presence + GDD default spot-checks (AC-1, AC "defaults") -------
@@ -55,7 +56,9 @@ func test_ai_config_exposes_all_15_scoring_knobs_plus_pacing_at_gdd_defaults() -
 	assert_float(cfg.setup_advance_bonus).is_equal_approx(0.4, 0.0001)
 	assert_float(cfg.retreat_hp_fraction).is_equal_approx(0.30, 0.0001)
 	assert_float(cfg.retreat_value_per_tile_fled).is_equal_approx(0.20, 0.0001)
-	assert_int(cfg.hq_siege_value).is_equal(12)
+	# ★ S6-07c: 12 -> 60. At 12 an HQ chip scored 0.75 against 3.00 for a kill, so the AI
+	# broke off from an objective to fight. 48 is the arithmetic break-even; 60 gives margin.
+	assert_int(cfg.hq_siege_value).is_equal(60)
 	assert_float(cfg.score_tie_epsilon).is_equal_approx(1e-6, 1e-9)
 
 	# commit_pacing_sec: not one of the 15 GDD scoring knobs, but lives on
@@ -72,7 +75,7 @@ func test_ai_config_extends_resource() -> void:
 
 func test_lethal_floor_invariant_holds_at_defaults() -> void:
 	var cfg := AIConfig.new()  # economy_horizon=6, economy_decay=0.85, lethal_floor_bonus=3.5
-	var ceiling: float = AIBalance.economy_ceiling_score(cfg, _default_economy(), _first_outpost(4))
+	var ceiling: float = AIBalance.economy_ceiling_score(cfg, _default_economy())
 
 	# GDD worked example: ceiling ~= 1.77 at defaults.
 	assert_float(ceiling).is_equal_approx(1.7647, 0.001)
@@ -86,7 +89,7 @@ func test_lethal_floor_invariant_violation_at_safe_range_maxima() -> void:
 	cfg.economy_horizon = 10
 	cfg.economy_decay = 0.95
 	cfg.lethal_floor_bonus = 3.5
-	var ceiling: float = AIBalance.economy_ceiling_score(cfg, _default_economy(), _first_outpost(4))
+	var ceiling: float = AIBalance.economy_ceiling_score(cfg, _default_economy())
 
 	# GDD worked example: ceiling ~= 3.81 at safe-range maxima.
 	assert_float(ceiling).is_equal_approx(3.81, 0.02)
@@ -133,6 +136,6 @@ func test_lethal_floor_invariant_holds_trivially_at_safe_range_floor() -> void:
 	cfg.economy_horizon = 4
 	cfg.economy_decay = 0.7
 	# lethal_floor_bonus left at its default 3.5.
-	var ceiling: float = AIBalance.economy_ceiling_score(cfg, _default_economy(), _first_outpost(4))
+	var ceiling: float = AIBalance.economy_ceiling_score(cfg, _default_economy())
 
 	assert_bool(cfg.lethal_floor_bonus > ceiling).is_true()

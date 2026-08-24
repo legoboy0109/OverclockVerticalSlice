@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cmaudmhf7uxcb"
-path="res://.godot/imported/struct_economy_outpost_neutral_idle.png-a0f7e321ef0c8e5502f10fd7c3e704b5.ctex"
+uid="uid://dhrirposw3s3k"
+path="res://.godot/imported/struct_barracks_rush_idle.png-cbdae136d7cabf6820110950b50ce2be.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/art/structures/struct_economy_outpost_neutral_idle.png"
-dest_files=["res://.godot/imported/struct_economy_outpost_neutral_idle.png-a0f7e321ef0c8e5502f10fd7c3e704b5.ctex"]
+source_file="res://assets/art/structures/struct_barracks_rush_idle.png"
+dest_files=["res://.godot/imported/struct_barracks_rush_idle.png-cbdae136d7cabf6820110950b50ce2be.ctex"]
 
 [params]
 

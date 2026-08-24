@@ -51,7 +51,7 @@ func _make_structure(state: GameState, owner: int, type: StructureTypeDef, statu
 func test_advance_decrements_two_remaining_to_one_stays_under_construction() -> void:
 	# Arrange
 	var state := _make_state()
-	var structure := _make_structure(state, 0, StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 2)
+	var structure := _make_structure(state, 0, StructureTypes.FACTORY, StructureState.BuildStatus.UNDER_CONSTRUCTION, 2)
 	# Act
 	var events: Array[Event] = BaseProduction.advance_build_timers(state, 0)
 	# Assert
@@ -65,7 +65,7 @@ func test_advance_decrements_two_remaining_to_one_stays_under_construction() -> 
 func test_advance_completes_one_remaining_appends_one_completed_event() -> void:
 	# Arrange
 	var state := _make_state()
-	var structure := _make_structure(state, 0, StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
+	var structure := _make_structure(state, 0, StructureTypes.FACTORY, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
 	# Act
 	var events: Array[Event] = BaseProduction.advance_build_timers(state, 0)
 	# Assert
@@ -81,7 +81,7 @@ func test_advance_reads_no_income_state_pure_transition_only() -> void:
 	# there is no income_this_turn snapshot; income banks into current_credits at
 	# step 4b, which advance_build_timers must likewise never touch.)
 	var state := _make_state()
-	_make_structure(state, 0, StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
+	_make_structure(state, 0, StructureTypes.FACTORY, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
 	var ap_before: int = state.per_player[0].current_ap
 	var credits_before: int = state.per_player[0].current_credits
 	# Act
@@ -96,8 +96,8 @@ func test_advance_reads_no_income_state_pure_transition_only() -> void:
 func test_advance_batch_completes_two_structures_reaching_zero_same_call() -> void:
 	# Arrange -- two Under-Construction structures both at 1 remaining.
 	var state := _make_state()
-	var a := _make_structure(state, 0, StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
-	var b := _make_structure(state, 0, StructureTypes.PRODUCTION_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
+	var a := _make_structure(state, 0, StructureTypes.FACTORY, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
+	var b := _make_structure(state, 0, StructureTypes.BARRACKS, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
 	# Act
 	var events: Array[Event] = BaseProduction.advance_build_timers(state, 0)
 	# Assert -- both complete in this one call, each with its own event.
@@ -112,9 +112,9 @@ func test_advance_only_touches_player_owned_under_construction_structures() -> v
 	# Arrange -- an opponent's Under-Construction structure and this player's
 	# already-Completed structure must both be left untouched.
 	var state := _make_state()
-	var mine := _make_structure(state, 0, StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
-	var opponents := _make_structure(state, 1, StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
-	var already_done := _make_structure(state, 0, StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.COMPLETED, 0)
+	var mine := _make_structure(state, 0, StructureTypes.FACTORY, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
+	var opponents := _make_structure(state, 1, StructureTypes.FACTORY, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
+	var already_done := _make_structure(state, 0, StructureTypes.FACTORY, StructureState.BuildStatus.COMPLETED, 0)
 	# Act
 	var events: Array[Event] = BaseProduction.advance_build_timers(state, 0)
 	# Assert -- only "mine" completes; opponent's untouched; already-Completed untouched.
@@ -131,10 +131,10 @@ func test_completed_outpost_count_basic_fixture_returns_exactly_two() -> void:
 	# Arrange -- {2 Completed Econ, 1 U/C Econ, 1 Completed Prod, 1 HQ}, all
 	# one player's.
 	var state := _make_state()
-	_make_structure(state, 0, StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.COMPLETED)
-	_make_structure(state, 0, StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.COMPLETED)
-	_make_structure(state, 0, StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
-	_make_structure(state, 0, StructureTypes.PRODUCTION_OUTPOST, StructureState.BuildStatus.COMPLETED)
+	_make_structure(state, 0, StructureTypes.FACTORY, StructureState.BuildStatus.COMPLETED)
+	_make_structure(state, 0, StructureTypes.FACTORY, StructureState.BuildStatus.COMPLETED)
+	_make_structure(state, 0, StructureTypes.FACTORY, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
+	_make_structure(state, 0, StructureTypes.BARRACKS, StructureState.BuildStatus.COMPLETED)
 	_make_structure(state, 0, StructureTypes.HQ, StructureState.BuildStatus.COMPLETED)
 	# Act / Assert
 	assert_int(BaseProduction.completed_outpost_count(state, 0)).is_equal(2)
@@ -143,8 +143,8 @@ func test_completed_outpost_count_basic_fixture_returns_exactly_two() -> void:
 func test_completed_outpost_count_excludes_opponent_owned() -> void:
 	# Arrange
 	var state := _make_state()
-	_make_structure(state, 0, StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.COMPLETED)
-	_make_structure(state, 1, StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.COMPLETED)
+	_make_structure(state, 0, StructureTypes.FACTORY, StructureState.BuildStatus.COMPLETED)
+	_make_structure(state, 1, StructureTypes.FACTORY, StructureState.BuildStatus.COMPLETED)
 	# Act / Assert -- player 0 sees only their own.
 	assert_int(BaseProduction.completed_outpost_count(state, 0)).is_equal(1)
 	assert_int(BaseProduction.completed_outpost_count(state, 1)).is_equal(1)
@@ -154,7 +154,7 @@ func test_completed_outpost_count_excludes_destroyed_alive_only() -> void:
 	# Arrange -- a Completed Economy Outpost destroyed this step (erased from
 	# entities_by_id, per ADR-0017 D1's alive == present invariant).
 	var state := _make_state()
-	var structure := _make_structure(state, 0, StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.COMPLETED)
+	var structure := _make_structure(state, 0, StructureTypes.FACTORY, StructureState.BuildStatus.COMPLETED)
 	state.entities_by_id.erase(structure.entity_id)
 	# Act / Assert
 	assert_int(BaseProduction.completed_outpost_count(state, 0)).is_equal(0)
@@ -186,7 +186,7 @@ func test_reset_turn_flags_resets_units_produced_this_turn_to_zero() -> void:
 	# Arrange
 	var structure := StructureState.new()
 	structure.owner = 0
-	structure.type = StructureTypes.PRODUCTION_OUTPOST
+	structure.type = StructureTypes.BARRACKS
 	structure.units_produced_this_turn = 3
 	# Act
 	Structure.reset_turn_flags(structure)
@@ -211,7 +211,7 @@ func test_reset_turn_flags_resets_both_flags_together_on_the_same_structure() ->
 	# structure type actually uses (harmless no-op write on the unused one).
 	var structure := StructureState.new()
 	structure.owner = 0
-	structure.type = StructureTypes.ECONOMY_OUTPOST
+	structure.type = StructureTypes.FACTORY
 	structure.units_produced_this_turn = 2
 	structure.has_attacked = true
 	# Act

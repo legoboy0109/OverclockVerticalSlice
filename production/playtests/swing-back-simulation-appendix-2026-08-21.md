@@ -276,3 +276,233 @@ Items 2 and 3 are real design/balance work and belong in
 `production/post-gate-backlog.md` unless the verdict makes them blocking. Item 1 is close
 to a one-line configuration change and may be worth doing *before* the human session, so
 that S5-04 is played on a build where matches can end.
+
+---
+
+## ⛔ S6-06 GATE RUN — 2026-08-24 — **FAILED**, and the diagnosis was wrong
+
+**Build**: post S6-01..S6-05 (economy re-based on research tiers, upkeep, per-structure
+maximums, population cap, AI re-anchored). Suite 1039/1039. 21 games, 1,260 turn-rows.
+
+| # | Gate condition | Result | Baseline |
+|---|---|---|---|
+| 1 | resolve on **play** | **0 / 21** | 0 / 20 — unchanged |
+| 2 | **non-zero HQ damage** | **NO — zero in 1,260 rows** | zero in 4,182 — unchanged |
+| 3 | outcomes from both seats | n/a | — |
+| 4 | peak banked Credits | **18,400** (target <15,000) | 572,400 equivalent |
+
+A **+3 material advantage converted in 0 of 6 games.** Unchanged.
+
+### The PIVOT note predicted its own falsifier, and hit it
+
+> *"Bounding the economy lets the existing siege term surface. **If it does not, the
+> diagnosis is wrong and that is the first thing to revisit.**"*
+
+It did not surface. **The economy chain was wrong at its last link.**
+
+### ★★ What instrumentation found (`tools/DiagnoseAI.tscn`, built for this)
+
+Traced 24 turns, reporting per-verb best scores against `pass_threshold` (0.15):
+
+| verb | turns with a candidate above threshold |
+|---|---:|
+| move | 14 / 24 |
+| attack | 17 / 24 |
+| produce | 24 / 24 |
+| ★ **build** | ★ **0 / 24 — `best_build` is 0.000 in EVERY row** |
+
+**The AI never builds anything, ever.** The chain:
+
+> `_economy_value` returns 0 for structures (S6-01) → the AI never builds a **Barracks** →
+> the population cap stays at its base of **4** → the army never grows → both sides field
+> 3–4 units, replace losses instantly from the HQ, and grind mid-map forever → nothing ever
+> reaches an objective.
+
+It also explains condition 4: **Credits accumulated to 18,400 because the AI had nothing it
+was willing to buy.** Not a broken drain — a broken *buyer*.
+
+★ **The defect was introduced in S6-01**, with reasoning that was right about income and
+wrong about value: *"no structure raises Credit income, so building is not an economic
+investment."* True — but since **S6-04 a Barracks raises the population cap**, and the AI
+has a term for income value and none for **capacity** value.
+
+### ⚠ Two corrections to the first reading of this batch
+
+1. **"The AI leaves 98% of its AP unspent" was an ARTEFACT.** `simulate_matches.gd` emits
+   its row *after* `end_turn`, which runs `start_turn` for the next player and resets their
+   AP — so the `ap0` column is a *fresh* budget, not a leftover one. The probe shows the AI
+   committing **9–12 actions per turn** and spending ~20 of 45 AP. ★ **Check where a metric
+   is captured before drawing a conclusion from it.**
+2. **"The diagnosis was wrong" was too broad.** The economy work is correct and necessary —
+   the unbounded-Credit defect was real and is fixed (a ~97% reduction against the
+   equivalent baseline). What was wrong is the final link, *"AP never reaches movement."*
+   AP does reach movement. The AI simply cannot grow.
+
+### Next
+
+Give the AI a **capacity-value** term so a Barracks is worth building, then re-run. Whether
+that alone makes matches resolve is a separate question — armies that can grow may still
+stalemate — but it is one batch to find out, and it is a bounded fix rather than a redesign.
+
+---
+
+## S6-06 GATE RE-RUN — 2026-08-24 — capacity fix landed; **gate still FAILS**
+
+**Change under test**: the AI gained a capacity-value term (a Barracks is worth the army
+capacity it unlocks) **and** the build enumeration was un-gated from a hard identity filter.
+
+### The filter was the real defect, and S6-03 created it
+
+`_score_build_and_economy_candidates` contained `if structure_type != ECONOMY_OUTPOST:
+continue`. Sound when written — the other types had no strategic model, and enumerating
+them on a placeholder basis caused a build↔cancel oscillation. But **S6-03 renamed
+`ECONOMY_OUTPOST → FACTORY` mechanically, and the filter came with it**, leaving the AI
+hard-locked to the one structure whose value S6-01 had just zeroed. It was structurally
+incapable of building a Barracks at any price. Now gated on *"can we actually value this?"*,
+which preserves the original guard's intent while letting any type with a real model in.
+
+### What the fix DID achieve
+
+| | before | after |
+|---|---:|---:|
+| Peak banked Credits | 18,400 | ★ **1,750** ✓ *(condition 4 now passes)* |
+| BUILD candidates above `pass_threshold` | 0 / 24 turns | ★ **20 / 24** |
+
+### What it did NOT
+
+| Gate condition | Result |
+|---|---|
+| resolve on **play** | **0 / 21** — unchanged |
+| **non-zero HQ damage** | **zero in 1,260 rows** — unchanged |
+| +3 advantage converts | **0 / 6** — unchanged |
+
+### ★★ The number that explains it
+
+| late-game (turn > 40) | before fix | after fix |
+|---|---:|---:|
+| mean army size | 2.4 v 2.2 | **2.5 v 2.2** |
+| mean structure hp | 14.7 | **14.9** |
+
+**The AI now spends, but nothing accumulates.** Units die exactly as fast as they are
+produced. Two symmetric AIs reinforcing from HQs at opposite ends of a 12×10 map, trading
+one-for-one in the middle, forever. **Perpetual attrition is the equilibrium** — so the
+population cap was never the binding constraint either.
+
+### ★ Conclusion: this is a BALANCE property, not a bug
+
+Nothing in the current rules lets either side achieve **local superiority**: reinforcement
+is instant and adjacent to the objective, the map is small and symmetric, and a kill scores
+**3.00** against an HQ chip at **0.75**, so no unit ever walks past a fight toward the
+objective.
+
+**Three levers, all design-direction calls:**
+1. **Slower or more distant reinforcement**, so losses cost ground rather than a turn.
+2. **Make the objective outscore trading**, so a unit will break off and push.
+3. **Make combat decisive**, so a material edge converts instead of dissolving.
+
+### ⚠ For the record: three predictions, three misses
+
+Unbounded economy → AI paralysis → capacity. Each was a real defect, each was fixed, and
+**none of them was the cause of non-resolution.** The economy work stands on its own merits
+and the AI genuinely could not build. But the pattern says the remaining question is not an
+engineering one, and the next change should be **chosen by design intent and then measured**,
+not guessed at again. The batch and `tools/DiagnoseAI.tscn` make any candidate cheap to test.
+
+---
+
+## ★★ S6-07 — SLOWER REINFORCEMENT — **the first real movement in this project's history**
+
+**Change**: a per-producer **production cooldown** (user's chosen lever, 2026-08-24). A
+producer that makes a unit cannot make another for `production_cooldown_turns`. Shipped at
+**2** on the HQ and the Barracks.
+
+**Why a cooldown rather than per-unit build times:** it slows the *rate* of replacement —
+which is what makes a loss cost ground — with one field and one check, rather than adding an
+under-construction lifecycle to units.
+
+### Result
+
+| # | Gate condition | Result | Previous |
+|---|---|---|---|
+| 1 | resolve on **play** | 0 / 21 | 0 / 21 |
+| 2 | ★★ **non-zero HQ damage** | ★★ **YES — 338 rows, lowest HQ 30/40** | ★ **ZERO, always** |
+| 3 | both seats | n/a | n/a |
+| 4 | peak banked Credits | **27,000** ⚠ | 1,750 |
+
+### ★★ Condition 2 flipped, and it had never moved before
+
+Across every prior measurement — 4,182 rows pre-fix, 1,260 after the economy work, 1,260
+after the capacity fix — **HQ damage was exactly zero**. It is now 338 rows, with an HQ taken
+to 30/40.
+
+**The attrition equilibrium was the cause.** Slowing replacement lets one side achieve the
+local superiority that instant reinforcement denied both, and somebody finally walks to an
+objective and hits it. ★ Three earlier hypotheses (unbounded economy → AI paralysis →
+capacity) each found a real defect and each fixed it; **none moved this number. This one
+did.**
+
+### Still failing, and now it is a MAGNITUDE problem rather than a DIRECTION one
+
+Damage reaches 10 of 40 hp and stalls: attackers get through, chip, and die before
+finishing. Pressure exists but does not sustain.
+
+**Credits regressed 1,750 → 27,000**, and that follows directly from the fix — production is
+gated behind a cooldown, so the AI banks what it cannot spend. A predictable second-order
+effect, not a new defect, but it means condition 4 needs a sink again.
+
+### Two candidate next steps, one batch each
+
+1. **Raise the cooldown to 3–4** — more pressure per exchange, at the risk of starving both
+   sides into a slower stalemate.
+2. ★ **Keep 2 and let Barracks raise throughput** — a player who *invests* reinforces faster.
+   Preferred on the reasoning that it turns the Credit surplus into the fix rather than a
+   side effect, and makes the population-cap/Barracks system load-bearing instead of
+   decorative. **User's call.**
+
+---
+
+## S6-07b — BARRACKS THROUGHPUT — **two of four conditions now pass**
+
+**Change** (user's call): keep the cooldown, make investment pay. HQ cooldown **3**,
+Barracks **1** — a player who builds Barracks reinforces three times faster. And the AI's
+structure valuation switched from *capacity headroom* to **throughput**.
+
+### The trend across four batches
+
+| # | Condition | B1 | B2 | B3 | **B4** |
+|---|---|---|---|---|---|
+| 1 | resolve on play | 0/21 | 0/21 | 0/21 | **0/21** ✗ |
+| 2 | **HQ damage (lowest hp)** | none | none | 30/40 | ★ **21/40** ✓ |
+| 3 | both seats | — | — | — | ✗ |
+| 4 | **peak Credits** | 18,400 | 1,750 | 27,000 | ★ **1,850** ✓ |
+
+**An HQ is now taken to just over half health.** That number had never moved off 40 across
+4,182 rows before S6-07.
+
+### ★★ The trap, recorded because it is the most instructive thing here
+
+The first capacity model scaled a Barracks' value by **cap utilisation**
+(`current_population / effective_cap`). It correctly stopped the AI building infrastructure
+it could not use — and created a loop that held the stalemate in place:
+
+> armies cannot grow (units die as fast as they are made) → utilisation stays low → a
+> Barracks looks worthless → throughput stays low → **armies cannot grow**
+
+The AI built ~0.4 Barracks per match. ★ **A gate that keys on the symptom of the problem it
+is meant to solve will preserve that problem.** Switching to throughput-based value broke
+the loop: BUILD candidates above threshold went **0/24 → 20/24 → 24/24** turns.
+
+★ It also inverted a relationship, and the new direction is the correct one: value now
+**falls** as headroom shrinks, rather than rising with pressure. A producer is worth most
+when you have room for what it makes. Over-building is bounded **structurally** (by
+`max_count` and the headroom term) rather than **behaviourally** (by a gate).
+
+### Still failing
+
+Damage reaches ~19 of 40 and stalls: attackers get through, do real work, and die before
+finishing. **Magnitude, not direction** — and the gap is closing.
+
+**Most likely remaining cause:** a kill still scores **3.00** against an HQ chip at **0.75**,
+so a unit standing beside an objective breaks off to fight instead of finishing. That is
+lever 2 from the S6-06 analysis ("make the objective outscore trading") and it is the one
+lever not yet tried.

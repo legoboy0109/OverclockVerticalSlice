@@ -310,8 +310,11 @@ func start_turn(player: int) -> Array:
 
 	# 4a. AP reset — flat budget + capped carryover (ADR-0006; not income-driven).
 	AP.reset_turn(self, player)
-	# 4b. Credit income — bank credit_income AFTER step 3, so same-turn completions count.
-	Credits.add_income(self, player)
+	# 4b. Credit economy — bank NET income (gross - upkeep) AFTER step 3, so a
+	# structure completing this turn is already paying its own upkeep. Also sets
+	# PlayerState.in_deficit, which locks produce/build/research for this turn
+	# (unit-upkeep.md UR-2/UR-6).
+	Upkeep.apply_turn_economy(self, player)
 
 	return events
 
@@ -440,6 +443,7 @@ static func _ensure_dispatch_registered() -> void:
 	register_verb(Action.Verb.BUILD, BaseProduction.validate_build, BaseProduction.apply_build)
 	register_verb(Action.Verb.PRODUCE, BaseProduction.validate_produce, BaseProduction.apply_produce)
 	register_verb(Action.Verb.CANCEL_BUILD, BaseProduction.validate_cancel, BaseProduction.apply_cancel)
+	register_verb(Action.Verb.DISBAND, Upkeep.validate_disband, Upkeep.apply_disband)
 	_dispatch_registered = true
 
 

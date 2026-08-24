@@ -77,19 +77,21 @@ func _make_cancel_action(structure_id: int, player: int = 0) -> CancelBuildActio
 
 # --- Cancel (Rule 10): refund per structure type ----------------------------
 
-func test_cancel_under_construction_economy_outpost_credits_2_removes_and_empties_tile() -> void:
+func test_cancel_under_construction_factory_credits_2_removes_and_empties_tile() -> void:
 	# Arrange -- an Under-Construction Economy Outpost (build_cost 4 -> refund 2).
 	var state := _make_state()
 	var tile := Vector2i(5, 5)
-	var structure := _make_structure(1, 0, tile, StructureTypes.ECONOMY_OUTPOST)
+	var structure := _make_structure(1, 0, tile, StructureTypes.FACTORY)
 	_place(state, structure)
 	var next_id_before: int = state.next_entity_id
 	var action := _make_cancel_action(structure.entity_id)
 	assert_int(BaseProduction.validate_cancel(state, action)).is_equal(Action.Reason.OK)
 	# Act
 	var events: Array[Event] = BaseProduction.apply_cancel(state, action)
-	# Assert -- floor(4*0.5) = 2 Credits credited (refund is Credits, ADR-0006 pivot).
-	assert_int(state.per_player[0].current_credits).is_equal(2)
+	# ★ S6-02: derived, not restated -- the ×100 rescale moved build_cost 4 -> 400 and
+	# the refund with it. cancel_refund_pct is a RATE and is unaffected.
+	var expected_refund: int = StructureTypes.FACTORY.build_cost * StructureBalance.base_production.cancel_refund_pct / 100
+	assert_int(state.per_player[0].current_credits).is_equal(expected_refund)
 	# Structure removed from the entity map and the grid; tile now empty.
 	assert_bool(state.entities_by_id.has(structure.entity_id)).is_false()
 	assert_object(state.entity_at(tile)).is_null()
@@ -102,17 +104,19 @@ func test_cancel_under_construction_economy_outpost_credits_2_removes_and_emptie
 	assert_bool(events[0] is StructureCancelledEvent).is_true()
 
 
-func test_cancel_under_construction_production_outpost_credits_4_removes_and_empties_tile() -> void:
+func test_cancel_under_construction_barracks_credits_4_removes_and_empties_tile() -> void:
 	# Arrange -- Production Outpost (build_cost 9 -> refund 4).
 	var state := _make_state()
 	var tile := Vector2i(5, 5)
-	var structure := _make_structure(1, 0, tile, StructureTypes.PRODUCTION_OUTPOST)
+	var structure := _make_structure(1, 0, tile, StructureTypes.BARRACKS)
 	_place(state, structure)
 	# Act
 	BaseProduction.apply_cancel(state, _make_cancel_action(structure.entity_id))
-	# Assert -- floor(9*0.5) = 4; removal dimensions checked per-type (not only for
-	# Economy Outpost) so a hypothetical per-type divergence would be caught.
-	assert_int(state.per_player[0].current_credits).is_equal(4)
+	# ★ S6-02: derived, not restated -- the ×100 rescale moved build_cost 9 -> 900.
+	# Removal dimensions still checked per-type so a per-type divergence would be caught.
+	var expected_refund_po: int = StructureTypes.BARRACKS.build_cost \
+		* StructureBalance.base_production.cancel_refund_pct / 100
+	assert_int(state.per_player[0].current_credits).is_equal(expected_refund_po)
 	assert_bool(state.entities_by_id.has(structure.entity_id)).is_false()
 	assert_int(state.grid.occupant_at(tile.x, tile.y)).is_equal(GridState.EMPTY_OCCUPANT)
 
@@ -126,7 +130,7 @@ func test_cancel_under_construction_defensive_structure_credits_3_removes_and_em
 	# Act
 	BaseProduction.apply_cancel(state, _make_cancel_action(structure.entity_id))
 	# Assert -- floor(6*0.5) = 3; removal dimensions checked per-type.
-	assert_int(state.per_player[0].current_credits).is_equal(3)
+	assert_int(state.per_player[0].current_credits).is_equal(300)  # ★ S6-02: ×100 Credit rescale
 	assert_bool(state.entities_by_id.has(structure.entity_id)).is_false()
 	assert_int(state.grid.occupant_at(tile.x, tile.y)).is_equal(GridState.EMPTY_OCCUPANT)
 
@@ -135,12 +139,15 @@ func test_cancel_refund_adds_to_existing_credits_not_overwrite() -> void:
 	# Arrange -- the player already has 10 Credits; cancelling an Economy Outpost
 	# (refund 2) must CREDIT (add), not overwrite, the pool.
 	var state := _make_state(0, 10)
-	var structure := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.ECONOMY_OUTPOST)
+	var structure := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.FACTORY)
 	_place(state, structure)
 	# Act
 	BaseProduction.apply_cancel(state, _make_cancel_action(structure.entity_id))
-	# Assert -- 10 + 2 = 12 (refund is additive; the refunded Credits are spendable again).
-	assert_int(state.per_player[0].current_credits).is_equal(12)
+	# ★ S6-02: derived, not restated -- the ×100 rescale moved the refund with build_cost.
+	# The claim under test is that the refund is ADDITIVE onto an existing balance.
+	var refund: int = StructureTypes.FACTORY.build_cost \
+		* StructureBalance.base_production.cancel_refund_pct / 100
+	assert_int(state.per_player[0].current_credits).is_equal(10 + refund)
 
 
 # --- Cancel rejection: Completed structures cannot be cancelled --------------
@@ -150,7 +157,7 @@ func test_cancel_completed_structure_rejected_no_refund_unchanged() -> void:
 	# combat-destroyed, never cancelled (Rule 10).
 	var state := _make_state()
 	var tile := Vector2i(5, 5)
-	var structure := _make_structure(1, 0, tile, StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.COMPLETED)
+	var structure := _make_structure(1, 0, tile, StructureTypes.FACTORY, StructureState.BuildStatus.COMPLETED)
 	_place(state, structure)
 	var action := _make_cancel_action(structure.entity_id)
 	# Act / Assert -- validate rejects.
@@ -168,7 +175,7 @@ func test_cancel_not_owned_structure_rejected_illegal_target() -> void:
 	# Arrange -- an Under-Construction structure owned by player 1, while player 0
 	# is active. You cannot cancel an opponent's build.
 	var state := _make_state()
-	var structure := _make_structure(1, 1, Vector2i(5, 5), StructureTypes.ECONOMY_OUTPOST)
+	var structure := _make_structure(1, 1, Vector2i(5, 5), StructureTypes.FACTORY)
 	_place(state, structure)
 	var action := _make_cancel_action(structure.entity_id)
 	# Act / Assert
@@ -193,10 +200,11 @@ func test_cancel_unknown_structure_id_rejected_no_such_entity() -> void:
 # --- Refund rides on the result event (presentation reads it) ---------------
 
 func test_cancel_result_event_carries_refund_and_identity() -> void:
-	# Arrange -- Production Outpost (refund 4).
+	# Arrange -- Production Outpost. ★ S6-02: refund derives from build_cost, which the
+	# ×100 Credit rescale moved 9 -> 900.
 	var state := _make_state(0)
 	var tile := Vector2i(5, 5)
-	var structure := _make_structure(1, 0, tile, StructureTypes.PRODUCTION_OUTPOST)
+	var structure := _make_structure(1, 0, tile, StructureTypes.BARRACKS)
 	_place(state, structure)
 	# Act
 	var events: Array[Event] = BaseProduction.apply_cancel(state, _make_cancel_action(structure.entity_id))
@@ -205,9 +213,10 @@ func test_cancel_result_event_carries_refund_and_identity() -> void:
 	assert_int(events.size()).is_equal(1)
 	assert_bool(events[0] is StructureCancelledEvent).is_true()
 	var evt: StructureCancelledEvent = events[0]
-	assert_int(evt.refund).is_equal(4)
+	assert_int(evt.refund).is_equal(StructureTypes.BARRACKS.build_cost \
+		* StructureBalance.base_production.cancel_refund_pct / 100)
 	assert_int(evt.entity_id).is_equal(structure.entity_id)
-	assert_object(evt.structure_type).is_same(StructureTypes.PRODUCTION_OUTPOST)
+	assert_object(evt.structure_type).is_same(StructureTypes.BARRACKS)
 	assert_int(evt.owner).is_equal(0)
 	assert_int(evt.tile.x).is_equal(tile.x)
 	assert_int(evt.tile.y).is_equal(tile.y)
@@ -225,7 +234,7 @@ func test_combat_destruction_is_a_separate_path_completed_yields_no_cancel_refun
 	# destroys it) cannot be cancelled at all -> zero AP credited via cancel. The
 	# under-construction destroy_entity contrast is Story 010's integration case.
 	var state := _make_state(0)
-	var structure := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.PRODUCTION_OUTPOST, StructureState.BuildStatus.COMPLETED)
+	var structure := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.BARRACKS, StructureState.BuildStatus.COMPLETED)
 	_place(state, structure)
 	# Act -- attempt to cancel the Completed structure.
 	var events: Array[Event] = BaseProduction.apply_cancel(state, _make_cancel_action(structure.entity_id))
@@ -247,6 +256,9 @@ func test_cancel_refund_formula_floors_via_integer_division() -> void:
 	assert_int(BaseProduction.cancel_refund(5)).is_equal(2) # odd fixture cost: 5*50/100 = 2 (floors, not rounds to 3)
 	# Reads the live config value, not a hardcoded 50 -- the registry consts back
 	# these build_costs, and the refunds match the real .tres cancel_refund_pct.
-	assert_int(BaseProduction.cancel_refund(StructureTypes.ECONOMY_OUTPOST.build_cost)).is_equal(2)
-	assert_int(BaseProduction.cancel_refund(StructureTypes.PRODUCTION_OUTPOST.build_cost)).is_equal(4)
-	assert_int(BaseProduction.cancel_refund(StructureTypes.DEFENSIVE_STRUCTURE.build_cost)).is_equal(3)
+	# ★ S6-02: derived from the live build_cost, which the ×100 rescale moved. The claim
+	# under test is the FLOORING (integer division), proven by the odd-cost fixtures above.
+	var pct: int = StructureBalance.base_production.cancel_refund_pct
+	for st: StructureTypeDef in [StructureTypes.FACTORY, StructureTypes.BARRACKS, \
+			StructureTypes.DEFENSIVE_STRUCTURE]:
+		assert_int(BaseProduction.cancel_refund(st.build_cost)).is_equal(st.build_cost * pct / 100)

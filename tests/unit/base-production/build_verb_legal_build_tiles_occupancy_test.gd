@@ -53,7 +53,7 @@ func _make_grid() -> GridState:
 	return grid
 
 
-# current_credits defaults to StructureTypes.ECONOMY_OUTPOST.build_cost (4, the
+# current_credits defaults to StructureTypes.FACTORY.build_cost (4, the
 # Credit-denominated main cost post-pivot) so a legal build fixture is
 # affordable unless a test explicitly drives it lower. current_ap defaults
 # independently to Balance.economy.build_ap_cost (2, the AP surcharge) --
@@ -62,7 +62,7 @@ func _make_state(current_ap: int = -1, current_credits: int = -1) -> GameState:
 	var state := GameStateFactory.make_state(2, 0)
 	state.grid = _make_grid()
 	var ap: int = current_ap if current_ap >= 0 else Balance.economy.build_ap_cost
-	var credits: int = current_credits if current_credits >= 0 else StructureTypes.ECONOMY_OUTPOST.build_cost
+	var credits: int = current_credits if current_credits >= 0 else StructureTypes.FACTORY.build_cost
 	state.per_player[0].current_ap = ap
 	state.per_player[1].current_ap = ap
 	state.per_player[0].current_credits = credits
@@ -109,7 +109,7 @@ func _make_build_action(tile: Vector2i, structure_type: StructureTypeDef, player
 func test_under_construction_structure_blocks_movement_via_grid_is_passable() -> void:
 	# Arrange -- a fresh Under-Construction structure sits on tile T.
 	var state := _make_state()
-	var structure := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION)
+	var structure := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.FACTORY, StructureState.BuildStatus.UNDER_CONSTRUCTION)
 	_place(state, structure)
 	# Act / Assert -- T reports movement-blocked (not passable) purely by
 	# occupying the shared Grid index -- no status branch anywhere.
@@ -121,7 +121,7 @@ func test_under_construction_structure_stops_direct_lof_walk_via_occupant_at() -
 	# on a cardinal line; occupant_at must resolve it (the same lookup
 	# Combat._walk_direction uses to stop a DIRECT walk).
 	var state := _make_state()
-	var structure := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION)
+	var structure := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.FACTORY, StructureState.BuildStatus.UNDER_CONSTRUCTION)
 	_place(state, structure)
 	# Act / Assert
 	assert_int(state.grid.occupant_at(5, 5)).is_equal(1)
@@ -132,7 +132,7 @@ func test_under_construction_structure_is_a_legal_target_resolvable_via_entity_a
 	# Arrange -- Combat's targeting resolves occupants via GameState.entity_at;
 	# an Under-Construction structure must resolve identically to a Completed one.
 	var state := _make_state()
-	var structure := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION)
+	var structure := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.FACTORY, StructureState.BuildStatus.UNDER_CONSTRUCTION)
 	_place(state, structure)
 	# Act
 	var resolved: EntityState = state.entity_at(Vector2i(5, 5))
@@ -149,11 +149,11 @@ func test_impassable_tile_never_offered_and_build_there_is_rejected() -> void:
 	_place(state, unit)
 	state.grid.terrain[state.grid.index(6, 5)] = GridState.Terrain.IMPASSABLE
 	# Act
-	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.ECONOMY_OUTPOST)
+	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
 	# Assert -- never offered.
 	assert_bool(Vector2i(6, 5) in tiles).is_false()
 	# Act -- build() there is rejected.
-	var action := _make_build_action(Vector2i(6, 5), StructureTypes.ECONOMY_OUTPOST, 0)
+	var action := _make_build_action(Vector2i(6, 5), StructureTypes.FACTORY, 0)
 	assert_int(BaseProduction.validate_build(state, action)).is_equal(Action.Reason.NOT_LEGAL_BUILD_TILE)
 
 
@@ -165,11 +165,11 @@ func test_occupied_tile_never_offered_and_build_there_is_rejected() -> void:
 	_place(state, unit)
 	_place(state, occupant)
 	# Act
-	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.ECONOMY_OUTPOST)
+	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
 	# Assert -- never offered.
 	assert_bool(Vector2i(6, 5) in tiles).is_false()
 	# Act -- build() there is rejected.
-	var action := _make_build_action(Vector2i(6, 5), StructureTypes.ECONOMY_OUTPOST, 0)
+	var action := _make_build_action(Vector2i(6, 5), StructureTypes.FACTORY, 0)
 	assert_int(BaseProduction.validate_build(state, action)).is_equal(Action.Reason.NOT_LEGAL_BUILD_TILE)
 
 
@@ -182,7 +182,7 @@ func test_affordable_legal_build_spends_credits_and_ap_surcharge_places_under_co
 	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
 	_place(state, unit)
 	var tile := Vector2i(6, 5)
-	var action := _make_build_action(tile, StructureTypes.ECONOMY_OUTPOST, 0)
+	var action := _make_build_action(tile, StructureTypes.FACTORY, 0)
 	assert_int(BaseProduction.validate_build(state, action)).is_equal(Action.Reason.OK)
 	# Act
 	var events: Array[Event] = BaseProduction.apply_build(state, action)
@@ -197,7 +197,7 @@ func test_affordable_legal_build_spends_credits_and_ap_surcharge_places_under_co
 	var structure: StructureState = placed
 	assert_int(structure.build_status).is_equal(StructureState.BuildStatus.UNDER_CONSTRUCTION)
 	assert_int(structure.owner).is_equal(0)
-	assert_object(structure.type).is_same(StructureTypes.ECONOMY_OUTPOST)
+	assert_object(structure.type).is_same(StructureTypes.FACTORY)
 	# Blocks/targets immediately (single atomic apply -- Grid already updated).
 	assert_bool(state.grid.is_passable(tile.x, tile.y)).is_false()
 	# One placement event.
@@ -210,7 +210,7 @@ func test_fresh_under_construction_structure_is_inert_for_completed_outpost_coun
 	var state := _make_state()
 	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
 	_place(state, unit)
-	var action := _make_build_action(Vector2i(6, 5), StructureTypes.ECONOMY_OUTPOST, 0)
+	var action := _make_build_action(Vector2i(6, 5), StructureTypes.FACTORY, 0)
 	BaseProduction.apply_build(state, action)
 	# Act / Assert -- zero contribution until Completed.
 	assert_int(BaseProduction.completed_outpost_count(state, 0)).is_equal(0)
@@ -224,7 +224,7 @@ func test_unaffordable_build_credits_short_rejected_credits_and_grid_unchanged()
 	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
 	_place(state, unit)
 	var tile := Vector2i(6, 5)
-	var action := _make_build_action(tile, StructureTypes.ECONOMY_OUTPOST, 0)
+	var action := _make_build_action(tile, StructureTypes.FACTORY, 0)
 	# Act
 	var reason: int = BaseProduction.validate_build(state, action)
 	# Assert
@@ -248,7 +248,7 @@ func test_commit_revalidation_rejects_when_tile_becomes_occupied_between_preview
 	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
 	_place(state, unit)
 	var tile := Vector2i(6, 5)
-	var action := _make_build_action(tile, StructureTypes.ECONOMY_OUTPOST, 0)
+	var action := _make_build_action(tile, StructureTypes.FACTORY, 0)
 	assert_int(BaseProduction.validate_build(state, action)).is_equal(Action.Reason.OK)
 	# Act -- tile becomes occupied before commit.
 	var intruder := _make_unit(2, 1, UnitTypes.SCOUT, tile)
@@ -270,11 +270,11 @@ func test_tile_adjacent_to_friendly_unit_and_manhattan_3_from_enemy_structure_is
 	# and manhattan 3 from the nearest enemy structure at (9,5).
 	var state := _make_state()
 	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
-	var enemy_structure := _make_structure(2, 1, Vector2i(9, 5), StructureTypes.ECONOMY_OUTPOST)
+	var enemy_structure := _make_structure(2, 1, Vector2i(9, 5), StructureTypes.FACTORY)
 	_place(state, unit)
 	_place(state, enemy_structure)
 	# Act
-	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.ECONOMY_OUTPOST)
+	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
 	# Assert
 	assert_bool(Vector2i(6, 5) in tiles).is_true()
 
@@ -283,10 +283,10 @@ func test_tile_adjacent_to_friendly_structure_not_unit_is_legal() -> void:
 	# Arrange -- friendly STRUCTURE (not unit) at (5,5); no enemy structures at
 	# all, so standoff trivially clears.
 	var state := _make_state()
-	var friendly_structure := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.ECONOMY_OUTPOST)
+	var friendly_structure := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.FACTORY)
 	_place(state, friendly_structure)
 	# Act
-	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.ECONOMY_OUTPOST)
+	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
 	# Assert -- unit OR structure satisfies adjacency.
 	assert_bool(Vector2i(6, 5) in tiles).is_true()
 
@@ -299,13 +299,13 @@ func test_tile_at_manhattan_exactly_2_from_enemy_structure_excluded_strict_bound
 	# EXACTLY 2 from an enemy structure at (6,7).
 	var state := _make_state()
 	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(6, 4))
-	var enemy_structure := _make_structure(2, 1, Vector2i(6, 7), StructureTypes.ECONOMY_OUTPOST)
+	var enemy_structure := _make_structure(2, 1, Vector2i(6, 7), StructureTypes.FACTORY)
 	_place(state, unit)
 	_place(state, enemy_structure)
 	# Precondition -- manhattan(candidate, enemy) == 2 exactly.
 	assert_int(state.grid.manhattan_distance(Vector2i(6, 5), Vector2i(6, 7))).is_equal(2)
 	# Act
-	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.ECONOMY_OUTPOST)
+	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
 	# Assert -- excluded (>2 strict required, exactly-2 does not clear).
 	assert_bool(Vector2i(6, 5) in tiles).is_false()
 
@@ -317,7 +317,7 @@ func test_tile_far_from_enemy_but_not_adjacent_to_any_friendly_excluded() -> voi
 	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(0, 0))
 	_place(state, unit)
 	# Act
-	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.ECONOMY_OUTPOST)
+	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
 	# Assert -- a tile with no friendly neighbour (e.g. far corner) is never a
 	# candidate at all -- the candidate universe IS the friendly frontier.
 	assert_bool(Vector2i(10, 10) in tiles).is_false()
@@ -329,16 +329,16 @@ func test_no_tile_satisfies_both_conditions_legal_build_tiles_is_empty() -> void
 	var state := _make_state()
 	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
 	_place(state, unit)
-	var n_struct := _make_structure(2, 1, Vector2i(5, 4), StructureTypes.ECONOMY_OUTPOST)
-	var e_struct := _make_structure(3, 1, Vector2i(6, 5), StructureTypes.ECONOMY_OUTPOST)
-	var s_struct := _make_structure(4, 1, Vector2i(5, 6), StructureTypes.ECONOMY_OUTPOST)
-	var w_struct := _make_structure(5, 1, Vector2i(4, 5), StructureTypes.ECONOMY_OUTPOST)
+	var n_struct := _make_structure(2, 1, Vector2i(5, 4), StructureTypes.FACTORY)
+	var e_struct := _make_structure(3, 1, Vector2i(6, 5), StructureTypes.FACTORY)
+	var s_struct := _make_structure(4, 1, Vector2i(5, 6), StructureTypes.FACTORY)
+	var w_struct := _make_structure(5, 1, Vector2i(4, 5), StructureTypes.FACTORY)
 	_place(state, n_struct)
 	_place(state, e_struct)
 	_place(state, s_struct)
 	_place(state, w_struct)
 	# Act
-	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.ECONOMY_OUTPOST)
+	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
 	# Assert -- every neighbour is occupied by an enemy structure -- none pass
 	# is_passable AND every candidate frontier tile is occupied, so the
 	# result is empty (build unavailable).
@@ -360,7 +360,7 @@ func test_hq_never_offered_as_a_candidate_even_when_adjacent_to_friendly_unit() 
 	_place(state, unit)
 	_place(state, hq)
 	# Act
-	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.ECONOMY_OUTPOST)
+	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
 	# Assert -- the HQ's own occupied tile is never offered (occupied, like
 	# any other occupant) -- no HQ-identity special-case re-adds it.
 	assert_bool(Vector2i(6, 5) in tiles).is_false()
@@ -372,7 +372,7 @@ func test_structure_placed_adjacent_to_unit_that_later_moves_away_remains_no_ree
 	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
 	_place(state, unit)
 	var tile := Vector2i(6, 5)
-	var action := _make_build_action(tile, StructureTypes.ECONOMY_OUTPOST, 0)
+	var action := _make_build_action(tile, StructureTypes.FACTORY, 0)
 	BaseProduction.apply_build(state, action)
 	assert_object(state.entity_at(tile)).is_not_null()
 	# Act -- the unit "moves away" (simulated directly via Grid, out of this
@@ -392,17 +392,17 @@ func test_two_builds_same_turn_both_succeed_parallel_construction_ap_gated() -> 
 	# Arrange -- dual-cost pivot: fund BOTH pools for two Economy Outposts --
 	# Credits = 2 * build_cost (4+4=8), AP = 2 * build_ap_cost (2+2=4) -- two
 	# separate friendly-adjacent legal tiles.
-	var state := _make_state(Balance.economy.build_ap_cost * 2, StructureTypes.ECONOMY_OUTPOST.build_cost * 2)
+	var state := _make_state(Balance.economy.build_ap_cost * 2, StructureTypes.FACTORY.build_cost * 2)
 	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
 	_place(state, unit)
 	var tile_a := Vector2i(6, 5)
 	var tile_b := Vector2i(4, 5)
-	var action_a := _make_build_action(tile_a, StructureTypes.ECONOMY_OUTPOST, 0)
+	var action_a := _make_build_action(tile_a, StructureTypes.FACTORY, 0)
 	# Act -- first build.
 	assert_int(BaseProduction.validate_build(state, action_a)).is_equal(Action.Reason.OK)
 	BaseProduction.apply_build(state, action_a)
 	# Act -- second build, same turn.
-	var action_b := _make_build_action(tile_b, StructureTypes.ECONOMY_OUTPOST, 0)
+	var action_b := _make_build_action(tile_b, StructureTypes.FACTORY, 0)
 	assert_int(BaseProduction.validate_build(state, action_b)).is_equal(Action.Reason.OK)
 	var events_b: Array[Event] = BaseProduction.apply_build(state, action_b)
 	# Assert -- both succeeded; both pools fully spent (Credits 8-4-4=0, AP 4-2-2=0).
@@ -416,17 +416,17 @@ func test_two_builds_same_turn_both_succeed_parallel_construction_ap_gated() -> 
 func test_economy_tech_does_not_discount_effective_build_cost_flat_four() -> void:
 	# Arrange -- player has researched Economy Tech.
 	var state := _make_state()
-	state.per_player[0].has_economy_tech = true
+	state.per_player[0].economy_tier = 1
 	# Act / Assert -- effective_build_cost is unmodified: flat 4 AP, no
-	# economy_outpost_discount hook.
-	assert_int(BaseProduction.effective_build_cost(state, StructureTypes.ECONOMY_OUTPOST, 0)).is_equal(4)
+	# factory_discount hook.
+	assert_int(BaseProduction.effective_build_cost(state, StructureTypes.FACTORY, 0)).is_equal(400)  # ★ S6-02: ×100 Credit rescale
 
 
 func test_effective_build_cost_equals_base_exactly_under_neutral() -> void:
 	# Arrange -- VS Neutral default (no faction assigned).
 	var state := _make_state()
 	# Act / Assert -- == base exactly, for both cost and time.
-	assert_int(BaseProduction.effective_build_cost(state, StructureTypes.ECONOMY_OUTPOST, 0)).is_equal(StructureTypes.ECONOMY_OUTPOST.build_cost)
-	assert_int(BaseProduction.effective_build_time(state, StructureTypes.ECONOMY_OUTPOST, 0)).is_equal(StructureTypes.ECONOMY_OUTPOST.build_time)
-	assert_int(BaseProduction.effective_build_cost(state, StructureTypes.PRODUCTION_OUTPOST, 0)).is_equal(StructureTypes.PRODUCTION_OUTPOST.build_cost)
-	assert_int(BaseProduction.effective_build_time(state, StructureTypes.PRODUCTION_OUTPOST, 0)).is_equal(StructureTypes.PRODUCTION_OUTPOST.build_time)
+	assert_int(BaseProduction.effective_build_cost(state, StructureTypes.FACTORY, 0)).is_equal(StructureTypes.FACTORY.build_cost)
+	assert_int(BaseProduction.effective_build_time(state, StructureTypes.FACTORY, 0)).is_equal(StructureTypes.FACTORY.build_time)
+	assert_int(BaseProduction.effective_build_cost(state, StructureTypes.BARRACKS, 0)).is_equal(StructureTypes.BARRACKS.build_cost)
+	assert_int(BaseProduction.effective_build_time(state, StructureTypes.BARRACKS, 0)).is_equal(StructureTypes.BARRACKS.build_time)

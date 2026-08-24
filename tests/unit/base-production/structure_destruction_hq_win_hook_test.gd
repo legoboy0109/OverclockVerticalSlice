@@ -110,7 +110,7 @@ func test_real_structure_destroyed_erased_from_entities_and_grid_same_step() -> 
 	# Arrange -- a real (non-HQ) StructureState placed on the board.
 	var state := _make_state()
 	var tile := Vector2i(4, 4)
-	var struct := _make_structure(1, 0, tile, StructureTypes.ECONOMY_OUTPOST)
+	var struct := _make_structure(1, 0, tile, StructureTypes.FACTORY)
 	_place(state, struct)
 	# Act -- the shared mutation-layer destruction (what Combat.apply calls at 0 hp).
 	var events: Array[Event] = state.destroy_entity(struct.entity_id)

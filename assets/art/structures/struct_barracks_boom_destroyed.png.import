@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://on610ksy0tps"
-path="res://.godot/imported/struct_production_outpost_rush_destroyed.png-b89709ed4fb63a775e0af7141e83739d.ctex"
+uid="uid://0cfp1k3ldisf"
+path="res://.godot/imported/struct_barracks_boom_destroyed.png-417be2ea17b4b5ed82066473058af600.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/art/structures/struct_production_outpost_rush_destroyed.png"
-dest_files=["res://.godot/imported/struct_production_outpost_rush_destroyed.png-b89709ed4fb63a775e0af7141e83739d.ctex"]
+source_file="res://assets/art/structures/struct_barracks_boom_destroyed.png"
+dest_files=["res://.godot/imported/struct_barracks_boom_destroyed.png-417be2ea17b4b5ed82066473058af600.ctex"]
 
 [params]
 

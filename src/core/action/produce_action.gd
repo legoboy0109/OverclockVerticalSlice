@@ -20,7 +20,7 @@
 ## [codeblock]
 ## var action := ProduceAction.new()
 ## action.player = state.active_player
-## action.producer_id = production_outpost.entity_id
+## action.producer_id = barracks.entity_id
 ## action.unit_type = UnitTypes.TROOPER
 ## action.tile = Vector2i(3, 4)
 ## var result: ActionResult = state.apply_action(action)
