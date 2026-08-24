@@ -97,7 +97,25 @@ extends Resource
 
 ## `ap_cost_opponent_paid_for` weight for the enemy HQ (which has no
 ## `build_cost`) — a siege-priority weight, not a sunk-cost figure.
-@export var hq_siege_value: int = 12
+## ★★ RAISED 12 -> 60 (S6-07c, user's lever: "make the objective outscore trading").
+##
+## At 12, a 5-damage HQ chip scored **0.75** against **3.00** for killing a full-hp Trooper,
+## so a unit standing beside an enemy HQ would break off and fight rather than finish the
+## job. Four measured batches showed damage reaching 21 of 40 hp and stalling for exactly
+## that reason. **48 is the arithmetic break-even; 60 gives a ~25% margin** so the objective
+## wins clearly rather than by a rounding error.
+##
+## ⚠ [b]This number compensates for a modelling flaw rather than fixing it, and that is worth
+## knowing before it is tuned again.[/b] [method AI._combat_value] scales value by
+## `hp_removed / max_hp`, which is right for a UNIT — a half-dead unit is still a unit, and
+## damage to it is worth roughly its share of the whole. It is wrong for a WIN CONDITION: an
+## HQ at 1 hp is nearly a victory, not "1/40th of a structure". The proportional form makes
+## every individual chip look small no matter how close the game is to ending.
+##
+## ★ The principled fix is to value HQ damage as progress toward victory (superlinear, or
+## flat-per-hp) rather than as a share of the target's health. Recorded as the next thing to
+## do here if 60 proves either too weak or too suicidal.
+@export var hq_siege_value: int = 60
 
 ## Score per tile of distance closed toward the ENEMY HQ, for a bare advance that is
 ## not closing on the nearest enemy — [b]the siege drive[/b].

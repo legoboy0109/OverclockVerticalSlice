@@ -230,7 +230,10 @@ func test_ap_cost_opponent_paid_for_hq_resolves_to_hq_siege_value_not_zero() -> 
 
 	# Assert — AIBalance.ai.hq_siege_value default is 12 (AC-29's regression guard).
 	assert_int(ap_cost).is_equal(AIBalance.ai.hq_siege_value)
-	assert_int(ap_cost).is_equal(12)
+	# ★ S6-07c: derived, not restated -- the HQ weight moved 12 -> 60 and this test is about
+	# the HQ resolving to that weight AT ALL rather than to zero (the AC-29 regression guard).
+	assert_int(ap_cost).is_equal(AIBalance.ai.hq_siege_value)
+	assert_int(ap_cost).is_greater(0)
 
 
 func test_combat_value_hq_siege_non_lethal_is_approx_1_5() -> void:
@@ -248,27 +251,29 @@ func test_combat_value_hq_siege_non_lethal_is_approx_1_5() -> void:
 	var is_kill: bool = hp_removed >= hq.current_hp
 	var value: float = AI._combat_value(hp_removed, is_kill, hq)
 
-	# Assert — dmg=5, hp_removed=5, target_max_hp=40, is_kill=false;
-	# combat_value = 12 × (5/40) + 0 = 1.5.
+	# ★ S6-07c: derived from the live weight, which moved 12 -> 60. combat_value =
+	# hq_siege_value × (hp_removed / max_hp), no kill bonus on a non-lethal hit.
 	assert_int(dmg).is_equal(5)
 	assert_bool(is_kill).is_false()
-	assert_float(value).is_equal_approx(1.5, 0.0001)
+	assert_float(value).is_equal_approx(float(AIBalance.ai.hq_siege_value) * (5.0 / 40.0), 0.0001)
 
 
-func test_action_score_hq_siege_is_approx_0_75_and_clears_pass_threshold() -> void:
-	# Arrange — combat_value 1.5 at cost 2 (CombatConfig.attack_cost).
-	var value := 1.5
-	var cost := 2
-	var base_score: float = value / float(cost)
+func test_action_score_hq_siege_now_outscores_killing_a_unit() -> void:
+	# ★★ S6-07c REPLACED test_..._is_approx_0_75_and_clears_pass_threshold. Clearing the
+	# pass threshold was never the problem -- an HQ chip always cleared it. The problem was
+	# that it lost to every available KILL, so a unit standing beside an enemy HQ broke off
+	# to fight instead of finishing. Four measured batches showed damage reaching 21 of 40
+	# and stalling for exactly that reason.
+	#
+	# This is now the assertion that matters: hitting the objective must BEAT trading.
+	var hq_hit: float = (float(AIBalance.ai.hq_siege_value) * (5.0 / 40.0)) / 2.0
+	var trooper_credits: float = AI.credits_to_ap(float(UnitTypes.TROOPER.produce_cost))
+	var kill: float = (trooper_credits + AIBalance.ai.kill_denial_rate * trooper_credits) / 2.0
 
-	# Act
-	var score: float = AI._action_score(base_score, false)
-
-	# Assert
-	assert_float(score).is_equal_approx(0.75, 0.0001)
-	assert_bool(score > AIBalance.ai.pass_threshold).is_true()
-
-
+	assert_float(hq_hit).is_greater(AIBalance.ai.pass_threshold)
+	assert_float(hq_hit).override_failure_message(
+		"an HQ hit (%.2f) must outscore killing a full-hp Trooper (%.2f), or the AI breaks off the objective" % [hq_hit, kill]
+	).is_greater(kill)
 # --- AC-14: production_value + 3-band REACHABILITY_MULTIPLIER --------------
 
 func test_production_value_isolated_band_is_produce_cost_times_0_9() -> void:

@@ -56,7 +56,9 @@ func test_ai_config_exposes_all_15_scoring_knobs_plus_pacing_at_gdd_defaults() -
 	assert_float(cfg.setup_advance_bonus).is_equal_approx(0.4, 0.0001)
 	assert_float(cfg.retreat_hp_fraction).is_equal_approx(0.30, 0.0001)
 	assert_float(cfg.retreat_value_per_tile_fled).is_equal_approx(0.20, 0.0001)
-	assert_int(cfg.hq_siege_value).is_equal(12)
+	# ★ S6-07c: 12 -> 60. At 12 an HQ chip scored 0.75 against 3.00 for a kill, so the AI
+	# broke off from an objective to fight. 48 is the arithmetic break-even; 60 gives margin.
+	assert_int(cfg.hq_siege_value).is_equal(60)
 	assert_float(cfg.score_tie_epsilon).is_equal_approx(1e-6, 1e-9)
 
 	# commit_pacing_sec: not one of the 15 GDD scoring knobs, but lives on
