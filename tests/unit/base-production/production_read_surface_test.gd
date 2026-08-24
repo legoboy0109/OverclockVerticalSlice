@@ -250,16 +250,21 @@ func test_can_afford_produce_false_when_ap_insufficient() -> void:
 # --- AC6: cancel-refund preview == apply_cancel's ACTUAL refund --------------
 
 func test_structure_info_cancel_refund_matches_base_production_cancel_refund_on_base_cost() -> void:
-	# Arrange -- the Under-Construction Economy Outpost (build_cost 4).
+	# Arrange -- the Under-Construction Factory (was the Economy Outpost; renamed in
+	# S6-03 and re-statted to its design values in S6-09).
 	var state := _make_story_state()
 	var reader := GameStateReader.new(state)
 	var structure: StructureState = state.entities_by_id[1]
 	# Act
 	var info: Dictionary = reader.structure_info(1)
 	var expected: int = BaseProduction.cancel_refund(structure.type.build_cost)
-	# Assert -- matches the story's stated value (2) and the exact refund expression.
-	assert_int(info["cancel_refund"]).is_equal(200)  # ★ S6-02: ×100 Credit rescale
+	# Assert -- the exact refund expression, derived from the type's own build_cost.
+	# ★ S6-09: was pinned to a literal 200 (half of the Factory's then-400 cost).
+	# This test's subject is that structure_info and BaseProduction.cancel_refund
+	# agree, not what the Factory happens to cost, so the literal was pure coupling.
 	assert_int(info["cancel_refund"]).is_equal(expected)
+	assert_int(info["cancel_refund"]).is_equal(
+		BaseProduction.cancel_refund(StructureTypes.FACTORY.build_cost))
 
 
 func test_structure_info_cancel_refund_equals_apply_cancels_actual_credit() -> void:

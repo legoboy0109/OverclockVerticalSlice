@@ -41,8 +41,18 @@ func test_hq_template_matches_stat_table() -> void:
 func test_factory_template_matches_stat_table() -> void:
 	var eo := StructureTypes.FACTORY
 	assert_int(eo.hp).is_equal(8)
-	assert_int(eo.build_cost).is_equal(400)  # ★ S6-02: ×100 Credit rescale
-	assert_int(eo.build_time).is_equal(1)
+	# ★ S6-09: aligned to `base-production.md`'s roster table (1,000 / 3 / 200). The
+	# data had been carrying the renamed Economy Outpost's numbers (400 / 1 / 100)
+	# ever since S6-03 renamed the resource rather than re-statting it -- a rename
+	# moves a file, it does not move the design intent behind the numbers inside it.
+	assert_int(eo.build_cost).is_equal(1000)
+	assert_int(eo.build_time).is_equal(3)
+	assert_int(eo.upkeep).is_equal(200)
+	assert_int(eo.max_count).is_equal(2)
+	# Produces nothing YET -- GROUND_VEHICLE units are wave 2 (`unit-classes.md`).
+	# ★ This is why S6-09 also pulled the Factory from the player's build roster:
+	# a 1,000-Credit, 200-upkeep structure that produces nothing is a trap, not a
+	# choice. Restore it in the change that gives it something to build.
 	assert_int(eo.production_cap).is_equal(0)
 	assert_int(eo.producible_types.size()).is_equal(0)
 	assert_int(eo.defense).is_equal(0)

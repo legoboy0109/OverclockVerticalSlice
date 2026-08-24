@@ -419,7 +419,11 @@ func test_economy_tech_does_not_discount_effective_build_cost_flat_four() -> voi
 	state.per_player[0].economy_tier = 1
 	# Act / Assert -- effective_build_cost is unmodified: flat 4 AP, no
 	# factory_discount hook.
-	assert_int(BaseProduction.effective_build_cost(state, StructureTypes.FACTORY, 0)).is_equal(400)  # ★ S6-02: ×100 Credit rescale
+	# ★ S6-09: derived from the type, not hardcoded. This test is about the ABSENCE
+	# of an economy-tech discount hook; pinning the literal cost made it fail when
+	# the Factory was re-statted to its design values, which is unrelated churn.
+	assert_int(BaseProduction.effective_build_cost(state, StructureTypes.FACTORY, 0)) \
+		.is_equal(StructureTypes.FACTORY.build_cost)
 
 
 func test_effective_build_cost_equals_base_exactly_under_neutral() -> void:

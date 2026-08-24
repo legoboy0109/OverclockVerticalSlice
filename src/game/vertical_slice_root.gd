@@ -336,8 +336,17 @@ func _build_hud() -> void:
 ## The non-HQ structures the player can build (mirrors HudControlsWidget's own
 ## default roster so the HUD affordability + the KEY_B build stay in lockstep).
 func _buildable_roster() -> Array[StructureTypeDef]:
+	# ★ The FACTORY is deliberately absent (S6-09, 2026-08-24). Its design role is to
+	# produce GROUND_VEHICLE units, and those are wave 2 -- `unit-classes.md` is not
+	# implemented. Today the Factory produces nothing (`producible_types = []`), grants
+	# no income (that moved to research in S6-01), and costs 1,000 Credits plus 200
+	# upkeep every turn. Offering it is offering the player a button that can only make
+	# their position worse, and the corrected stats make the trap more expensive, not
+	# less. Restore this entry in the same change that gives the Factory something to
+	# build. The AI already skips it on its own -- its value gate scores an
+	# unproductive structure 0 -- so this only ever affected the human.
 	return [
-		StructureTypes.FACTORY, StructureTypes.BARRACKS,
+		StructureTypes.BARRACKS,
 		StructureTypes.DEFENSIVE_STRUCTURE, StructureTypes.RESEARCH_LAB,
 	]
 
