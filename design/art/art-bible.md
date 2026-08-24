@@ -22,12 +22,18 @@
 >    `design/registry/entities.yaml` before backlog planning is finalized. → **scheduled as S2-07.**
 > 2. ~~`design/ux/hud.md` (per-screen HUD layout) missing — §7 defines HUD visual *language*, not
 >    layout.~~ → **RESOLVED 2026-07-27 (S2-05): `design/ux/hud.md` authored + `/ux-review` APPROVED.**
-> 3. §4.2 hue-neighborhood watch-item: Boom's cyan sits near the Dark Stage family — run a
+> 3. ~~§4.2 hue-neighborhood watch-item: Boom's cyan sits near the Dark Stage family — run a
 >    same-scene side-by-side prototype test (Boom units on max-elevation terrain) before final
->    hex lock.
-> 4. §8.9 engine-verification watch-item: confirm per-instance shader uniform behavior in 2D and
+>    hex lock.~~ → **RESOLVED 2026-07-29 (S4-01 de-risk spike): hexes LOCKED.** Boom `#22C7F0`
+>    clears every legibility bar against all five stage tiles incl. the worst case (max-elevation
+>    `#33405A`): ΔE2000 **51.8** (higher than Rush's 49.4 vs the same tile), WCAG **5.19:1**,
+>    grayscale Δ **104/255**. See the §4.2 resolution note. Reproducible spike: `prototypes/s4-01-art-spike/`.
+> 4. ~~§8.9 engine-verification watch-item: confirm per-instance shader uniform behavior in 2D and
 >    that the 4.6 glow-pipeline rework is 3D/WorldEnvironment-only (does not affect the 2D
->    CanvasItem-shader approach) via a one-unit glow spike before committing the shader pipeline.
+>    CanvasItem-shader approach) via a one-unit glow spike before committing the shader pipeline.~~
+>    → **RESOLVED 2026-07-29 (S4-01 de-risk spike): 2D CanvasItem per-instance-uniform approach
+>    CONFIRMED safe to commit** (engine-ref + headless smoke on Redot 26.2; one-unit windowed render
+>    folded into S4-07). See the §8.9 resolution note.
 
 > **Map projection decision (2026-07-23):** OVERCLOCK renders its tactical maps in
 > **isometric 2D** (Final Fantasy Tactics lineage), a revision of the concept doc's
@@ -241,9 +247,11 @@ A **7-color functional system** (5 stage neutrals + 2 faction neons), plus the a
 
 **Structural risk (flagged):** the Dark Stage family (§4.1) is itself in the 210–240° cool-blue range — the same hue neighborhood as Boom. This is intentional (a cool dark stage makes any saturated hue pop) but means Boom's cyan sits closer to the stage than Rush's orange does. Mitigation is **saturation + lightness distance, not hue distance**: stage tops out at S 25%/L 22%; Boom sits at S 85–95%/L 55–62%. Recommend a same-scene side-by-side prototype test (Boom units on max-elevation terrain) before locking final hex.
 
+**→ RESOLVED 2026-07-29 (S4-01 de-risk spike — hexes LOCKED).** The side-by-side test (analytic + swatch, `prototypes/s4-01-art-spike/`) ran Boom `#22C7F0` against all five §4.1 stage tiles. The worst case is the max-elevation tile `#33405A`, and even there Boom clears every bar: **ΔE2000 51.8** (perceptually *further* than Rush's 49.4 vs the same tile), **WCAG contrast 5.19:1** (passes AA), **grayscale value Δ 104/255** (passes the §4.4 desaturation test). Boom is only **28°** from the stage hue (vs Rush's 150°) yet sits **60% S / 26% L** away — the saturation-plus-lightness-distance mitigation is validated numerically; **no hue adjustment needed.** *Doc reconciliation:* the "stage tops out at S 25%/L 22%" figure describes terrain *base* (`#232A38`, L 17.8%); the max-elevation tile `#33405A` actually reaches **S 27.7% / L 27.6%** — Boom was tested at (and passes at) that true brighter ceiling, so read the ceiling as ~L 28% at max elevation. A residual windowed eyeball is folded into S4-07.
+
 **Colorblind-safety of the A/B pair:** orange-red (~H15°) vs. cyan-azure (~H195°) is ~180° apart and falls on opposite sides of the red-green confusion axis (protanopia/deuteranopia, ~8% of men). Neither is a red-green pair with the other — about as safe a two-faction assignment as exists. Tritanopia risk on Boom's cyan is addressed in §4.4.
 
-**Neutral / unaligned faction (LOCKED — achromatic, Option N2):** Neutral is treated as **achromatic** (near-white/silver, S 0–10%, L 70–80%, no hue). This keeps the reserved-neon budget at exactly two hues (Rush, Boom), matches Neutral's design intent as *the value-neutral default* (the absence of a faction claim, not a third ideology — it is named "Neutral" in the registry roster), and is trivially colorblind-safe since it carries no hue information. Consequence: the **Neutral-vs-Neutral mirror match** (which the VS ships) leans entirely on the §1 P2 secondary non-hue markers (silhouette-family trait, trim pattern, emblem) to carry ownership — which must exist anyway for colorblind players in *any* matchup, so this is a forcing function, not a new cost.
+**Neutral / unaligned faction (LOCKED — achromatic, Option N2):** Neutral is treated as **achromatic** (near-white/silver, S 0–10%, L 70–80%, no hue). This keeps the reserved-neon budget at exactly two hues (Rush, Boom), matches Neutral's design intent as *the value-neutral default* (the absence of a faction claim, not a third ideology — it is named "Neutral" in the registry roster), and is trivially colorblind-safe since it carries no hue information. Consequence: the **Neutral-vs-Neutral mirror match** (which the VS ships) leans entirely on the §1 P2 secondary non-hue markers (silhouette-family trait, trim pattern, emblem) to carry ownership — which must exist anyway for colorblind players in *any* matchup, so this is a forcing function, not a new cost. *(→ **S4-02 reconciliation, 2026-07-29:** the VS art authors all three hue variants (rush/boom/neutral), and the recommended VS wiring is **Rush-vs-Boom** so ownership reads by hue — matching scope §5's "ownership clear by hue" iso-legibility acceptance and the S4-01 hue validation. A true Neutral-vs-Neutral mirror would still need the per-owner non-hue markers named above. See `design/assets/specs/vs-entities-assets.md` § Scope Reconciliation.)*
 
 **Reserved naming for Factions 3–6 (Full Vision):** hue slots assigned by **maximum pairwise hue-wheel distance** from all previously-assigned faction hues — theme is fit to the hue slot, not the reverse, so colorblind-safety is structural. Suggested order: Faction C ≈ H280–300° (violet-magenta), Faction D ≈ H60–75° (yellow-chartreuse). Factions E/F resolved only once C/D are validated — 5–6 simultaneous saturated hues on one board is a Pillar-3 legibility risk that may force the non-hue marker system to carry more weight than hue at that scale.
 
@@ -312,11 +320,76 @@ A later production phase (out of VS scope, its own production structure) is expe
 - **Sealed helmet, no face.** Every infantry unit reads through armor plating and a fully enclosed helmet — no exposed skin, no facial acting, no visible eyes. This is a direct execution of §1's rule (*clarity from silhouette + color, never surface detail*): a face is the single most detail-hungry, most attention-grabbing surface a humanoid shape can carry, and it would compete with the neon-state layer (§2) for the eye exactly where Pillar 3 needs attention to go to AP-relevant reads instead. A sealed helmet also removes the entire "individual likeness" problem for a solo/small-team pipeline — one helmet silhouette per role, reused across factions with only the §5.2 kit markers changing.
 - **Chunky, Advance-Wars-adjacent proportions, not anatomically realistic ones.** Infantry are drawn with **exaggerated mass ratios** — oversized shoulders/chest, shortened and thickened limbs, a compressed torso-to-limb ratio — rather than realistic human proportions. This is the direct answer to the stated stress case: **infantry are small at iso tactical zoom**, and a realistically-proportioned human (thin limbs, narrow torso) degrades into a grey smear of near-identical thin verticals at thumbnail size, exactly where §3.1's roster-family read (posture axis + mass axis) needs to survive. Chunky proportions push each role's silhouette rule (§3.1's table — Trooper's balanced rectangle, Heavy's wide bottom-heavy mass, Scout's low horizontal lean, Sniper's tall planted profile + long barrel) to survive being rendered at 24–40px effective height on a tile. Realism would only be legible at a zoom level this game does not ship at.
 - **Material language:** matte, hard-surface armor plating in flat value blocks (§6.2's flat/painted terrain rule applies equally to units) — no specular highlight, no cloth-sim, no skin-texture reads. Trim, vents, and joint plating are large simple shapes, not greebled detail; per §3.5, units earn the *most* silhouette complexity on the board, but that budget is spent on **outline shape**, not on **surface micro-detail** — the two are not the same currency, and §1 forbids spending on the latter.
+- **Actor value: units are LIGHTER than the stage (P3 — added 2026-08-19, production-validated).** Unit armour is **`#6E7C99`** (cool slate) with `#3E4860` shadowed facets — deliberately *above* every stage tile in lightness, where structures stay near-black `#1B2130`. This is the operational form of §3.5's hierarchy (units are the hero shapes that own the eye; no terrain silhouette may out-mass a unit) and of §1's iso-proofing rule. It exists because the first production pass specced unit armour in the `#232A38` family — **the exact value of the plain terrain tile** — and the units vanished into the board: at true sprite size only the accent trim survived, and in grayscale the silhouette was unreadable, failing §1's identifiable-by-outline-alone test outright. Measured separation: luma Δ82 vs terrain base `#232A38`, Δ60 vs the max-elevation tile `#33405A` (the worst case), and Δ82 below Neutral silver `#C6CED8` so slate never reads as a faction claim. **The stage is dark so the actors can be light** — the dark-stage identity lives in the terrain and the structures, not in the units standing on them.
+- **Body plan is a legitimate role-separation axis (added 2026-08-19).** §3.1's role silhouettes may be expressed through **different body plans**, not only through proportion differences within one humanoid shape: the shipping roster uses a low four-legged walker (Scout — this is what actually delivers §3.1's "outline dominated by locomotion"), an upright biped (Trooper, the control group), and a squat wide-planted walker (Heavy). Production evidence: three humanoid variants differentiated only by proportion adjectives failed the §5.2 grayscale role test — they read as one shape at three widths — while the body-plan roster separates cleanly with no hue information. The sealed-helmet rule above is satisfied by the walkers having **no head at all**, which serves the same purpose (nothing competing with the neon-state layer) more strongly than a helmet does.
 - **Forward-compat hook:** a later piloted-vehicle/mech tier is produced under the exact same three rules — sealed cockpit/no face-read, exaggerated (not realistic) mass proportions, flat hard-surface material language — just at a **larger silhouette budget** (§5.5). A mech is not a different design language from a soldier; it is the same language with more silhouette real estate, because it will occupy more of the tile and more of the screen. Nothing in this subsection is infantry-only.
 
 ### 5.2 Per-Faction Silhouette-Family Markers (P2 — Body-Plan-Agnostic)
 
+> **VS scope note (S4-02, 2026-07-29):** the Vertical Slice ships **hue-only ownership with one
+> shared silhouette per role** — the per-faction Mass Distribution Bias below is **deferred to Full
+> Vision** with Pillar-4 faction asymmetry (recorded in `design/assets/entity-inventory.md` #1 and
+> `design/assets/specs/vs-entities-assets.md`). Read this section as the full-vision target, not the
+> VS backlog; VS hue variants (rush/boom/neutral) are re-hues of one silhouette per role.
+
 This is the mechanism that satisfies §1 Principle 2 ("Ownership Legible Beyond Hue") for units specifically. A human body can't be "raked" or "swept" the way a vehicle chassis can — so faction identity on infantry lives in **kit and armor-profile silhouette**, not chassis geometry. The trick that makes this body-plan-agnostic: define each faction's marker as a **mass-distribution principle**, not a humanoid-specific shape, so the same principle re-renders correctly on a tank or mech later without redesign.
+
+> ### ⚠ IMPLEMENTATION STATUS — 2026-08-20 (S5-08): NOT BUILT IN THE VERTICAL SLICE
+>
+> **Mass Distribution Bias is a Full Vision commitment, not a shipped fact.** The principle below
+> stands as the standing requirement; this note records an accepted, measured deviation for the
+> Vertical Slice so the document stops asserting something the art does not do.
+>
+> **What shipped instead.** All **26** Rush/Boom sprite pairs in `assets/art/` are **pixel-identical
+> in silhouette** — faction variants are produced by recolouring one approved master per entity
+> (`tools/asset-pipeline/recolor.py`), so the shapes cannot differ. VS faction identity is carried
+> by **hue alone**.
+>
+> **Why that was accepted.** Measurement on the shipped art (see
+> `production/qa/evidence/s5-08-colourblind-ownership-brief.md`) found the locked hue pair does the
+> job on its own for every colourblind mode the project's Standard accessibility tier names. Rush
+> `#FF5A2E` against Boom `#22C7F0` sits on the blue-versus-yellow axis — the axis red-green
+> colourblind vision *retains* — separating at **ΔE 60–76 (deuteranopia)** and **ΔE 27–45
+> (protanopia, the hardest case)** across the unit roster. Tritanopia is the mode where the pair
+> separates *best*. The S4-01 hue lock therefore satisfies P2's practical intent, though its stated
+> justification at the time was stage-tile contrast, not dichromat separation.
+>
+> **What is genuinely lost, and is now Full Vision debt.**
+> - **Full desaturation destroys ownership completely** (ΔE 0.3–7.2). §5.3's claim that the backup
+>   "survives colorblind vision and full desaturation" is false as shipped — there is no shape
+>   channel to survive on. This affects monochromacy (~1 in 30,000, against ~1 in 12 men for
+>   red-green deficiency) and grayscale broadcast capture.
+> - **The Neutral-vs-Neutral mirror has no ownership signal at all**, exactly as §4.2 predicted it
+>   would if the markers did not exist. The VS ships Rush-vs-Boom, so this does not bite yet.
+> - **There is no redundancy** if the hue channel is ever degraded by lighting, calibration or
+>   glow-blur — which is the risk §4.4's table names.
+>
+> **★ UPDATE 2026-08-20, same day (S5-08 option D3 — a non-hue channel now EXISTS).** After this
+> note was written the user chose to build the backup on the **tile** rather than in the sprite: a
+> per-faction ground decal under each entity, drawn by the renderer
+> ([code]src/ui/board_renderer/ownership_marker.gd[/code]). Rush is a solid chevron capping the
+> near vertex (forward-light), Boom is a split pair of flank arcs with a gap at that vertex
+> (the inverse), Neutral is an even unbroken ring. **The three read apart with every colour
+> channel discarded**, which is what §1 P2 actually asks for and what no amount of hue work can
+> deliver. It also fixes the Neutral-vs-Neutral mirror and the weak-structure case in the same
+> stroke, because the decal is the same size whatever it stands under.
+>
+> **★ Scope set 2026-08-21: structures only.** The decal is drawn under structures, not under every
+> entity — `ALL` put one beneath each unit's own feet, competing with the actors against §3.5, and
+> units were never the weak case (26–82% accent coverage, ΔE 60–76 deuteranopia unaided). So the
+> non-hue channel is carried by the **structures that anchor every position on the board**, and a
+> unit-only read remains hue-carried and does **not** survive full desaturation. That is an accepted
+> trade, not an oversight; `EntitySpriteFeed.marker_policy = ALL` restores the board-wide channel.
+>
+> So P2 is **satisfied as a channel**, by a mechanism §5.2 did not anticipate. What remains
+> unbuilt is specifically the **silhouette** expression of the bias — the sprites are still
+> pixel-identical between factions, and Mass Distribution Bias as a *body-shape* rule is still
+> Full Vision work. The ground decal expresses the same forward/rear asymmetry principle in the
+> one place a fixed iso camera leaves visible. See ADR-0013's 2026-08-20 amendment.
+>
+> **Do not mark P2 resolved on the strength of this note.** It records why shipping without the
+> marker was acceptable *for the Vertical Slice*, not that the marker is unnecessary. Any faction
+> beyond Rush/Boom, any Neutral mirror, and any monochromacy claim re-opens it.
 
 **Named principle: Mass Distribution Bias.** Every faction's non-hue marker is where a unit's *silhouette mass sits* relative to its direction of travel/action — forward-light vs. rear/body-loaded vs. neutral-even. This single continuum is expressible on any body plan: a soldier's kit-load silhouette, a vehicle's hull/turret-mass balance, a mech's chassis/backpack silhouette. Faction hue (§4.2) still carries primary ownership; Mass Distribution Bias is the secondary, hue-independent confirmation, exactly as §1 P2 requires.
 
@@ -335,7 +408,7 @@ This is the mechanism that satisfies §1 Principle 2 ("Ownership Legible Beyond 
 No single signal is allowed to be a single point of failure (colorblind vision, grayscale broadcast capture, fog/overlay occlusion all must degrade gracefully). Signals are layered in priority order, each independently sufficient to *narrow* the read even if a higher-priority signal is unavailable:
 
 1. **Hue (fastest, primary — §4.2).** Rush orange-red vs. Boom cyan-azure vs. Neutral achromatic. Read first, in normal play, at full color fidelity.
-2. **Mass Distribution Bias (§5.2 — the mandatory non-hue backup).** Forward-light (Rush) vs. rear-loaded (Boom) vs. neutral-even (Neutral) silhouette. Survives colorblind vision and full desaturation, since it is a shape fact, not a color fact.
+2. **Mass Distribution Bias (§5.2 — the mandatory non-hue backup).** Forward-light (Rush) vs. rear-loaded (Boom) vs. neutral-even (Neutral) silhouette. Survives colorblind vision and full desaturation, since it is a shape fact, not a color fact. **⚠ AMENDED TWICE ON 2026-08-20 (S5-08).** Faction *silhouettes* are pixel-identical, so the bias is **not** expressed in the body art. It **is** expressed as a per-faction **ground decal** under each entity (chevron / split-flanks / even ring — see §5.2's note and ADR-0013's amendment), which does survive full desaturation and carries this row's promise. Read "silhouette" here as "the decal's shape", not "the unit's outline", until Full Vision builds the latter.
 3. **Board position / turn-context convention.** Standard tactics-genre spatial conventions (each player's forces read from their controlled structures/deploy zone outward; the active player's units carry the §2.1 breathe/idle glow, the opponent's do not during the player's own planning phase) provide a tertiary, situational confirmation — useful exactly when a unit is small, partially occluded, or mid-animation and neither hue nor silhouette is fully legible in that instant.
 
 Because hue and Mass Distribution Bias are independent channels (one chromatic, one geometric), losing either one in isolation (colorblindness removes reliable hue distinction; heavy occlusion or extreme zoom-out can blur silhouette nuance) still leaves a working signal from the other, with position/context as a fallback tiebreak. No degraded viewing condition is allowed to make faction identity fully unreadable — this is the same discipline §4.4's colorblind-safety table applies to the palette, extended to the shape layer.
@@ -528,6 +601,14 @@ Target < 500 draw calls; the 14×16 board itself lands at **~5–10** (one `Tile
 3. Faction variants must not force a texture-swap batch break — keep them within shared atlas pages.
 4. Atlas page ceiling **2048×2048**; 4096 is an escalation, not a default.
 
+**⚠ Faction-art reconciliation — SUPERSEDED IN PRACTICE (2026-08-20, S5-08).** The paragraph below
+describes the intended pipeline; the VS did **not** build it. Faction variants are recolours of one
+master per entity, so unit art is **1×** a single-faction estimate, not ~3×, and all faction variants
+of a role share one silhouette and one atlas footprint. The draw-call and VRAM conclusions still
+hold (they were the conservative case). What does *not* hold is "distinct art, not palette-swaps" —
+they are exactly palette-swaps. See §5.2's implementation-status note. Read the following as the
+Full Vision target.
+
 **Faction-art reconciliation (LOCKED — accept distinct-silhouette art):** §5.2 makes faction identity a *silhouette* difference (Mass Distribution Bias: Rush forward-light / Boom rear-loaded / Neutral even), so faction units are **distinct art, not palette-swaps of one base** — 3 faction silhouettes × 4 roles. Unit art is therefore ~**3×** a single-faction estimate and spans a few atlas pages rather than one. This is accepted as the cost of the strongest Pillar-4 visual expression; it stays comfortably under the draw-call budget (all faction variants share one shader/material via per-instance uniforms), and Lossless VRAM footprint at single-digit 2048² page counts is trivial on any modern GPU. The shader still applies each faction's single hue + drives glow-state; it does not collapse the silhouettes. *(If art scope later needs cutting, the fallback is §5's rejected option — shared silhouette + a small per-faction emblem marker — which would require a §5 edit.)*
 
 ### 8.8 Iso Depth-Sort (technical)
@@ -541,6 +622,8 @@ Use Godot 4's `y_sort_enabled` on a shared parent `Node2D` holding all board occ
 **Import:** Lossless for all gameplay sprites (flat neon bands/blocks under VRAM/BC compression — worst-case content for it; and memory is a non-issue at this scope). Mipmaps likely off (fixed iso camera; mip-blur would soften hard edges). Screen-space AA (SMAA/FXAA) handles edges.
 
 **⚠️ Engine-verify before this becomes load-bearing (post-4.3 cutoff):** confirm in the live Redot 26.2 / Godot 4.6 editor that (a) `set_instance_shader_parameter` / per-instance uniforms behave as expected in 2D, and (b) the 4.6 **glow-pipeline rework** (per `docs/engine-reference/godot/modules/rendering.md`) is understood — note that rework is the *3D/WorldEnvironment* post-process glow and does **not** affect the hand-authored 2D CanvasItem-shader emission approach above; but if the team also wants a soft `WorldEnvironment` 2D bloom halo on top, that 4.6 change *does* apply and should be spiked/screenshotted first. Run a one-unit glow spike to validate before committing the pipeline.
+
+**→ RESOLVED 2026-07-29 (S4-01 de-risk spike — approach CONFIRMED, safe to commit).** (a) The Redot 26.2 engine reference (`docs/engine-reference/godot/modules/rendering.md`) confirms the 4.6 glow rework is the **WorldEnvironment/Compositor 3D post-process** path (glow now processes *before* tonemapping, screen-blend) — it does **not** touch the hand-authored 2D CanvasItem emission shader above. (b) A headless smoke on Redot 26.2 confirmed two `Sprite2D` (CanvasItem) nodes **sharing one `ShaderMaterial`** hold divergent per-instance `faction_hue` / `pulse_intensity` via `set_instance_shader_parameter` — the batch-safe §8.7-rule-2 pattern works in 2D. **Residual (windowed, advisory → S4-07):** render the one-unit spike (`prototypes/s4-01-art-spike/GlowSpike.tscn`) in the live rasterizer to confirm the `instance uniform` declaration compiles + the additive emission reads correctly (the dummy headless rasterizer can't render). And per the ⚠️ above, a *WorldEnvironment 2D bloom halo* — if ever layered on top — **is** governed by the 4.6 rework and must be spiked separately.
 
 ## 9. Reference Direction
 

@@ -9,6 +9,12 @@
 > **Purpose:** bridge "the visual style is defined" (art bible) to "here is the VS production
 > backlog." Each entity below is a **spec stub** — run `/asset-spec entity:[name]` to expand a
 > stub into full per-asset `ASSET-NNN` specs (sprites, VFX, generation prompts, tech constraints).
+>
+> **★ SPECS WRITTEN 2026-07-29 (S4-02):** all 5 entities + 2 terrain tiles below are now expanded
+> into full per-asset specs → `design/assets/specs/vs-entities-assets.md` (`ASSET-001`–`ASSET-007`),
+> indexed in `design/assets/asset-manifest.md` (the live status tracker). VS ships **3 hue variants**
+> (rush/boom/neutral — a re-hue of one shared silhouette per role; Mass-Distribution-Bias deferred).
+> Recommended VS wiring is **Rush-vs-Boom** for ownership-by-hue (see the spec's Scope Reconciliation).
 
 ---
 

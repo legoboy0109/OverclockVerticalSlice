@@ -5,28 +5,30 @@
 # production/epics/base-production/story-010-integration-apply-action-end-to-end.md
 # (TR-baseprod-004, the real apply_action commit, exercised end-to-end):
 #
-#   AC-1 (build atomicity): a BuildAction(Economy Outpost) submitted via the
-#     real state.apply_action() with exactly effective_build_cost AP -> AP
-#     spent + the structure placed Under-Construction on the real Grid +
-#     entities_by_id, one atomic commit. A second, independent state submits
-#     an unaffordable build (AP one short of cost) -> ok == false,
-#     CANT_AFFORD, and the real AP pool + Grid occupancy are byte-for-byte
-#     unchanged.
-#   AC-2 (Rule-6 income ordering, the headline proof): a player owns two
-#     already-COMPLETED Economy Outposts (income this reflects == the tier1
-#     formula for n=2) plus a third Economy Outpost with
-#     build_turns_remaining == 1. The REAL state.start_turn(owner) is called
-#     (start_turn's own step 3 -- BaseProduction.advance_build_timers -- runs
-#     strictly before its step 4 -- AP.reset_turn's income snapshot); the
-#     SAME call's post-snapshot income/breakdown already reflects n=3, i.e.
-#     the tier1-formula delta for the just-completed 3rd outpost, never
-#     requiring a second start_turn to see it. A second, independent test
-#     proves the batch case: two Economy Outposts both reaching
-#     build_turns_remaining == 1 the same start_turn both complete and both
-#     count in that same call's income. Every expected value is derived from
-#     Balance.economy's real fields (base_income, outpost_bonus_tier1,
-#     outpost_bonus_tier2, tier_threshold) via AP.income/ap_income_breakdown
-#     -- never a bare literal.
+#   AC-1 (build atomicity, dual-cost pivot ADR-0006): a BuildAction(Economy
+#     Outpost) submitted via the real state.apply_action() with exactly
+#     effective_build_cost Credits (main cost) and exactly build_ap_cost AP
+#     (surcharge) -> both pools spent + the structure placed Under-Construction
+#     on the real Grid + entities_by_id, one atomic commit. A second,
+#     independent state submits an unaffordable build (Credits one short of
+#     cost, the binding leg) -> ok == false, CANT_AFFORD_CREDITS, and the real
+#     Credits/AP pools + Grid occupancy are byte-for-byte unchanged.
+#   AC-2 (Rule-6 income ordering, the headline proof, pivot: income now funds
+#     Credits, not AP): a player owns two already-COMPLETED Economy Outposts
+#     (income this reflects == the tier1 formula for n=2) plus a third Economy
+#     Outpost with build_turns_remaining == 1. The REAL state.start_turn(owner)
+#     is called (start_turn's own step 3 -- BaseProduction.advance_build_timers
+#     -- runs strictly before its step 4 -- Credits.add_income's income
+#     snapshot); the SAME call's post-snapshot income/breakdown already
+#     reflects n=3, i.e. the tier1-formula delta for the just-completed 3rd
+#     outpost, never requiring a second start_turn to see it. A second,
+#     independent test proves the batch case: two Economy Outposts both
+#     reaching build_turns_remaining == 1 the same start_turn both complete and
+#     both count in that same call's income. Every expected value is derived
+#     from Balance.economy's real fields (base_income, outpost_bonus_tier1,
+#     outpost_bonus_tier2, tier_threshold) via Credits.credit_income/
+#     credit_income_breakdown -- never a bare literal. AP is flat + capped
+#     carryover post-pivot, not income-driven; current_ap == flat_ap_per_turn.
 #   AC-3 (real production): a real COMPLETED Production Outpost ->
 #     ProduceAction(Trooper, adjacent tile) via apply_action -> a real
 #     UnitState entity exists on the tile, immediately Active: has_attacked
@@ -123,16 +125,19 @@ func _make_grid(size: int = GRID_SIZE) -> GridState:
 	return grid
 
 
-# Builds a GameState with a real blank grid, both players' AP set, and both
-# players pinned to Factions.NEUTRAL (make_state otherwise leaves faction
-# null, which Unit.effective_produce_cost/BaseProduction's effective_* folds
-# would dereference) -- mirrors produce_legal_deploy_tiles_test.gd's
-# _make_state idiom.
-func _make_state(current_ap: int = 10) -> GameState:
+# Builds a GameState with a real blank grid, both players' AP + Credits set,
+# and both players pinned to Factions.NEUTRAL (make_state otherwise leaves
+# faction null, which Unit.effective_produce_cost/BaseProduction's effective_*
+# folds would dereference) -- mirrors produce_legal_deploy_tiles_test.gd's
+# _make_state idiom. current_credits defaults independently of current_ap
+# (ADR-0006 pivot: the two pools have different scales -- Credits fund the
+# build/produce main cost, AP funds the surcharge + move/attack).
+func _make_state(current_ap: int = 10, current_credits: int = 10000) -> GameState:  # ★ S6-02: ×100 Credit rescale — 10 no longer funds a unit
 	var state := GameStateFactory.make_state(2, 0)
 	state.grid = _make_grid()
 	for i: int in state.per_player.size():
 		state.per_player[i].current_ap = current_ap
+		state.per_player[i].current_credits = current_credits
 		state.per_player[i].faction = Factions.NEUTRAL
 	return state
 
@@ -209,14 +214,16 @@ func _make_hq(entity_id: int, owner: int, pos: Vector2i, hp: int) -> StructureSt
 
 # --- AC-1: build atomicity via real apply_action -----------------------------
 
-func test_build_with_exact_ap_via_apply_action_commits_atomically() -> void:
-	# Arrange -- exactly effective_build_cost AP for an Economy Outpost, one
-	# friendly unit adjacent to the target tile so it is in legal_build_tiles.
-	var state := _make_state(0)
+func test_build_with_exact_credits_and_ap_surcharge_via_apply_action_commits_atomically() -> void:
+	# Arrange -- exactly effective_build_cost Credits (the main cost) and exactly
+	# build_ap_cost AP (the surcharge) for an Economy Outpost, one friendly unit
+	# adjacent to the target tile so it is in legal_build_tiles.
+	var state := _make_state(0, 0)
 	var anchor := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(0, 0))
 	_place(state, anchor)
 	var cost: int = BaseProduction.effective_build_cost(state, StructureTypes.ECONOMY_OUTPOST, 0)
-	state.per_player[0].current_ap = cost
+	state.per_player[0].current_credits = cost
+	state.per_player[0].current_ap = Balance.economy.build_ap_cost
 	var target_tile := Vector2i(1, 0) # manhattan==1 from the anchor.
 	# Non-vacuous precondition: the tile is actually legal before we act.
 	assert_bool(target_tile in BaseProduction.legal_build_tiles(state, 0, StructureTypes.ECONOMY_OUTPOST)).is_true()
@@ -225,10 +232,11 @@ func test_build_with_exact_ap_via_apply_action_commits_atomically() -> void:
 	# Act
 	var result: ActionResult = state.apply_action(action)
 
-	# Assert -- one atomic commit: ok, AP fully spent, a real StructureState
-	# placed Under-Construction, visible both on the real Grid and in
-	# entities_by_id.
+	# Assert -- one atomic commit: ok, Credits fully spent (main cost), AP fully
+	# spent (surcharge), a real StructureState placed Under-Construction, visible
+	# both on the real Grid and in entities_by_id.
 	assert_bool(result.ok).is_true()
+	assert_int(state.per_player[0].current_credits).is_equal(0)
 	assert_int(state.per_player[0].current_ap).is_equal(0)
 	var placed_id: int = state.grid.occupant_at(target_tile.x, target_tile.y)
 	assert_int(placed_id).is_not_equal(GridState.EMPTY_OCCUPANT)
@@ -246,14 +254,18 @@ func test_build_with_exact_ap_via_apply_action_commits_atomically() -> void:
 	assert_bool(saw_placed).is_true()
 
 
-func test_unaffordable_build_via_apply_action_rejected_state_unchanged() -> void:
-	# Arrange -- one AP short of effective_build_cost.
-	var state := _make_state(0)
+func test_unaffordable_build_credits_short_via_apply_action_rejected_state_unchanged() -> void:
+	# Arrange -- one Credit short of effective_build_cost (the binding leg), AP
+	# surcharge fully funded so CANT_AFFORD_CREDITS is unambiguously the Credits
+	# gate firing, not the AP gate.
+	var state := _make_state(0, 0)
 	var anchor := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(0, 0))
 	_place(state, anchor)
 	var cost: int = BaseProduction.effective_build_cost(state, StructureTypes.ECONOMY_OUTPOST, 0)
-	state.per_player[0].current_ap = cost - 1
+	state.per_player[0].current_credits = cost - 1
+	state.per_player[0].current_ap = Balance.economy.build_ap_cost
 	var target_tile := Vector2i(1, 0)
+	var credits_before: int = state.per_player[0].current_credits
 	var ap_before: int = state.per_player[0].current_ap
 	var occupancy_before: PackedInt32Array = state.grid.occupancy.duplicate()
 	var entity_count_before: int = state.entities_by_id.size()
@@ -262,10 +274,11 @@ func test_unaffordable_build_via_apply_action_rejected_state_unchanged() -> void
 	# Act
 	var result: ActionResult = state.apply_action(action)
 
-	# Assert -- rejected, CANT_AFFORD, real AP + real Grid occupancy
-	# byte-for-byte unchanged, no new entity registered.
+	# Assert -- rejected, CANT_AFFORD_CREDITS, real Credits + real AP + real Grid
+	# occupancy byte-for-byte unchanged, no new entity registered.
 	assert_bool(result.ok).is_false()
-	assert_int(result.reason).is_equal(Action.Reason.CANT_AFFORD)
+	assert_int(result.reason).is_equal(Action.Reason.CANT_AFFORD_CREDITS)
+	assert_int(state.per_player[0].current_credits).is_equal(credits_before)
 	assert_int(state.per_player[0].current_ap).is_equal(ap_before)
 	assert_array(state.grid.occupancy).is_equal(occupancy_before)
 	assert_int(state.entities_by_id.size()).is_equal(entity_count_before)
@@ -279,8 +292,12 @@ func test_outpost_completing_at_real_start_turn_counts_same_turn_income() -> voi
 	# (build_turns_remaining == 1). No grid adjacency matters here -- these
 	# structures are placed directly via fixtures, not built through
 	# apply_action, since this AC is about start_turn's internal ordering,
-	# not the build verb.
-	var state := _make_state(0)
+	# not the build verb. current_ap starts at 0 so post-reset current_ap ==
+	# flat_ap_per_turn cleanly (no carryover noise); current_credits starts at
+	# 0 (a known baseline) so post-add_income current_credits ==
+	# Credits.credit_income(...) exactly (Credits bank additively, never a
+	# reset-to-snapshot like AP).
+	var state := _make_state(0, 0)
 	var completed_a := _make_structure(1, 0, Vector2i(0, 0), StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.COMPLETED)
 	var completed_b := _make_structure(2, 0, Vector2i(1, 0), StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.COMPLETED)
 	var completing := _make_structure(3, 0, Vector2i(2, 0), StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
@@ -293,13 +310,17 @@ func test_outpost_completing_at_real_start_turn_counts_same_turn_income() -> voi
 	# start_turn runs -- proves the pre-turn baseline is real, not zero.
 	assert_int(BaseProduction.completed_outpost_count(state, 0)).is_equal(2)
 	var cfg: EconomyConfig = Balance.economy
-	var income_at_n2: int = cfg.base_income \
-		+ cfg.outpost_bonus_tier1 * min(2, cfg.tier_threshold) \
-		+ cfg.outpost_bonus_tier2 * max(0, 2 - cfg.tier_threshold)
-	assert_int(AP.income(state, 0)).is_equal(income_at_n2)
+	# ★ S6-01 (2026-08-24): income no longer depends on outpost count at all.
+	# The AC this test was written for ("a completing outpost counts toward THIS
+	# turn's income") describes a mechanic that no longer exists. What survives --
+	# and is still worth pinning -- is the step ORDERING (step 3 build timers run
+	# strictly before step 4 income) and the completion event. The income
+	# assertions are inverted into a regression that the outpost curve is gone.
+	var income_before: int = Credits.credit_income(state, 0)
+	assert_int(income_before).is_equal(cfg.base_income) # tier 0, and structures contribute nothing
 
 	# Act -- the REAL start-of-turn sequence: step 3 (advance_build_timers)
-	# strictly before step 4 (AP.reset_turn's income snapshot), same call.
+	# strictly before step 4 (Credits.add_income's income snapshot), same call.
 	var turn_events: Array = state.start_turn(0)
 
 	# Assert -- the 3rd outpost is now COMPLETED (step 3 ran) ...
@@ -319,21 +340,28 @@ func test_outpost_completing_at_real_start_turn_counts_same_turn_income() -> voi
 	# real fields, never a bare literal; tier1 covers n=3 since tier_threshold
 	# is 4 in the shipped config (asserted below so this test would fail loud,
 	# not silently mis-tier, if that config value ever changes).
-	assert_int(cfg.tier_threshold).is_greater_equal(3)
-	var income_at_n3: int = cfg.base_income \
-		+ cfg.outpost_bonus_tier1 * min(3, cfg.tier_threshold) \
-		+ cfg.outpost_bonus_tier2 * max(0, 3 - cfg.tier_threshold)
-	assert_int(income_at_n3).is_equal(income_at_n2 + cfg.outpost_bonus_tier1) # the "X + OUTPOST_BONUS_TIER1 this turn" AC wording.
-	assert_int(AP.ap_income_breakdown(state, 0)["outpost"]).is_equal(cfg.outpost_bonus_tier1 * min(3, cfg.tier_threshold) + cfg.outpost_bonus_tier2 * max(0, 3 - cfg.tier_threshold))
-	assert_int(AP.income(state, 0)).is_equal(income_at_n3)
-	assert_int(state.per_player[0].income_this_turn).is_equal(income_at_n3)
-	assert_int(state.per_player[0].current_ap).is_equal(income_at_n3)
+	# ★ ... and income is UNCHANGED by that completion. This is the regression that
+	# proves the outpost income curve is really gone: a structure finished during
+	# step 3 used to raise step 4's income by OUTPOST_BONUS_TIER1, and now does not.
+	assert_int(Credits.credit_income(state, 0)).is_equal(income_before)
+	assert_int(Credits.credit_income_breakdown(state, 0)["tiers"]).is_equal(0)
+	# Credits banked additively from the known 0 baseline.
+	# ★ S6-02: what banks is NET income (gross - upkeep), not gross. These fixtures own
+	# entities that now pay upkeep, so the expectation derives from Upkeep rather than
+	# from Credits alone. A test asserting gross here would be asserting a bug.
+	assert_int(state.per_player[0].current_credits) \
+		.is_equal(maxi(0, income_before - Upkeep.total_upkeep(state, 0)))
+	# AP is flat + capped carryover, not income-driven -- leftover was 0 going
+	# in, so post-reset current_ap == flat_ap_per_turn exactly.
+	assert_int(state.per_player[0].current_ap).is_equal(cfg.flat_ap_per_turn)
 
 
 func test_two_outposts_completing_same_start_turn_both_count() -> void:
 	# Arrange -- player 0 owns zero completed outposts going in; two separate
 	# Economy Outposts both reach build_turns_remaining == 1 the same turn.
-	var state := _make_state(0)
+	# current_credits starts at the known baseline 0 so the post-add_income
+	# value equals Credits.credit_income(...) exactly.
+	var state := _make_state(0, 0)
 	var completing_a := _make_structure(1, 0, Vector2i(0, 0), StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
 	var completing_b := _make_structure(2, 0, Vector2i(1, 0), StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
 	_place(state, completing_a)
@@ -352,17 +380,21 @@ func test_two_outposts_completing_same_start_turn_both_count() -> void:
 	assert_int(completing_b.build_status).is_equal(StructureState.BuildStatus.COMPLETED)
 	assert_int(BaseProduction.completed_outpost_count(state, 0)).is_equal(2)
 	var cfg: EconomyConfig = Balance.economy
-	var expected_income: int = cfg.base_income \
-		+ cfg.outpost_bonus_tier1 * min(2, cfg.tier_threshold) \
-		+ cfg.outpost_bonus_tier2 * max(0, 2 - cfg.tier_threshold)
-	assert_int(state.per_player[0].income_this_turn).is_equal(expected_income)
+	# ★ S6-01: both completed in the same batch (the surviving ADR-0017 D1 /
+	# ADR-0008 ordering AC), and neither raised income -- structures no longer feed
+	# the Credit curve at all. Expected income is base only, at economy_tier 0.
+	# ★ S6-02: NET, not gross -- the two structures that just completed now pay upkeep.
+	var expected_income: int = maxi(0, cfg.base_income - Upkeep.total_upkeep(state, 0))
+	# Banked additively from the known 0 baseline.
+	assert_int(state.per_player[0].current_credits).is_equal(expected_income)
 
 
 # --- AC-3: real production ----------------------------------------------------
 
 func test_produce_via_apply_action_creates_real_active_selectable_unit() -> void:
-	# Arrange -- a real COMPLETED Production Outpost with ample AP.
-	var state := _make_state(100)
+	# Arrange -- a real COMPLETED Production Outpost with ample AP + Credits
+	# (both legs of the dual-cost gate generously funded).
+	var state := _make_state(100, 100000)  # ★ S6-02: ×100 Credit rescale — 100 no longer funds a Trooper (400)
 	var producer := _make_structure(1, 0, Vector2i(0, 0), StructureTypes.PRODUCTION_OUTPOST, StructureState.BuildStatus.COMPLETED)
 	_place(state, producer)
 	var deploy_tile := Vector2i(1, 0) # manhattan==1 from the producer, empty.
@@ -500,12 +532,13 @@ func test_hq_destroyed_through_real_apply_action_sets_game_over_and_locks_out() 
 
 func test_under_construction_structure_force_destroyed_no_refund() -> void:
 	# Arrange -- a real Under-Construction Economy Outpost; the owner holds a
-	# known AP balance unrelated to the structure's build_cost, so any
-	# (incorrect) refund would visibly change it.
-	var state := _make_state(7)
+	# known AP + Credits balance unrelated to the structure's build_cost, so any
+	# (incorrect) refund on EITHER pool would visibly change it.
+	var state := _make_state(7, 7)
 	var structure := _make_structure(1, 0, Vector2i(3, 3), StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 2)
 	_place(state, structure)
 	var ap_before: int = state.per_player[0].current_ap
+	var credits_before: int = state.per_player[0].current_credits
 	# Non-vacuous precondition: the structure genuinely occupies the grid and
 	# entities_by_id before destruction.
 	assert_int(state.grid.occupant_at(3, 3)).is_equal(structure.entity_id)
@@ -524,11 +557,12 @@ func test_under_construction_structure_force_destroyed_no_refund() -> void:
 			saw_destroyed = true
 			assert_bool(e.is_hq).is_false()
 	assert_bool(saw_destroyed).is_true()
-	# ... and the owner's AP is completely UNCHANGED -- no refund (the
-	# explicit contrast with Story 005's voluntary-cancel refund path, which
-	# credits floor(build_cost * cancel_refund_pct / 100) and is never called
-	# here).
+	# ... and the owner's AP AND Credits are completely UNCHANGED -- no refund on
+	# either pool (the explicit contrast with Story 005's voluntary-cancel refund
+	# path, which credits floor(build_cost * cancel_refund_pct / 100) to Credits
+	# and is never called here).
 	assert_int(state.per_player[0].current_ap).is_equal(ap_before)
+	assert_int(state.per_player[0].current_credits).is_equal(credits_before)
 
 
 # --- AC-8: live re-legalization ------------------------------------------------

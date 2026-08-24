@@ -10,4 +10,5 @@ attack = 2
 attack_range = 1
 move_cost = 1
 soft_move_cap = 4
-produce_cost = 2
+upkeep = 100
+produce_cost = 200

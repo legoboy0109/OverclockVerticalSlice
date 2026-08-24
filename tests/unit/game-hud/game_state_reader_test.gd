@@ -153,21 +153,21 @@ func test_game_state_reader_getters_return_verbatim_values() -> void:
 	assert_bool(reader.can_afford(0, 13)).is_false()
 
 
-func test_game_state_reader_income_breakdown_matches_ap_call_verbatim() -> void:
-	# Proves income_breakdown() is a real pass-through (not a stub): it returns
-	# the exact Dictionary AP.ap_income_breakdown() itself returns for the same
-	# state/player — zero local re-derivation. (Comparing to the owning query's
-	# own result IS the pass-through contract; a hardcoded literal would instead
-	# re-test AP's arithmetic, which AP's own tests own.)
+func test_game_state_reader_income_breakdown_matches_credits_call_verbatim() -> void:
+	# Proves income_breakdown() is a real pass-through (not a stub): it returns the
+	# exact Dictionary Credits.credit_income_breakdown() itself returns for the same
+	# state/player — zero local re-derivation (repointed from AP.ap_income_breakdown
+	# by the ADR-0006 pivot; income now funds Credits). (Comparing to the owning
+	# query's own result IS the pass-through contract; a hardcoded literal would
+	# instead re-test the economy's arithmetic, which its own tests own.)
 	var state := _make_state(0)
 	var reader := GameStateReader.new(state)
 
-	var expected: Dictionary = AP.ap_income_breakdown(state, 0)
+	var expected: Dictionary = Credits.credit_income_breakdown(state, 0)
 	var actual: Dictionary = reader.income_breakdown(0)
 
 	assert_int(actual["base"]).is_equal(expected["base"])
-	assert_int(actual["outpost"]).is_equal(expected["outpost"])
-	assert_int(actual["econ_tech"]).is_equal(expected["econ_tech"])
+	assert_int(actual["tiers"]).is_equal(expected["tiers"])
 
 
 func test_game_state_reader_entities_and_entity_at_match_game_state_verbatim() -> void:

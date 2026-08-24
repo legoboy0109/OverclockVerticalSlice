@@ -48,11 +48,15 @@ func _make_grid() -> GridState:
 # ever being the limiter, unless a test drives it lower. Both players' faction
 # is pinned to Neutral (make_state leaves it null; effective_produce_cost would
 # otherwise dereference a null FactionDef).
-func _make_state(current_ap: int = 100) -> GameState:
+func _make_state(current_ap: int = 100, current_credits: int = 100000) -> GameState:  # ★ S6-02: ×100 Credit rescale — 100 no longer funds a single unit
 	var state := GameStateFactory.make_state(2, 0)
 	state.grid = _make_grid()
 	for i: int in state.per_player.size():
 		state.per_player[i].current_ap = current_ap
+		# Fund Credits too (dual-cost pivot, ADR-0006): produce spends produce_cost
+		# from Credits + a produce_ap_cost surcharge from AP. Generous by default so
+		# these cap/tile-gate tests are never blocked by the Credit leg.
+		state.per_player[i].current_credits = current_credits
 		state.per_player[i].faction = Factions.NEUTRAL
 	return state
 
@@ -163,10 +167,12 @@ func test_legal_deploy_tiles_excludes_offboard_neighbours_at_high_board_edge() -
 
 # --- Production (Rule 7): the happy path -------------------------------------
 
-func test_produce_spends_ap_creates_active_unit_on_tile_and_increments_counter() -> void:
-	# Arrange -- Completed Production Outpost, counter 0, AP exactly the cost.
+func test_produce_spends_both_pools_creates_active_unit_on_tile_and_increments_counter() -> void:
+	# Arrange -- Completed Production Outpost, counter 0; fund EXACTLY the dual cost
+	# (ADR-0006 pivot): produce_cost Credits + produce_ap_cost AP surcharge, so both
+	# pools land at 0 after the commit.
 	var cost: int = UnitTypes.TROOPER.produce_cost
-	var state := _make_state(cost)
+	var state := _make_state(Balance.economy.produce_ap_cost, cost)
 	var producer := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.PRODUCTION_OUTPOST)
 	_place(state, producer)
 	var tile := Vector2i(6, 5)
@@ -175,7 +181,8 @@ func test_produce_spends_ap_creates_active_unit_on_tile_and_increments_counter()
 	var next_id_before: int = state.next_entity_id
 	# Act
 	var events: Array[Event] = BaseProduction.apply_produce(state, action)
-	# Assert -- AP spent exactly the produce cost.
+	# Assert -- both pools spent exactly (Credit main cost + AP surcharge).
+	assert_int(state.per_player[0].current_credits).is_equal(0)
 	assert_int(state.per_player[0].current_ap).is_equal(0)
 	# The new unit took the pending id and next_entity_id advanced by exactly one.
 	assert_int(state.next_entity_id).is_equal(next_id_before + 1)

@@ -46,6 +46,18 @@
 
 **Features explicitly in scope (beyond tier baseline)**:
 - Colorblind-safe presentation is elevated to a *structural* requirement rather than a togglable mode — because the Non-Hue Semantic Layer means no gameplay signal is ever color-only in the first place, there's no separate "colorblind mode" to build; the default presentation already passes.
+  - ⚠ **Amended 2026-08-20 (S5-08).** This holds for every signal *except faction ownership*, which
+    the Vertical Slice ships as **color-only** — the silhouette backup it was supposed to have was
+    never built. The tier requirement is still met, because the locked hue pair measures as
+    separating well under all three named dichromacies on its own, but it is met by **one channel,
+    not two**. The "structural, not a mode" framing therefore has one live exception, and it is the
+    single point of failure §5.3 exists to forbid. Tracked as Full Vision debt; see the audit row
+    below and `production/qa/evidence/s5-08-colourblind-ownership-brief.md`.
+  - ★ **Closed the same day**: option D3 shipped the ownership decal, so faction identity is back
+    to two independent channels and this exception no longer stands. Kept on the record because
+    the doc asserted a backup it did not have for roughly four months, and the lesson — that a
+    "Resolved" row citing an unbuilt mechanism reads exactly like a resolved one — is worth more
+    than a clean page.
 - Extended/adjustable timing for the Hold-to-Confirm Refund pattern (`design/ux/interaction-patterns.md`) — its hold threshold needs a toggle-to-confirm alternative for players who can't sustain a hold, even though the base threshold is already "generous, not twitch."
 
 **Features explicitly out of scope**:
@@ -77,7 +89,7 @@
 
 | Location | Color Signal | What It Communicates | Non-Color Backup | Status |
 |----------|-------------|---------------------|-----------------|--------|
-| Faction identity (units/structures) | Each faction owns a saturated neon hue (art bible §1 P2) | Which faction owns this entity | Distinct per-faction silhouette (Mass Distribution Bias: Rush forward-light / Boom rear-loaded / Neutral even — art bible §5.2, LOCKED) | **Resolved** |
+| Faction identity (units/structures) | Each faction owns a saturated neon hue (art bible §1 P2) | Which faction owns this entity | ⚠ **Re-audited 2026-08-20 (S5-08) — the cited backup does not exist.** All 26 Rush/Boom sprite pairs are pixel-identical in silhouette; Mass Distribution Bias was never built (art bible §5.2 implementation-status note). Ownership is carried by **hue alone**, which *measures as sufficient* for all three modes this document names: ΔE 60–76 deuteranopia, 27–45 protanopia, best-case tritanopia. It is **not** sufficient under full desaturation (ΔE 0.3–7.2). | **Resolved.** ★ Same-day update: S5-08 option D3 built a non-hue channel — a per-faction ground decal (chevron / split-flanks / even ring) under every entity, which reads apart with all colour discarded. Ownership now has **two independent channels** (hue + decal shape) as §5.3 requires. ⚠ **Scoped 2026-08-21 to structures only** (§3.5 clutter — see the art bible note): structures carry both channels, units carry hue alone, so a **unit-only read still fails under full monochromacy**. Structures anchor every position on the board, so ownership is never fully unreadable, but the two-channel guarantee is not universal. `marker_policy = ALL` restores it board-wide. The *silhouette* form of the backup remains Full Vision work. Evidence: `production/qa/evidence/s5-08-colourblind-ownership-brief.md` |
 | Board Overlay Taxonomy (9 classes) | Would naively be a "traffic light" hue system | Tile legality/affordability/outcome | Fill/hatch pattern distinction, never hue (art bible §4.3/§4.5, `interaction-patterns.md`) | **Resolved** |
 | Affordability Dimming (menu verbs, build/research options) | Would naively be red = unaffordable | Action legality/affordability | Dim/hatch treatment, reason text attached, never red or hue-coded (`interaction-patterns.md`) | **Resolved** |
 | Cost/damage preview readout, unaffordable state | Would naively be a red numeral | Insufficient AP | Dimming/hatching on the arrow/delta, never a red numeral, never negative (art bible §7.6, `interaction-patterns.md`) | **Resolved** |
@@ -187,7 +199,7 @@ Every currently-designed audio cue rides the same architectural event (`action_a
 | Input remapping | Manual — rebind all inputs, complete a full match | All board/menu inputs rebound across keyboard/mouse/gamepad | All actions accessible after remapping; no binding conflicts; bindings persist | qa-tester | Not Started |
 | Hold-to-press toggle | Manual — enable Hold-to-Confirm Refund's toggle alternative, cancel an in-progress build | Toggle mode arms/confirms without a sustained hold | Refund completes via two discrete presses, no hold required | qa-tester | Not Started |
 | Reduced motion mode | Manual — enable mode, play a full turn | AP counter flourishes, commit-flash, board overlay transitions | All flourishes suppressed; committed values still snap correctly; no information lost per *Snap, Never Tween* | ux-designer | Not Started |
-| Color-as-only-indicator re-audit | Manual — repeat the audit above against actual implemented UI (not design docs) | Every row in this document's Color-as-Only-Indicator Audit | Implementation matches the "Resolved" status claimed at design time — flag any drift | ux-designer | Not Started — scheduled once UI implementation exists |
+| Color-as-only-indicator re-audit | Manual — repeat the audit above against actual implemented UI (not design docs) | Every row in this document's Color-as-Only-Indicator Audit | Implementation matches the "Resolved" status claimed at design time — flag any drift | ux-designer | **Partially done 2026-08-20 (S5-08)** — the faction-identity row was re-audited against the shipped art and **drift was found** (see that row). The remaining rows (Board Overlay Taxonomy, Affordability Dimming, hp display) are still un-re-audited and should be checked the same way before the Standard-tier claim is made in public. |
 
 ---
 

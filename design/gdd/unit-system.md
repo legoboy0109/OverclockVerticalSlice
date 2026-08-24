@@ -7,8 +7,14 @@
 > testable flag-independence AC (no formula/rule/balance change). **The range-2 firing behavior AND the
 > ranged/kiting subsystem remain Provisional/Experimental** — gated on a combat spike before their
 > numbers lock (unchanged, spike-gated). Prior: fully Approved twice on 2026-07-20 (14 blockers closed).
+> ⚠ **PIVOT 2026-08-05:** the AP Economy split into two resources, **AP** (tactical) and **Credits**
+> (banked economic). `produce_cost` is now **dual-cost**: it is spent in **Credits** (the value
+> unchanged — Scout/Trooper/Heavy/Sniper 2/4/5/7) plus a small flat `PRODUCE_AP_COST` (1) **AP**
+> surcharge, both-or-neither. Move/attack costs are **unchanged and AP-only**. This pass corrects the
+> stale single-pool worked examples below and renames "AP Economy" → "**AP & Credits Economy**"
+> throughout; no roster stat, move-cost, or attack-cost value changed.
 > **Author**: user + main session
-> **Last Updated**: 2026-07-21
+> **Last Updated**: 2026-08-05 (economy pivot — produce dual-cost; stale AP examples corrected)
 > **Implements Pillar**: Pillar 3 (Readable Board — silhouette-first, roles read at a glance); Pillar 2 (Tempo Is the Skill — unit roles create tactical depth)
 > **Priority / Layer**: Vertical Slice / Core (system #4)
 
@@ -21,8 +27,9 @@ Vertical Slice ships four types — **Scout** (cheap, fast, fragile, melee), **T
 range-2 line unit), **Heavy** (expensive, slow, durable, range 2), and **Sniper** (fragile glass
 cannon, range 3) — spanning a cost-power ladder crossed with a short-vs-long range axis. Units are
 the player's expression of
-the "army" axis of the AP economy: every unit is an AP investment, and choosing *which* units to
-field — and when — is a core tempo decision. Unit definitions are external data (not hardcoded), so
+the "army" axis of the AP & Credits Economy: every unit is a Credits investment (plus a small
+`PRODUCE_AP_COST` AP surcharge to field it), and choosing *which* units to field — and when — is a
+core tempo decision. Unit definitions are external data (not hardcoded), so
 stats can be tuned without code changes, and each unit's runtime state lives in the render-decoupled
 game state so the AI can simulate with it and the tests can run headless.
 
@@ -51,7 +58,9 @@ legible units whose interactions run deep.
 1. **A unit type is an immutable data template** with: display name, silhouette id, `hp` (max),
    `attack` (base), `attack_range` (tiles), `move_cost` (AP per tile entered), `soft_move_cap`
    (tiles a unit may move *cumulatively this turn* before movement cost escalates — see Rule 6), and
-   `produce_cost` (AP to build). It additionally carries four **combat-infrastructure fields** the
+   `produce_cost` (**Credits** to build — since the pivot, producing also draws a flat
+   `PRODUCE_AP_COST` **AP** surcharge, owned by the AP & Credits Economy, not by this stat; see Rule 3
+   and Edge Cases). It additionally carries four **combat-infrastructure fields** the
    Combat GDD (#6) introduced but that this system **owns**: `defense` (flat damage mitigation, int ≥ 0),
    `targeting_mode` (enum {DIRECT, AREA}), `min_range` (AREA dead-zone floor, int; `attack_range` is the
    maximum reach for both profiles), and `can_counterattack` (bool). All four ship **off/neutral by
@@ -82,41 +91,46 @@ legible units whose interactions run deep.
      sequential counter (no random UUIDs — upholds the "no random seeds" test rule).
 3. **Stat table (the cost-power ladder):**
 
-   | Type | `hp` | `attack` | `attack_range` | `move_cost` (AP/tile) | `soft_move_cap` (tiles) | `produce_cost` (AP) |
-   |------|------|----------|----------------|-----------------------|-------------------------|---------------------|
+   | Type | `hp` | `attack` | `attack_range` | `move_cost` (AP/tile) | `soft_move_cap` (tiles) | `produce_cost` (Credits) |
+   |------|------|----------|----------------|-----------------------|-------------------------|---------------------------|
    | **Scout** | 3 | 2 | 1 | 1 | 4 | 2 |
    | **Trooper** | 6 | 3 | 2 | 2 | 3 | 4 |
    | **Heavy** | 10 | 5 | 2 | 3 | 2 | 7 |
    | **Sniper** | 3 | 6 | 3 | 2 | 3 | 5 |
 
-   **Roster identities (honest, per-AP-audited).** At `produce_cost` the value ratios are: Scout
-   hp/AP **1.50**, atk/AP **1.00**, (hp+atk)/AP **2.50**; Trooper 1.50 / 0.75 / 2.25; Heavy 1.43 /
-   0.714 / 2.14; Sniper 0.60 / **1.20** / 1.80. Amortized attack per 2-AP attack-action: Scout 1.0,
-   Trooper 1.5, Heavy 2.5, Sniper **3.0**. Read those honestly:
-   - **Scout** — the **raw value-per-AP leader** at range 1: highest (hp+atk)/AP and best atk/AP of
-     the two cheapest. Its role is *breadth* — many fragile bodies, map control, harass. It is
-     deliberately the most AP-efficient body; it pays for that with 3 hp and range 1.
-   - **Trooper** — the **efficient range-2 body**: among the range-2 units it has the best hp/AP
+   Every `produce_cost` above also draws a flat `PRODUCE_AP_COST` (1, owned by the AP & Credits
+   Economy) from the buyer's AP budget, both-or-neither with the Credits spend — see Edge Cases for
+   the worked example. The ratios in this section price the **Credits** cost only, since `PRODUCE_AP_COST` is
+   identical across the whole roster and does not change the *relative* ladder shape.
+
+   **Roster identities (honest, per-Credit-audited).** At `produce_cost` the value ratios are: Scout
+   hp/Credit **1.50**, atk/Credit **1.00**, (hp+atk)/Credit **2.50**; Trooper 1.50 / 0.75 / 2.25; Heavy
+   1.43 / 0.714 / 2.14; Sniper 0.60 / **1.20** / 1.80. Amortized attack per 2-AP attack-action: Scout
+   1.0, Trooper 1.5, Heavy 2.5, Sniper **3.0**. Read those honestly:
+   - **Scout** — the **raw value-per-Credit leader** at range 1: highest (hp+atk)/Credit and best
+     atk/Credit of the two cheapest. Its role is *breadth* — many fragile bodies, map control, harass.
+     It is deliberately the most Credit-efficient body; it pays for that with 3 hp and range 1.
+   - **Trooper** — the **efficient range-2 body**: among the range-2 units it has the best hp/Credit
      (1.50 > Heavy's 1.43). It is *not* the most efficient unit in the roster (the Scout ties its
-     hp/AP and beats its atk/AP), and that is intended — the Trooper's niche is "the reliable,
+     hp/Credit and beats its atk/Credit), and that is intended — the Trooper's niche is "the reliable,
      efficient piece that also reaches 2 tiles," a capability the Scout does not have. Its
      legibility story is "the dependable mid unit," not a decimal edge.
-   - **Heavy** — **concentrated durability + alpha on ONE body / ONE action.** Its per-AP ratios are
-     intentionally the *weakest* in the roster (worst atk/AP at 0.714, strictly below Trooper at
-     range 2). You are not buying efficiency — you are buying **concentration**: 10 hp that cannot be
-     chipped one cheap body at a time, and a single 5-attack (amortized 2.5 dmg/attack-action, tied
+   - **Heavy** — **concentrated durability + alpha on ONE body / ONE action.** Its per-Credit ratios
+     are intentionally the *weakest* in the roster (worst atk/Credit at 0.714, strictly below Trooper
+     at range 2). You are not buying efficiency — you are buying **concentration**: 10 hp that cannot
+     be chipped one cheap body at a time, and a single 5-attack (amortized 2.5 dmg/attack-action, tied
      top before the Sniper) that lands as one blow through one action of the shared economy. Ratios
      that spread value across several cheap bodies do not price that concentration; the anvil does.
      **The Heavy does *not* hold the raw-attack crown** — the Sniper's 6 attack is the roster's
-     highest single hit. (Heavy `produce_cost` is **7**: at the old 6 it out-valued the Trooper on
-     *both* hp/AP and atk/AP at range 2, leaving the backbone with no efficient-range-2 niche. Cost 7
-     hands range-2 hp/AP to the Trooper; the trade is that the Heavy now has *no* per-AP niche and
-     stands entirely on concentration — a deliberate, audited consequence. Whether cost-7 Heavy
-     actually gets built is a slice-tuning open question below.)
+     highest single hit. (Heavy `produce_cost` is **7 Credits**: at the old 6 it out-valued the
+     Trooper on *both* hp/Credit and atk/Credit at range 2, leaving the backbone with no efficient-
+     range-2 niche. Cost 7 hands range-2 hp/Credit to the Trooper; the trade is that the Heavy now has
+     *no* per-Credit niche and stands entirely on concentration — a deliberate, audited consequence.
+     Whether cost-7 Heavy actually gets built is a slice-tuning open question below.)
    - **Sniper** — the **raw-attack leader** (6, highest single hit) at the **longest range** (3), on
-     a glass chassis (hp 3). Best attack-per-AP in the roster. **Unvalidated** — see Open Questions;
-     its whole ranged/kiting profile was never in the prototype, and its lack of a clear counter on
-     this ladder is a named spike hypothesis, not a settled balance point.
+     a glass chassis (hp 3). Best attack-per-Credit in the roster. **Unvalidated** — see Open
+     Questions; its whole ranged/kiting profile was never in the prototype, and its lack of a clear
+     counter on this ladder is a named spike hypothesis, not a settled balance point.
 
    *(Sniper stats — and the range-2 firing behavior of Trooper/Heavy — are starting proposals; the
    whole ranged-combat model is unvalidated. See Open Questions.)*
@@ -142,7 +156,7 @@ legible units whose interactions run deep.
    terrain, resolving to the nearest occupant (no shoot-through), and the legality gate that the
    first blocker must be an **enemy** — is **owned by the Combat GDD (#6)** and is summarized here
    non-authoritatively, for context only. **Precedence: if this summary ever disagrees with the
-   Combat GDD, the Combat GDD wins** (mirroring AP Economy's action-cost precedence clause).
+   Combat GDD, the Combat GDD wins** (mirroring AP & Credits Economy's action-cost precedence clause).
    `attack_range` is the unit-owned parameter Combat's rule reads.
 6. **Attack is once-per-unit-per-turn** (`has_attacked`, reset by `reset_turn_flags()` at the
    owner's start-of-turn — Rule 2a). **Movement is AP-gated with a per-unit soft cap.** A unit may
@@ -170,13 +184,14 @@ legible units whose interactions run deep.
    The escalation formula that consumes them is owned by the **Movement GDD (#5)** and must be added
    there — see Dependencies and Open Questions.)*
 
-   **6a. Integer-AP invariant.** All AP costs are integers (matching Movement's and AP Economy's
-   published invariant). Because `SOFT_MOVE_PENALTY`'s tuning range (1.5–3.0) times an odd
-   `move_cost` can be fractional (e.g. Scout 1 × 1.5 = 1.5, Heavy 3 × 2.5 = 7.5), the per-tile
-   surcharge is **`ceil(move_cost × SOFT_MOVE_PENALTY)`** — rounded up per over-cap tile so the cost
-   is always an integer and always ≥ the base `move_cost`. Movement's formula and this doc must agree
-   on `ceil`.
-7. **A newly produced unit may act the turn it is produced** (no summoning sickness) — AP permitting.
+   **6a. Integer-AP invariant.** All AP costs are integers (matching Movement's and the AP & Credits
+   Economy's published invariant — Credits are likewise always integers). Because
+   `SOFT_MOVE_PENALTY`'s tuning range (1.5–3.0) times an odd `move_cost` can be fractional (e.g. Scout
+   1 × 1.5 = 1.5, Heavy 3 × 2.5 = 7.5), the per-tile surcharge is **`ceil(move_cost ×
+   SOFT_MOVE_PENALTY)`** — rounded up per over-cap tile so the cost is always an integer and always ≥
+   the base `move_cost`. Movement's formula and this doc must agree on `ceil`.
+7. **A newly produced unit may act the turn it is produced** (no summoning sickness) — AP and Credits
+   permitting (production itself already happened; a fresh unit's own move/attack are AP-only).
 8. **A unit dies when `current_hp` reaches 0** (Combat resolves the damage); it is removed from the
    grid immediately, in the same resolution step.
 9. **Effective attack and defense include research buffs (two independent tech flags).** Research /
@@ -211,7 +226,7 @@ Manager calls it). `current_hp` only decreases (no healing in the VS) and is bou
 |--------|---------|----------|-----------------|
 | Grid & Terrain | position / occupancy | unit's tile | Grid |
 | Game State & Turn Manager | stores unit instances; **calls** `reset_turn_flags()` at start-of-turn and `duplicate()` for AI (Unit owns the operations, Rule 2a) | unit runtime state | Turn manager (storage + *when*) |
-| AP Economy | `move_cost`, `produce_cost`, over-cap surcharge spent via `spend()` | — | **Unit System owns these cost values**; AP Economy owns the pool |
+| AP & Credits Economy | `move_cost` + over-cap surcharge spent via `ap_spend()` (AP); `produce_cost` spent via `credits_spend()` (Credits) **plus** a flat `PRODUCE_AP_COST` surcharge spent via `ap_spend()` (AP), both-or-neither | — | **Unit System owns these cost values**; AP & Credits Economy owns both pools |
 | Base & Production | creates instances at HQ | new unit on board | Base & Production (production) |
 | Combat Resolution | reads `hp`/effective attack/`attack_range`/`can_attack()`; resolves the cardinal-line-first-blocker targeting; applies damage; sets `has_attacked` | destroyed flag | Combat owns `attack_cost` (2 AP), the line-of-fire/targeting rule, and the damage formula; Unit owns `attack_range` + `can_attack()` |
 | Movement | reads `move_cost`, `soft_move_cap`, `tiles_moved_this_turn`, `SOFT_MOVE_PENALTY` | writes `tiles_moved_this_turn` | Movement owns pathing **and the soft-cap surcharge formula (new — must be added)**; Unit owns the values + counter field |
@@ -300,19 +315,28 @@ The one derived quantity it owns:
   baked into each unit.
 - **If two units would occupy the same tile**: impossible — the Grid single-occupant invariant
   rejects the second placement (Base & Production / Movement must target empty tiles).
-- **If a move would cost more AP than remains**: that destination is not offered/allowed (AP Economy
-  `can_afford` gate) — Unit System never lets a unit move "on credit." This includes the over-cap
-  surcharge: the *surcharged* total, not the base cost, is what `can_afford` gates on.
+- **If a move would cost more AP than remains**: that destination is not offered/allowed (the AP &
+  Credits Economy's `ap_can_afford` gate — movement is AP-only, unchanged by the pivot) — Unit System
+  never lets a unit move "on AP credit" (colloquial "credit," not the Credits resource). This includes
+  the over-cap surcharge: the *surcharged* total, not the base cost, is what `ap_can_afford` gates on.
 - **If `current_hp` would exceed `hp`** (no healing source exists in the VS, but reserved): clamp at
   `hp`. Documented so a future repair/heal mechanic has a defined ceiling.
 - **If Base & Production has no empty tile adjacent to the HQ to deploy a produced unit**: production
   is blocked (owned by Base & Production) — a unit cannot spawn onto an occupied or off-board tile.
-- **Heavy on floor income (10 AP) cannot produce, move, and attack the same turn** (produce 7 +
-  move 3 (one tile, under cap) + attack 2 = 12 > 10): the Heavy is **intentionally a turn-2+
-  investment**. It may be produced and repositioned, but its first attack lands the following turn
-  (AP permitting). Every cheaper unit can fully act the turn it is produced; the Heavy trades that
-  immediacy for durability and alpha. *(Documented as a deliberate consequence, not an oversight;
-  an AC guards it against silent retunes.)*
+- **Heavy on a flat 10-AP turn CAN produce, move, and attack the same turn — this inverts the
+  pre-pivot conclusion.** Producing a Heavy now costs **7 Credits** (the resource gate) plus only
+  `PRODUCE_AP_COST` = **1 AP** (the tempo surcharge) from the unit-system-owned `produce_cost`. A
+  full produce→move→attack turn costs `PRODUCE_AP_COST 1 + move 3 (one tile, under cap) + attack_cost
+  2 = 6 AP`, comfortably under the 10-AP floor income — **if** the player has 7 Credits banked. The
+  old single-pool version of this example (produce 7 AP + move 3 + attack 2 = 12 > 10, "the Heavy is
+  a turn-2+ investment") is **exactly the coupling the pivot removed**: tactical AP no longer gates
+  how much Credits-side army you can afford to field, only how many actions (economic *and* tactical)
+  you can fit into one turn's AP budget via each action's small surcharge. **What now actually gates
+  "produce + move + attack in one turn"** is Credits affordability (`credits_can_afford(player, 7)`),
+  not AP scarcity — a Heavy is a turn-1-affordable *tactical* action but may still be a turn-2+
+  *economic* investment if the player hasn't banked 7 Credits yet. *(Corrected 2026-08-05 — economy
+  pivot. The AC that guarded the old 12 > 10 arithmetic is corrected alongside it; see Acceptance
+  Criteria.)*
 - **A unit moving beyond its `soft_move_cap` (cumulative this turn)**: each tile past the cap costs
   `ceil(move_cost × SOFT_MOVE_PENALTY)`, a flat surcharge. **Worked example:** a Scout (`move_cost` 1,
   `soft_move_cap` 4, `SOFT_MOVE_PENALTY` 2.0) moving 6 tiles this turn pays `4×1 + 2×ceil(1×2.0) =
@@ -330,7 +354,7 @@ The one derived quantity it owns:
 |--------|--------|-----------|
 | Grid & Terrain | Hard | Unit position, occupancy, single-occupant invariant |
 | Game State & Turn Manager | Hard | Stores instances; **calls** `reset_turn_flags()` / `duplicate()` (Unit owns the operations) |
-| AP Economy | Hard | `spend()` for move/produce/surcharge costs (which this system owns the values of) |
+| AP & Credits Economy | Hard | `ap_spend()` for move + over-cap surcharge costs; `credits_spend()` + `PRODUCE_AP_COST` (via `ap_spend()`) for produce costs (which this system owns the values of) |
 
 **Downstream (systems that depend on this — all HARD):** Movement (`move_cost` + `soft_move_cap` +
 `SOFT_MOVE_PENALTY` + `tiles_moved_this_turn`; **added the soft-cap surcharge summation formula
@@ -342,11 +366,12 @@ stale**), Combat
 Interface, Game HUD. Each lists Unit System under its Dependencies when authored.
 
 **Faction Identity (#12)** is also a downstream dependent (additive, identity-default):
-`effective_produce_cost` / `effective_move_cost` fold each player's faction cost deltas, floored by the
-existing `MIN_MOVE_COST` (= `move_cost ≥ 1`, already Approved — no new floor owed). Combat stats stay
-identity-locked (faction-identity.md CR-6). **No-op under the Neutral default**; the fold-ins land with
-the asymmetry prototype. *(Reciprocity closed 2026-07-22 via `/review-all-gdds` C-5 — see
-faction-identity.md Dependencies.)*
+`effective_produce_cost` (now a **Credits** value, post-pivot — `PRODUCE_AP_COST` is a flat global
+surcharge and is not faction-varied) / `effective_move_cost` (AP) fold each player's faction cost
+deltas, floored by the existing `MIN_MOVE_COST` (= `move_cost ≥ 1`, already Approved — no new floor
+owed). Combat stats stay identity-locked (faction-identity.md CR-6). **No-op under the Neutral
+default**; the fold-ins land with the asymmetry prototype. *(Reciprocity closed 2026-07-22 via
+`/review-all-gdds` C-5 — see faction-identity.md Dependencies.)*
 
 **Cross-system ownership (dependencies now designed):** Research / Tech (#8, Approved) owns
 `RESEARCH_ATK_BONUS` (+1) and `DEFENSE_TECH_BONUS` (+1) — Unit System absorbed Research's handoff
@@ -360,10 +385,10 @@ deploy-tile selection (though the cost *values* live here).
 
 | Knob | VS Range | Default | Affects | If too high | If too low |
 |------|----------|---------|---------|-------------|------------|
-| Scout stats (hp/atk/range/move/cost) | hp 2–4 / atk 1–3 / range 1 / move 1 / cost 2–3 | 3 / 2 / 1 / 1 / 2 | Harass & map-control identity; raw value/AP leader | If opening is >60% Scouts or Scout wins its cost-matched trade >1:1 → rush dominates | If produced in <5% of sampled games → never worth it |
-| Trooper stats | hp 5–7 / atk 3–4 / range 2 / move 2 / cost 4 | 6 / 3 / 2 / 2 / 4 | **Efficient range-2 backbone** (best hp/AP *among range-2 units*) | If >50% of all units built are Troopers → crowds out others | If <10% built → roster feels gapped |
-| Heavy stats | hp 9–12 / atk 5–6 / range 2 / move 3 / cost 6–8 | 10 / 5 / 2 / 3 / 7 | Anvil: **concentrated** durability + alpha on one body (not per-AP efficiency) | If Heavy-heavy armies win >60% vs mixed → booming dominates | If Heavy built in <10% of games → too fragile/costly for its concentration premium |
-| Sniper stats | hp 2–4 / atk 5–7 / range 3 / move 2 / cost 4–6 | 3 / 6 / 3 / 2 / 5 | Glass-cannon / long-range poke identity | If Sniper kiting win-rate vs melee >60% **or outcome variance is bimodal** → oppressive | If Sniper avg. survives <1.5 turns before firing → dies before it fires |
+| Scout stats (hp/atk/range/move/cost) | hp 2–4 / atk 1–3 / range 1 / move 1 / cost 2–3 (Credits) | 3 / 2 / 1 / 1 / 2 | Harass & map-control identity; raw value/Credit leader | If opening is >60% Scouts or Scout wins its cost-matched trade >1:1 → rush dominates | If produced in <5% of sampled games → never worth it |
+| Trooper stats | hp 5–7 / atk 3–4 / range 2 / move 2 / cost 4 (Credits) | 6 / 3 / 2 / 2 / 4 | **Efficient range-2 backbone** (best hp/Credit *among range-2 units*) | If >50% of all units built are Troopers → crowds out others | If <10% built → roster feels gapped |
+| Heavy stats | hp 9–12 / atk 5–6 / range 2 / move 3 / cost 6–8 (Credits) | 10 / 5 / 2 / 3 / 7 | Anvil: **concentrated** durability + alpha on one body (not per-Credit efficiency) | If Heavy-heavy armies win >60% vs mixed → booming dominates | If Heavy built in <10% of games → too fragile/costly for its concentration premium |
+| Sniper stats | hp 2–4 / atk 5–7 / range 3 / move 2 / cost 4–6 (Credits) | 3 / 6 / 3 / 2 / 5 | Glass-cannon / long-range poke identity | If Sniper kiting win-rate vs melee >60% **or outcome variance is bimodal** → oppressive | If Sniper avg. survives <1.5 turns before firing → dies before it fires |
 | Per-unit `soft_move_cap` | 2–5 tiles (VS) | Scout 4 / Trooper 3 / Heavy 2 / Sniper 3 | Deep-rush / bulk-reach brake before AP surcharges | Too high → free cross-board rushes (no brake) | Too low → units feel immobile, board stalls |
 | `SOFT_MOVE_PENALTY` (× `move_cost` per over-cap tile, `ceil`) | 1.5–3.0 | 2.0 | How steeply bulk over-extension is taxed | Over-extension/rushing effectively dead | No brake on rushing |
 | Per-unit `attack_range` | 1–3 (VS) | 1/2/2/3 | Sightline & spacing depth; interacts with Impassable/blocking | Long ranges dominate positioning | Everything collapses to melee |
@@ -386,11 +411,12 @@ deploy-tile selection (though the cost *values* live here).
 > claim the defaults are correct.
 
 > Every stat is **data-driven** (external `.tres`/config), tunable without code changes, per the
-> coding standard. The whole point of the ladder is that cost buys concentration/durability/range
-> while cheap units lead on raw value/AP — keep that shape when retuning: **total-stat/AP falls as
-> cost rises** (Scout 2.50 → Trooper 2.25 → Heavy 2.14, Sniper an outlier dip at 1.80), which is the
-> intended Advance-Wars-infantry shape, not a bug — expensive units justify themselves on
-> range/burst/concentration, not per-AP stats.
+> coding standard. The whole point of the ladder is that Credits cost buys concentration/durability/
+> range while cheap units lead on raw value/Credit — keep that shape when retuning:
+> **total-stat/Credit falls as cost rises** (Scout 2.50 → Trooper 2.25 → Heavy 2.14, Sniper an outlier
+> dip at 1.80), which is the intended Advance-Wars-infantry shape, not a bug — expensive units justify
+> themselves on range/burst/concentration, not per-Credit stats. (`PRODUCE_AP_COST` is a flat, roster-
+> uniform AP surcharge and does not affect this Credits-side ladder shape.)
 
 ## Visual/Audio Requirements
 
@@ -436,8 +462,9 @@ whether it has acted this turn. The Command & Action Interface uses this to pres
 **Unit-owned — pure, headless, deterministic (Unit System Logic gate):**
 
 - **GIVEN** each unit type is instantiated, **WHEN** its stats are read, **THEN** they match the
-  table exactly — Scout (hp 3, atk 2, range 1, move 1, cap 4, cost 2), Trooper (6, 3, 2, 2, 3, 4),
-  Heavy (10, 5, 2, 3, 2, **7**), Sniper (3, 6, 3, 2, 3, 5).
+  table exactly — Scout (hp 3, atk 2, range 1, move 1, cap 4, `produce_cost` **Credits** 2), Trooper
+  (6, 3, 2, 2, 3, 4), Heavy (10, 5, 2, 3, 2, **7**), Sniper (3, 6, 3, 2, 3, 5). *(`produce_cost` values
+  are unchanged by the pivot — only their currency changed, from AP to Credits.)*
 - **GIVEN** each unit type is instantiated, **WHEN** its `base_defense` field is read, **THEN** it is
   **0** for all four types (Scout / Trooper / Heavy / Sniper) — the schema default the whole VS roster
   ships with, and the value `effective_defense` reads before any Defense-Tech bonus. *(Guards the
@@ -493,12 +520,17 @@ whether it has acted this turn. The Command & Action Interface uses this to pres
   `entity_id`, and `type` compare **equal** across the clone (value/identity preserved and
   intentionally shared — the clone is a parallel non-coexisting state, per Rule 2a — not aliased
   mutable state).
-- **GIVEN** the ladder constants, **WHEN** Heavy `produce_cost` (7) + one-tile move (`move_cost` 3) +
-  Combat `attack_cost` (2) are summed, **THEN** the total (12) **exceeds** floor income (10) — a pure
-  arithmetic regression guard for the "Heavy is a turn-2+ investment" intent, tripping if anyone
-  silently retunes the ladder.
+- **GIVEN** the ladder constants under the dual-cost model, **WHEN** `PRODUCE_AP_COST` (1) +
+  one-tile move (`move_cost` 3) + Combat `attack_cost` (2) are summed for a Heavy, **THEN** the AP
+  total (6) is **within** the flat 10-AP floor income, **AND** Heavy `produce_cost` (7) is checked
+  **separately** against `current_credits` — a pure arithmetic regression guard proving the two pools
+  are summed independently, never combined into one total. *(Corrected 2026-08-05 — economy pivot;
+  supersedes the pre-pivot AC that summed all three costs as AP and asserted 12 > 10. The point this
+  AC preserves is ordering/independence: AP and Credits affordability are two separate gates checked
+  against two separate pools, never added together — a regression that summed `produce_cost` into the
+  AP total would silently reintroduce the old single-pool coupling and must fail this AC.)*
 
-**Integration — require Grid + AP Economy + Movement/Combat (not the pure Unit gate):**
+**Integration — require Grid + AP & Credits Economy + Movement/Combat (not the pure Unit gate):**
 
 - **GIVEN** a unit at `current_hp` 0, **WHEN** resolution completes, **THEN** it transitions to
   Destroyed, is removed from Grid occupancy that step, and its tile is empty (Unit + Grid; a fake
@@ -530,7 +562,7 @@ whether it has acted this turn. The Command & Action Interface uses this to pres
 | Question | Owner | Notes / target |
 |----------|-------|----------------|
 | **Ranged combat is UNVALIDATED** — the prototype was all melee (range-1). Does the cardinal-line/first-blocker model feel good, and are the ranges/stats balanced? **Note this is 3 of 4 units** (Trooper/Heavy range 2, Sniper range 3), not just the Sniper — Trooper/Heavy range-2 firing (incl. friendly units blocking your own shots) is equally untested. | game-designer / Combat (#6) | **Highest risk in this GDD.** Validate the whole `range>1` model in the vertical slice or a focused combat spike before committing |
-| **Does the Sniper have any counter on this ladder?** Best atk/AP + longest range (3) + no Zone-of-Control (Movement) + unrestricted move→attack→move means it can plausibly fire from outside every other unit's counter-range, with no piece that both reaches it and survives the trade. | game-designer / Combat (#6) | **Named spike hypothesis (structural, not just tuning).** Design the spike to look for a *no-counter* result and to measure **outcome variance / dispersion**, not just mean win-rate — the Sniper is bimodal (oppressive or dead). If structural, tuning alone won't fix it; the ZoC / friendly-fire-blocking / move-then-attack-restriction levers are the candidate fixes |
+| **Does the Sniper have any counter on this ladder?** Best atk/Credit + longest range (3) + no Zone-of-Control (Movement) + unrestricted move→attack→move means it can plausibly fire from outside every other unit's counter-range, with no piece that both reaches it and survives the trade. | game-designer / Combat (#6) | **Named spike hypothesis (structural, not just tuning).** Design the spike to look for a *no-counter* result and to measure **outcome variance / dispersion**, not just mean win-rate — the Sniper is bimodal (oppressive or dead). If structural, tuning alone won't fix it; the ZoC / friendly-fire-blocking / move-then-attack-restriction levers are the candidate fixes |
 | Should any unit get shoot-through/pierce, or diagonal fire? | Combat (#6) | VS = cardinal only, first blocker only; pierce/diagonal are Alpha levers |
 | Does line-of-fire blocking make Impassable terrain / Procedural Center bands too strong (sightline walls)? | game-designer / Grid | Watch in playtest — interacts with Grid's Impassable + cover |
 | **Does the soft-cap brake need a companion *kiting* tax?** The soft cap only bites on deep single-turn over-extension (rushes); a 1–2 tile standoff kite sits under every cap and is untaxed by design. If Sniper/ranged kiting proves oppressive in the spike, a *separate* anti-kite lever (ZoC, move-then-attack cost, etc.) — not a lower soft cap — is the tool. | game-designer / Combat (#6) / Movement (#5) | Deliberately **out of scope** for the soft cap. Reframed 2026-07-20: soft cap = rush/over-extension brake, honestly named; kiting is its own spike question |
@@ -539,6 +571,6 @@ whether it has acted this turn. The Command & Action Interface uses this to pres
 | Per-unit veterancy / XP? | game-designer | Out of VS scope; noted as a possible progression hook |
 | Should Heavy have splash/AoE attacks? | Combat (#6) | Ties to the turn manager's reserved "simultaneous HQ destruction" rule; Alpha consideration |
 | **Soft-cap surcharge formula added to Movement (2026-07-20).** Unit owns `soft_move_cap`, `SOFT_MOVE_PENALTY`, and the `tiles_moved_this_turn` counter; Movement (#5) has added the surcharge summation: tiles past the cap (cumulative this turn) billed at `ceil(move_cost × SOFT_MOVE_PENALTY)`, a flat single-step surcharge, reading the counter and honoring the `ceil` integer-AP rule. | Movement (#5) | **Handoff complete and re-reviewed — formula authored in `move_path_cost`, confirmed sound in Movement's 2026-07-21 independent `/design-review` (Approved; corrected 2026-07-22, `/review-all-gdds` — this entry was stale).** |
-| **Does cost-7 Heavy actually get built?** Raising Heavy 6→7 gave the Trooper the range-2 hp/AP niche but left the Heavy with *no* per-AP niche (worst atk/AP in the roster), standing entirely on concentration. Is concentration enough to justify the price, or is the Heavy dead? | game-designer / economy-designer | Validate build-rate in the slice (doc's own "if <10% built → too costly" threshold). If dead, retune (cost or stats) — kept as a doc-level identity for now, not a rebalance |
-| **Odd `produce_cost` friction (Sniper 5 AND Heavy 7).** A full Sniper turn (5+move2+attack2 = 9 of 10) strands 1 AP; Heavy produce+attack (7+2 = 9) strands 1 AP the same way. **Both kept** pending the spike. | game-designer / Combat (#6) | Even either to a spend-clean value only if the 1-AP friction proves annoying in playtest; likely low-impact (a Scout's 1-AP move absorbs the leftover). Treat as a spike output, not a pre-tune |
+| **Does cost-7 Heavy actually get built?** Raising Heavy 6→7 gave the Trooper the range-2 hp/Credit niche but left the Heavy with *no* per-Credit niche (worst atk/Credit in the roster), standing entirely on concentration. Is concentration enough to justify the price, or is the Heavy dead? | game-designer / economy-designer | Validate build-rate in the slice (doc's own "if <10% built → too costly" threshold). If dead, retune (cost or stats) — kept as a doc-level identity for now, not a rebalance |
+| ~~Odd `produce_cost` friction (Sniper 5 AND Heavy 7)~~ — **RESOLVED by the 2026-08-05 economy pivot.** Under the old single AP pool, a full Sniper turn (produce 5 + move 2 + attack 2 = 9 of 10) or Heavy produce+attack (7 + 2 = 9) each stranded 1 AP. Since `produce_cost` moved to Credits and only a flat `PRODUCE_AP_COST` (1) hits the AP budget, the AP-side arithmetic changed entirely (e.g. Sniper: 1 + move 2 + attack 2 = 5 of 10 AP) and this specific friction no longer exists. Any *Credits*-side "leftover" friction is a new, unstudied question — not yet raised as a spike target. | game-designer / Combat (#6) | Closed as moot by the pivot; re-open only if a new Credits-side spend-friction pattern surfaces in playtest |
 | **`soft_move_cap` / `SOFT_MOVE_PENALTY` defaults are unvalidated** (the ranged/reach model was never in the prototype). | game-designer / Movement (#5) | Tune in the ranged-combat spike alongside the Sniper/range numbers |

@@ -6,7 +6,8 @@
 script = ExtResource("1")
 display_name = "Defensive Structure"
 hp = 10
-build_cost = 6
+upkeep = 100
+build_cost = 600
 build_time = 1
 production_cap = 0
 producible_types = []

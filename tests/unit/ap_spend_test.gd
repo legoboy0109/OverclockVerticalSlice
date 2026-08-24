@@ -6,6 +6,13 @@
 # setup. No RNG, no time-dependent asserts, no file I/O; each test builds its
 # own isolated state (no shared mutable fixtures).
 #
+# Migration note (2026-08-05 AP<->Credits pivot): AP.credit() (the cancel-build
+# refund) moved to Credits.credit() — its tests moved to credits_spend_test.gd
+# verbatim (same expected values, new pool). The income_this_turn invariant
+# test below was rewritten: income_this_turn is retired (AP is no longer
+# income-driven), replaced by the pivot's static bound
+# 0 <= current_ap <= flat_ap_per_turn + ap_carryover_cap (== 15 at defaults).
+#
 # Naming follows tests/README.md: [system]_[feature]_test.gd + test_[scenario]_[expected].
 extends GdUnitTestSuite
 
@@ -101,72 +108,6 @@ func test_spend_by_inactive_player_b_returns_false_and_changes_no_pool() -> void
 	assert_int(state.per_player[1].current_ap).is_equal(10)
 
 
-# --- credit(): additive refund path (Story 005 — cancel-build refund) -------
-
-func test_credit_2_to_5_returns_true_and_leaves_7() -> void:
-	# Arrange — the active player's pool at 5.
-	var state := GameStateFactory.make_state(1, 0)
-	state.per_player[0].current_ap = 5
-	# Act
-	var result := AP.credit(state, 0, 2)
-	# Assert — additive, not overwrite.
-	assert_bool(result).is_true()
-	assert_int(state.per_player[0].current_ap).is_equal(7)
-
-
-func test_credit_0_returns_true_and_is_a_noop() -> void:
-	# Arrange — a 0-cost structure refunds nothing but the cancel still succeeds.
-	var state := GameStateFactory.make_state(1, 0)
-	state.per_player[0].current_ap = 5
-	# Act
-	var result := AP.credit(state, 0, 0)
-	# Assert
-	assert_bool(result).is_true()
-	assert_int(state.per_player[0].current_ap).is_equal(5)
-
-
-func test_credit_negative_1_returns_false_and_leaves_unchanged() -> void:
-	# Arrange
-	var state := GameStateFactory.make_state(1, 0)
-	state.per_player[0].current_ap = 5
-	# Act
-	var result := AP.credit(state, 0, -1)
-	# Assert — a negative credit is rejected (no covert spend via credit).
-	assert_bool(result).is_false()
-	assert_int(state.per_player[0].current_ap).is_equal(5)
-
-
-func test_credit_by_inactive_player_returns_false_and_changes_no_pool() -> void:
-	# Arrange — Player 0 active, Player 1 inactive. credit is active-player-gated
-	# like spend (Rule 7) — this directly exercises that gate (the cancel-build
-	# call site can't reach it because validate_cancel rejects non-owners first,
-	# so this is the gate's only direct coverage).
-	var state := GameStateFactory.make_state(2, 0)
-	state.per_player[0].current_ap = 5
-	state.per_player[1].current_ap = 10
-	# Act — inactive player 1 attempts to be credited.
-	var result := AP.credit(state, 1, 3)
-	# Assert — rejected; neither pool changes.
-	assert_bool(result).is_false()
-	assert_int(state.per_player[0].current_ap).is_equal(5)
-	assert_int(state.per_player[1].current_ap).is_equal(10)
-
-
-func test_credit_can_raise_current_ap_above_frozen_income_snapshot() -> void:
-	# Arrange — income frozen at 10, pool already at 10 (fully un-spent). A refund
-	# is a mid-turn credit with NO upper cap: the refunded AP is spendable again
-	# this same turn, so current_ap may legitimately exceed income_this_turn
-	# (ADR-0006: the snapshot is a floor-setting event, not a live ceiling).
-	var state := GameStateFactory.make_state(1, 0)
-	state.per_player[0].income_this_turn = 10
-	state.per_player[0].current_ap = 10
-	# Act
-	var result := AP.credit(state, 0, 4)
-	# Assert — 14 > the frozen 10; no clamp to the snapshot.
-	assert_bool(result).is_true()
-	assert_int(state.per_player[0].current_ap).is_equal(14)
-
-
 # --- can_afford(): pure query, no mutation -----------------------------------
 
 func test_can_afford_3_from_5_returns_true_and_does_not_mutate() -> void:
@@ -238,28 +179,35 @@ func test_current_ap_returns_the_players_current_ap_field() -> void:
 	assert_int(AP.current_ap(state, 1)).is_equal(3)
 
 
-# --- Invariant: 0 <= current_ap <= income_this_turn across a spend sequence -
+# --- Invariant: 0 <= current_ap <= flat_ap_per_turn + ap_carryover_cap -----
 
 func test_invariant_current_ap_stays_within_bounds_across_valid_spend_sequence() -> void:
-	# Arrange — income_this_turn frozen at 10 (Story 003 concern to set it;
-	# here we simulate the frozen snapshot directly per this story's scope).
+	# Arrange — the pivot's static upper bound: current_ap can never exceed
+	# flat_ap_per_turn + ap_carryover_cap (== 15 at EconomyConfig defaults),
+	# since reset_turn() is the only writer that can raise current_ap and it
+	# always caps carryover at that sum. Drive it via a real reset_turn() from
+	# a large leftover so the pool starts at the actual ceiling (15), not a
+	# hand-picked number.
 	var state := GameStateFactory.make_state(1, 0)
-	state.per_player[0].income_this_turn = 10
-	state.per_player[0].current_ap = 10
+	state.per_player[0].current_ap = 999  # leftover far past the cap
+	AP.reset_turn(state, 0)
+	var cfg: EconomyConfig = Balance.economy
+	var max_ap: int = cfg.flat_ap_per_turn + cfg.ap_carryover_cap
+	assert_int(state.per_player[0].current_ap).is_equal(max_ap)  # 15 at defaults
 
-	# Act / Assert — each valid spend keeps 0 <= current_ap <= income_this_turn.
+	# Act / Assert — each valid spend keeps 0 <= current_ap <= max_ap.
 	assert_bool(AP.spend(state, 0, 4)).is_true()
-	assert_int(state.per_player[0].current_ap).is_equal(6)
+	assert_int(state.per_player[0].current_ap).is_equal(max_ap - 4)
 	assert_bool(state.per_player[0].current_ap >= 0).is_true()
-	assert_bool(state.per_player[0].current_ap <= state.per_player[0].income_this_turn).is_true()
+	assert_bool(state.per_player[0].current_ap <= max_ap).is_true()
 
-	assert_bool(AP.spend(state, 0, 6)).is_true()
+	assert_bool(AP.spend(state, 0, max_ap - 4)).is_true()
 	assert_int(state.per_player[0].current_ap).is_equal(0)
 	assert_bool(state.per_player[0].current_ap >= 0).is_true()
-	assert_bool(state.per_player[0].current_ap <= state.per_player[0].income_this_turn).is_true()
+	assert_bool(state.per_player[0].current_ap <= max_ap).is_true()
 
 	# A further spend attempt is rejected — invariant still holds, unchanged.
 	assert_bool(AP.spend(state, 0, 1)).is_false()
 	assert_int(state.per_player[0].current_ap).is_equal(0)
 	assert_bool(state.per_player[0].current_ap >= 0).is_true()
-	assert_bool(state.per_player[0].current_ap <= state.per_player[0].income_this_turn).is_true()
+	assert_bool(state.per_player[0].current_ap <= max_ap).is_true()

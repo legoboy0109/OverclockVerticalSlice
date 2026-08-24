@@ -1,0 +1,105 @@
+[gd_scene load_steps=2 format=3 uid="uid://c8k2n4x7q1m3v"]
+
+[ext_resource type="Script" path="res://prototypes/adr0014-input-spike/input_focus_spike.gd" id="1_spike"]
+
+[node name="InputFocusSpike" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_spike")
+
+[node name="Instructions" type="Label" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 900.0
+offset_top = 16.0
+offset_bottom = 130.0
+text = "ADR-0014 Input/Focus Spike — see README.md for the full run protocol.
+Arrow keys: if a Button below has keyboard focus, they traverse focus_neighbor_*.
+If NO Button has focus (click \"Release All Focus\" first), they drive BoardCursor.
+board_cursor_cycle (default: [ ] keys, see README) jumps BoardCursor to the next corner tile."
+autowrap_mode = 3
+
+[node name="ReadoutPanel" type="VBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 140.0
+offset_right = 900.0
+offset_bottom = 260.0
+
+[node name="LastHandlerLabel" type="Label" parent="ReadoutPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "(no input yet)"
+
+[node name="UnhandledCountLabel" type="Label" parent="ReadoutPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "_unhandled_input directional count: 0"
+
+[node name="FocusOwnerLabel" type="Label" parent="ReadoutPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Keyboard focus owner: (none)"
+
+[node name="HoveredControlLabel" type="Label" parent="ReadoutPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Mouse-hovered control: (none)"
+
+[node name="BoardCursorLabel" type="Label" parent="ReadoutPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "BoardCursor.grid_pos: (2, 2)"
+
+[node name="MenuPanel" type="VBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 280.0
+offset_right = 260.0
+offset_bottom = 460.0
+
+[node name="ButtonA" type="Button" parent="MenuPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(220, 48)
+text = "Button A (keyboard-focus test)"
+
+[node name="ButtonB" type="Button" parent="MenuPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(220, 48)
+text = "Button B (mouse-hover test)"
+
+[node name="ButtonClickOnly" type="Button" parent="MenuPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(220, 48)
+text = "Button C (FOCUS_CLICK only)"
+
+[node name="ReleaseFocusButton" type="Button" parent="MenuPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(220, 48)
+focus_mode = 0
+text = "Release All Focus"
+
+[node name="BoardGrid" type="GridContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 300.0
+offset_top = 280.0
+offset_right = 600.0
+offset_bottom = 580.0
+columns = 5
+theme_override_constants/h_separation = 4
+theme_override_constants/v_separation = 4

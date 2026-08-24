@@ -1,17 +1,18 @@
 # Game Concept: OVERCLOCK
 
 *Created: 2026-07-18*
-*Status: Draft*
+*Status: Draft (⚠ Revised 2026-08-05 — AP↔Credits two-budget pivot: Pillar 1, Unique Hook, and Core Hypothesis reframed from the single-AP-economy model. See ap-economy.md.)*
 
 ---
 
 ## Elevator Pitch
 
-> It's a 2D isometric sci-fi turn-based tactics game where you spend a single pool
-> of action points — on building, producing, moving, fighting, and researching —
-> to out-tempo a rival commander for control of a contested star sector. Victory
-> goes not to the bigger army, but to whoever compounds their action-point
-> advantage fastest.
+> It's a 2D isometric sci-fi turn-based tactics game where you fight from a flat
+> per-turn budget of action points and invest from a war chest of Credits you bank
+> between turns — but every unit, structure, and tech you buy still spends a slice of
+> the same turn you'd fight with. You out-tempo a rival commander for control of a
+> contested star sector: victory goes not to the bigger army, but to whoever best
+> reads when to strike and when to invest.
 
 > **Projection note (2026-07-25):** OVERCLOCK renders in **2:1 isometric (dimetric)**
 > projection (revised from the original "top-down" framing) — see `design/art/art-bible.md`
@@ -59,23 +60,28 @@ undecided** game before it tips; it is not reversing a game that has already bee
 decided. Once a game is decided, it stays decided — that asymmetry is what makes
 the stabilization skill meaningful in the first place.
 
-What you can do here that you can't elsewhere: manage your economy and your army
-as *the same decision*. There is no separate "macro screen." Building a structure,
-producing a unit, moving, attacking, and researching all spend from one budget, so
-every turn is a genuine triage between growing, fighting, and teching.
+What you can do here that you can't elsewhere: your economy and your army are *never
+fully separate decisions*. There is no detached "macro screen" — building a structure,
+producing a unit, or researching draws from a banked war chest (Credits) *and* spends
+a slice of the same tactical budget (AP) you move and fight with, so every turn is a
+genuine triage between growing, fighting, and teching.
 
 ---
 
 ## Unique Hook
 
-**Like Advance Wars, AND ALSO your economy and your army share one action budget —
-so macro and micro are the same decision, and the game is a tempo duel over who
-compounds that budget fastest.**
+**Like Advance Wars, AND your economy is a war chest you bank between turns — but
+building a unit, expanding, or teching still spends part of the same turn you'd fight
+with. Macro and micro live in separate budgets, yet every investment is paid partly in
+battle tempo — so the game is a tempo duel over when to strike and when to invest.**
 
-- Explainable in one sentence: one AP pool governs everything.
-- Genuinely novel: turn-based tactics games separate economy from combat; OVERCLOCK
-  fuses them into a single resource, making every turn a whole-strategy triage.
-- Connected to the fantasy: the unified budget *is* the "mastery of tempo" fantasy.
+- Explainable in one sentence: two budgets — battle tempo (AP) and a war chest
+  (Credits) — but growing the war chest always costs you tempo.
+- Genuinely novel: most turn-based tactics games let you macro *for free* on a separate
+  track; OVERCLOCK keeps a tempo price on every investment, so macro and micro stay
+  entangled without collapsing into one pool.
+- Connected to the fantasy: the tension between spending tempo now and banking for a
+  bigger strike later *is* the "mastery of tempo" fantasy.
 - Affects gameplay, not just aesthetics: it reshapes every decision the player makes.
 
 ---
@@ -121,9 +127,9 @@ compounds that budget fastest.**
    missions; asymmetric factions each with a single-player campaign.
 6. **Pre-commit action interface** — an Advance Wars / Fire Emblem-style command flow that
    previews a unit's move range, valid targets, and the exact AP cost *before* the player
-   commits. Core to Pillar 3 (*Readable Board, Deep Decisions*): the unified AP economy only
-   feels deliberate rather than fiddly if the player can see the cost of a choice before
-   paying for it. *(Identified as the highest-value missing affordance in the concept
+   commits. Core to Pillar 3 (*Readable Board, Deep Decisions*): the two-budget economy only
+   feels deliberate rather than fiddly if the player can see the cost of a choice — now in AP,
+   Credits, or both — before paying for it. *(Identified as the highest-value missing affordance in the concept
    prototype.)*
 
 ---
@@ -134,8 +140,8 @@ compounds that budget fastest.**
 
 | Need | How This Game Satisfies It | Strength |
 | ---- | ---- | ---- |
-| **Autonomy** | The unified AP pool lets players author their own strategy every turn — rush, boom, tech, or turtle | Core |
-| **Competence** | Skill = allocating AP for maximum compounding tempo; mastery is visible, deep, and always improvable | Core |
+| **Autonomy** | The two budgets (tactical AP + a banked Credits war chest) let players author their own strategy every turn — rush, boom, tech, or turtle | Core |
+| **Competence** | Skill = allocating AP and timing Credits for maximum compounding tempo; mastery is visible, deep, and always improvable | Core |
 | **Relatedness** | Carried by the narrative campaigns and distinct faction identities the player comes to know | Supporting |
 
 ### Player Type Appeal (Bartle Taxonomy)
@@ -195,16 +201,25 @@ complete; replay value = 3–5 other factions that play entirely differently.
 
 ## Game Pillars
 
-### Pillar 1: One Economy, Every Choice
-Everything a player does — build, produce, move, fight, research — draws from the single
-action-point pool. We never add a parallel resource that lets you dodge the core tradeoff.
+### Pillar 1: Every Choice Is a Tradeoff
+Two scarce budgets — a flat tactical **AP** pool (move, fight) and a banked **Credits**
+war chest (build, produce, research) — and everything you do draws from one; economic
+actions draw a little from both. There's no "free" action that dodges the tension: if it
+has an effect, it has a price. The two budgets are deliberate and distinct — **tempo vs.
+investment** — not a pile of parallel currencies that blur the decision.
 
-*Design test*: If a feature would let players do something "for free" outside the AP
-economy, this pillar says **cut it or price it in AP.**
+*Design test*: If a feature would let players do something "for free" outside both
+budgets, this pillar says **cut it or price it — in AP, Credits, or both.**
+
+> *(Revised 2026-08-05 from "One Economy, Every Choice." The original single-AP-pool framing
+> was replaced by the two-budget pivot — see ap-economy.md. The pillar keeps its intent
+> (every spend is a real tradeoff); the AP surcharge on economic actions preserves the
+> tempo link the single pool used to enforce.)*
 
 ### Pillar 2: Tempo Is the Skill
-The game rewards out-accelerating your opponent — investing AP so it compounds faster
-than theirs. Depth comes from timing and sequencing, not from bigger numbers.
+The game rewards out-accelerating your opponent — spending your tactical AP sharply and
+investing your Credits so they compound faster than theirs. Depth comes from timing and
+sequencing, not from bigger numbers.
 
 *Design test*: If we're choosing between a mechanic that rewards *raw power* vs. one
 that rewards *timing/sequencing*, this pillar says **choose timing.**
@@ -224,16 +239,16 @@ fixed or cut, not shipped.
 pillar says **find a clearer expression or cut it.**
 
 ### Pillar 4: Factions Are Verbs, Not Skins
-Each faction changes *how you spend AP and win tempo* — a different playstyle, not just
-different art on the same units.
+Each faction changes *how you spend your budgets and win tempo* — a different playstyle,
+not just different art on the same units.
 
 *Design test*: If a new faction plays like an existing one with reskinned units, this
-pillar says **redesign it around a distinct AP strategy or don't ship it.**
+pillar says **redesign it around a distinct tempo/economy strategy or don't ship it.**
 
 ### Anti-Pillars (What This Game Is NOT)
 
 - **NOT real-time action**: It would compromise *Readable Board, Deep Decisions* and the deliberate weight of AP allocation.
-- **NOT parallel resource economies** (separate money / mana / supply tracks): It would compromise *One Economy, Every Choice.*
+- **NOT a sprawl of parallel currencies**: the two budgets (tactical AP + economic Credits) are the deliberate whole — we don't bolt on further disconnected tracks (mana / supply / energy / favor) that blur which decision matters. Two clear axes, not five muddy ones. *(Revised 2026-08-05: the original "NOT parallel resource economies" absolute is superseded by the two-budget pivot; the intent — no resource sprawl that dilutes the core tradeoff — is preserved.)*
 - **NOT randomized combat outcomes** (dice-roll hit chance): It would compromise *Tempo Is the Skill* — results must be predictable so mastery is about planning, not luck.
 - **NOT grind- or monetization-gated progression**: It would compromise the campaign's Challenge + Story promise.
 
@@ -243,8 +258,8 @@ pillar says **redesign it around a distinct AP strategy or don't ship it.**
 
 | Reference | What We Take From It | What We Do Differently | Why It Matters |
 | ---- | ---- | ---- | ---- |
-| **Advance Wars 2** | Readable top-down grid tactics, unit production, CO-power identity, clean combat | Add real base-building and fuse economy into a single AP budget; deterministic combat | Validates the readable-tactics core and the appetite for a modern successor |
-| **StarCraft II** | Economic/tempo pressure, macro-vs-micro tension, the *Zero Hour* siege-survival feeling | Turn-based, deterministic, single unified budget instead of parallel resources | Validates that tempo duels are deeply replayable and emotionally intense |
+| **Advance Wars 2** | Readable top-down grid tactics, unit production, CO-power identity, clean combat | Add real base-building; split into two budgets (tactical AP + banked Credits) but keep a tempo price on every investment; deterministic combat | Validates the readable-tactics core and the appetite for a modern successor |
+| **StarCraft II** | Economic/tempo pressure, macro-vs-micro tension, the *Zero Hour* siege-survival feeling | Turn-based, deterministic; macro and micro sit in separate budgets but stay entangled by the AP surcharge (no free macro) | Validates that tempo duels are deeply replayable and emotionally intense |
 | **Into the Breach** | Deterministic, puzzle-clean tactics; perfect information; tight scope | Larger economy/production layer and a tempo-duel opponent rather than pure defense puzzle | Proves a modern readable-tactics audience exists and rewards elegant systems |
 
 **Non-game inspirations**: Synthwave / TRON-era neon sci-fi aesthetics; hard-sci-fi
@@ -333,17 +348,28 @@ Expanse* and *Battlestar Galactica* for narrative tone.
 
 ## MVP Definition
 
-**Core hypothesis**: *A single unified action-point economy makes a turn-based tempo duel
-fun and deep, and two factions built around distinct AP strategies feel genuinely different
-to play.*
+**Core hypothesis** *(revised 2026-08-05 — two-budget pivot)*: *A two-budget tempo economy —
+a flat tactical **AP** budget for the board plus a banked **Credits** war chest for
+investment, with every investment still paying a small AP surcharge that keeps it
+tempo-linked — makes a turn-based tempo duel fun and deep, and two factions built around
+distinct tempo/economy strategies feel genuinely different to play.*
 
-> **Prototype result (2026-07-19): CONFIRMED for the economy.** The concept prototype
-> validated the first half — the unified AP duel is fun and non-degenerate (rush and boom
-> both won). The *faction* half was not tested (the prototype was symmetric) and remains the
-> open question. Baseline tuning values that felt good — base income 10 + 2/outpost, unspent
-> AP lost, unit costs Scout 2 / Trooper 4 / Heavy 6, attack 2 AP, outpost 5 AP, research 6 AP,
-> deterministic combat with cover −1 and free counters — are recorded in
-> `prototypes/overclock-concept/REPORT.md` for the balance/economy GDD.
+> **Prototype result (2026-07-19): CONFIRMED for the *single*-economy model.** The concept
+> prototype validated the first half — the unified single-AP duel was fun and non-degenerate
+> (rush and boom both won). The *faction* half was not tested (the prototype was symmetric)
+> and remains open. Baseline prototype tuning that felt good — base income 10 + 2/outpost,
+> unspent AP lost, unit costs Scout 2 / Trooper 4 / Heavy 6, attack 2 AP, outpost 5 AP,
+> research 6 AP, deterministic combat with cover −1 and free counters — is recorded in
+> `prototypes/overclock-concept/REPORT.md`.
+>
+> **⚠ Pivot update (2026-08-05): the economy hypothesis was revised.** The prototype confirmed
+> the *single* AP pool, but windowed vertical-slice playtesting surfaced a real friction —
+> producing and building drained the same AP you move and attack with ("I built something, now
+> I can't act"). The economy was therefore split into two budgets (tactical AP + banked
+> Credits) with a small AP surcharge keeping every investment tempo-linked (see ap-economy.md).
+> **The single-economy "CONFIRMED" no longer covers the shipping model** — the two-budget
+> economy is re-opened, and its "fun and deep" claim is now the S4-05 tempo playtest's job to
+> confirm.
 
 > **Current build target = Vertical Slice.** The Prototype tier below is **DONE**
 > (2026-07-19, verdict PROCEED). Systems Design should therefore scope GDDs to **Vertical
@@ -361,7 +387,7 @@ to play.*
 5. Hot-seat or a simple AI opponent.
 
 **Vertical Slice requirements** *(the next build target)*:
-1. All six core systems above at production quality, unified under one AP economy.
+1. All six core systems above at production quality, built on the two-budget AP + Credits economy (pivot 2026-08-05).
 2. One polished mission end-to-end + persistence across 2–3 linked missions.
 3. Two **asymmetric** factions (rush/tempo vs boom/mass) — pending the asymmetry prototype.
 4. A basic but competent AI opponent, and the pre-commit action-preview menu.

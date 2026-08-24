@@ -25,16 +25,16 @@
 # STATUS VALUES: active | deprecated | superseded-by: TR-[system]-NNN
 #
 # `adr` = the ADR that governs this requirement's implementation (from
-#   docs/architecture/architecture.md mapping, 200/200 mapped). ADRs 0001-0016
-#   exist (all Proposed). ADR-0017 (Base & Production mechanics) and ADR-0018
-#   (Research/Tech mechanics) are RECOMMENDED-BUT-NOT-YET-WRITTEN: the
-#   2026-07-24 /architecture-review found 7 build/produce/research-mechanic TRs
-#   mis-parked on ADR-0010 (which specifies only combat/destruction) and
-#   re-pointed them to the planned ADR-0017/0018. Those 7 are ⚠️ Partial until
-#   the ADRs are authored.
+#   docs/architecture/architecture.md mapping, 200/200 mapped). ADRs 0001-0018
+#   all exist and are Accepted. (History: the 2026-07-24 /architecture-review found 7
+#   build/produce/research-mechanic TRs mis-parked on ADR-0010 [combat/destruction only]
+#   and re-pointed them to the then-planned ADR-0017/0018, since authored.)
+#   2026-08-05: the AP-economy pivot (single pool -> AP + Credits) revised ~22 requirement
+#   texts + added 5 TR-IDs (TR-apecon-015/016/017, TR-ai-018, TR-research-014) — see
+#   docs/architecture/change-impact-2026-08-05-ap-credits-economy.md.
 
-version: 3
-last_updated: "2026-07-24"
+version: 4
+last_updated: "2026-08-05"
 
 requirements:
 
@@ -111,34 +111,40 @@ requirements:
       requirement: "State-model location (Autoload vs passed object vs event-bus) resolved by ADR before coding (was OPEN blocker; ADR-0001 resolves)" }
 
   # ============================ AP Economy (14) ============================
-  - { id: TR-apecon-001, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
-      requirement: "current_ap stored as state, mutated by exactly 2 paths: turn-manager reset + spend(); int field on per-player state" }
-  - { id: TR-apecon-002, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
-      requirement: "ap_income(player)->int per tiered formula (BASE + tier1*min(n,THRESH) + tier2*max(0,n-THRESH) + econ-tech term), n=max(0,outposts)" }
-  - { id: TR-apecon-003, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
-      requirement: "Externalize coefficients: BASE_INCOME=10, OUTPOST_BONUS_TIER1=2, TIER2=1, TIER_THRESHOLD=4, ECONOMY_TECH_TIER_THRESHOLD=6, ECONOMY_TECH_INCOME_BONUS=1; no literals in code" }
-  - { id: TR-apecon-004, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0008, created: 2026-07-23, revised: "", status: active,
-      requirement: "Start-of-turn: eval ap_income once, freeze income_this_turn snapshot; current_ap set to it; no mid-turn recompute (step 3 of turn seq)" }
-  - { id: TR-apecon-005, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
-      requirement: "End of turn: discard unspent AP (current_ap:=0), immutable through opponent turn; hard write, observable" }
-  - { id: TR-apecon-006, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
-      requirement: "can_afford(player,amount)->bool pure, callable for any player; all spenders call before offering action" }
-  - { id: TR-apecon-007, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
-      requirement: "spend(player,amount)->bool sole atomic mutator (reject if not active, <0, >current_ap; no-op if 0); sole cross-system write" }
-  - { id: TR-apecon-008, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
-      requirement: "Invariant 0<=current_ap<=income_this_turn holds structurally" }
-  - { id: TR-apecon-009, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
-      requirement: "Read query current_ap + frozen income breakdown (base/outpost/tech); HUD + Cmd interface; frozen snapshot not live recompute" }
+  - { id: TR-apecon-001, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "current_ap (AP tactical pool) int per-player, 2 writers: turn reset (flat+capped carry) + AP.spend(); current_credits (Credit economic pool, banked >=0) int per-player, 3 writers: start-of-turn income add + Credits.spend() + Credits.credit() (cancel refund)" }
+  - { id: TR-apecon-002, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "credit_income(player)->int per tiered formula (BASE + tier1*min(n,THRESH) + tier2*max(0,n-THRESH) + econ-tech term), n=max(0,outposts) — same shape as former ap_income, now funds the Credits pool" }
+  - { id: TR-apecon-003, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "Externalize coefficients in EconomyConfig (10 fields): BASE_INCOME=10, OUTPOST_BONUS_TIER1=2, TIER2=1, TIER_THRESHOLD=4, ECONOMY_TECH_TIER_THRESHOLD=6, ECONOMY_TECH_INCOME_BONUS=1 (Research-owned), FLAT_AP_PER_TURN=10, AP_CARRYOVER_CAP=5, PRODUCE_AP_COST=1, BUILD_AP_COST=2, RESEARCH_AP_COST=1; no literals in code" }
+  - { id: TR-apecon-004, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0008, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "Start-of-turn (ADR-0008): step 4a AP.reset_turn (current_ap := FLAT_AP_PER_TURN + min(leftover, AP_CARRYOVER_CAP), overwrite); step 4b Credits.add_income (bank credit_income, AFTER the build-timer advance); income_this_turn snapshot RETIRED" }
+  - { id: TR-apecon-005, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "End of turn: NO AP discard — unspent AP carries (capped at AP_CARRYOVER_CAP, consumed by next reset); Credits bank indefinitely (no cap); both pools immutable through opponent turn" }
+  - { id: TR-apecon-006, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "ap_can_afford + credits_can_afford (player,amount)->bool pure, callable for any player; all spenders call the relevant pool(s) before offering an action" }
+  - { id: TR-apecon-007, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "ap_spend + credits_spend (player,amount)->bool sole atomic mutators per pool (reject if not active, <0, >current; no-op if 0); Credits.credit is the cancel-refund writer; sole cross-system writes" }
+  - { id: TR-apecon-008, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "Invariants hold structurally: 0<=current_ap<=FLAT_AP_PER_TURN+AP_CARRYOVER_CAP (max 15); current_credits>=0 (unbounded above)" }
+  - { id: TR-apecon-009, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "Read queries current_ap + current_credits + credit_income_breakdown (base/outpost/econ_tech) for HUD + Cmd interface; LIVE read (equals start-of-turn value within a turn — not a stored snapshot)" }
   - { id: TR-apecon-010, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
       requirement: "Read completed_outpost_count(player) + has_economy_tech(player) as external deps (Base&Prod + Research); pure/deterministic" }
-  - { id: TR-apecon-011, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
-      requirement: "All AP-consumers integrate via spend()/can_afford() only; no parallel pool (Pillar 1)" }
-  - { id: TR-apecon-012, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
-      requirement: "Additive Faction income modifier fold-in (Delta base/tier1/tier2) gated by BASE_INCOME_FLOOR; no-op under Neutral" }
-  - { id: TR-apecon-013, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0003, created: 2026-07-23, revised: "", status: active,
-      requirement: "Full determinism: identical income+actions -> bit-identical AP trajectory, no RNG" }
+  - { id: TR-apecon-011, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "Move/Attack integrate via ap_spend/ap_can_afford; economic actions (produce/build/research) are DUAL-COST (Credits main + AP surcharge) both-or-neither; two bounded budgets are the deliberate model (Pillar 1 = 'Every Choice Is a Tradeoff', not a sprawl of parallel currencies)" }
+  - { id: TR-apecon-012, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0012, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "Additive Faction income modifier fold-in into effective_credit_income (Delta base/tier1/tier2) gated by BASE_INCOME_FLOOR; no-op under Neutral" }
+  - { id: TR-apecon-013, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0003, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "Full determinism: identical income+actions -> bit-identical AP + Credit trajectories, no RNG" }
   - { id: TR-apecon-014, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
       requirement: "Test doubles for completed_outpost_count + has_economy_tech (DI over singletons)" }
+  - { id: TR-apecon-015, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-08-05, revised: "", status: active,
+      requirement: "Dual-cost economic actions (produce/build/research): legal iff credits_can_afford(credit_cost) AND ap_can_afford(ap_surcharge); apply spends BOTH (both-or-neither); enforced by ADR-0002 validate-before-mutate, no rollback object" }
+  - { id: TR-apecon-016, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-08-05, revised: "", status: active,
+      requirement: "AP carryover: unspent AP carries into next turn capped at AP_CARRYOVER_CAP (5); Credits accumulate uncapped across turns (banked war chest, no discard)" }
+  - { id: TR-apecon-017, system: apecon, gdd: design/gdd/ap-economy.md, adr: ADR-0006, created: 2026-08-05, revised: "", status: active,
+      requirement: "AP logistics surcharges PRODUCE_AP_COST/BUILD_AP_COST/RESEARCH_AP_COST owned by EconomyConfig (economy-owned), read cross-system by B&P/Research; research surcharge per-tech-overridable via TechDef.ap_surcharge" }
 
   # ============================ Unit System (15) ============================
   - { id: TR-unit-001, system: unit, gdd: design/gdd/unit-system.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
@@ -239,16 +245,16 @@ requirements:
       requirement: "Structure instance FSM: Under-Construction->Completed->Destroyed + Removed(cancel); per-instance hp/build-turns/units_produced_this_turn/has_attacked/owner" }
   - { id: TR-baseprod-003, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0017, created: 2026-07-23, revised: "", status: active,
       requirement: "Structures occupy 1 tile, hard blocker for movement + DIRECT line-of-fire, targetable in both Under-Construction+Completed; atomic vs Grid" }
-  - { id: TR-baseprod-004, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0002, created: 2026-07-23, revised: "", status: active,
-      requirement: "build(player,type,tile) validates affordability+legality at commit, atomic via apply_action (spend+place one txn), re-validate on change" }
+  - { id: TR-baseprod-004, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0002, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "build(player,type,tile) validates DUAL affordability (Credits build_cost + BUILD_AP_COST surcharge) + legality at commit, atomic via apply_action (spend BOTH pools + place, one txn, both-or-neither), re-validate on change" }
   - { id: TR-baseprod-005, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0017, created: 2026-07-23, revised: "", status: active,
       requirement: "legal_build_tiles(player,type): empty+passable, manhattan==1 from friendly, manhattan>2 from every enemy structure, live-recomputed" }
-  - { id: TR-baseprod-006, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0008, created: 2026-07-23, revised: "", status: active,
-      requirement: "Build-timer advance (decrement, complete at 0) as start-of-turn effect BEFORE AP snapshot (step 3 before 4), batch-complete" }
-  - { id: TR-baseprod-007, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
-      requirement: "completed_outpost_count(player): alive owned Completed Economy Outposts only, start-of-turn snapshot; return 0 not null; consumed by ap_income" }
-  - { id: TR-baseprod-008, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0017, created: 2026-07-23, revised: "", status: active,
-      requirement: "produce(producer,type,tile) validates Completed+producible+cap+adjacent-empty; spend produce_cost; instantiate on chosen deploy tile; needs legal_deploy_tiles" }
+  - { id: TR-baseprod-006, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0008, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "Build-timer advance (decrement, complete at 0) as start-of-turn effect BEFORE the Credit income add (step 3 before 4b), batch-complete" }
+  - { id: TR-baseprod-007, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0006, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "completed_outpost_count(player): alive owned Completed Economy Outposts only, start-of-turn snapshot; return 0 not null; consumed by credit_income" }
+  - { id: TR-baseprod-008, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0017, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "produce(producer,type,tile) validates Completed+producible+cap+adjacent-empty+DUAL affordability; spend produce_cost (Credits) + PRODUCE_AP_COST (AP surcharge) both-or-neither; instantiate on chosen deploy tile; needs legal_deploy_tiles" }
   - { id: TR-baseprod-009, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0008, created: 2026-07-23, revised: "", status: active,
       requirement: "Per-turn structure flag reset at start-of-turn: units_produced_this_turn->0, has_attacked->false; same seq as unit resets" }
   - { id: TR-baseprod-010, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
@@ -257,8 +263,8 @@ requirements:
       requirement: "Structure damage via Combat damage_formula, structures cover-immune; hp 0->Destroyed+Grid removal same step" }
   - { id: TR-baseprod-012, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
       requirement: "HQ destruction raises observable hq_destroyed on Result -> Turn Manager sets GameOver winner=opponent; non-HQ raises none" }
-  - { id: TR-baseprod-013, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
-      requirement: "cancel_build(structure) only Under-Construction, removes+clears tile, credits floor(build_cost*CANCEL_REFUND_RATE) AP; combat-destruction never refunds" }
+  - { id: TR-baseprod-013, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0007, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "cancel_build(structure) only Under-Construction, removes+clears tile, refunds floor(build_cost*CANCEL_REFUND_RATE) CREDITS via Credits.credit (not AP; the AP surcharge is not refunded); combat-destruction never refunds" }
   - { id: TR-baseprod-014, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
       requirement: "Closeout-pressure NOT hard cap: MAX_OUTPOST_COUNT exists as named data-driven lever but DISABLED in VS; pressure emergent; togglable-off infra-only" }
   - { id: TR-baseprod-015, system: baseprod, gdd: design/gdd/base-production.md, adr: ADR-0003, created: 2026-07-23, revised: "", status: active,
@@ -271,30 +277,32 @@ requirements:
   # ============================ Research / Tech (13) ============================
   - { id: TR-research-001, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
       requirement: "Data-driven Research Lab template (hp 12, build_cost 8, build_time 2, defense 0, no counter, production_cap 0) as B&P 5th structure" }
-  - { id: TR-research-002, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
-      requirement: "Data-driven tech table (Attack 10/3/+1atk; Defense 10/4/+1def; Economy 7/3/+1AP-per-outpost-capped) with named constants externalized" }
+  - { id: TR-research-002, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0007, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "Data-driven tech table (Attack 10/3/+1atk; Defense 10/4/+1def; Economy 7/3/+1Credit-per-outpost-capped) — research_cost in Credits, per-tech ap_surcharge (base 1); named constants externalized" }
   - { id: TR-research-003, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0018, created: 2026-07-23, revised: "", status: active,
       requirement: "Per-player tech-unlock: 3 terminal boolean flags (has_attack/defense/economy_tech), one-time permanent; survives Lab destruction" }
   - { id: TR-research-004, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0018, created: 2026-07-23, revised: "", status: active,
       requirement: "Per-Lab research state: current_research_target + research_turns_remaining, parallel Labs; cross-Lab mutual exclusion (same tech not at 2 Labs)" }
   - { id: TR-research-005, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0018, created: 2026-07-23, revised: "", status: active,
       requirement: "legal_research_targets(lab)->set<tech> excluding Completed + Under-Research-elsewhere; empty for Under-Construction Lab" }
-  - { id: TR-research-006, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0002, created: 2026-07-23, revised: "", status: active,
-      requirement: "start_research(lab,tech)/cancel_research(lab) via apply_action, upfront full-cost AP spend, atomic; cancel reuses CANCEL_REFUND_RATE" }
-  - { id: TR-research-007, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0008, created: 2026-07-23, revised: "", status: active,
-      requirement: "Start-of-turn research-timer advance interleaved with build-timer, before income snapshot" }
+  - { id: TR-research-006, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0002, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "start_research(lab,tech)/cancel_research(lab) via apply_action, upfront DUAL-cost spend (Credits research_cost + AP surcharge = TechDef.ap_surcharge or RESEARCH_AP_COST base 1) both-or-neither, atomic; cancel refunds CANCEL_REFUND_RATE in Credits" }
+  - { id: TR-research-007, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0008, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "Start-of-turn research-timer advance interleaved with build-timer, before the Credit income add (step 4b)" }
   - { id: TR-research-008, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0010, created: 2026-07-23, revised: "", status: active,
       requirement: "Lab destruction -> synchronous same-step tech-revert (current_research_target->Not Started, no refund) within same apply_action; shared trigger with Combat" }
   - { id: TR-research-009, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0007, created: 2026-07-23, revised: "", status: active,
       requirement: "Unit System exposes owner_has_attack_tech/owner_has_defense_tech feeding effective_attack/effective_defense, live-read" }
-  - { id: TR-research-010, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
-      requirement: "ap_income adds ECONOMY_TECH_INCOME_BONUS*min(outposts,ECONOMY_TECH_TIER_THRESHOLD) live each snapshot; threshold AP-owned, bonus Research-owned" }
+  - { id: TR-research-010, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0006, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "credit_income adds ECONOMY_TECH_INCOME_BONUS*min(outposts,ECONOMY_TECH_TIER_THRESHOLD) each start-of-turn; threshold economy-owned, bonus Research-owned" }
   - { id: TR-research-011, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0003, created: 2026-07-23, revised: "", status: active,
       requirement: "Deterministic headless pure-fn research ops, clone() for AI + tests, order-independent batch completion" }
   - { id: TR-research-012, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0001, created: 2026-07-23, revised: "", status: active,
       requirement: "Persist per-player tech flags + per-Lab research state in save; single-match permanence" }
   - { id: TR-research-013, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
       requirement: "UI feed: research menu (targets, cost/time, affordability), tech status panel, timer, cancel-refund preview; opponent-visible working state" }
+  - { id: TR-research-014, system: research, gdd: design/gdd/research-tech.md, adr: ADR-0007, created: 2026-08-05, revised: "", status: active,
+      requirement: "TechDef.ap_surcharge (ADR-0007 schema field): per-tech AP-surcharge override for research; defaults to EconomyConfig.RESEARCH_AP_COST (base 1); read by research validate/apply (ADR-0018); VS techs use base 1" }
 
   # =================== Command & Action Interface (24) ===================
   - { id: TR-cmdui-001, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0015, created: 2026-07-23, revised: "", status: active,
@@ -383,8 +391,8 @@ requirements:
       requirement: "End Turn + Build gated inert during opponent turn + EndTurn transient, readouts stay live; reads match_status/phase" }
   - { id: TR-hud-018, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
       requirement: "Every HUD value live verbatim read, zero local balance constants, zero recompute (exempt transient anim delta)" }
-  - { id: TR-hud-019, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0006, created: 2026-07-23, revised: "", status: active,
-      requirement: "AP Economy exposes pre-computed ap_income_breakdown(player)->{base,outpost,econ_tech}" }
+  - { id: TR-hud-019, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0006, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "AP & Credits Economy exposes pre-computed Credits.credit_income_breakdown(player)->{base,outpost,econ_tech}, read live (not a stored income_this_turn snapshot)" }
   - { id: TR-hud-020, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
       requirement: "Bind read-only to 7 upstream systems + coordination seam w/ Cmd, zero downstream dependents (leaf)" }
   - { id: TR-hud-021, system: hud, gdd: design/gdd/game-hud.md, adr: ADR-0016, created: 2026-07-23, revised: "", status: active,
@@ -403,20 +411,20 @@ requirements:
       requirement: "Decision loop iterative evaluate->commit: clone->enumerate all legal/affordable across verbs->score->commit best via apply_action->re-clone->repeat" }
   - { id: TR-ai-004, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
       requirement: "Enumerate via reachable(), legal_targets()/hypothetical+preview_damage(), legal_build_tiles/legal_deploy_tiles/completed_outpost_count, legal_research_targets" }
-  - { id: TR-ai-005, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
-      requirement: "Every candidate through can_afford + costed via current_ap/income before scoring; no discount" }
-  - { id: TR-ai-006, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
-      requirement: "Single normalized action_score(action) -> AP-equivalent-value-per-AP-cost, post-hoc lethal floor override; verb-dispatch, data-driven no hardcoded priority" }
-  - { id: TR-ai-007, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
-      requirement: "All scoring weights external tunable (15 knobs: HP_PER_AP, KILL_DENIAL_RATE, ECONOMY_HORIZON, LETHAL_FLOOR_BONUS, PASS_THRESHOLD, etc.)" }
-  - { id: TR-ai-008, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
-      requirement: "Enforce/validate LETHAL_FLOOR_BONUS > economy_ceiling_score cross-knob invariant; needs startup assertion (no AC automates - QQ-07)" }
+  - { id: TR-ai-005, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "Every candidate through DUAL afford gate (ap_can_afford AND credits_can_afford) + costed via ap_equiv_cost = ap_cost + credit_cost*CREDIT_TO_AP_RATE before scoring; no discount" }
+  - { id: TR-ai-006, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "Single normalized action_score(action) -> AP-equivalent value/cost (Credit-denominated value+cost terms converted via CREDIT_TO_AP_RATE), post-hoc lethal floor override; verb-dispatch, data-driven no hardcoded priority" }
+  - { id: TR-ai-007, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "All scoring weights external tunable (16 knobs: HP_PER_AP, KILL_DENIAL_RATE, ECONOMY_HORIZON, LETHAL_FLOOR_BONUS, PASS_THRESHOLD, CREDIT_TO_AP_RATE, etc.)" }
+  - { id: TR-ai-008, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "Enforce/validate LETHAL_FLOOR_BONUS > economy_ceiling_score * CREDIT_TO_AP_RATE cross-knob invariant (holds <= rate ~1.98 at default floor); needs startup assertion (no AC automates - QQ-07)" }
   - { id: TR-ai-009, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
       requirement: "Loop termination guaranteed: no legal action, best<=PASS_THRESHOLD, or own commit->GameOver; bounded iterations" }
   - { id: TR-ai-010, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
       requirement: "Handle apply_action() rejection defensively: discard clone, re-loop fresh, spend 0, no crash" }
-  - { id: TR-ai-011, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0003, created: 2026-07-23, revised: "", status: active,
-      requirement: "Deterministic selection: no engine RNG; ties (<SCORE_TIE_EPSILON) -> lowest ap_cost then lowest entity ID" }
+  - { id: TR-ai-011, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0003, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "Deterministic selection: no engine RNG; ties (<SCORE_TIE_EPSILON) -> lowest ap_equiv_cost then lowest entity ID (unique integer final key)" }
   - { id: TR-ai-012, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
       requirement: "Perf budget for evaluate->commit loop OPEN (~O(N^2*W*H), N<=24 on 14x16); turn wall-clock 3000ms OR per-commit 400ms spike-gated (QQ-06)" }
   - { id: TR-ai-013, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
@@ -429,6 +437,8 @@ requirements:
       requirement: "Seeded fixture + fuzz corpus (>=20 boards, >=500 fuzzed, fixed seed) verifying current_ap never negative" }
   - { id: TR-ai-017, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-07-23, revised: "", status: active,
       requirement: "Consume Grid manhattan_distance/terrain_at/occupant_at for positional/retreat scoring normalized by tiles-traversed; nearest-live-enemy + one-step lookahead" }
+  - { id: TR-ai-018, system: ai, gdd: design/gdd/ai-opponent.md, adr: ADR-0011, created: 2026-08-05, revised: "", status: active,
+      requirement: "CREDIT_TO_AP_RATE (default 1.0, range 0.5-2.0, AI-only) converts Credit-denominated costs/values to AP-equivalent so the single-axis score holds; anchors ap_equiv_cost + the dual-pool affordability gate; the AIConfig's 16th knob (two-currency pivot)" }
 
   # ============================ Faction Identity (15) ============================
   - { id: TR-faction-001, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
@@ -437,8 +447,8 @@ requirements:
       requirement: "Schema exposes exactly 6 CR-2 domains, reject load if field outside closed set; hard contract" }
   - { id: TR-faction-003, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
       requirement: "effective_produce_cost/effective_move_cost/effective_soft_move_cap in Unit read sites, fold faction delta, floors max(1,..)/max(MIN_MOVE_COST,..)" }
-  - { id: TR-faction-004, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
-      requirement: "effective_ap_income(player) folds Delta base/tier1/tier2 into 4-term formula, floored BASE_INCOME_FLOOR; preserves econ-tech term + cap" }
+  - { id: TR-faction-004, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "2026-08-05", status: active,
+      requirement: "effective_credit_income(player) folds Delta base/tier1/tier2 into the 4-term Credit income formula, floored BASE_INCOME_FLOOR; preserves econ-tech term + cap" }
   - { id: TR-faction-005, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,
       requirement: "effective_build_cost/build_time/production_cap in B&P read sites, floors max(1,..)/max(MIN_BUILD_TIME,..)/dual-floor cap" }
   - { id: TR-faction-006, system: faction, gdd: design/gdd/faction-identity.md, adr: ADR-0012, created: 2026-07-23, revised: "", status: active,

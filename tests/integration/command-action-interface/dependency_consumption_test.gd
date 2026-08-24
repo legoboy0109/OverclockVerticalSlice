@@ -16,9 +16,10 @@
 #   AC-7: has_attacked=true -> Attack disabled ALREADY_ATTACKED regardless of
 #     current_ap, evaluated against real Unit.can_attack.
 #   AC-16 (Logic portion): CommandFSM.build_preview exposes build_cost/
-#     build_time (both from BaseProduction's live queries), affordability
-#     (AP.can_afford), legal_tiles (BaseProduction.legal_build_tiles), and the
-#     two distinguishable exclusion reasons (insufficient_ap / no_legal_tile)
+#     build_time (both from BaseProduction's live queries), dual-cost affordability
+#     (Credits.can_afford main cost + AP.can_afford surcharge, ADR-0006 pivot),
+#     legal_tiles (BaseProduction.legal_build_tiles), and the THREE distinguishable
+#     exclusion reasons (insufficient_credits / insufficient_ap / no_legal_tile)
 #     as independent booleans.
 #   AC-26: a Defensive Structure attacker's previewed AND committed cost is
 #     the QUERIED Combat.attack_cost_for(structure) ==
@@ -186,11 +187,12 @@ func test_ac4_attack_commit_hp_delta_equals_previewed_damage() -> void:
 	assert_int(hp_before - hp_after).is_equal(previewed_damage)
 
 
-func test_ac4_build_commit_ap_delta_equals_previewed_build_cost() -> void:
+func test_ac4_build_commit_splits_ap_surcharge_and_credit_main_cost() -> void:
 	var state := _make_state(0)
 	var hq_type := _make_structure_type_for_build()
 	_place_structure(state, 1, 0, Vector2i(5, 5), hq_type)
 	state.per_player[0].current_ap = 20
+	state.per_player[0].current_credits = 20  # fund Credits (build main cost, ADR-0006 pivot)
 
 	var buildable := _make_structure_type_for_build(6)
 	var preview: CommandFSM.BuildEntry = CommandFSM.build_preview(state, 0, buildable)
@@ -199,6 +201,7 @@ func test_ac4_build_commit_ap_delta_equals_previewed_build_cost() -> void:
 	var target_tile: Vector2i = preview.legal_tiles[0]
 
 	var ap_before: int = AP.current_ap(state, 0)
+	var credits_before: int = Credits.current_credits(state, 0)
 
 	var iface: CommandInterface = auto_free(CommandInterface.new())
 	iface.set_local_player(0)
@@ -208,8 +211,10 @@ func test_ac4_build_commit_ap_delta_equals_previewed_build_cost() -> void:
 	var result: ActionResult = iface.commit(state, action)
 
 	assert_bool(result.ok).is_true()
-	var ap_after: int = AP.current_ap(state, 0)
-	assert_int(ap_before - ap_after).is_equal(preview.build_cost)
+	# Dual-cost: the AP delta is the build_ap_cost surcharge; the Credit main cost
+	# (preview.build_cost) comes out of the Credits pool.
+	assert_int(ap_before - AP.current_ap(state, 0)).is_equal(Balance.economy.build_ap_cost)
+	assert_int(credits_before - Credits.current_credits(state, 0)).is_equal(preview.build_cost)
 
 
 func _make_structure_type_for_build(build_cost: int = 6) -> StructureTypeDef:
@@ -295,6 +300,7 @@ func test_ac16_build_preview_cost_time_affordability_and_legal_tiles() -> void:
 	var hq_type := _make_structure_type_for_build()
 	_place_structure(state, 1, 0, Vector2i(5, 5), hq_type)
 	state.per_player[0].current_ap = 20
+	state.per_player[0].current_credits = 20 # fund the Credit main cost (dual-cost pivot).
 
 	var buildable := _make_structure_type_for_build(6)
 	buildable.build_time = 3
@@ -312,31 +318,47 @@ func test_ac16_build_preview_cost_time_affordability_and_legal_tiles() -> void:
 	assert_bool(preview.no_legal_tile).is_false()
 
 
-func test_ac16_build_preview_two_exclusion_reasons_distinguishable() -> void:
+func test_ac16_build_preview_three_exclusion_reasons_distinguishable() -> void:
+	# Dual-cost pivot (ADR-0006): Build now has THREE distinguishable exclusion
+	# reasons — insufficient_credits (main cost), insufficient_ap (surcharge), and
+	# no_legal_tile. Each is isolated below.
 	var state := _make_state(0)
 	var hq_type := _make_structure_type_for_build()
 	_place_structure(state, 1, 0, Vector2i(5, 5), hq_type)
-
-	# Case 1: insufficient AP only — legal_tiles is non-empty (HQ has open
-	# neighbours), but current_ap is 0.
 	var buildable := _make_structure_type_for_build(6)
-	state.per_player[0].current_ap = 0
-	var unaffordable_preview: CommandFSM.BuildEntry = CommandFSM.build_preview(state, 0, buildable)
-	assert_bool(unaffordable_preview.insufficient_ap).is_true()
-	assert_bool(unaffordable_preview.no_legal_tile).is_false()
 
-	# Case 2: no legal tile only — wall off every cardinal neighbour of the
-	# HQ with IMPASSABLE terrain (never a candidate, and never itself a
-	# friendly entity whose OWN neighbours would reopen new candidates — the
-	# failure mode a friendly-unit "ring" fixture has: legal_build_tiles scans
-	# every friendly entity's neighbours, so filler units would just push the
-	# open frontier outward instead of closing it). AP is plentiful.
+	# Case 1: insufficient AP surcharge ONLY — Credits fully fund the main cost, but
+	# current_ap is below build_ap_cost; legal_tiles non-empty (HQ has open neighbours).
+	state.per_player[0].current_credits = 20
+	state.per_player[0].current_ap = 0
+	var ap_short: CommandFSM.BuildEntry = CommandFSM.build_preview(state, 0, buildable)
+	assert_bool(ap_short.affordable).is_false()
+	assert_bool(ap_short.insufficient_ap).is_true()
+	assert_bool(ap_short.insufficient_credits).is_false()
+	assert_bool(ap_short.no_legal_tile).is_false()
+
+	# Case 2: insufficient CREDITS ONLY — AP funds the surcharge, but Credits are
+	# below the main cost (the pivot's new third exclusion reason).
+	state.per_player[0].current_ap = 20
+	state.per_player[0].current_credits = 0
+	var credits_short: CommandFSM.BuildEntry = CommandFSM.build_preview(state, 0, buildable)
+	assert_bool(credits_short.affordable).is_false()
+	assert_bool(credits_short.insufficient_credits).is_true()
+	assert_bool(credits_short.insufficient_ap).is_false()
+	assert_bool(credits_short.no_legal_tile).is_false()
+
+	# Case 3: no legal tile ONLY — both pools plentiful, but every cardinal
+	# neighbour of the HQ is walled off with IMPASSABLE terrain (never a candidate,
+	# and never itself a friendly entity whose OWN neighbours would reopen the
+	# frontier — legal_build_tiles scans every friendly entity's neighbours).
 	state.per_player[0].current_ap = 999
+	state.per_player[0].current_credits = 999
 	for n: Vector2i in [Vector2i(5, 4), Vector2i(6, 5), Vector2i(5, 6), Vector2i(4, 5)]:
 		state.grid.terrain[state.grid.index(n.x, n.y)] = GridState.Terrain.IMPASSABLE
-	var no_tile_preview: CommandFSM.BuildEntry = CommandFSM.build_preview(state, 0, buildable)
-	assert_bool(no_tile_preview.no_legal_tile).is_true()
-	assert_bool(no_tile_preview.insufficient_ap).is_false()
+	var no_tile: CommandFSM.BuildEntry = CommandFSM.build_preview(state, 0, buildable)
+	assert_bool(no_tile.no_legal_tile).is_true()
+	assert_bool(no_tile.insufficient_ap).is_false()
+	assert_bool(no_tile.insufficient_credits).is_false()
 
 
 # ==============================================================================

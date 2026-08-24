@@ -11,7 +11,7 @@
 > Approved 2026-07-21. See `reviews/movement-system-review-log.md`.
 > **Author**: user + main session
 > **Last Updated**: 2026-07-21
-> **Implements Pillar**: Pillar 3 (Readable Board — reachable tiles shown before committing); Pillar 1 (movement spends from the one AP pool); Pillar 2 (positioning is tempo)
+> **Implements Pillar**: Pillar 3 (Readable Board — reachable tiles shown before committing); Pillar 1 (movement spends AP — the tactical budget; unchanged by the 2026-08-05 two-budget pivot, which moved only build/produce/research onto Credits); Pillar 2 (positioning is tempo)
 > **Priority / Layer**: Vertical Slice / Core (system #5)
 
 ## Overview
@@ -59,7 +59,7 @@ clear before you spend the AP.
    the Formulas section). `soft_move_cap` (per-unit) and `SOFT_MOVE_PENALTY` (a global constant) are
    **owned by Unit System**; Movement owns only the summation below. This is a **two-level step, not a
    multi-tier curve** — a brake on deep single-turn over-extension/rushes, not a per-step kiting tax.
-   AP is spent via AP Economy's `spend()`.
+   AP is spent via AP & Credits Economy's `ap_spend()`.
 3. **Traversal (what a path may pass *through*):** a path may cross tiles occupied by **friendly
    units**. It may **not** cross: enemy units, **any structure** (HQ or outpost, friendly or enemy),
    or **Impassable** terrain. Those are hard blockers.
@@ -104,7 +104,7 @@ manager's `apply_action`:
 |--------|---------|----------|-----------------|
 | Grid & Terrain | neighbors, passability (Impassable), occupancy (unit/structure at a tile) | — | Grid |
 | Unit System | `move_cost`, `soft_move_cap`, `SOFT_MOVE_PENALTY` per unit; reads/writes `tiles_moved_this_turn` | updated `tiles_moved_this_turn` | Unit System owns the values + the counter field + `reset_turn_flags()`; Movement owns the surcharge summation |
-| AP Economy | `can_afford` (gates reachable set) / `spend` (on move) | — | AP Economy owns the pool |
+| AP & Credits Economy | `ap_can_afford` (gates reachable set) / `ap_spend` (on move) | — | AP & Credits Economy owns the pools |
 | Game State & Turn Manager | applies the move via `apply_action`; move is part of clonable state | new unit position | Turn manager (mutation path) |
 | Combat Resolution | a moved unit may then attack (separate action) | — | Combat (movement doesn't trigger it) |
 | Base & Production | (produced units are *placed*, not *moved* — placement owned there); **structures block all traversal (Rule 3), incl. for their owner** — so *your own* structure placement can reduce *your own* army's reachability (a corridor-blocking outpost/HQ removes a friendly pass-through route). A placement-side interaction Base & Production should be aware of. | — | Base & Production |
@@ -286,7 +286,7 @@ diverge; an AC asserts it directly.
 |--------|--------|-----------|
 | Grid & Terrain | Hard | Neighbors, passability, occupancy; 4-dir adjacency |
 | Unit System | Hard | `move_cost`, `soft_move_cap`, `SOFT_MOVE_PENALTY`, `tiles_moved_this_turn` per unit; `reset_turn_flags()` resets the counter |
-| AP Economy | Hard | `can_afford` (gates reachability) / `spend` (on move) |
+| AP & Credits Economy | Hard | `ap_can_afford` (gates reachability) / `ap_spend` (on move) |
 | Game State & Turn Manager | Hard | Applies moves via `apply_action`; clonable state for AI/tests |
 
 **Downstream (systems that depend on this — HARD):** Command & Action Interface (renders reachable

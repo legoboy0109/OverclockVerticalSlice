@@ -9,8 +9,9 @@
 ##
 ## [b]What it does[/b]:
 ## [br]1. Builds an authored all-Plain map + two HQs and starts a real match
-##    ([method GameState.start_match]); pins both players to the NEUTRAL faction
-##    and marks player 1 AI-controlled.
+##    ([method GameState.start_match]); pins the two sides to the RUSH and BOOM
+##    factions (ownership-by-hue; both empty-delta, so VS parity holds) and marks
+##    player 1 AI-controlled.
 ## [br]2. Adds a [BoardRenderer] (placeholder iso floor tiles + the overlay layer)
 ##    and a [Camera2D] framing the board.
 ## [br]3. Wires a [CommandInterface] to the board + state (input + overlays).
@@ -22,18 +23,22 @@
 ##
 ## [b]Known stubs (flagged, not hidden)[/b] — these are unbuilt/blocked seams, not
 ## part of this harness:
-## [br]• [b]Unit/HQ sprites[/b]: [BoardRenderer] renders only the floor + overlay
-##   TileMapLayers — there is no live-entity sprite renderer yet (the
-##   [code]GameState.entities()[/code] → board feed is unowned). Entities are drawn
-##   here as minimal owner-coloured placeholder markers ([method _draw]) purely so
-##   the board is not empty; replace with the real entity renderer when it lands.
-## [br]• [b]Click-to-select[/b] (mouse): picking a unit BY CLICK needs the
-##   occupant-pick-region authoring seam (an unassigned build task) — deferred.
-##   Keyboard selection is wired around it: the arrow-key grid cursor
-##   ([member _cursor]) resolves the entity from its own tile (peek →
-##   [method select_at_cursor]), so only mouse-click selection + click-driven
-##   board overlays remain on that blocked seam.
-## [br]• [b]Art[/b]: placeholder tinted diamonds until the art/TileSet pass.
+## [br]• [b]Unit/HQ sprites[/b]: ✅ BUILT (Story 006 / S5-01, scope §8 build-seam c
+##   closed). [EntitySpriteFeed] renders one real [Sprite2D] per live entity into
+##   the board's Y-sorted occupant layer, and [method BoardRenderer.paint_terrain]
+##   paints the floor + Cover props. This scene no longer draws entities itself.
+## [br]• [b]Click-to-select[/b] (mouse): WIRED (scope §8 seam b closed). Left-click
+##   routes through [method select_at_mouse] → [method CommandInterface.route_click]
+##   → [method BoardRenderer.pick_at] against the occupant pick-regions this scene
+##   authors from the live entities ([method _refresh_occupant_pick_regions]) — the
+##   ADR-0013 §4 CAI boundary (never [code]screen_to_grid[/code] for routing). The
+##   regions are authored from the ACTUAL drawn sprite bounds by
+##   [method EntitySpriteFeed.pick_regions] (Story 006 closed the S3-05 seam).
+##   Click-to-MOVE (an action from a click into an open preview) stays Story 007
+##   scope — this closes selection only. The keyboard cursor path
+##   ([method select_at_cursor]) remains as the gamepad/keyboard equivalent.
+## [br]• [b]Art[/b]: real sprites + terrain as of 2026-08-19. Still owed: the glow
+##   shader (S5-02), move/attack/hit transforms and the destroyed beat (S5-06).
 ## [br]• Camera framing/zoom is provisional (final feel = `/ux-design`).
 class_name VerticalSliceRoot
 extends Node2D
@@ -50,6 +55,27 @@ const HQ_B: Vector2i = Vector2i(9, 5)
 const LOCAL_PLAYER: int = 0
 const AI_PLAYER: int = 1
 
+## Round cap for the vertical slice, arming [member GameState.max_rounds] (user
+## decision, 2026-08-21).
+##
+## [b]Why the slice needs one at all.[/b] An AI-vs-AI simulation over 20 matches found
+## the slice had NO terminating condition: the AI never attacks an HQ (zero HQ damage in
+## 4,182 turn-rows) and `max_rounds` defaulted to 0, so every game ran forever — even
+## with one side starting three Troopers up. See
+## `production/playtests/swing-back-simulation-appendix-2026-08-21.md`.
+##
+## [b]Why 30.[/b] The simulation showed unit counts stabilising by round 20-30 and the
+## economy well developed by 25, so 30 rounds leaves room for a full arc without the
+## indefinite drag. It is a starting value for the S5-04 session to judge, not a locked
+## one — change this single constant.
+##
+## ★ [b]Note what the tiebreak rewards.[/b] [constant GameState.TiebreakMetric.UNIT_COUNT]
+## is the only implemented metric, so a capped game is won on unit COUNT. Combined with
+## the unbounded Credit accumulation the same simulation found, the theoretically optimal
+## line in a capped game is "bank, mass-produce cheap units, avoid fighting" — flagged
+## for the playtest to watch for, not fixed here.
+const VS_MAX_ROUNDS: int = 30
+
 ## Provisional camera zoom over the placeholder board (final feel = `/ux-design`).
 # Camera framing. The board is fit into the viewport minus these HUD-reserved
 # bands (so the top/bottom HUD chrome sits over empty space, not the board), then
@@ -65,6 +91,11 @@ const CAMERA_ZOOM_STEP: float = 1.12
 var _state: GameState = null
 var _reader: GameStateReader = null
 var _board: BoardRenderer = null
+
+## The live [method GameState.entities] -> sprite feed (Story 006 / S5-01). Owns
+## every entity [Sprite2D] under the board's occupant layer, and is also the source
+## of the board's occupant pick-regions (see [method _refresh_occupant_pick_regions]).
+var _feed: EntitySpriteFeed = null
 var _camera: Camera2D = null
 ## The whole-board fit zoom (lower bound for wheel zoom-out); set by _fit_camera_to_board.
 var _camera_fit_zoom: float = 1.0
@@ -117,10 +148,11 @@ func _ready() -> void:
 	_build_status_overlay()
 	_ai_driver = AITurnDriver.new()
 	add_child(_ai_driver)
-	# Repaint the placeholder markers on every commit (an AI turn drives many).
+	# Re-sync sprites + pick regions on every commit (an AI turn drives many).
 	_reader.subscribe_action_applied(_on_action_applied)
 	# If the match ever opens on the AI's side, hand off immediately.
 	_drive_ai_turns()
+	_refresh_occupant_pick_regions() # author the initial click targets from the starting entities.
 	queue_redraw()
 	_refresh_status()
 
@@ -142,9 +174,14 @@ func _build_match() -> void:
 	_state = GameState.start_match(map, LOCAL_PLAYER)
 	# Faction / AI assignment is a direct Setup-phase field write (no
 	# faction-assignment verb exists yet; the "lock" is a future-verb convention,
-	# ADR-0012 — the widget/integration tests set these the same way).
-	_state.per_player[LOCAL_PLAYER].faction = Factions.NEUTRAL
-	_state.per_player[AI_PLAYER].faction = Factions.NEUTRAL
+	# ADR-0012). The two sides are pinned to RUSH/BOOM so ownership reads by hue
+	# (art-bible §4.2 / S4-02); both carry empty unit_deltas, so this is exact VS
+	# parity — mechanically identical to Neutral, distinct only in identity/hue.
+	# Arm the round cap so a match can actually end (see VS_MAX_ROUNDS). The tiebreak
+	# machinery already existed and is tested; the slice simply never set this.
+	_state.max_rounds = VS_MAX_ROUNDS
+	_state.per_player[LOCAL_PLAYER].faction = Factions.RUSH
+	_state.per_player[AI_PLAYER].faction = Factions.BOOM
 	_state.per_player[AI_PLAYER].is_ai_controlled = true
 
 	# start_match places HQs as bare EntityState stubs (its own doc flags that
@@ -167,14 +204,35 @@ func _build_match() -> void:
 
 func _build_board_and_camera() -> void:
 	_board = BoardRenderer.new()
-	add_child(_board) # _ready() seeds the board's y-sort DEMO occupants (Story 002).
-	# Those 2 placeholder units + tall prop are br-002 fixtures, not real entities —
-	# strip them so they don't sit as coloured blobs mid-board (the slice draws live
-	# entities via its own _draw; the real entity renderer is an unbuilt seam).
-	if _board.occupant_layer != null:
-		for demo: Node in _board.occupant_layer.get_children():
-			_board.occupant_layer.remove_child(demo)
-			demo.queue_free()
+	add_child(_board)
+	# Static board first (floor cells + Y-sorted Cover props), then the live entity
+	# feed into the same occupant layer. Story 002's placeholder fixtures and this
+	# scene's own _draw marker diamonds are both gone — this is the real art.
+	_board.paint_terrain(_state.grid)
+	_feed = EntitySpriteFeed.new(_board, [
+		_state.per_player[LOCAL_PLAYER].faction,
+		_state.per_player[AI_PLAYER].faction,
+	])
+	# ★ PER-UNIT actionability (user decision, 2026-08-21), replacing the army-wide
+	# "does this player have any AP" read that art bible §8.5/§2.6 specified
+	# literally. An actor is lit while its owner can still afford SOMETHING for it,
+	# and dims when it cannot.
+	#
+	# [b]Why affordability and not "has this unit acted".[/b] The obvious XCOM-style
+	# read — a unit greys out once used — has no equivalent state here. Attacking
+	# sets has_attacked, but the move cap is SOFT: a unit that has moved, or
+	# attacked, can always keep moving, it just pays a surcharge. There is no point
+	# at which a unit is finished. So "can still act" has to mean "the owner can
+	# still pay for its cheapest remaining option", which IS per-unit because
+	# move_cost varies across the roster (Scout 1, Trooper/Sniper 2, Heavy 3).
+	#
+	# The practical read this gives: at 2 AP the Scout, Trooper and Sniper stay lit
+	# while the Heavy goes dark; at 1 AP only the Scout is left. That answers the
+	# question a player actually has at end of turn — "what can I still do?" —
+	# rather than the blunter "am I out of AP", which the AP counter already says.
+	#
+	# Structures are handled separately: see the closure.
+	_feed.actionable_predicate = _is_entity_actionable
 
 	_camera = Camera2D.new()
 	add_child(_camera)
@@ -255,11 +313,12 @@ func _keep_cursor_in_view() -> void:
 func _build_command_interface() -> void:
 	_cmd = CommandInterface.new()
 	add_child(_cmd)
-	# Accept the real default query Callables. The overlay renderer is NOT injected
-	# yet: overlays only render during selection/preview, which rides the blocked
-	# click-pick seam — inject the board as renderer (a small CommandInterface
-	# set_renderer passthrough is owed) when board selection is wired.
+	# Accept the real default query Callables, then inject the board as the click
+	# renderer (scope §8 seam b closed): route_click consumes _board.pick_at as the
+	# ONE click-routing entry point (ADR-0013 §4), never screen_to_grid directly.
+	# _board is built first in _ready, so it exists here.
 	_cmd.configure_dependencies()
+	_cmd.set_renderer(_board)
 	_cmd.set_local_player(LOCAL_PLAYER)
 	_cmd.set_input_config(InputConfig.new())
 	_cmd.attach_to_state(_state)
@@ -317,6 +376,17 @@ func _refresh_status() -> void:
 	var lines := PackedStringArray()
 	# ASCII only — the engine fallback font has no glyph for many symbols
 	# (bullet/hourglass/warning/arrow), which render as "tofu" boxes.
+	# Match end takes over the whole status line. ★ This is NOT game-hud.md CR-9's
+	# victory/defeat screen — that remains unimplemented for EVERY win path, including
+	# HQ destruction (AC-17/AC-22). It is a stopgap so that arming the round cap does not
+	# produce a build where the match silently stops responding with no explanation,
+	# which is what a playtester would otherwise experience.
+	if _state != null and _state.match_status == GameState.MatchStatus.GAME_OVER:
+		var who: String = "You win" if _state.winner == LOCAL_PLAYER else "You lose"
+		var how: String = "opponent HQ destroyed" if _hq_destroyed() \
+			else "round limit reached (%d) - decided on unit count" % VS_MAX_ROUNDS
+		_status_label.text = ">> MATCH OVER - %s (%s)" % [who, how]
+		return
 	lines.append(">> AI thinking..." if _ai_running else ">> Your turn")
 
 	var build_type: StructureTypeDef = selected_buildable()
@@ -432,13 +502,71 @@ func _build_cursor() -> void:
 
 # --- Turn loop ---------------------------------------------------------------
 
-## Every commit repaints the placeholder entity markers. It deliberately does
-## NOT drive the AI — that is owned by the End-Turn path ([method try_end_human_turn]),
-## so each [method AITurnDriver.run_ai_turn] runs on a clean call stack rather
-## than re-entrantly inside [method GameState.apply_action]'s own signal emission.
-func _on_action_applied(_result: ActionResult) -> void:
+## Every commit repaints the board and plays §8.5's state transforms. It
+## deliberately does NOT drive the AI — that is owned by the End-Turn path
+## ([method try_end_human_turn]), so each [method AITurnDriver.run_ai_turn] runs on
+## a clean call stack rather than re-entrantly inside
+## [method GameState.apply_action]'s own signal emission.
+##
+## [b]The three steps are strictly ordered[/b] (Story 008 / S5-06):
+## [br]1. [b]Deaths first, BEFORE the sync.[/b] A destroyed entity is already gone
+##    from [method GameStateReader.entities], so the sync in step 2 would free its
+##    sprite — [method EntitySpriteFeed.power_down] must claim the node first or
+##    §8.5's destroyed beat has nothing to play on.
+## [br]2. [b]Sync.[/b] Sprites move onto their new tiles and click targets are
+##    re-authored.
+## [br]3. [b]Motion last, AFTER the sync[/b], so a lean or a lunge is measured from
+##    where the actors now are rather than where they were.
+func _on_action_applied(result: ActionResult) -> void:
+	_dispatch_deaths(result)
 	queue_redraw()
+	_refresh_occupant_pick_regions() # entities moved/spawned/died — re-author the click targets.
+	_dispatch_motion(result)
 	_refresh_status() # AP/affordability/selection may have changed.
+
+
+## Step 1 of [method _on_action_applied]: starts the destroyed beat for everything
+## [param result] killed, unit or structure alike (§8.5, art-bible "no gibs").
+##
+## Must run before the feed syncs — see [method EntitySpriteFeed.power_down].
+func _dispatch_deaths(result: ActionResult) -> void:
+	if _feed == null:
+		return
+	for event: Event in result.events:
+		if event is UnitDestroyedEvent:
+			_feed.power_down((event as UnitDestroyedEvent).entity_id)
+		elif event is StructureDestroyedEvent:
+			_feed.power_down((event as StructureDestroyedEvent).entity_id)
+
+
+## Step 3 of [method _on_action_applied]: plays §8.5's move lean and attack/hit
+## pair from [param result]'s events.
+##
+## Narrowing is [code]if e is XEvent[/code] per ADR-0004 — never a match on
+## runtime type, and never an hp diff.
+##
+## A [DamageEvent] drives three things at once on the same frame: the attacker's
+## body lunge, its §2.2 glow flare (so light and body spike together, §8.5
+## "snappy, synced to the flare"), and the target's recoil. A counterattack
+## arrives as its own [DamageEvent] with the roles swapped, so it animates
+## correctly with no special case here. Anything killed by the blow was marked
+## dying in step 1 and is silently skipped by the feed, so a killing hit reads as
+## a power-down rather than a recoil.
+func _dispatch_motion(result: ActionResult) -> void:
+	if _feed == null or _board == null:
+		return
+	for event: Event in result.events:
+		if event is UnitMovedEvent:
+			var moved := event as UnitMovedEvent
+			_feed.lean(
+				moved.entity_id,
+				_board.grid_to_screen(moved.to) - _board.grid_to_screen(moved.from)
+			)
+		elif event is DamageEvent:
+			var hit := event as DamageEvent
+			_feed.lunge(hit.attacker_id, hit.target_id)
+			_feed.flare(hit.attacker_id)
+			_feed.recoil(hit.target_id, hit.attacker_id)
 
 
 ## Runs AI turns to completion until it is a human's turn again (or the match
@@ -471,10 +599,24 @@ func _drive_ai_turns() -> void:
 ## selects an own unit at the cursor; M moves/attacks the selected unit onto the
 ## cursor tile; B builds the selected structure and C cycles the buildable type; P
 ## produces the selected unit type at the cursor and V cycles that type; Tab ends
-## the human's turn. Mouse wheel zooms and middle-drag pans the camera. The cursor
+## the human's turn. Left-click selects the own unit under the pointer (routed
+## through the board's pick-regions, [method select_at_mouse]); mouse wheel zooms
+## and middle-drag pans the camera. The cursor
 ## keys reuse the built-in [code]ui_*[/code] actions; the letter/Tab keys are read
 ## by keycode. Dedicated, rebindable InputMap actions for all of these are a
 ## follow-up (the cai-005 InputMap-wiring tech-debt).
+## Advances the board glow clock (§8.9). One shared-uniform write per frame for the
+## whole board — the per-actor uniforms are event-driven and untouched here.
+##
+## The glow deliberately keeps breathing during the AI's paced turn: it signals
+## "this actor still has AP", which stays true and legible while the opponent moves.
+## [member EntitySpriteFeed.glow_paused] is the hook if a real pause screen ever
+## needs it frozen.
+func _process(delta: float) -> void:
+	if _feed != null:
+		_feed.advance_glow(delta)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"ui_up"):
 		move_cursor(Vector2i.UP)
@@ -505,6 +647,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			_zoom_camera(CAMERA_ZOOM_STEP)      # wheel up: zoom in
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			_zoom_camera(1.0 / CAMERA_ZOOM_STEP) # wheel down: zoom out (to the fit floor)
+		elif event.button_index == MOUSE_BUTTON_LEFT:
+			select_at_mouse()                    # left-click: pick + select an own unit
 	elif event is InputEventMouseMotion and (event.button_mask & MOUSE_BUTTON_MASK_MIDDLE) != 0:
 		_camera.position -= event.relative / _camera.zoom # middle-drag: free pan
 
@@ -545,6 +689,131 @@ func select_at_cursor() -> bool:
 			queue_redraw() # paint the selected unit's move/attack range immediately.
 		return ok
 	return false
+
+
+## Mouse click-select (scope §8 seam b): resolves the click through the Command &
+## Action Interface's ONE routing entry point — [method CommandInterface.route_click]
+## → [method BoardRenderer.pick_at] against the authored occupant pick-regions, NEVER
+## [method BoardRenderer.screen_to_grid] directly (the ADR-0013 §4 CAI boundary).
+## Clicking an own unit pins it (detail panel + move/attack range), exactly like the
+## keyboard [method select_at_cursor]. The board-cursor is synced to the picked tile
+## (when in bounds) so keyboard control continues from where the mouse last acted and
+## the two input paths never disagree on "where we are". Click-to-MOVE (a committed
+## action from a click) stays Story 007 scope — this closes selection only. Returns
+## whether the click left an own unit selected.
+##
+## The board is a child Node2D under the framing camera, and pick_at works in the
+## board's local space (the space grid_to_screen and the pick-regions live in), so
+## [method Node2D.get_local_mouse_position] folds in the camera zoom/pan for free.
+## The actual routing lives in [method select_at_board_point] (a testable seam that
+## takes an explicit board-space point, since the live mouse position is not settable
+## headlessly).
+func select_at_mouse() -> bool:
+	if _board == null:
+		return false
+	return select_at_board_point(_board.get_local_mouse_position())
+
+
+## Click-select at an explicit board-local point (the injectable core of
+## [method select_at_mouse]). See that method for the full contract.
+func select_at_board_point(board_pos: Vector2) -> bool:
+	if _board == null or _cmd == null or _state == null:
+		return false
+	var pick: Object = _cmd.route_click(board_pos, _state)
+	if pick == null:
+		return false
+	# route_click returns the raw pick whether or not it selected; reflect it in the
+	# keyboard cursor + detail panel so the two input paths stay in lockstep.
+	if _cursor != null and _state.grid != null \
+			and _state.grid.in_bounds(pick.tile.x, pick.tile.y):
+		_cursor.grid_pos = pick.tile
+		_cmd.inspect(_state, pick.tile) # peek the picked tile into the detail panel.
+		if _flash != "":
+			_flash = ""
+			_refresh_status()
+		_keep_cursor_in_view()
+	queue_redraw() # paint (or clear) the selected unit's range highlight.
+	return pick.occupant_entity_id != -1 and _cmd.selected_id() == pick.occupant_entity_id
+
+
+## Whether the match ended by HQ destruction rather than by the round cap — used only
+## to word the end-of-match status line. True when either HQ is missing from the live
+## entity set, which is what [method GameState.destroy_entity] leaves behind.
+func _hq_destroyed() -> bool:
+	if _state == null:
+		return false
+	for player: int in 2:
+		var hq: EntityState = _state.entities_by_id.get(player)
+		if hq == null:
+			return true
+	return false
+
+
+## Whether [param entity] can still be used this turn — the Pillar-1 "can this
+## actor act?" read feeding [member EntitySpriteFeed.actionable_predicate], which
+## drives both the glow state and (since Story 010) the body tint.
+##
+## A [UnitState] is actionable while its owner can afford the cheapest option still
+## open to it: moving (always available — the cap is soft, so a moved unit can move
+## again at a surcharge) or attacking, if it has not already attacked this turn.
+## Because [member UnitTypeDef.move_cost] varies across the roster this genuinely
+## discriminates between units rather than dimming a whole army at once.
+##
+## A [StructureState] that can shoot follows the same rule against its own
+## once-per-turn attack; one that cannot shoot never dims, because it is a fixture
+## rather than an actor with a turn allowance and dimming it would say nothing.
+##
+## [b]Not a legality check.[/b] It deliberately does not ask whether any legal move
+## target or attack target exists — that is O(reachable) per actor per refresh, and
+## a unit boxed in by its own squad is still "yours to use", not spent. Affordability
+## is the honest cheap approximation; a fully accurate version would be a legality
+## query and is not worth the cost on a per-frame-adjacent path.
+func _is_entity_actionable(entity: EntityState) -> bool:
+	if _reader == null:
+		return true # unwired: breathe rather than sit inert (feed's own default).
+	# ★ Structures are resolved BEFORE the empty-pool check, deliberately. A
+	# non-combat structure is a fixture with no turn allowance, so it must stay lit
+	# even at 0 AP — dimming it says nothing true, and both HQs are a large share of
+	# the board's visual mass, so darkening them at every end of turn would
+	# re-create most of the whole-board flattening this predicate replaced.
+	if entity is StructureState:
+		var structure := entity as StructureState
+		if structure.type == null or structure.type.attack <= 0:
+			return true
+		# One that CAN shoot does have a once-per-turn allowance, and follows it.
+		return not structure.has_attacked \
+			and _reader.current_ap(entity.owner) >= Combat.attack_cost_for(structure)
+	if entity is UnitState:
+		var unit := entity as UnitState
+		if unit.type == null:
+			return true
+		var ap: int = _reader.current_ap(entity.owner)
+		if ap <= 0:
+			return false
+		var cheapest: int = unit.type.move_cost
+		if not unit.has_attacked:
+			cheapest = mini(cheapest, Combat.attack_cost_for(unit))
+		return ap >= cheapest
+	return true
+
+
+## Rebuilds the board's occupant pick-regions from the live entities## Rebuilds the board's occupant pick-regions from the live entities so a left-click
+## resolves to the occupant on that tile (scope §8 seam b, consumed by
+## [method BoardRenderer.pick_at]). Each region is the occupant tile's screen-space
+## AABB, authored back-to-front (ascending screen Y — the Y-sort paint order) so
+## pick_at's front-most-wins overlap rule (it tests regions in reverse) resolves a
+## tie to the occupant nearest the camera. Placeholder-era sizing: the tile diamond's
+## box, matching the markers [method _draw] paints; the real entity renderer (S4-03)
+## re-authors these from actual sprite bounds. Refreshed on every commit
+## ([method _on_action_applied]) since entities move, spawn, and die.
+func _refresh_occupant_pick_regions() -> void:
+	if _board == null or _reader == null or _feed == null:
+		return
+	# Sync the sprites FIRST, then author the click targets from their actual drawn
+	# bounds — the regions must describe what is on screen right now, and a sprite
+	# is wider/taller than the tile diamond the placeholder markers used.
+	_feed.sync(_reader.entities())
+	_board.occupant_pick_regions = _feed.pick_regions()
 
 
 ## The cursor's current grid tile (for the test + the [method _draw] highlight).
@@ -697,27 +966,21 @@ func _tiles_for_cost(unit: UnitState, ap_cost: int) -> int:
 	return 1
 
 
-# --- Placeholder entity rendering (STUB — see class doc) ---------------------
+# --- Board-space affordance drawing (range preview + cursor) -----------------
 
-## Draws a minimal owner-coloured marker at each live entity's tile — a stand-in
-## for the not-yet-built entity-sprite renderer, so the board is not blank. This
-## is deliberately crude (a filled diamond per entity); delete it when the real
-## renderer lands.
+## Draws the selected unit's move/attack range and the keyboard cursor. Entity
+## sprites are NOT drawn here — [EntitySpriteFeed] renders those as real nodes in
+## the board's Y-sort group (Story 006). What remains is only the immediate-mode
+## affordance layer: range highlight underneath, cursor outline on top.
 func _draw() -> void:
 	if _board == null or _reader == null:
 		return
 	# Under the entity markers: the selected unit's move/attack range, so the player
 	# can SEE where a unit can go (short-range units otherwise look unresponsive).
 	_draw_selection_overlay()
-	for entity: EntityState in _reader.entities():
-		var center: Vector2 = _board.grid_to_screen(entity.position)
-		var col: Color = Color(0.2, 0.7, 1.0) if entity.owner == LOCAL_PLAYER else Color(1.0, 0.4, 0.3)
-		var r: float = 10.0
-		var diamond := PackedVector2Array([
-			center + Vector2(0, -r), center + Vector2(r, 0),
-			center + Vector2(0, r), center + Vector2(-r, 0),
-		])
-		draw_colored_polygon(diamond, col)
+	# Entities themselves are NOT drawn here any more — EntitySpriteFeed owns one
+	# real Sprite2D per entity under the board's Y-sorted occupant layer (Story 006).
+	# Drawing them here too would paint unsorted markers on top of the sprites.
 
 	# The keyboard cursor — a hollow diamond outline at the cursor tile.
 	if _cursor != null:

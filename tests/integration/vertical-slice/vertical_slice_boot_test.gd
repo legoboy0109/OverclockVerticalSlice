@@ -45,7 +45,12 @@ func test_boots_a_live_match_with_board_hud_and_ai() -> void:
 	assert_int(state.active_player).is_equal(0) # the human starts.
 	assert_int(state.match_status).is_equal(GameState.MatchStatus.IN_PROGRESS)
 	assert_bool(state.per_player[1].is_ai_controlled).is_true()
-	assert_object(state.per_player[0].faction).is_not_null() # NEUTRAL pinned.
+	# Ownership-by-hue precondition (S4-02/S4-03): the two sides pin to DISTINCT
+	# factions (Rush vs Boom), not a Neutral mirror — both empty-delta so VS parity
+	# still holds. Distinctness is what lets the renderer color ownership by hue.
+	assert_object(state.per_player[0].faction).is_same(Factions.RUSH)
+	assert_object(state.per_player[1].faction).is_same(Factions.BOOM)
+	assert_bool(state.per_player[0].faction == state.per_player[1].faction).is_false()
 
 	# Two HQs placed, nothing else yet (the human hasn't acted, no AI turn ran).
 	assert_int(state.entities().size()).is_equal(2)
@@ -153,6 +158,58 @@ func test_cursor_stops_at_the_board_edge() -> void:
 	assert_vector(root.cursor_tile()).is_equal(Vector2i(0, 5)) # clamped at the west edge.
 	assert_bool(root.move_cursor(Vector2i.LEFT)).is_false()     # can't step past it.
 	assert_vector(root.cursor_tile()).is_equal(Vector2i(0, 5))
+
+
+# ==============================================================================
+# Mouse click-select (scope §8 seam b) — the board authors an occupant pick-region
+# per live entity, and a left-click routes through CommandInterface.route_click →
+# BoardRenderer.pick_at against those regions (the ADR-0013 §4 CAI boundary — never
+# screen_to_grid for routing).
+# ==============================================================================
+
+func test_boot_authors_a_pick_region_per_starting_entity() -> void:
+	var root := _make_root()
+	var board := root.board()
+	var regions: Array = board.occupant_pick_regions
+	# Two HQs at boot → two regions, each carrying its entity id + tile, its rect
+	# covering that tile's centre so a click on the tile resolves the occupant.
+	assert_int(regions.size()).is_equal(2)
+	for region: BoardRenderer.OccupantPickRegion in regions:
+		assert_bool(region.rect.has_point(board.grid_to_screen(region.tile))).is_true()
+	# Authored back-to-front (ascending screen Y = the Y-sort paint order) so pick_at's
+	# reverse scan resolves an overlap to the front-most (nearest-camera) occupant.
+	for i: int in range(1, regions.size()):
+		assert_bool(regions[i - 1].rect.position.y <= regions[i].rect.position.y).is_true()
+
+
+func test_left_click_selects_own_unit_through_pick_regions() -> void:
+	var root := _make_root()
+	var state := root.state()
+	_place_unit(state, 10, 0, Vector2i(4, 5)) # friendly
+	_place_unit(state, 11, 1, Vector2i(6, 5)) # enemy
+	root._refresh_occupant_pick_regions() # a commit re-authors regions; do it directly here.
+
+	# Left-click the friendly unit's tile centre → routed through pick_at → selected,
+	# and the keyboard cursor syncs to the clicked tile.
+	var friendly: Vector2 = root.board().grid_to_screen(Vector2i(4, 5))
+	assert_bool(root.select_at_board_point(friendly)).is_true()
+	assert_int(root.command_interface().selected_id()).is_equal(10)
+	assert_vector(root.cursor_tile()).is_equal(Vector2i(4, 5))
+
+	# Left-click the enemy unit → pick resolves it, but route_click refuses (not
+	# owned): the prior own-unit selection is left untouched.
+	var enemy: Vector2 = root.board().grid_to_screen(Vector2i(6, 5))
+	assert_bool(root.select_at_board_point(enemy)).is_false()
+	assert_int(root.command_interface().selected_id()).is_equal(10) # unchanged.
+
+
+func test_left_click_on_own_structure_does_not_select() -> void:
+	var root := _make_root()
+	# The local player's HQ is a structure — pick_at resolves it, but route_click
+	# selects units only, so nothing gets pinned.
+	var hq: Vector2 = root.board().grid_to_screen(Vector2i(2, 5))
+	assert_bool(root.select_at_board_point(hq)).is_false()
+	assert_int(root.command_interface().selected_id()).is_equal(-1)
 
 
 func _move_cursor_to(root: VerticalSliceRoot, target: Vector2i) -> void:
@@ -474,9 +531,25 @@ func test_move_relocates_a_non_scout_unit() -> void:
 	assert_vector((state.entities_by_id[12] as UnitState).position).is_equal(Vector2i(6, 6))
 
 
-func test_board_demo_placeholder_occupants_are_removed() -> void:
-	# Regression: BoardRenderer._ready seeds br-002 y-sort DEMO occupants (2 units +
-	# a tall prop) that otherwise sit as coloured blobs mid-board in the real slice.
+func test_board_occupant_layer_holds_one_real_sprite_per_live_entity() -> void:
+	# Story 006 replaced this test's original premise. It used to assert the layer
+	# was EMPTY at boot, because BoardRenderer._ready seeded br-002 Polygon2D demo
+	# fixtures the slice had to strip. Those fixtures are gone and the layer now
+	# holds the real board, so the regression worth guarding is the inverse: every
+	# child is genuine content, and nothing placeholder-shaped survives.
 	var root := _make_root()
 	var board: BoardRenderer = root.board()
-	assert_int(board.occupant_layer.get_child_count()).is_equal(0)
+	var state := root.state()
+	var children := board.occupant_layer.get_children()
+
+	var sprites := 0
+	for child: Node in children:
+		# No Polygon2D placeholders, and nothing that fights the parent Y-sort.
+		assert_bool(child is Sprite2D).is_true()
+		assert_int((child as Node2D).z_index).is_equal(0)
+		if not child.name.begins_with(BoardRenderer.COVER_PROP_NAME_PREFIX):
+			sprites += 1
+
+	# One entity sprite per live entity — two HQs at boot.
+	assert_int(sprites).is_equal(state.entities().size())
+	assert_int(sprites).is_equal(2)

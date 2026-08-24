@@ -50,7 +50,8 @@ extends Node2D
 ##  |-- FloorTileMapLayer   (TileSet.TILE_SHAPE_ISOMETRIC; z_index 0)
 ##  |-- OverlayTileMapLayer (TileSet.TILE_SHAPE_ISOMETRIC; z_index 1)
 ##  `-- OccupantLayer       (Node2D, y_sort_enabled = true; z_index 2)
-##       `-- placeholder occupant/prop sprites (Story 002 fixtures only)
+##       |-- CoverProp_<x>_<y> (Sprite2D, this class; see paint_terrain)
+##       `-- Entity<id>        (Sprite2D, owned by EntitySpriteFeed)
 ## [/codeblock]
 ## [code]z_index[/code] is the coarse cross-tree band (Floor 0 -> Overlay 1
 ## -> Occupant 2); [member Node2D.y_sort_enabled] on [code]OccupantLayer[/code]
@@ -59,13 +60,13 @@ extends Node2D
 ## [code]OccupantLayer[/code] must never set their own conflicting
 ## [code]z_index[/code] — that would fight the Y-sort.
 ##
-## [b]Story 002 placeholder occupants:[/b] [method _ready] also populates
-## [code]OccupantLayer[/code] with runtime-generated placeholder sprites (2
-## units at different rows + 1 tall prop) purely to give the Y-sort mechanism
-## something to sort — there is no live [code]GameState.entities()[/code]
-## feed yet. [b]Open item (unassigned, per epic/story Out of Scope):[/b]
-## whichever story first wires [code]BoardRenderer[/code] to real match
-## state owns replacing [method _build_placeholder_occupants] outright.
+## [b]Occupant-layer ownership is SPLIT (Story 006).[/b] This class owns the
+## static board — the floor cells and the Cover props ([method paint_terrain]) —
+## while [EntitySpriteFeed] owns one [Sprite2D] per live entity in the same layer.
+## They coexist safely because each only ever touches its own nodes: cover props
+## are identified by [constant COVER_PROP_NAME_PREFIX], entity sprites by the
+## feed's own id map. Story 002's placeholder fixtures that used to live here are
+## gone — the live [method GameState.entities] feed replaced them.
 
 ## Tile width in pixels for the 2:1 dimetric projection. Placeholder value
 ## satisfying the 2:1 ratio (ADR-0013 §1) — the exact pixel value is
@@ -76,6 +77,59 @@ const TILE_WIDTH_PX: float = 128.0
 ## see [constant TILE_WIDTH_PX].
 const TILE_HEIGHT_PX: float = 64.0
 
+## Factor by which shipped art exceeds its on-screen size (art-bible §8.3,
+## assets/art/README.md): one asset serves both 1080p and 1440p, and the §2 glow
+## keeps its falloff. Every texture in [code]assets/art/[/code] is authored at this
+## multiple of the size it is drawn at — the floor/overlay layers absorb it with a
+## layer [member Node2D.scale], individual sprites with their own
+## ([constant EntitySpriteFeed.TEXTURE_SCALE], which must stay in step with this).
+##
+## [b]This is NOT a change to the on-screen cell.[/b]
+## [constant TILE_WIDTH_PX]/[constant TILE_HEIGHT_PX] remain 128x64 on screen and
+## the transform pair is untouched — only the source texture is bigger (Story 006
+## AC-7/AC-8).
+const TEXTURE_SCALE: float = 2.0
+
+## The [member TileSet.tile_size] both tile layers use: the on-screen cell scaled
+## up by [constant TEXTURE_SCALE], because the floor texture ships at 2x. Paired
+## with [constant TILE_LAYER_SCALE] on the layer node, the effective on-screen cell
+## is exactly [constant TILE_WIDTH_PX] x [constant TILE_HEIGHT_PX] again.
+const TILE_TEXTURE_SIZE: Vector2i = Vector2i(
+	int(TILE_WIDTH_PX * TEXTURE_SCALE), int(TILE_HEIGHT_PX * TEXTURE_SCALE)
+)
+
+## The [member Node2D.scale] applied to both tile layers to bring
+## [constant TILE_TEXTURE_SIZE] back down to the on-screen cell.
+##
+## [b]Why this leaves [method grid_to_screen] alone (AC-8):[/b] the engine places
+## cell [code](x,y)[/code] at [code]((x-y) * tile_size.x/2, (x+y) * tile_size.y/2)[/code]
+## in LAYER-local space; multiplying by 0.5 with a doubled tile_size lands on
+## [code]((x-y) * TILE_WIDTH_PX/2, (x+y) * TILE_HEIGHT_PX/2)[/code] — which is
+## [method _project] exactly. The two doublings cancel, so occupant sprites (drawn
+## in unscaled BoardRenderer space at [method grid_to_screen]) stay registered with
+## the floor cells.
+const TILE_LAYER_SCALE: float = 1.0 / TEXTURE_SCALE
+
+## [member TileSet] source id for the one floor atlas source
+## ([method _build_floor_tile_source]). Distinct from the overlay's ids, which are
+## [enum OverlayClass] values on the OVERLAY layer's own TileSet — the two TileSets
+## are separate objects, so the id spaces never collide.
+const FLOOR_SOURCE_ID: int = 0
+
+## The plain-floor texture, reused as the floor cell under Cover tiles too
+## (assets/art/README.md §8.8: cover's floor IS the plain floor; there is no
+## separate cover floor art).
+const FLOOR_TEXTURE_PATH: String = "res://assets/art/terrain/tile_plain_clean.png"
+
+## The cover-mass prop texture — a Y-sorted occupant, NOT a tile cell. See
+## [method _add_cover_prop].
+const COVER_PROP_TEXTURE_PATH: String = "res://assets/art/terrain/tile_cover_clean.png"
+
+## Node-name prefix marking a cover prop under [member occupant_layer], so
+## [method _clear_cover_props] can repaint terrain without disturbing the entity
+## sprites [EntitySpriteFeed] owns in the same layer.
+const COVER_PROP_NAME_PREFIX: String = "CoverProp_"
+
 ## Coarse cross-tree z-index band for [member floor_layer] (ADR-0013 §2).
 ## Sits outside the Y-sort group — never compared against occupant Y.
 const FLOOR_Z_INDEX: int = 0
@@ -83,10 +137,24 @@ const FLOOR_Z_INDEX: int = 0
 ## Coarse cross-tree z-index band for [member overlay_layer] (ADR-0013 §2).
 const OVERLAY_Z_INDEX: int = 1
 
+## Coarse cross-tree z-index band for [member marker_layer] (ADR-0013 §2,
+## amended 2026-08-20 for Story 009 / S5-08).
+##
+## [b]Above the overlay, below the occupants.[/b] Above, because ownership must stay
+## legible through a range or target highlight — an overlay tint washing the marker
+## out would break it in exactly the moment a player is deciding what to attack.
+## Below, because it is a decal on the floor and an actor standing on the tile must
+## occlude it.
+const MARKER_Z_INDEX: int = 2
+
 ## Coarse cross-tree z-index band for [member occupant_layer] (ADR-0013 §2).
 ## Depth-sort within this band is native [member Node2D.y_sort_enabled],
 ## never this constant nor any custom depth math.
-const OCCUPANT_Z_INDEX: int = 2
+##
+## [b]Was 2 until 2026-08-20[/b], when [constant MARKER_Z_INDEX] took that band
+## (ADR-0013 amendment). The ordering floor -> overlay -> markers -> occupants is
+## what the numbers mean; the absolute values carry no other meaning.
+const OCCUPANT_Z_INDEX: int = 3
 
 ## The 9-class overlay taxonomy (ADR-0013 §3; taxonomy source:
 ## [code]command-action-interface.md[/code] Visual/Audio §B). Each value
@@ -215,6 +283,16 @@ var overlay_layer: TileMapLayer
 ## z-index/y-sort division of labor this node anchors.
 var occupant_layer: Node2D
 
+## The [code]MarkerLayer[/code] holding one faction ownership decal per entity
+## (Story 009 / S5-08), populated by [EntitySpriteFeed].
+##
+## [b]Deliberately NOT Y-sorted[/b], unlike [member occupant_layer]. Markers are
+## flat on the floor at tile centres and one can never meaningfully occlude another;
+## sorting them would only add cost and a second depth rule to keep in step. Their
+## own band ([constant MARKER_Z_INDEX]) puts the whole layer under every occupant,
+## which is the only depth relationship that matters here.
+var marker_layer: Node2D
+
 ## [b]Injectable occupant-pick-region seam (ADR-0013 §4, Story 004).[/b]
 ## Ordered back-to-front matching [member occupant_layer]'s Y-sort paint
 ## order (i.e. the same order real occupant children would visually draw
@@ -224,18 +302,16 @@ var occupant_layer: Node2D
 ## [method screen_to_grid] for every click — the correct, harmless default
 ## until real regions are wired in.
 ##
-## [b]⚠ Ownership gap — do not treat this as the real convention:[/b] the
-## per-sprite [Rect2]/mask "occupant clickable-region authoring" that would
-## populate this array from live occupant sprites has [b]no confirmed
-## owning epic yet[/b] (ADR-0013 Consequences/Risks; tracked as vertical-
-## slice build-seam S3-05, `production/vertical-slice/scope.md` §8(b)).
-## This member exists purely as a settable seam so [method pick_at]'s
-## priority logic is unit-testable now via injected
-## [OccupantPickRegion] mocks (this story's tests) — it is deliberately
-## [i]not[/i] wired to [member occupant_layer]'s placeholder occupants, and
-## nothing here invents a real "derive [Rect2] from a sprite" convention.
-## The real live wiring (populating this array from actual occupant scenes)
-## is that unassigned owner's job, not this story's.
+## [b]✅ Ownership gap CLOSED by Story 006[/b] (was ADR-0013
+## Consequences/Risks, vertical-slice build-seam S3-05,
+## `production/vertical-slice/scope.md` §8(b)): the real
+## "derive [Rect2] from a sprite" convention now lives in
+## [method EntitySpriteFeed.pick_regions], which authors this array from the
+## actual drawn sprite bounds in Y-sort order. This member stays a settable
+## seam — that is what keeps [method pick_at]'s priority logic unit-testable
+## with injected [OccupantPickRegion] mocks — but it is no longer unwired:
+## the vertical slice assigns [method EntitySpriteFeed.pick_regions] to it
+## after every feed sync.
 var occupant_pick_regions: Array[OccupantPickRegion] = []
 
 ## [b]Injectable glyph-offset data seam (ADR-0013 §5, Story 005).[/b] The
@@ -262,8 +338,9 @@ func _ready() -> void:
 	floor_layer = _build_iso_tilemap_layer("FloorTileMapLayer", FLOOR_Z_INDEX)
 	overlay_layer = _build_iso_tilemap_layer("OverlayTileMapLayer", OVERLAY_Z_INDEX)
 	_build_overlay_tile_source()
+	marker_layer = _build_marker_layer()
 	occupant_layer = _build_occupant_layer()
-	_build_placeholder_occupants()
+	_build_floor_tile_source()
 
 
 ## Constructs one iso-shaped, empty [TileMapLayer] at [param z_index], added
@@ -280,8 +357,17 @@ func _build_iso_tilemap_layer(node_name: String, z_index_value: int) -> TileMapL
 	layer.z_index = z_index_value
 	var tile_set := TileSet.new()
 	tile_set.tile_shape = TileSet.TILE_SHAPE_ISOMETRIC
-	tile_set.tile_size = Vector2i(int(TILE_WIDTH_PX), int(TILE_HEIGHT_PX))
+	tile_set.tile_size = TILE_TEXTURE_SIZE
 	layer.tile_set = tile_set
+	# Both layers take the 2x-art scale together. ADR-0013 §3 guarantees
+	# floor/overlay alignment by the two sharing an IDENTICAL TileSet config, so
+	# scaling only the floor would break that mechanism even though the two would
+	# still happen to line up numerically (Story 006 AC-7).
+	layer.scale = Vector2.ONE * TILE_LAYER_SCALE
+	# Sprites bake [member origin_offset_px] into their position via
+	# grid_to_screen(); tile cells cannot, so the layer node carries it instead.
+	# Read once here — change origin_offset_px after _ready() and you must repaint.
+	layer.position = origin_offset_px
 	add_child(layer)
 	return layer
 
@@ -302,7 +388,10 @@ func _build_iso_tilemap_layer(node_name: String, z_index_value: int) -> TileMapL
 ## [method _build_iso_tilemap_layer] configuring both identically, not from
 ## this method).
 func _build_overlay_tile_source() -> void:
-	var tile_size := Vector2i(int(TILE_WIDTH_PX), int(TILE_HEIGHT_PX))
+	# Baked at TILE_TEXTURE_SIZE, not the on-screen cell: the overlay layer carries
+	# the same TILE_LAYER_SCALE as the floor, so a 1x diamond would draw at half a
+	# cell. Matching the floor's 2x also keeps overlay edges as crisp as the art.
+	var tile_size := TILE_TEXTURE_SIZE
 	for class_id in OverlayClass.values():
 		var source := TileSetAtlasSource.new()
 		source.texture = _build_diamond_texture(tile_size, OVERLAY_TINTS[class_id])
@@ -333,6 +422,17 @@ func _build_diamond_texture(tile_size: Vector2i, tint: Color) -> ImageTexture:
 	return ImageTexture.create_from_image(image)
 
 
+## Constructs the flat [code]MarkerLayer[/code] (ADR-0013 §2 as amended): a plain
+## [Node2D] in the [constant MARKER_Z_INDEX] band, holding the per-entity ownership
+## decals. See [member marker_layer] for why it is not Y-sorted.
+func _build_marker_layer() -> Node2D:
+	var layer := Node2D.new()
+	layer.name = "MarkerLayer"
+	layer.z_index = MARKER_Z_INDEX
+	add_child(layer)
+	return layer
+
+
 ## Constructs the Y-sorted [code]OccupantLayer[/code] (ADR-0013 §2): a plain
 ## [Node2D] with [member Node2D.y_sort_enabled] on and the coarse
 ## [constant OCCUPANT_Z_INDEX] band. Depth-sort among its children is
@@ -346,58 +446,113 @@ func _build_occupant_layer() -> Node2D:
 	return layer
 
 
-## [b]Story 002 placeholder fixtures — temporary.[/b] Populates
-## [member occupant_layer] with 2 unit placeholders at different grid rows
-## plus 1 tall-prop placeholder, purely so the Y-sort mechanism has something
-## to sort (QA Test Cases, story-002). Every placeholder is a runtime-built
-## [Polygon2D] — deliberately [Node2D]-based (never a [Control]-based node
-## like [ColorRect]: [member Node2D.y_sort_enabled] on [member occupant_layer]
-## only ever compares [member Node2D.position].y among [Node2D] children, so
-## a [Control] child would silently never participate in the sort) — with a
-## manually-set ground-contact (bottom-center) pivot: the polygon's local
-## points extend upward from the node's own origin, so
-## [code]position = grid_to_screen(tile)[/code] directly IS the
-## ground-contact point, the same sprite-placement anchor contract every
-## future real occupant (e.g. [Sprite2D]) will use (class doc comment,
-## Story 001). None of these placeholders set their own [code]z_index[/code],
-## which is itself the regression guard for AC-4 (a child that does not set
-## [code]z_index[/code] must still participate correctly in the Y-sort
-## group).
+## Registers the floor [TileSetAtlasSource] on [member floor_layer] (Story 006).
+## One source, id [constant FLOOR_SOURCE_ID], wrapping the plain-floor texture —
+## [b]cover reuses this same floor cell[/b] (there is no separate cover floor art;
+## assets/art/README.md §8.8), so one source covers every painted tile.
 ##
-## [b]Open item (unassigned):[/b] this method — not just its call site — is
-## meant to be replaced wholesale once a story wires
-## [member occupant_layer] to a live [code]GameState.entities()[/code] feed
-## (see the class doc comment and story-002's Out of Scope).
-func _build_placeholder_occupants() -> void:
-	_add_placeholder_occupant("PlaceholderUnitA", Vector2i(3, 2), Vector2(40.0, 64.0), Color(0.2, 0.4, 0.85))
-	_add_placeholder_occupant("PlaceholderUnitB", Vector2i(3, 5), Vector2(40.0, 64.0), Color(0.85, 0.3, 0.25))
-	_add_placeholder_occupant("PlaceholderTallProp", Vector2i(4, 3), Vector2(64.0, 140.0), Color(0.55, 0.35, 0.15))
+## Silently skips if the texture is absent so a stripped art tree still boots with
+## an unpainted board rather than failing to construct; [method paint_terrain] is
+## the loud path for a real missing-art problem.
+func _build_floor_tile_source() -> void:
+	if not ResourceLoader.exists(FLOOR_TEXTURE_PATH):
+		push_error("BoardRenderer: missing floor texture '%s' — board will render unpainted" % FLOOR_TEXTURE_PATH)
+		return
+	var source := TileSetAtlasSource.new()
+	source.texture = load(FLOOR_TEXTURE_PATH)
+	source.texture_region_size = TILE_TEXTURE_SIZE
+	source.create_tile(Vector2i.ZERO)
+	floor_layer.tile_set.add_source(source, FLOOR_SOURCE_ID)
 
 
-## Adds one placeholder occupant [Polygon2D] under [member occupant_layer] at
-## [param tile], sized [param footprint_size], tinted [param color]. Node2D-
-## based by design (see [method _build_placeholder_occupants]'s doc comment
-## for why this must never be a [Control]-based node). Ground-contact
-## bottom-center pivot is achieved by authoring the polygon's local point
-## rectangle entirely above y=0 — [code]position = grid_to_screen(tile)[/code]
-## is then directly the ground-contact point, no separate pivot offset
-## needed. [param footprint_size].y taller placeholders (the "tall prop"
-## case) visibly overhang above their own tile exactly as ADR-0013 §2/art
-## bible §8.8 describe. Deliberately sets no [code]z_index[/code] on the
-## returned node — see [method _build_placeholder_occupants].
-func _add_placeholder_occupant(node_name: String, tile: Vector2i, footprint_size: Vector2, color: Color) -> void:
-	var polygon := Polygon2D.new()
-	polygon.name = node_name
-	polygon.color = color
-	var half_width := footprint_size.x * 0.5
-	polygon.polygon = PackedVector2Array([
-		Vector2(-half_width, -footprint_size.y),
-		Vector2(half_width, -footprint_size.y),
-		Vector2(half_width, 0.0),
-		Vector2(-half_width, 0.0),
-	])
-	polygon.position = grid_to_screen(tile)
-	occupant_layer.add_child(polygon)
+## Paints the static board for [param grid] (Story 006): a floor cell for every
+## passable tile, plus one Y-sorted prop per Cover tile. Idempotent — clears both
+## before repainting, so it can be re-run on a map change.
+##
+## [b]Cover is TWO nodes, never one cell[/b] (art-bible §8.8, AC-6): a floor cell
+## on [member floor_layer] PLUS a separate prop in the Y-sort group, so the mass
+## occludes and is occluded by units on adjacent rows. "One PNG = one TileMapLayer
+## cell" is exactly what breaks for cover — a cell cannot participate in the
+## occupant Y-sort at all.
+##
+## [b]Impassable tiles are deliberately left UNPAINTED[/b] — the void showing
+## through IS the art (assets/art/README.md: a void gap reads as a full
+## tile-shaped diamond, much darker than any wear variant, which is what keeps it
+## distinguishable from scorch).
+##
+## O(width * height).
+func paint_terrain(grid: GridState) -> void:
+	floor_layer.clear()
+	_clear_cover_props()
+	for y in grid.height:
+		for x in grid.width:
+			var terrain: int = grid.terrain_at(x, y)
+			if terrain == GridState.Terrain.IMPASSABLE:
+				continue
+			floor_layer.set_cell(cell_for(Vector2i(x, y)), FLOOR_SOURCE_ID, Vector2i.ZERO)
+			if terrain == GridState.Terrain.COVER:
+				_add_cover_prop(Vector2i(x, y))
+
+
+## Adds one Y-sorted cover-mass prop at [param tile]. Anchored bottom-centre and
+## drawn at [constant TILE_LAYER_SCALE] exactly like an entity sprite: the prop's
+## canvas is the full tile diamond plus headroom (256x184 at 2x, footprint the
+## bottom 256x128), so bottom-centre of the canvas is the ground-contact point and
+## [method grid_to_screen] places it with no extra offset.
+##
+## Sets no [code]z_index[/code] — depth against units is the parent layer's native
+## Y-sort (ADR-0013 §2).
+func _add_cover_prop(tile: Vector2i) -> void:
+	if not ResourceLoader.exists(COVER_PROP_TEXTURE_PATH):
+		push_error("BoardRenderer: missing cover texture '%s'" % COVER_PROP_TEXTURE_PATH)
+		return
+	var texture: Texture2D = load(COVER_PROP_TEXTURE_PATH)
+	var prop := Sprite2D.new()
+	prop.name = "%s%d_%d" % [COVER_PROP_NAME_PREFIX, tile.x, tile.y]
+	prop.texture = texture
+	prop.centered = false
+	prop.scale = Vector2.ONE * TILE_LAYER_SCALE
+	var size: Vector2 = texture.get_size()
+	prop.offset = Vector2(-size.x * 0.5, -size.y)
+	prop.position = grid_to_screen(tile)
+	occupant_layer.add_child(prop)
+
+
+## Frees every cover prop currently under [member occupant_layer], identified by
+## the [constant COVER_PROP_NAME_PREFIX] naming convention so entity sprites (which
+## [EntitySpriteFeed] owns and tracks separately) are never touched.
+func _clear_cover_props() -> void:
+	for child: Node in occupant_layer.get_children():
+		if child.name.begins_with(COVER_PROP_NAME_PREFIX):
+			occupant_layer.remove_child(child)
+			child.queue_free()
+
+
+## Maps a logical grid tile to the [TileMapLayer] CELL coordinate that draws at
+## [method grid_to_screen]'s position for that tile.
+##
+## [b]⚠ A grid tile is NOT a tile-map cell — never call [code]set_cell(tile)[/code]
+## directly.[/b] Redot/Godot lay isometric cells out in a stacked basis whose
+## origin and axes differ from this project's hand-rolled 2:1 dimetric transform
+## (the same engine-iso mismatch ADR-0013 §1 cites GH#89423 for). Painting raw grid
+## coordinates puts the board in the wrong place entirely — measured at up to
+## 1408px of drift across a 12x10 board.
+##
+## Rather than re-derive the engine's layout (undocumented, fork-specific, and the
+## thing ADR-0013 already distrusts), this asks the engine its OWN inverse: which
+## cell covers the point we want to draw at. [method TileMapLayer.local_to_map] and
+## [method TileMapLayer.map_to_local] are exactly self-consistent even where the
+## layout differs from ours — verified over the full 12x10 board at 0.0px error
+## with 120 distinct, collision-free cells — so the result is exact, not
+## approximate.
+##
+## The projection is taken with a ZERO origin offset because the layer node itself
+## carries [member origin_offset_px] as its position (see
+## [method _build_iso_tilemap_layer]); folding the offset in here as well would
+## apply it twice, once scaled. O(1).
+func cell_for(tile: Vector2i) -> Vector2i:
+	var unoffset: Vector2 = _project(tile, TILE_WIDTH_PX, TILE_HEIGHT_PX, Vector2.ZERO)
+	return floor_layer.local_to_map(unoffset / TILE_LAYER_SCALE)
 
 
 ## Projects a logical grid tile to its screen-space position under the 2:1
@@ -518,7 +673,7 @@ func glyph_anchor(tile: Vector2i, glyph_class: int) -> Vector2:
 func set_overlay(tiles: Array[Vector2i], class_id: int) -> void:
 	clear_overlay()
 	for tile in tiles:
-		overlay_layer.set_cell(tile, class_id, Vector2i.ZERO)
+		overlay_layer.set_cell(cell_for(tile), class_id, Vector2i.ZERO)
 
 
 ## Multi-class overlay write (ADR-0013 §3; Command & Action Interface Story 006).
@@ -538,7 +693,7 @@ func set_overlays(class_tiles: Dictionary) -> void:
 	clear_overlay()
 	for class_id: int in class_tiles:
 		for tile: Vector2i in class_tiles[class_id]:
-			overlay_layer.set_cell(tile, class_id, Vector2i.ZERO)
+			overlay_layer.set_cell(cell_for(tile), class_id, Vector2i.ZERO)
 
 
 ## Empties [member overlay_layer] of every populated cell (ADR-0013 §3,

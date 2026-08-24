@@ -3,7 +3,7 @@
 > **Status**: Approved (independent `/design-review` 2026-07-21 — 4 blocking items fixed in-file; verdict NEEDS REVISION → accepted after revision). **Ranged model + Sniper/kiting balance remain spike-gated (unvalidated — prototype was pure melee); counterattack / defense / area-fire ship as OFF-by-default infrastructure.**
 > **Author**: user + main session (systems-designer on damage formula; qa-lead on acceptance criteria; art-director on visual/audio)
 > **Last Updated**: 2026-07-21 (independent `/design-review` revision — 4 blocking items fixed in-file: **structures are cover-immune** (Rule 6 — closes the HQ `defense 2` + `COVER_DR 1` = 3 floor-lock trap by rule, superseding the unenforced "keep structures off Cover" caveat; synced to base-production.md + registry); determinism AC rewritten to a defined state-equality predicate (no "byte-identical"); added missing ACs (structure cover-immunity, attacker-on-Cover, `preview_damage` guarantee, same-attack idempotency, AREA ring exact-boundary + `min_range ≤ attack_range` invariant, structure-as-attacker); fixed the "structures never counter" contradiction (Defensive Structure exception). Earlier 2026-07-21: reconciled with Base & Production #7 — `attack()` accepts a structure as attacker; the Defensive Structure, first `can_counterattack=true` entity, fires at Base-&-Production-owned `DEFENSIVE_ATTACK_COST`. No change to the damage-formula math.)
-> **Implements Pillar**: Pillar 2 (Tempo Is the Skill — deterministic, no-RNG resolution so outcomes reward planning, not luck); Pillar 3 (Readable Board — targets and damage knowable before commit); Pillar 1 (attacks spend from the one AP pool)
+> **Implements Pillar**: Pillar 2 (Tempo Is the Skill — deterministic, no-RNG resolution so outcomes reward planning, not luck); Pillar 3 (Readable Board — targets and damage knowable before commit); Pillar 1 (attacks spend AP — the tactical budget; unchanged by the 2026-08-05 two-budget pivot, which moved only build/produce/research onto Credits)
 > **Creative Director Review (CD-GDD-ALIGN)**: SKIPPED — Lean review mode (not a phase gate). Review pillar alignment manually or in the independent `/design-review`.
 > **Priority / Layer**: Vertical Slice / Core (system #6)
 
@@ -140,8 +140,8 @@ through `apply_action`:
 | Step | Effect |
 |------|--------|
 | 1. Attacker selected | Combat computes the legal target set (per profile, Rule 4/5) for preview |
-| 2. Target chosen | Validate: `can_attack(attacker)` true, `can_afford(attack_cost)` true, target is a legal enemy in range/LoF |
-| 3. Commit | `spend(attack_cost)`; set attacker `has_attacked = true` (atomic; on any validation failure nothing changes) |
+| 2. Target chosen | Validate: `can_attack(attacker)` true, `ap_can_afford(attack_cost)` true, target is a legal enemy in range/LoF |
+| 3. Commit | `ap_spend(attack_cost)`; set attacker `has_attacked = true` (atomic; on any validation failure nothing changes) |
 | 4. Primary damage | Compute `damage` (Rule 6); subtract from defender `current_hp` |
 | 5. Primary death check | If defender `current_hp ≤ 0`: destroy + remove from Grid this step |
 | 6. Counter (conditional) | If defender alive **and** `can_counterattack` **and** attacker in defender's range/profile: apply defender's `damage` to attacker (free) |
@@ -157,7 +157,7 @@ nothing.
 |--------|---------|----------|-----------------|
 | Unit System | `effective_attack`, `attack_range` (=max range), `min_range`, `targeting_mode`, `defense`, `can_counterattack`, `can_attack()` | sets `has_attacked`; writes `current_hp` (via Unit's hp mutator); destroyed flag | **Unit owns all these stat fields + `can_attack()`/hp mutator; Combat owns the targeting rule, damage formula, counter rule, `attack_cost`, `COVER_DR`** |
 | Grid & Terrain | `occupant_at`, `is_cover`, `manhattan_distance`, `neighbors`; `remove` on death | — | Grid (query + mutation API) |
-| AP Economy | `can_afford(attack_cost)` / `spend(attack_cost)` | — | AP Economy owns the pool; Combat owns `attack_cost` |
+| AP & Credits Economy | `ap_can_afford(attack_cost)` / `ap_spend(attack_cost)` | — | AP & Credits Economy owns the pools; Combat owns `attack_cost` |
 | Game State & Turn Manager | attack applied via `apply_action`; runs win-check after resolution | updated entities; HQ-destroyed → GameOver | Turn Manager (mutation path + win rule) |
 | Base & Production | structure `hp`/`defense` (HQ/outposts) as targetable enemies; the **Defensive Structure as an attacker** (`attack`/`attack_range`/`can_counterattack`, fired at `DEFENSIVE_ATTACK_COST`) | destroyed structure; damage/counter applied to targets | Base & Production owns structure stats + `DEFENSIVE_ATTACK_COST`; Combat owns targeting/damage/counter resolution (its `attack()` accepts a structure as attacker) |
 | Research / Tech | attack buff already folded into `effective_attack` (read via Unit) | — | Research owns the bonus magnitude |
@@ -290,7 +290,7 @@ Base-&-Production-owned value below this rate, its reward for immobility. Counte
 - **If the attacker has already attacked this turn** (`has_attacked == true`): the attack is rejected
   (`can_attack()` false); the unit may still move if AP allows.
 - **If the attacker cannot afford `attack_cost`**: the attack is not offered and `attack()` rejects it
-  — no AP spent, no state change (AP Economy `can_afford` gate + `apply_action` atomicity).
+  — no AP spent, no state change (AP & Credits Economy `ap_can_afford` gate + `apply_action` atomicity).
 - **If the target is an enemy structure (HQ/outpost)**: damage applies via the same formula (with
   structure cover-immunity, Rule 6). **Most structures never counter** — HQ, Economy Outpost, and
   Production Outpost all ship `can_counterattack = false`. The **Defensive Structure is the exception**:
@@ -330,7 +330,7 @@ Base-&-Production-owned value below this rate, its reward for immobility. Counte
 |--------|--------|-----------|
 | Grid & Terrain | Hard | `occupant_at`, `is_cover`, `manhattan_distance`, `neighbors`; `remove` on death; 4-dir adjacency |
 | Unit System | Hard | `effective_attack`, `attack_range`, `min_range`, `targeting_mode`, `defense`, `can_counterattack`, `can_attack()`; sets `has_attacked`; hp mutator for damage |
-| AP Economy | Hard | `can_afford(attack_cost)` / `spend(attack_cost)` |
+| AP & Credits Economy | Hard | `ap_can_afford(attack_cost)` / `ap_spend(attack_cost)` |
 | Game State & Turn Manager | Hard | Attacks applied via `apply_action`; win-check on HQ destruction; clonable state for AI/tests |
 
 **Downstream (systems that depend on this — all HARD):** Command & Action Interface (renders legal
@@ -361,7 +361,7 @@ fields (`targeting_mode`, `min_range`, `defense`, `can_counterattack`) that Unit
 and `entities.yaml` must adopt; `attack_range` is reused as the maximum range for both targeting
 profiles. See Open Questions and Phase-5 registry sync.
 
-*Bidirectional note:* Grid & Terrain, Unit System, AP Economy, and Game State & Turn Manager already
+*Bidirectional note:* Grid & Terrain, Unit System, AP & Credits Economy, and Game State & Turn Manager already
 list Combat Resolution as a Hard downstream dependent; the `manhattan_distance` registry entry already
 anticipates `combat.md` referencing it (to be wired in Phase 5).
 
@@ -477,7 +477,7 @@ presentation and interaction.
   the attack will deal (post-cover, post-defense, post-research, min-1) — displayed before the player
   commits. Because combat is deterministic, this preview is a *guarantee*, not an estimate.
 - The interface must surface the `attack_cost` (2 AP) and gate the action on `can_afford` — an
-  unaffordable attack is shown as unavailable, consistent with AP Economy's affordability rule.
+  unaffordable attack is shown as unavailable, consistent with AP & Credits Economy's affordability rule.
 - It must be possible to **cancel** a pending attack (select target → review → back out) before
   committing, mirroring Movement's cancel affordance.
 - A reserved counter-preview: once a `can_counterattack` unit exists, the interface should be able to
@@ -644,7 +644,7 @@ impossible; the Turn Manager owns the reserved "non-active player wins" rule for
 | Should AREA fire ever become true multi-tile **splash/AoE** (vs the VS single-target-in-ring)? | Combat (#6) | VS = single-target. AoE (and the Heavy-splash question from Unit System) is an Alpha lever; it would need friendly-fire rules + a blast-radius stat + the reserved simultaneous-HQ rule. |
 | Is **binary Cover** (`COVER_DR = 1`) enough, or does Cover want degrees (light/heavy)? | Combat / Grid | VS = binary. Degrees are an Alpha consideration; would add a per-tile cover-magnitude to Grid. |
 | Does **line-of-fire blocking** make Impassable / Procedural-Center bands too strong as sightline walls? | game-designer / Grid / Combat | Watch in playtest — Grid's Impassable now doubles as a line-of-fire blocker for DIRECT fire; `PROC_DENSITY`/`PROC_FEATURE_MIX` may need re-tuning. (Grid and Unit raise the same flag.) |
-| Is flat **`attack_cost = 2`** right, or is any unit's attack mispriced at a flat rate? | game-designer / economy-designer | Decided flat 2 (keeps legibility; Unit's per-AP audit assumes a constant 2-AP denominator). Revisit only if playtest shows a specific unit's attack is over/under-valued at 2. |
+| Is flat **`attack_cost = 2`** right, or is any unit's attack mispriced at a flat rate? | game-designer / economy-designer | Decided flat 2 (keeps legibility; Unit's per-AP audit assumes a constant 2-AP denominator). Revisit only if playtest shows a specific unit's attack is over/under-valued at 2. **★ Raised again 2026-08-21 and DEFERRED, decision unchanged** — the trigger above had not fired (S5-04 has not run), and the prompt was a rendering side-effect rather than playtest evidence. A candidate spread (Scout 1 / Trooper 2 / Sniper 2 / Heavy 3, roster mean held at 2) and the full list of what would need re-checking are recorded in `production/post-gate-backlog.md` §1. |
 | When **defense / counter / AREA units** are eventually added, do the infrastructure rules hold? | Unit (#4) / Combat (#6) / Base & Production (#7) | **Partly realized:** Base & Production's **Defensive Structure** is the first entity to populate `defense` (1) and set `can_counterattack = true`, exercising Rule 7's counter path + the shared `defense` field. Re-validate the **defense-stacking constraint** for *units* (a unit's `defense + COVER_DR < ` lowest `effective_attack`; first live at a Defense-Tech unit on Cover = 2 mitigation) and the DIRECT-counter profile when it playtests. **Structures no longer participate** — cover-immunity (Rule 6) means the HQ's `defense 2` never stacks with Cover, resolving the earlier "keep structures off Cover" caveat by rule rather than by placement. AREA remains dormant (`DIRECT` everywhere in the VS). |
 | Does the **min-1 damage floor** worsen the endgame closeout-drag? | Base & Production (#7) | **CONFIRMED not a factor** — Base & Production (#7, Designed 2026-07-21) brakes the drag via production rate/quality (HQ Scouts-only cap 2 + expensive/destroyable Production Outpost), not the damage formula. `systems-designer` re-affirmed: the min-1 floor only binds for Scout-tier attackers into Cover and does not participate in the closeout mechanic. Combat only guarantees nothing is unkillable. |
 | **Cross-system handoff to Unit System (#4, Approved):** add stat fields `targeting_mode` (enum, default DIRECT), `min_range` (int, default 1), `defense` (int, default 0), `can_counterattack` (bool, default false) to the unit schema + `entities.yaml`; `attack_range` becomes the max range for both profiles. | Unit (#4) / this session | **Action item.** Combat specs the resolution; Unit owns the fields. Partly actioned in Phase 5 (registry candidates); Unit System's GDD should be revised to document the four fields. Consider `/propagate-design-change`. |

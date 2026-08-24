@@ -1,0 +1,25 @@
+; S4-01 art de-risk spike — standalone throwaway mini-project.
+; Isolated from the repo root project.godot so it launches independently:
+;   ./redot prototypes/s4-01-art-spike/project.godot
+;   ./redot --path prototypes/s4-01-art-spike
+;
+; Purpose: windowed validation for art-bible §8.9 (2D CanvasItem per-instance glow uniforms)
+; and a live eyeball of §4.2 (Boom cyan vs the 5 dark-stage tiles). See README.md.
+; Engine: Redot 26.2 (Godot 4.6-compatible). See docs/engine-reference/godot/VERSION.md.
+
+config_version=5
+
+[application]
+
+config/name="S4-01 Art De-Risk Spike (glow + hue)"
+run/main_scene="res://GlowSpike.tscn"
+config/features=PackedStringArray("4.6", "Forward Plus")
+
+[display]
+
+window/size/viewport_width=1152
+window/size/viewport_height=648
+
+[rendering]
+
+renderer/rendering_method="forward_plus"

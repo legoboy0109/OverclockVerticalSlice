@@ -42,6 +42,32 @@ func _hq_destroyed(owner: int) -> StructureDestroyedEvent:
 # Adds count plain EntityState entities owned by owner to state, with unique
 # ids starting from state.next_entity_id — enough for the UNIT_COUNT tiebreak
 # metric (a plain count over entities_by_id, independent of entity subtype).
+# Real UnitState fixtures. _add_entities creates BARE EntityState, which is neither a
+# unit nor a structure — fine for tests that only need "some entities exist", but it
+# counts as nothing under either tiebreak metric, both of which narrow by type.
+func _add_units(state: GameState, owner: int, count: int) -> void:
+	for _i: int in count:
+		var u := UnitState.new()
+		u.entity_id = state.next_entity_id
+		u.owner = owner
+		u.type = UnitTypes.TROOPER
+		u.current_hp = UnitTypes.TROOPER.hp
+		state.entities_by_id[u.entity_id] = u
+		state.next_entity_id += 1
+
+
+# An HQ with an explicit remaining hp, for the TOTAL_HQ_HP metric.
+func _add_hq(state: GameState, owner: int, hp: int) -> void:
+	var s := StructureState.new()
+	s.entity_id = state.next_entity_id
+	s.owner = owner
+	s.type = StructureTypes.HQ
+	s.current_hp = hp
+	s.build_status = StructureState.BuildStatus.COMPLETED
+	state.entities_by_id[s.entity_id] = s
+	state.next_entity_id += 1
+
+
 func _add_entities(state: GameState, owner: int, count: int) -> void:
 	for _i: int in count:
 		var e := EntityState.new()
@@ -241,17 +267,106 @@ func test_hq_destroyed_same_step_max_rounds_reached_hq_winner_wins_not_tiebreak(
 
 func test_max_rounds_reached_no_hq_destroyed_tiebreak_picks_higher_unit_count() -> void:
 	# Arrange — max_rounds=5, round_number=6 (cap reached); player 0 has more
-	# units than player 1.
+	# units than player 1. UNIT_COUNT is set EXPLICITLY: the default is now
+	# TOTAL_HQ_HP (the metric game-state-turn-manager.md always specified), so a test
+	# of unit count has to ask for it.
 	var state := _make_state(2, 0)
 	state.max_rounds = 5
 	state.round_number = 6
-	_add_entities(state, 0, 3)
-	_add_entities(state, 1, 1)
+	state.tiebreak_metric = GameState.TiebreakMetric.UNIT_COUNT
+	_add_units(state, 0, 3)
+	_add_units(state, 1, 1)
 	# Act
 	state.run_win_check([])
 	# Assert
 	assert_int(state.match_status).is_equal(GameState.MatchStatus.GAME_OVER)
 	assert_int(state.winner).is_equal(0)
+
+
+# --- TOTAL_HQ_HP: the spec default, corrected 2026-08-21 --------------------
+#
+# game-state-turn-manager.md always specified {total HQ hp, tiles controlled, unit
+# count} with total HQ hp as the DEFAULT. Only UNIT_COUNT shipped, because HQ hp needed
+# schema fields that did not exist at the time; ADR-0007 has since landed and they do.
+# UNIT_COUNT was also implemented as a count of EVERY entity, structures and HQ
+# included, which made a capped game a contest of who built more.
+
+func test_total_hq_hp_is_the_default_metric() -> void:
+	# Asserted WITHOUT setting it, so a silent change to the default fails here.
+	var state := _make_state(2, 0)
+	assert_int(state.tiebreak_metric).is_equal(GameState.TiebreakMetric.TOTAL_HQ_HP)
+
+
+func test_default_tiebreak_picks_the_player_whose_hq_is_healthier() -> void:
+	# The point of the metric: a capped game goes to whoever did more damage toward
+	# the only real win condition.
+	var state := _make_state(2, 0)
+	state.max_rounds = 5
+	state.round_number = 6
+	_add_hq(state, 0, 40) # untouched
+	_add_hq(state, 1, 12) # battered
+	state.run_win_check([])
+	assert_int(state.match_status).is_equal(GameState.MatchStatus.GAME_OVER)
+	assert_int(state.winner).is_equal(0)
+
+
+func test_default_tiebreak_cannot_be_won_by_building_or_producing() -> void:
+	# ★ The regression this correction exists to prevent. Player 1 is drowning player 0
+	# in units and structures but has taken real HQ damage; player 0 still wins, because
+	# the metric measures progress toward victory rather than accumulated stuff.
+	# Under the old entity-count implementation player 1 won this position outright.
+	var state := _make_state(2, 0)
+	state.max_rounds = 5
+	state.round_number = 6
+	_add_hq(state, 0, 40)
+	_add_hq(state, 1, 8)
+	_add_units(state, 1, 12)
+	for _i: int in 5:
+		var outpost := StructureState.new()
+		outpost.entity_id = state.next_entity_id
+		outpost.owner = 1
+		outpost.type = StructureTypes.PRODUCTION_OUTPOST
+		outpost.current_hp = 10
+		state.entities_by_id[outpost.entity_id] = outpost
+		state.next_entity_id += 1
+	state.run_win_check([])
+	assert_int(state.winner).is_equal(0)
+
+
+func test_unit_count_metric_ignores_structures() -> void:
+	# ★ The other half of the same correction: UNIT_COUNT must count UNITS. Player 1 has
+	# more entities in total but fewer units, and must lose on this metric.
+	var state := _make_state(2, 0)
+	state.max_rounds = 5
+	state.round_number = 6
+	state.tiebreak_metric = GameState.TiebreakMetric.UNIT_COUNT
+	_add_units(state, 0, 4)
+	_add_units(state, 1, 2)
+	_add_hq(state, 1, 40)
+	for _i: int in 6:
+		var outpost := StructureState.new()
+		outpost.entity_id = state.next_entity_id
+		outpost.owner = 1
+		outpost.type = StructureTypes.PRODUCTION_OUTPOST
+		outpost.current_hp = 10
+		state.entities_by_id[outpost.entity_id] = outpost
+		state.next_entity_id += 1
+	state.run_win_check([])
+	assert_int(state.winner).is_equal(0)
+
+
+func test_equal_hq_hp_falls_through_to_the_non_active_player_rule() -> void:
+	# ★ Worth knowing before relying on this: two untouched HQs are an EXACT tie, so the
+	# result comes from the seat rule, not from play. That is the shipped behaviour and
+	# it is what an AI-vs-AI mirror produces today, since the AI never attacks an HQ.
+	var state := _make_state(2, 0)
+	state.max_rounds = 5
+	state.round_number = 6
+	_add_hq(state, 0, 40)
+	_add_hq(state, 1, 40)
+	state.run_win_check([])
+	assert_int(state.match_status).is_equal(GameState.MatchStatus.GAME_OVER)
+	assert_int(state.winner).is_equal(1) # non-active; active_player is 0
 
 
 # --- AC7: MAX_ROUNDS reached with EQUAL tiebreak metric -> non-active wins --
@@ -261,8 +376,9 @@ func test_max_rounds_reached_equal_unit_count_non_active_player_wins_no_draw() -
 	var state := _make_state(2, 0)
 	state.max_rounds = 5
 	state.round_number = 6
-	_add_entities(state, 0, 2)
-	_add_entities(state, 1, 2)
+	state.tiebreak_metric = GameState.TiebreakMetric.UNIT_COUNT
+	_add_units(state, 0, 2)
+	_add_units(state, 1, 2)
 	# Act
 	state.run_win_check([])
 	# Assert — no draw; deterministic non-active-player rule.

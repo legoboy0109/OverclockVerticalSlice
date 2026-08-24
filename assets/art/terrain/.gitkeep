@@ -1,0 +1,2 @@
+# Drop terrain sprites here: tile_[terrain-type]_[variant].png
+# e.g. tile_plain_clean.png, tile_cover_clean.png — see ../README.md. Delete once real assets land.

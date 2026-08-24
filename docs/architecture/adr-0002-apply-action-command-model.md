@@ -3,6 +3,13 @@
 ## Status
 Accepted
 
+> **Revised 2026-08-05 (economy pivot).** Updated for the two-budget model (ADR-0006): economic verbs are
+> dual-cost — `validate()` checks BOTH `Credits.can_afford` and `AP.can_afford`, and `apply()` spends BOTH
+> (both-or-neither, made safe by this ADR's validate-before-mutate atomicity — no rollback needed); added
+> `CANT_AFFORD_CREDITS` to the `Reason` enum so the binding pool is nameable; `EndTurnAction` no longer
+> discards AP (it carries over, capped). The command-model architecture (typed Actions, verb-keyed
+> dispatch, validate-before-mutate) is unchanged.
+
 ## Date
 2026-07-23
 
@@ -48,9 +55,9 @@ mutation.
 - Single-threaded (turn-based; no simulation deadline) — atomicity does not need lock/thread safety.
 
 ### Requirements
-- **Atomicity**: illegal action → zero state change, including AP (GDD Core Rule 8, Edge Cases; TR-gamestate-005).
-- **Validation**: enough AP, legal target, correct active player (GDD Core Rule 8).
-- **AP deduction** happens inside the pipeline via AP Economy's `spend()` (ADR-0006), never by direct write.
+- **Atomicity**: illegal action → zero state change, including **both** AP and Credits (GDD Core Rule 8, Edge Cases; TR-gamestate-005). For a dual-cost economic action this is **both-or-neither**: never spend Credits then fail the AP-surcharge leg (or vice versa).
+- **Validation**: enough AP **and** Credits (economic verbs are dual-cost — the resource gate + the AP-surcharge tempo gate), legal target, correct active player (GDD Core Rule 8, ap-economy.md Rule 11).
+- **Pool deduction** (AP and/or Credits) happens inside the pipeline via AP & Credits Economy's `AP.spend()` / `Credits.spend()` (ADR-0006), never by direct write. Move/Attack spend AP only; Produce/Build/Research spend Credits (main) + an AP surcharge, both in the one `apply()`.
 - **Win-check** runs after every mutation that could destroy an HQ, synchronously → `GameOver`
   (GDD Core Rule 5; TR-gamestate-010).
 - **Idempotency-by-revalidation**: a resubmitted action is re-validated against current state and
@@ -87,24 +94,30 @@ fixed pipeline skeleton:
 apply_action(action):
     1. if match_status == GameOver:          return fail(GAME_OVER)          # post-GameOver lockout
     2. if action.player != active_player:    return fail(NOT_ACTIVE_PLAYER)  # (EndTurnAction: active player only)
-    3. reason = _validators[action.verb].call(state, action)  # PURE, total — checks AP, target, legality, faction-lock
+    3. reason = _validators[action.verb].call(state, action)  # PURE, total — checks AP+Credits, target, legality, faction-lock
     4. if reason != OK:                      return fail(reason)             # ATOMIC: nothing mutated yet
-    5. events = _appliers[action.verb].call(state, action)    # mutates; spends AP via AP.spend(); MAY NOT fail
+    5. events = _appliers[action.verb].call(state, action)    # mutates; spends AP and/or Credits (dual-cost: both-or-neither); MAY NOT fail
     6. run_win_check(state, events)          # HQ at 0 hp → match_status = GameOver(winner = opponent)
     7. return ok(events)
 ```
 
 **Atomicity is achieved by validate-before-mutate, with no rollback** (Alternative 1). Because the
 simulation is single-threaded and `validate()` is *total* (it checks every precondition, including
-`AP.can_afford`), step 5's `apply()` cannot fail after step 4 passes — so there is never a partial
-mutation to roll back. This is a hard invariant on every verb handler:
+`AP.can_afford` **and**, for economic verbs, `Credits.can_afford` — both pools before either is
+spent), step 5's `apply()` cannot fail after step 4 passes — so there is never a partial mutation to
+roll back, and the dual-cost both-or-neither guarantee falls out of this same property (validating
+both pools first means neither `spend()` leg can fail after the gate). This is a hard invariant on
+every verb handler:
 
-> **Handler invariant:** `validate()` is pure and checks ALL failure conditions. `apply()` never
-> returns a failure and never encounters a rejected `AP.spend()` — if it does, that is a
-> contract-violation bug (assert), not a normal control-flow path.
+> **Handler invariant:** `validate()` is pure and checks ALL failure conditions (for economic verbs,
+> BOTH `Credits.can_afford` and `AP.can_afford`). `apply()` never returns a failure and never
+> encounters a rejected `AP.spend()` / `Credits.spend()` — if it does, that is a contract-violation
+> bug (assert), not a normal control-flow path. An economic `apply()` spends **both** pools (Credits
+> main + AP surcharge); spending only one is an atomicity bug.
 
 **`apply_action` returns a uniform `ActionResult`** — `{ok: bool, reason: int, events: Array[Event]}`.
-On rejection, `ok=false` and `reason` names the cause (`NOT_ACTIVE_PLAYER`, `CANT_AFFORD`,
+On rejection, `ok=false` and `reason` names the cause (`NOT_ACTIVE_PLAYER`, `CANT_AFFORD` [insufficient
+AP], `CANT_AFFORD_CREDITS` [insufficient Credits — so the Command interface can name the binding pool],
 `ILLEGAL_TARGET`, `OUT_OF_RANGE`, `TILE_OCCUPIED`, `GAME_OVER`, `FACTION_LOCKED`, …). On success,
 `events` carries what happened (verb-specific detail like damage dealt, plus `hq_destroyed` for the
 win-check and the entries the HUD action-log consumes, TR-hud-014). One uniform call site for UI and AI.
@@ -115,9 +128,10 @@ unit already moved), returning `ok=false`. This matches the GDD Edge Case and ad
 `clone()`/determinism surface.
 
 `EndTurnAction` is the one verb exempt from an affordability/legality check: it is unconditionally
-legal for the active player (no softlock). Its `apply()` runs end-of-turn (discard unspent AP) then
-the canonical start-of-turn sequence for the next player — the *ordering* of which is owned by
-ADR-0008; `apply_action` only invokes it.
+legal for the active player (no softlock). Its `apply()` runs the end-of-turn → start-of-turn
+sequence for the next player — the *ordering* of which is owned by ADR-0008; `apply_action` only
+invokes it. (There is **no AP discard** anymore: unspent AP carries over capped, and Credits bank —
+ADR-0008/ADR-0006's pivot removed the old end-of-turn AP-discard step.)
 
 ### Architecture Diagram
 
@@ -131,7 +145,9 @@ ADR-0008; `apply_action` only invokes it.
         │ 3 validate() ── dispatch by action.verb ───▶│  owning Core system
         │ 4 reject if !OK  (ATOMIC — no mutation)     │   Movement.validate/apply
         │ 5 apply()   ── dispatch by action.verb ────▶│   Combat.validate/apply
-        │      └─ AP.spend() (ADR-0006, sole deductor)│   Base&Prod.validate/apply
+        │      └─ AP.spend() / Credits.spend()         │   Base&Prod.validate/apply
+        │         (ADR-0006, sole pool deductors;      │
+        │          economic verbs spend both)          │
         │ 6 run_win_check()  (turn manager owns)      │   Research.validate/apply
         │ 7 return ActionResult{ok, reason, events}   │
         └─────────────────────────────────────────────┘
@@ -157,9 +173,13 @@ func _init() -> void: verb = Verb.MOVE
 # attack_action.gd: class_name AttackAction extends Action; var attacker_id/target_id; verb = Verb.ATTACK
 # end_turn_action.gd: class_name EndTurnAction extends Action; verb = Verb.END_TURN  (unconditionally legal)
 
-enum Reason { OK, NOT_ACTIVE_PLAYER, CANT_AFFORD, ILLEGAL_TARGET, OUT_OF_RANGE,
+enum Reason { OK, NOT_ACTIVE_PLAYER, CANT_AFFORD, CANT_AFFORD_CREDITS, ILLEGAL_TARGET, OUT_OF_RANGE,
               TILE_OCCUPIED, NOT_LEGAL_BUILD_TILE, PRODUCTION_CAP_REACHED,
               GAME_OVER, FACTION_LOCKED, NO_SUCH_ENTITY }
+# CANT_AFFORD = insufficient AP (tactical). CANT_AFFORD_CREDITS = insufficient Credits (economic).
+# An economic verb's validate() returns whichever pool binds, so the Command interface can grey the
+# action against the correct pool (ap-economy.md dual-cost). Appending mid-enum is safe — verb
+# dispatch is by Verb, not Reason ordinal, and Reason is compared by name, never by int value.
 
 class ActionResult extends RefCounted:
     var ok: bool
@@ -250,7 +270,9 @@ func end_turn() -> ActionResult                      # sugar: apply_action(EndTu
   review + a test asserting `validate()` leaves state field-wise-unchanged for a sample of each verb.
 - **A precondition split** (checked in `apply()` not `validate()`) surfaces only as a rare partial
   mutation. Mitigation: the "rejected action → zero state change" AC is run per verb, including the
-  boundary cases (exactly-not-enough AP, target just out of range).
+  boundary cases (exactly-not-enough AP, target just out of range) and — for economic verbs — the
+  **dual-cost both-or-neither** cases: affordable in Credits but not the AP surcharge (and vice
+  versa) must leave BOTH pools unchanged.
 - **Dispatch on `get_class()`** is a tempting-but-wrong bug: for a GDScript class it returns the base
   engine class (`"RefCounted"`), so a verb `match` on it silently never matches. Mitigation: dispatch
   is pinned to the `verb` enum table (Decision); flag `get_class()`-based verb routing in code review.
@@ -264,8 +286,8 @@ func end_turn() -> ActionResult                      # sugar: apply_action(EndTu
 
 | GDD System | Requirement | How This ADR Addresses It |
 |------------|-------------|---------------------------|
-| game-state-turn-manager.md | TR-gamestate-004: single `apply_action` entry, validates+applies atomically, deducts AP, runs win-check | The fixed 7-step pipeline |
-| game-state-turn-manager.md | TR-gamestate-005: illegal action → zero state change incl. AP | Validate-before-mutate (steps 3–4); nothing mutates before validation passes |
+| game-state-turn-manager.md | TR-gamestate-004: single `apply_action` entry, validates+applies atomically, deducts AP and/or Credits, runs win-check | The fixed 7-step pipeline; economic verbs deduct both pools in step 5 |
+| game-state-turn-manager.md | TR-gamestate-005: illegal action → zero state change incl. AP and Credits (dual-cost both-or-neither) | Validate-before-mutate (steps 3–4); nothing mutates before validation passes; economic verbs validate both pools first |
 | game-state-turn-manager.md | TR-gamestate-010: win-check after every HQ-destroying mutation, synchronous | Step 6 runs inside the same call, before returning |
 | game-state-turn-manager.md | TR-gamestate-017: `end_turn()` never softlocks | `EndTurnAction` exempt from affordability/legality gate |
 | game-state-turn-manager.md | TR-gamestate-018: resubmitted action re-validated, no double-apply | Stateless re-validation (full pipeline re-run) |

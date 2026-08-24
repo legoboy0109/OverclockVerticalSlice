@@ -137,12 +137,44 @@ per-sprite fudge factor.
 BoardRenderer (Node2D)
  ├─ FloorTileMapLayer      (TileSet.TILE_SHAPE_ISOMETRIC; static terrain art; z_index 0)
  ├─ OverlayTileMapLayer    (TileSet.TILE_SHAPE_ISOMETRIC; reachable/target/build overlays; z_index 1)
- └─ OccupantLayer (Node2D, y_sort_enabled = true; z_index 2)
+ ├─ MarkerLayer            (Node2D, flat; faction ownership decals; z_index 2)   [AMENDED 2026-08-20]
+ └─ OccupantLayer (Node2D, y_sort_enabled = true; z_index 3)                     [was z_index 2]
       ├─ unit/structure sprites (position = grid_to_screen(tile), pivot = ground-contact point)
       └─ tall props with vertical overhang (pulled out of the floor layer per art bible §8.8)
 ```
 
-Draw order is fixed by this z-index/node ordering: floor → overlays → Y-sorted occupants, so a
+> **⚠ AMENDMENT — 2026-08-20 (Story 009 / sprint task S5-08).** A fourth layer,
+> **`MarkerLayer`**, was inserted between the overlay and the occupants, taking `z_index 2` and
+> pushing `OccupantLayer` to `z_index 3`. The ordering floor → overlay → **markers** → occupants is
+> what the numbers mean; the absolute values carry no other significance, and the division of
+> labour this ADR protects is untouched — `z_index` still does the coarse cross-tree banding and
+> `y_sort_enabled` still does occupant-vs-occupant depth *inside* `OccupantLayer` only.
+>
+> **Why a layer and not a child of each sprite.** The layer holds one flat faction-ownership decal
+> per entity, drawn on the tile the entity occupies. It cannot be a child of the body sprite for
+> two independent reasons: a child inherits the §8.5 motion transforms (Story 008), so the decal
+> would lean with a moving unit and lunge with an attacking one when it must stay flat on its tile;
+> and a child must draw *under* its parent, which is impossible without a child `z_index` that this
+> ADR's own guardrail forbids.
+>
+> **Why above the overlay.** Ownership has to stay legible *through* a range or target highlight —
+> an overlay tint washing the decal out would break it in precisely the moment a player is deciding
+> what to attack. It stays below the occupants because it is a decal on the floor and an actor
+> standing on the tile must occlude it.
+>
+> **Not Y-sorted, deliberately.** The decals are flat, at tile centres, and cannot meaningfully
+> occlude one another; sorting them would add cost and a second depth rule to keep in step with
+> this one. Their band alone puts the whole layer under every occupant, which is the only depth
+> relationship that exists here.
+>
+> **Why it was needed.** The S5-08 measurement pass found faction ownership carried by hue alone —
+> art bible §5.2's Mass Distribution Bias, the mandatory non-hue backup, was never built, and
+> structures declared their owner so weakly that a Rush and a Boom Defensive Structure measured
+> ΔE 2.3 apart with normal colour vision. Putting the marker on the tile fixes both the weak
+> structures and the missing non-hue channel without regenerating any art. Evidence:
+> `production/qa/evidence/s5-08-colourblind-ownership-brief.md`.
+
+Draw order is fixed by this z-index/node ordering: floor → overlays → ownership markers → Y-sorted occupants, so a
 highlighted overlay tile never draws over a unit standing on it, and occupants always correctly
 depth-sort against each other and against any tall prop via the engine's own global-Y comparison —
 **no custom depth math**, per art bible §8.8's explicit instruction. `FloorTileMapLayer` and
@@ -223,6 +255,7 @@ per-frame reproject) compose cleanly with `grid_to_screen()` regardless of which
    BoardRenderer (Node2D, Presentation)  ◀──────────┘
     ├─ FloorTileMapLayer      (static terrain art, iso shape)
     ├─ OverlayTileMapLayer    (9-class overlay taxonomy, iso shape)
+    ├─ MarkerLayer            (faction ownership decals @ grid_to_screen(tile))  [AMENDED 2026-08-20]
     ├─ OccupantLayer (y_sort_enabled) — unit/structure sprites @ grid_to_screen(tile)
     ├─ grid_to_screen(tile) -> Vector2      [exact forward, §1]
     ├─ screen_to_grid(px) -> Vector2i       [exact inverse, §1]
@@ -250,6 +283,59 @@ class PickResult extends RefCounted:
     var tile: Vector2i
     var occupant_entity_id: int   # -1 if none
 ```
+
+## Amendment 2026-08-19 — a grid tile is not a tile-map cell (`cell_for`)
+
+**Found during Story 006 (sprint task S5-01)**, the first story to paint real floor art. Until
+then both TileMapLayers were either empty or carrying overlay tiles nothing had been visually
+checked against, so the defect below was latent and invisible.
+
+**The defect.** `set_cell(tile, ...)` called with a raw grid tile does **not** draw at
+`grid_to_screen(tile)`. Redot lays `TILE_SHAPE_ISOMETRIC` cells out in a *stacked* basis whose
+origin and axes differ from this ADR's hand-rolled 2:1 dimetric pair — measured on Redot 26.2:
+
+| grid tile | `grid_to_screen` | engine cell position | drift |
+|---|---|---|---|
+| (0,0) | (0, 0) | (64, 32) | 71px |
+| (1,1) | (0, 64) | (256, 64) | 256px |
+| (11,9) | (128, 640) | (1536, 320) | **1408px** |
+
+This is the same engine-iso mismatch the Status block already flags via GH#89423, showing up on
+the *forward* path rather than the inverse. It affected the floor (new) **and** the overlay layer
+(since Story 003) — the overlay's alignment evidence doc was owed and never filed, which is why it
+went unnoticed.
+
+**The fix.** `BoardRenderer.cell_for(tile)` is now the single mandatory adapter, and every
+`set_cell`/cell query goes through it:
+
+```gdscript
+func cell_for(tile: Vector2i) -> Vector2i:
+    var unoffset := _project(tile, TILE_WIDTH_PX, TILE_HEIGHT_PX, Vector2.ZERO)
+    return floor_layer.local_to_map(unoffset / TILE_LAYER_SCALE)
+```
+
+**Why this does not violate the "never use `local_to_map`" rule.** That rule (Decision §1,
+control-manifest) forbids the engine's iso math for *our own coordinate math* — picking, and the
+grid↔screen pair. Here it is used only to ask the engine which of **its own** cells covers a point
+we located with our transform. Engine forward and engine inverse are mutually exact even where the
+layout differs from ours: verified over the full 12×10 board at **0.0px error, 120 distinct cells,
+zero collisions**. No hand-rolled inverse is mixed with an engine forward.
+
+Rejected alternative: replacing the tile layers with individually-placed sprites. That would have
+sidestepped the engine basis entirely but forfeits native batching, which the Consequences section's
+draw-call budget depends on — an explicitly forbidden pattern in the control manifest.
+
+**Regression cover**: `tests/integration/board-renderer/entity_sprite_feed_test.gd` —
+`test_painted_floor_cells_draw_exactly_where_grid_to_screen_says` (all 120 tiles),
+`test_cell_for_is_injective_across_the_board`, and
+`test_overlay_cells_land_on_the_same_anchors_as_floor_cells` (which finally asserts §3's
+floor/overlay alignment guarantee instead of assuming it).
+
+**Also amended by Story 006:** `TileSet.tile_size` is now `256×128` with both layers scaled `0.5`,
+because art ships at 2× its on-screen size (art-bible §8.3). `TILE_WIDTH_PX`/`TILE_HEIGHT_PX`
+(128×64) remain the **on-screen** cell and the transform pair is untouched — the two doublings
+cancel. The §4 occupant-clickable-region authoring gap is closed by
+`EntitySpriteFeed.pick_regions()`.
 
 ## Alternatives Considered
 
@@ -336,7 +422,8 @@ class PickResult extends RefCounted:
   (godot-specialist, 2026-07-24). Godot's rule (stable since 4.0, unaffected by any 4.4–4.6 change):
   `z_index` is the coarse cross-tree sort key; `y_sort_enabled` only re-sorts children *within* a
   Y-sort group at the same effective z-index — a Y-sorted child cannot "escape" its parent's z-index
-  band. This ADR's ordering (Floor `z_index 0` → Overlay `z_index 1` → `OccupantLayer z_index 2`)
+  band. This ADR's ordering (Floor `z_index 0` → Overlay `z_index 1` → `MarkerLayer z_index 2` →
+  `OccupantLayer z_index 3`, as amended 2026-08-20)
   uses `z_index` for the coarse floor→overlay→occupant bands and reserves `y_sort_enabled` purely for
   occupant-vs-occupant/prop depth *inside* `OccupantLayer` — idiomatic and correct today. The
   forward risk: a future node added under `OccupantLayer` (e.g. a VFX node authored later assuming

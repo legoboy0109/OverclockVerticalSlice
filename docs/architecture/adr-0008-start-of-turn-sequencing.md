@@ -21,7 +21,7 @@ Accepted
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 (`active_player`/`round_number`/`match_status`, `end_turn()` sugar), ADR-0002 (`EndTurnAction` verb dispatch — this ADR defines its `apply()` body), ADR-0004 (`Event` base class / `action_applied` signal contract — this ADR's new event types must fit it), ADR-0006 (`AP.reset_turn()`/`AP.discard()`, which already forward-reference "invoked by ADR-0008's start-of-turn sequence"), ADR-0007 (`UnitState`/`StructureState` fields this ADR resets and advances) |
+| **Depends On** | ADR-0001 (`active_player`/`round_number`/`match_status`, `end_turn()` sugar), ADR-0002 (`EndTurnAction` verb dispatch — this ADR defines its `apply()` body), ADR-0004 (`Event` base class / `action_applied` signal contract — this ADR's new event types must fit it), ADR-0006 (`AP.reset_turn()` [4a, flat+carry] + `Credits.add_income()` [4b], which already forward-reference "invoked by ADR-0008's start-of-turn sequence"; the old `AP.discard()` is removed by the economy pivot), ADR-0007 (`UnitState`/`StructureState` fields this ADR resets and advances) |
 | **Enables** | Unblocks implementation of the Unit System, Base & Production, Research/Tech, and Combat Resolution epics (all depend on a defined turn-boundary reset/advance sequence); ADR-0011 (AI headless decision loop — needs a fully defined turn loop to simulate `clone()`-based lookahead against) |
 | **Blocks** | Epic "Foundation: Game State Core" completion — this is the last of the 8 Foundation ADRs; no Core-layer verb handler can be correctness-tested end-to-end (build completing, tech completing, AP resetting) until this is Accepted |
 | **Ordering Note** | This is the final Foundation ADR in the dependency chain (0001 → {0002, 0003} → 0005 → {0004, 0006} → 0007 → 0008) |
@@ -30,7 +30,7 @@ Accepted
 
 ### Problem Statement
 
-`game-state-turn-manager.md` Rule 3 already specifies, in prose, the canonical 4-step start-of-turn order (set active player → clear per-turn flags → apply start-of-turn effects [build-timer + research-timer advance] → reset AP to income), and both `base-production.md` and `research-tech.md` explicitly defer to "the Turn Manager's canonical sequence" for their own completion timing rather than defining an order themselves. ADR-0002 already forward-references this ADR twice — "the *ordering* of which is owned by ADR-0008; `apply_action` only invokes it" and "ADR-0008: Start-of-turn sequencing (invoked by `EndTurnAction.apply()`)" — without defining what `EndTurnAction.apply()` concretely calls.
+`game-state-turn-manager.md` Rule 3 already specifies, in prose, the canonical 4-step start-of-turn order (set active player → clear per-turn flags → apply start-of-turn effects [build-timer + research-timer advance] → reset AP [flat + capped carryover] and add Credit income), and both `base-production.md` and `research-tech.md` explicitly defer to "the Turn Manager's canonical sequence" for their own completion timing rather than defining an order themselves. ADR-0002 already forward-references this ADR twice — "the *ordering* of which is owned by ADR-0008; `apply_action` only invokes it" and "ADR-0008: Start-of-turn sequencing (invoked by `EndTurnAction.apply()`)" — without defining what `EndTurnAction.apply()` concretely calls.
 
 Two further gaps prevent that prose from being implementable as-is:
 1. **`round_number` increment timing** (Rule 4: "increments... each time control returns to the starting player") requires knowing who the starting player *was*, a fact ADR-0001's `GameState` schema never captured.
@@ -44,18 +44,18 @@ Two further gaps prevent that prose from being implementable as-is:
 - Must not introduce a win-check gap: timer-advance effects can complete structures/techs but cannot destroy an HQ, so no new win-check call is needed inside `start_turn()` — the existing `apply_action` step 6 already covers all HQ-destroying paths (combat damage, resolved during the Action phase).
 
 ### Requirements
-- `EndTurnAction.apply()` must: discard the outgoing player's AP, determine the next player, increment `round_number` at the correct point, and run the canonical start-of-turn sequence for the next player.
+- `EndTurnAction.apply()` must: determine the next player, increment `round_number` at the correct point, and run the canonical start-of-turn sequence for the next player. (It no longer discards the outgoing player's AP — AP carries over, capped, per the economy pivot; ADR-0006.)
 - `start_match()` must also run the start-of-turn sequence for the starting player (per the `Setup → PlayerTurn(starting)` transition in `game-state-turn-manager.md`'s state table).
 - Per-unit and per-structure flag resets (`has_attacked`, `tiles_moved_this_turn`, `units_produced_this_turn`) must be attributed to their owning systems' semantics (Unit System / Base & Production), with only the *timing* owned here — per the GDD's own framing.
-- Build-timer and research-timer advances must run before the AP income snapshot, and both must complete before that snapshot is taken if both reach 0 the same turn (`research-tech.md`'s explicit joint-completion requirement).
+- Build-timer and research-timer advances must run before the Credit income add (step 4b), and both must complete before that add if both reach 0 the same turn (`research-tech.md`'s explicit joint-completion requirement). (The AP reset, step 4a, is a flat + carry overwrite and is order-independent of the timer advances.)
 
 ## Decision
 
 `GameState.start_turn(player: int) -> Array[Event]` is the concrete orchestrator for the canonical 4-step sequence, implemented as a `GameState`-owned instance method (matching how `apply_action`/`end_turn`/`clone`/`start_match` are already `GameState`'s own methods, not a separate static utility class). It is called in exactly two places: once by `start_match()` for the starting player, and once per turn by `EndTurnAction.apply()` for the next player.
 
-`EndTurnAction.apply()` additionally owns the end-of-turn half (AP discard) and the `round_number` increment, using a new `starting_player: int` field this ADR adds to `GameState` (immutable after `start_match()`, closing the gap ADR-0001 left open).
+`EndTurnAction.apply()` additionally owns the `round_number` increment, using a new `starting_player: int` field this ADR adds to `GameState` (immutable after `start_match()`, closing the gap ADR-0001 left open). It no longer performs an end-of-turn AP discard — the economy pivot (ADR-0006) removed it: unspent AP carries over (capped, consumed by the next reset) and Credits bank.
 
-Two contracts are forward-declared for Unit System and Base & Production to implement when those systems are coded (no dedicated ADR is planned for either, mirroring how ADR-0006 forward-declared `completed_outpost_count()` for ADR-0007 to implement): `Unit.reset_turn_flags(unit)`, `Structure.reset_turn_flags(structure)`, `BaseProduction.advance_build_timers(state, player)`, and `Research.advance_research_timers(state, player)`. `start_turn()` calls all four plus the already-concrete `AP.reset_turn()` (ADR-0006), in GDD Rule 3's exact order.
+Two contracts are forward-declared for Unit System and Base & Production to implement when those systems are coded (no dedicated ADR is planned for either, mirroring how ADR-0006 forward-declared `completed_outpost_count()` for ADR-0007 to implement): `Unit.reset_turn_flags(unit)`, `Structure.reset_turn_flags(structure)`, `BaseProduction.advance_build_timers(state, player)`, and `Research.advance_research_timers(state, player)`. `start_turn()` calls all four plus the already-concrete `AP.reset_turn()` and `Credits.add_income()` (ADR-0006), in GDD Rule 3's exact order — the old single AP-reset step 4 now splits into **4a** (`AP.reset_turn`, flat + capped carryover) and **4b** (`Credits.add_income`, add `credit_income` to the banked pool), both after step 3's timer advances so a just-completed outpost counts toward Credit income this same turn.
 
 Two new `Event` subclasses join `GameOverEvent` (ADR-0004): `StructureCompletedEvent` and `TechCompletedEvent`, appended by the two advance calls and flowing through the existing `action_applied(result)` signal — no new signal or polling path.
 
@@ -68,14 +68,15 @@ start_match(map, starting_player)
    └─▶ state.start_turn(starting_player)                # first Start-of-turn, no round increment
 
 EndTurnAction.apply(state, action) -> Array[Event]:      # dispatched via apply_action step 5 (ADR-0002)
-    1. AP.discard(state, state.active_player)            # end-of-turn: unspent AP gone, no banking
-    2. next_player := opponent(state.active_player)       # 2-player VS: 1 - active_player
-    3. if next_player == state.starting_player:
+    1. next_player := opponent(state.active_player)       # 2-player VS: 1 - active_player
+    2. if next_player == state.starting_player:
            state.round_number += 1                        # Rule 4: control returned to the starter
-    4. events := state.start_turn(next_player)
-    5. return events
+    3. events := state.start_turn(next_player)
+    4. return events
+    # NO AP discard (economy pivot, ADR-0006): the outgoing player's unspent AP stays in current_ap and
+    # is consumed (capped at AP_CARRYOVER_CAP) by that player's NEXT AP.reset_turn(). Credits bank across turns.
 
-GameState.start_turn(player: int) -> Array[Event]:        # the canonical 4-step sequence (Rule 3)
+GameState.start_turn(player: int) -> Array[Event]:        # the canonical sequence (Rule 3; step 4 now 4a+4b)
     events := []
     1. active_player = player
     2. for e in entities() where e.owner == player:        # stable order (ADR-0003 Rule 3)
@@ -83,8 +84,9 @@ GameState.start_turn(player: int) -> Array[Event]:        # the canonical 4-step
            elif e is StructureState: Structure.reset_turn_flags(e)  # forward-declared, B&P-owned
     3. events += BaseProduction.advance_build_timers(self, player)   # forward-declared
        events += Research.advance_research_timers(self, player)      # forward-declared
-       # (3a) both complete fully before step 4 — no snapshot is taken until both have run
-    4. AP.reset_turn(self, player)                          # ADR-0006, concrete — snapshot + set current_ap
+       # (3a) both complete fully before step 4 — a just-completed outpost must count toward Credit income
+    4a. AP.reset_turn(self, player)                         # ADR-0006 — flat + capped carryover (overwrite current_ap)
+    4b. Credits.add_income(self, player)                    # ADR-0006 — add credit_income to the banked pool (after step 3)
     return events
 ```
 
@@ -106,7 +108,8 @@ func start_turn(player: int) -> Array:                 # Array[Event]; the canon
     var events: Array = []
     events.append_array(BaseProduction.advance_build_timers(self, player))
     events.append_array(Research.advance_research_timers(self, player))
-    AP.reset_turn(self, player)
+    AP.reset_turn(self, player)          # 4a — flat + capped carryover (ADR-0006)
+    Credits.add_income(self, player)     # 4b — bank credit_income, after the timer advances (ADR-0006)
     return events
 
 static func start_match(map: MapDefinition, starting_player: int) -> GameState:
@@ -122,7 +125,8 @@ static func start_match(map: MapDefinition, starting_player: int) -> GameState:
 # end_turn_action.gd — EndTurnAction's apply() (the verb handler ADR-0002 dispatches to)
 static func apply(state: GameState, action: Action) -> Array:   # Array[Event]; assumes validated
     var outgoing: int = state.active_player
-    AP.discard(state, outgoing)
+    # No AP discard (economy pivot, ADR-0006): unspent AP carries; next AP.reset_turn() consumes it
+    # (capped). Credits bank across turns. `outgoing` is retained only for the alternation below.
     var next_player: int = 1 - outgoing                 # 2-player VS: strict alternation
     if next_player == state.starting_player:
         state.round_number += 1                          # Rule 4
@@ -166,7 +170,7 @@ var tech: TechDef                            # ADR-0007
 ## Alternatives Considered
 
 ### Alternative 1: `GameState.start_turn()` as the single orchestrator — CHOSEN
-- **Description**: A `GameState`-owned instance method runs the 4-step sequence; `EndTurnAction.apply()` (Turn-Manager's own verb handler, dispatched normally through `apply_action`) calls it after the end-of-turn discard.
+- **Description**: A `GameState`-owned instance method runs the 4-step sequence; `EndTurnAction.apply()` (Turn-Manager's own verb handler, dispatched normally through `apply_action`) calls it as its final step (after the `round_number` increment; there is no end-of-turn AP discard post-pivot — AP carries).
 - **Pros**: Matches the precedent `apply_action`/`end_turn`/`clone`/`start_match` already set — `GameState` *is* the turn manager (per `game-state-turn-manager.md`'s own framing), so its own orchestration living on itself is not a new pattern. No new class to reason about; `start_turn()` is trivially reachable from both call sites (`start_match`, `EndTurnAction.apply()`).
 - **Cons**: `GameState` accumulates one more method beyond pure state-container behavior.
 - **Rejection Reason**: N/A — chosen.
@@ -187,7 +191,7 @@ var tech: TechDef                            # ADR-0007
 - **Description**: `start_turn()` directly writes `unit.has_attacked = false`, `structure.units_produced_this_turn = 0`, etc., rather than calling forward-declared owning-system methods.
 - **Pros**: One fewer indirection layer for a handful of trivial field writes.
 - **Cons**: Couples the Foundation layer (`GameState`) to the exact set of per-turn flags every Core system will ever define. A future unit type or structure type adding a new per-turn flag would require editing `GameState` (Foundation) rather than only its owning system — the opposite of the ownership boundary `unit-system.md` Rule 2a explicitly draws ("Unit-owned pure operations... Turn Manager owns *when* they run").
-- **Rejection Reason**: User-directed choice (session decision, 2026-07-23) — forward-declaring keeps flag *semantics* owned by Unit System/Base & Production while `GameState` owns only *timing*, consistent with the GDD's own ownership split and with how `AP.reset_turn()`/`AP.discard()` are already forward-declared-and-implemented rather than inlined.
+- **Rejection Reason**: User-directed choice (session decision, 2026-07-23) — forward-declaring keeps flag *semantics* owned by Unit System/Base & Production while `GameState` owns only *timing*, consistent with the GDD's own ownership split and with how `AP.reset_turn()`/`Credits.add_income()` are already forward-declared-and-implemented rather than inlined.
 
 ### Alternative 5: No completion events — silent state transition
 - **Description**: `advance_build_timers()`/`advance_research_timers()` mutate state and return an empty `Array[Event]`; HUD detects completions by polling/diffing `build_status`/`current_research_target` each frame.
@@ -207,7 +211,7 @@ var tech: TechDef                            # ADR-0007
 ### Negative
 - `GameState` now has one more method (`start_turn()`) and one more field (`starting_player`) beyond ADR-0001's original shape — a small, justified schema/behavior growth on the Foundation class.
 - Four forward-declared contracts (`Unit.reset_turn_flags`, `Structure.reset_turn_flags`, `BaseProduction.advance_build_timers`, `Research.advance_research_timers`) exist only as signatures until their owning systems are implemented — same latency risk ADR-0006's forward declarations had, resolved there when ADR-0007 landed.
-- `EndTurnAction.apply()` is now less trivial than a typical verb handler (it owns discard + round-increment + start_turn dispatch) — still a single, linear, five-line sequence, but it is the one verb handler with more than "spend AP and mutate one thing" inside it.
+- `EndTurnAction.apply()` is now less trivial than a typical verb handler (it owns the round-increment + start_turn dispatch; post-pivot it no longer discards AP) — still a single, linear, short sequence, but it is the one verb handler with more than "spend AP and mutate one thing" inside it.
 
 ### Risks
 - **A future N-player mode would break the `next_player := 1 - active_player` alternation.** Out of scope for the Vertical Slice (2-player only, per `technical-preferences.md`), but any future multiplayer-beyond-2 expansion must revisit this line specifically, not assume it generalizes. **Mitigation**: flagged here explicitly so a future ADR touching player count finds this comment.
@@ -219,10 +223,10 @@ var tech: TechDef                            # ADR-0007
 
 | GDD System | Requirement | How This ADR Addresses It |
 |------------|-------------|---------------------------|
-| game-state-turn-manager.md | Rule 3: canonical 4-step start-of-turn order (active player → clear flags → start-of-turn effects → AP reset) | `GameState.start_turn()` implements the exact 4 steps in exact order |
+| game-state-turn-manager.md | Rule 3: canonical start-of-turn order (active player → clear flags → start-of-turn effects → AP reset + Credit income add) | `GameState.start_turn()` implements the steps in order; step 4 is now 4a (`AP.reset_turn`, flat+carry) + 4b (`Credits.add_income`) |
 | game-state-turn-manager.md | Rule 4: `round_number` increments when control returns to the starting player | New `starting_player` field + `EndTurnAction.apply()`'s increment check |
 | game-state-turn-manager.md | States and Transitions: `Setup → PlayerTurn(starting)` fires Start-of-turn; `EndTurn(P) → PlayerTurn(other)` fires Start-of-turn for the other player | `start_match()` calls `start_turn(starting_player)`; `EndTurnAction.apply()` calls `start_turn(next_player)` |
-| ap-economy.md | Rule 5: income is a frozen start-of-turn snapshot, evaluated after the build-timer advance | `AP.reset_turn()` (ADR-0006, concrete) is called last, step 4, after step 3's timer advances |
+| ap-economy.md | Rule 6/7: Credit income is added at start-of-turn, evaluated after the build-timer advance; AP is a flat + capped-carry reset | `Credits.add_income()` is step 4b, after step 3's timer advances (a just-completed outpost counts); `AP.reset_turn()` is step 4a (flat + carry) — both ADR-0006, concrete |
 | base-production.md | Rule 6: build completion is a start-of-turn effect, processed before the income snapshot; batch completions same-turn | `BaseProduction.advance_build_timers()` forward-declared, called at step 3; loop completes all of a player's structures before step 4 runs |
 | research-tech.md | Rule 5: research-timer advance ordered like the build-timer advance, same-turn joint completion with no ordering dependency | `Research.advance_research_timers()` forward-declared, called at step 3 alongside the build-timer advance; Validation Criteria asserts order-independence |
 | unit-system.md | Rule 2a: `reset_turn_flags(unit)` is Unit-owned; Turn Manager owns *when* it runs | `Unit.reset_turn_flags()` forward-declared, called at step 2, filtered to the active player's entities |
@@ -240,7 +244,7 @@ None — this is new orchestration logic completing what ADR-0001/0002/0006/0007
 
 ## Validation Criteria
 - Unit test: a full `start_match()` → several `EndTurnAction`s asserts `round_number` increments exactly when control returns to `starting_player`, for **both** `starting_player = 0` and `starting_player = 1` (catching the gap this ADR closes).
-- Unit test: a start-of-turn where a Production Outpost's `build_turns_remaining` reaches 0 **and** an Economy Outpost is already Completed asserts `AP.income()` (sampled after step 4) reflects the newly-Completed outpost the same turn (the "just-completed counts this turn" guarantee).
+- Unit test: a start-of-turn where an Economy Outpost's `build_turns_remaining` reaches 0 asserts the `current_credits` gain from step 4b (i.e. `Credits.credit_income()` sampled after the timer advance) reflects the newly-Completed outpost the same turn (the "just-completed counts this turn" guarantee — now for Credit income).
 - Unit test: order-independence — running `start_turn()` with `BaseProduction.advance_build_timers()` and `Research.advance_research_timers()` swapped (test-only harness) produces an identical resulting `GameState` (deep-equality) when both a structure and a tech complete the same turn, per `research-tech.md`'s explicit joint-completion rule.
 - Unit test: `Unit.reset_turn_flags()`/`Structure.reset_turn_flags()` are called for the incoming active player's entities only — an opponent's `has_attacked`/`tiles_moved_this_turn` are untouched across the boundary.
 - Determinism test: two identical `GameState`s driven through an identical action sequence (including multiple `EndTurnAction`s) produce byte-identical `round_number`/`active_player`/`entities()` iteration order at every turn boundary (ADR-0003 golden-replay pattern).
@@ -249,6 +253,6 @@ None — this is new orchestration logic completing what ADR-0001/0002/0006/0007
 - ADR-0001: State Model Ownership & Lifecycle (`GameState` base, `end_turn()` sugar, `start_match()`)
 - ADR-0002: Apply-Action Command Model (`EndTurnAction` verb dispatch — this ADR defines its `apply()` body)
 - ADR-0004: Event/Signal Architecture (`Event` base class, `action_applied` signal — this ADR's two new event types)
-- ADR-0006: AP Economy Data Model & Spend Contract (`AP.reset_turn()`/`AP.discard()`, already forward-referencing this ADR)
+- ADR-0006: AP & Credits Economy Data Model & Spend Contract (`AP.reset_turn()` [step 4a, flat+carry] + `Credits.add_income()` [step 4b], already forward-referencing this ADR; `AP.discard()` removed by the pivot)
 - ADR-0007: Unit & Structure Entity/Stat Schema (`UnitState`/`StructureState` fields this ADR resets and advances)
 - `design/gdd/game-state-turn-manager.md`, `design/gdd/ap-economy.md`, `design/gdd/base-production.md`, `design/gdd/research-tech.md`, `design/gdd/unit-system.md`

@@ -81,8 +81,16 @@ This epic is complete when:
 > real end-to-end picking needs an upstream owner. Also unowned: the live
 > `GameState.entities()` → `BoardRenderer` feed (Story 002 stubs occupants).
 
+## Sprint 5 additions (2026-08-19)
+
+Stories 001–005 are Complete. Two new stories carry the art integration now that S4-02 has landed:
+
+| Story | Type | Sprint ID | Notes |
+|---|---|---|---|
+| `story-006-entity-sprite-feed.md` | Integration | S5-01 | Replaces the placeholder diamonds with the real sprite set. **Read `assets/art/README.md` first** — 2× textures, facing map, two-layer cover |
+| `story-007-glow-shader-wiring.md` | Visual/Feel | S5-02 | §8.9 emission mask + per-instance uniforms; delivers the Pillar-1 AP-available vs AP-spent read |
+
 ## Next Step
 
-Run `/story-readiness production/epics/board-renderer/story-001-grid-screen-transform-pair.md`,
-then `/dev-story` to begin. Build this epic before (or alongside the early stories of)
-the Command & Action Interface and Game HUD epics.
+Run `/story-readiness production/epics/board-renderer/story-006-entity-sprite-feed.md`,
+then `/dev-story` to begin. Stories 001–005 are already Complete.

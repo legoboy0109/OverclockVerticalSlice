@@ -308,6 +308,21 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 	var adv_score: float = 0.0
 	var adv_ap_cost: int = 0
 
+	# --- Siege drive ---------------------------------------------------------
+	# Folded exactly like the advance above, and for the same reason: every tile of
+	# progress ties on a per-tile rate, so folding each through the global tie-break
+	# would pick the 1-tile step and the unit would crawl.
+	var hq: StructureState = _enemy_hq(lookahead, unit.owner)
+	var siege_dist_before: int = -1
+	if hq != null:
+		siege_dist_before = lookahead.grid.manhattan_distance(unit.position, hq.position)
+	var siege_found: bool = false
+	var siege_tile: Vector2i = Vector2i.ZERO
+	var siege_tiles_moved: int = 0
+	var siege_dist_after: int = siege_dist_before
+	var siege_score: float = 0.0
+	var siege_ap_cost: int = 0
+
 	for r: Movement.ReachableTile in Movement.reachable(lookahead, unit):
 		if not AP.can_afford(lookahead, unit.owner, r.min_cost):
 			continue
@@ -332,6 +347,33 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 			if _is_better(score, r.min_cost, unit.entity_id, best.score, best.ap_cost, best.entity_id):
 				best = _Candidate.new(_make_move_action(unit, r.tile, tiles_moved), score, r.min_cost, unit.entity_id)
 			continue # Anti-oscillation: no advance/SETUP candidate this call.
+
+		# Siege is evaluated BEFORE the nearest-enemy closure gate below, because the
+		# tiles that matter for a siege are precisely the ones that gate rejects: a
+		# step toward the enemy HQ usually does not close on the nearest enemy unit.
+		if siege_dist_before > 0:
+			var hq_dist_after: int = lookahead.grid.manhattan_distance(r.tile, hq.position)
+			# Same strict-closure rule the advance uses, and for the same
+			# anti-oscillation reason: only tiles that genuinely make progress.
+			if hq_dist_after < siege_dist_before:
+				var s_value: float = AIBalance.ai.siege_value_per_tile_closed \
+					* float(siege_dist_before - hq_dist_after)
+				var s_score: float = s_value / float(tiles_moved)
+				var s_take: bool = false
+				if not siege_found:
+					s_take = true
+				elif hq_dist_after < siege_dist_after:
+					s_take = true
+				elif hq_dist_after == siege_dist_after \
+						and _is_better(s_score, r.min_cost, unit.entity_id, siege_score, siege_ap_cost, unit.entity_id):
+					s_take = true
+				if s_take:
+					siege_found = true
+					siege_tile = r.tile
+					siege_tiles_moved = tiles_moved
+					siege_dist_after = hq_dist_after
+					siege_score = s_score
+					siege_ap_cost = r.min_cost
 
 		var dist_after: int = _nearest_live_enemy_distance(lookahead, r.tile, unit.owner)
 		# Anti-oscillation: consider a bare advance ONLY if it strictly closes
@@ -365,6 +407,9 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 
 	if adv_found and _is_better(adv_score, adv_ap_cost, unit.entity_id, best.score, best.ap_cost, best.entity_id):
 		best = _Candidate.new(_make_move_action(unit, adv_tile, adv_tiles_moved), adv_score, adv_ap_cost, unit.entity_id)
+
+	if siege_found and _is_better(siege_score, siege_ap_cost, unit.entity_id, best.score, best.ap_cost, best.entity_id):
+		best = _Candidate.new(_make_move_action(unit, siege_tile, siege_tiles_moved), siege_score, siege_ap_cost, unit.entity_id)
 
 	return best
 
@@ -466,6 +511,24 @@ static func _nearest_live_enemy_distance(state: GameState, from_tile: Vector2i, 
 		if best_dist == -1 or dist < best_dist:
 			best_dist = dist
 	return maxi(0, best_dist)
+
+
+## The enemy HQ [StructureState] for [param owner], or [code]null[/code] if the
+## opponent has none (it was destroyed, or setup never placed one).
+##
+## The objective the siege drive advances on. Identified via
+## [method StructureState.is_hq] — a Resource-ref check against the real HQ template
+## per ADR-0007, never a parallel flag. Deterministic: [method GameState.entities] is
+## entity_id-ordered, so a hypothetical two-HQ opponent always yields the same one.
+##
+## O(entity count), one pass — the same cost class as the enumeration already running.
+static func _enemy_hq(state: GameState, owner: int) -> StructureState:
+	for e: EntityState in state.entities():
+		if e.owner == owner:
+			continue
+		if e is StructureState and (e as StructureState).is_hq():
+			return e as StructureState
+	return null
 
 
 ## `sets_up_attack_next_turn(dest)` (GDD Edge Cases Term 2, AC-32) — true iff,
@@ -672,7 +735,14 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 
 	for unit_type: UnitTypeDef in producer.type.producible_types:
 		var cost: int = Unit.effective_produce_cost(lookahead, unit_type, producer.owner)
-		if not AP.can_afford(lookahead, producer.owner, cost):
+		# Dual-cost affordability (ADR-0006 pivot): produce needs BOTH the Credit
+		# main cost AND the AP surcharge, else apply_action rejects it — skip such
+		# candidates so the driver never enters an unaffordable-commit reject loop.
+		# NOTE (Landing 4b): scoring below still uses the Credit `cost` as the
+		# value/cost denominator (== ap_equiv_cost at CREDIT_TO_AP_RATE=1); the full
+		# two-currency scoring is deferred to the AI CREDIT_TO_AP_RATE rework.
+		if not Credits.can_afford(lookahead, producer.owner, cost) \
+				or not AP.can_afford(lookahead, producer.owner, Balance.economy.produce_ap_cost):
 			continue
 		for tile: Vector2i in deploy_tiles:
 			var multiplier: float = _reachability_multiplier(lookahead, producer.owner, tile, unit_type)
@@ -808,7 +878,14 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 			continue
 
 		var cost: int = BaseProduction.effective_build_cost(lookahead, structure_type, player)
-		if not AP.can_afford(lookahead, player, cost):
+		# Dual-cost affordability (ADR-0006 pivot): build needs BOTH the Credit main
+		# cost AND the AP surcharge, else apply_action rejects it — skip such
+		# candidates so the driver never enters an unaffordable-commit reject loop.
+		# NOTE (Landing 4b): scoring below still uses the Credit `cost` as the
+		# value/cost denominator (== ap_equiv_cost at CREDIT_TO_AP_RATE=1); the full
+		# two-currency scoring is deferred to the AI CREDIT_TO_AP_RATE rework.
+		if not Credits.can_afford(lookahead, player, cost) \
+				or not AP.can_afford(lookahead, player, Balance.economy.build_ap_cost):
 			continue
 
 		var tiles: Array[Vector2i] = BaseProduction.legal_build_tiles(lookahead, player, structure_type)
@@ -835,33 +912,36 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 ## gate) — kept as an explicit parameter (rather than hardcoding the type
 ## internally) so a future non-Outpost economy building, if one is ever added,
 ## slots in without a signature change. `raw_immediate_value` is fixed 0 (an
-## Economy Outpost's `build_time` produces no immediate board effect the turn
-## it starts, GDD Formulas table) — never computed, just the literal.
+## a structure's `build_time` produces no immediate board effect the turn it
+## starts, GDD Formulas table) — never computed, just the literal.
 ##
-## `marginal_ap_income(t)` is [b]this candidate outpost's own marginal
-## contribution[/b] at future turn `t`, computed the same tiered way
-## [code]AP.ap_income_breakdown[/code] does but isolated to the single
-## marginal outpost being evaluated: if this would be [param player]'s
-## outpost number [code]n+1[/code] (where [code]n[/code] =
-## [method BaseProduction.completed_outpost_count]) and [code]n+1 <=
-## EconomyConfig.tier_threshold[/code], it contributes
-## [code]outpost_bonus_tier1[/code]; otherwise [code]outpost_bonus_tier2[/code]
-## — the GDD's own AC-16 worked contrast (a strictly-higher tier-1 candidate
-## vs. a tier-2 candidate past the threshold). Economy Tech's income term is
-## deliberately never added here (Research is not implemented — the stub
-## scope named in this story's Implementation Notes; the marginal-income
-## computation below reads only [code]EconomyConfig[/code], never
-## [code]Research[/code]).
+## `marginal_credit_income(t)` is [b]this candidate's own marginal contribution[/b]
+## at future turn `t`. ★ [b]S6-01 (2026-08-24): it is now always 0 for a structure
+## build.[/b] The per-outpost income curve this once read is deleted; no structure
+## raises Credit income any more (see [method Credits.credit_income_breakdown]), so
+## building something is not an economic investment and must not be scored as one.
+## That is the PIVOT verdict's fix arriving at the scoring layer.
 ##
 ## No cap is applied anywhere in this sum (the GDD's 2026-07-22 decoupling
 ## note) — the dominant-strategy guardrail is [param economy_investments_committed]'s
 ## cadence cap in the caller, never a valuation ceiling here.
 static func _economy_value(lookahead: GameState, player: int, structure_type: StructureTypeDef) -> float:
-	var economy_cfg: EconomyConfig = Balance.economy
-	var n: int = BaseProduction.completed_outpost_count(lookahead, player)
-	var marginal_rank: int = n + 1 # This candidate would be the player's (n+1)th outpost.
-	var marginal_income: float = float(economy_cfg.outpost_bonus_tier1) if marginal_rank <= economy_cfg.tier_threshold \
-		else float(economy_cfg.outpost_bonus_tier2)
+	# ★ S6-01 (2026-08-24): re-pointed off the deleted per-outpost income curve.
+	#
+	# NO STRUCTURE RAISES CREDIT INCOME ANY MORE. Income comes solely from completed
+	# economy research tiers (Credits.credit_income_breakdown), so the marginal income
+	# of *building* anything is exactly zero — and this function is only ever called
+	# with a structure candidate (see the build-scoring loop above).
+	#
+	# Returning 0 here is CORRECT, not a stub: the AI should no longer treat any build
+	# as an economic investment, because none is. That is precisely the behaviour the
+	# PIVOT verdict wanted — the AI kept choosing BUILD because building bought income.
+	#
+	# ⚠ S6-05 owns the other half: giving RESEARCH actions an economy_value computed
+	# from econ_tier_bonus, and re-anchoring CREDIT_TO_AP_RATE (1.0 -> 0.01, broken by
+	# the ×100 Credit rescale). Until then the AI simply has no economic play to score,
+	# which is a *safe* failure direction — it under-invests rather than over-builds.
+	var marginal_income: float = 0.0
 
 	var raw_immediate_value: float = 0.0
 	var decayed_sum: float = 0.0
@@ -947,8 +1027,13 @@ static func _attack_defense_tech_marginal_value(tech_bonus: float) -> float:
 ## researching player's completed [b]plus[/b] under-construction Economy
 ## Outposts (the caller's responsibility to compute — this function is pure
 ## arithmetic only, per the GDD's "counting in-flight outposts" fix).
-static func _economy_tech_marginal_value(economy_tech_income_bonus: int, projected_completed_outposts: int, economy_tech_tier_threshold: int) -> float:
-	return float(economy_tech_income_bonus) * float(mini(projected_completed_outposts, economy_tech_tier_threshold))
+## ★ S6-01 (2026-08-24): Economy Tech's income no longer scales with outpost count —
+## it is a flat [code]econ_tier_bonus[/code] per completed tier, and the outpost count
+## it multiplied against no longer exists. Kept as a one-line pass-through rather than
+## deleted so the call graph and its tests stay intact until S6-05 rewrites the research
+## scoring path properly.
+static func _economy_tech_marginal_value(econ_tier_bonus: int, _unused_projected: int, _unused_threshold: int) -> float:
+	return float(econ_tier_bonus)
 
 
 ## Per-under-construction-structure cancel-build candidate enumeration

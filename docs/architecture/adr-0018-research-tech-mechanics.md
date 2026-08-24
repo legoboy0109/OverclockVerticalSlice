@@ -3,6 +3,15 @@
 ## Status
 Accepted
 
+**Revised 2026-08-05 — economy pivot: dual-cost research + per-tech `ap_surcharge`; Credit refund.**
+The single AP pool split into two resources, `AP` and `Credits` (research-tech.md PIVOT
+2026-08-05 header; see ap-economy.md). Research's `research_cost` is now Credit-denominated
+(same 7/10/10 values); starting research additionally spends a small per-tech AP
+`ap_surcharge` (default `EconomyConfig.research_ap_cost`, base 1), both-or-neither. Cancel
+now refunds 50% **Credits**, not AP. No Research architecture changed (static utility, D1–D6,
+timers, tri-state derivation, tech flags) — only the resource(s) `start_research`/
+`cancel_research` move. See D5 and the Architecture Diagram for the concrete edits.
+
 ## Date
 2026-07-24
 
@@ -22,10 +31,10 @@ Accepted
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 (GameState/PlayerState — this ADR adds the 3 tech-unlock bool fields to PlayerState), ADR-0002 (apply_action verb dispatch, validate-before-mutate atomicity, stateless re-validation), ADR-0003 (determinism: no RNG, stable iteration order, integer state), ADR-0006 (AP `can_afford`/`spend`), ADR-0007 (TechDef templates + preload'd `Techs` registry, StructureState Lab fields `current_research_target`/`research_turns_remaining`), ADR-0017 (Research Labs are built/cancelled/destroyed via BaseProduction's structure lifecycle; `cancel_research` reuses `BaseProductionConfig.cancel_refund_pct`) |
+| **Depends On** | ADR-0001 (GameState/PlayerState — this ADR adds the 3 tech-unlock bool fields to PlayerState), ADR-0002 (apply_action verb dispatch, validate-before-mutate atomicity, stateless re-validation), ADR-0003 (determinism: no RNG, stable iteration order, integer state), ADR-0006 (AP & Credits Economy — `AP.can_afford`/`AP.spend`, `Credits.can_afford`/`Credits.spend`/`Credits.credit`, `EconomyConfig.research_ap_cost` base), ADR-0007 (TechDef templates + preload'd `Techs` registry, StructureState Lab fields `current_research_target`/`research_turns_remaining`, **`TechDef.ap_surcharge`** per-tech AP-surcharge override field — this ADR reads it, falling back to `EconomyConfig.research_ap_cost`), ADR-0017 (Research Labs are built/cancelled/destroyed via BaseProduction's structure lifecycle; `cancel_research` reuses `BaseProductionConfig.cancel_refund_pct` for the Credit refund) |
 | **Enables** | Closes TR-research-003/004/005 (the last 3 Partial TRs → 200/200 covered); unblocks ADR-0011 (AI research start/cancel + `legal_research_targets`) and ADR-0015/0016 (research menu + tech-status panel); unblocks the **Research/Tech epic**. Completes the 18-ADR plan. |
 | **Blocks** | Research/Tech epic (start/cancel research, tech-unlock, per-Lab state stories) cannot start implementation until this ADR is Accepted |
-| **Ordering Note** | Coordinates-not-depends with ADR-0008 (this ADR supplies the concrete `Research.advance_research_timers` body that ADR-0008 forward-declared and *sequences* at start-of-turn step 3, order-independent vs `advance_build_timers`), ADR-0010 (this ADR supplies the `Research.on_lab_destroyed` body that `GameState.destroy_entity` calls before Lab removal), ADR-0006/0007 (`economy_tech_income_bonus`, whose body ADR-0007 implements, reads this ADR's `has_economy_tech` flag; `ECONOMY_TECH_TIER_THRESHOLD` is AP-Economy-owned), and ADR-0012 (`legal_research_targets` folds `Faction.faction_allows`; `effective_research_cost`/`effective_research_time` are Research-owned `effective_*` sites, == base under Neutral) |
+| **Ordering Note** | Coordinates-not-depends with ADR-0008 (this ADR supplies the concrete `Research.advance_research_timers` body that ADR-0008 forward-declared and *sequences* at start-of-turn step 3, order-independent vs `advance_build_timers`), ADR-0010 (this ADR supplies the `Research.on_lab_destroyed` body that `GameState.destroy_entity` calls before Lab removal), ADR-0006/0007 (`economy_tech_income_bonus`, whose body ADR-0007 implements, reads this ADR's `has_economy_tech` flag; `ECONOMY_TECH_TIER_THRESHOLD` and the base `research_ap_cost` are AP & Credits Economy-owned), and ADR-0012 (`legal_research_targets` folds `Faction.faction_allows`; `effective_research_cost`/`effective_research_time` are Research-owned `effective_*` sites, == base under Neutral) |
 
 ## Context
 
@@ -52,7 +61,7 @@ The rest of Research is already owned: TechDef/Lab-field *schema* (ADR-0007), st
 
 ## Decision
 
-**`Research` is a static utility class** (`class_name Research extends RefCounted`, no instance state) exposing pure functions over `GameState`, exactly mirroring `BaseProduction` (ADR-0017), `AP` (ADR-0006), `Movement` (ADR-0009), `Combat` (ADR-0010). Start/Cancel are typed `Action` subclasses (ADR-0002) whose `validate`/`apply` the `apply_action` verb-enum dispatcher routes to `Research.validate_*` / `apply_*`. No `Research` instance lives on `GameState`.
+**`Research` is a static utility class** (`class_name Research extends RefCounted`, no instance state) exposing pure functions over `GameState`, exactly mirroring `BaseProduction` (ADR-0017), `AP` / `Credits` (ADR-0006), `Movement` (ADR-0009), `Combat` (ADR-0010). Start/Cancel are typed `Action` subclasses (ADR-0002) whose `validate`/`apply` the `apply_action` verb-enum dispatcher routes to `Research.validate_*` / `apply_*`. No `Research` instance lives on `GameState`.
 
 ### D1 — Tech unlocks: 3 named bool flags on PlayerState (TR-research-003)
 
@@ -120,15 +129,28 @@ static func legal_research_targets(state: GameState, lab: StructureState) -> Arr
 
 ### D5 — `start_research` / `cancel_research` + `advance_research_timers` (TR-research-004; Rules 3–7)
 
+**Research is a dual-cost, both-or-neither economic action** (pivot 2026-08-05, mirrors AP &
+Credits Economy Rule 11): `research_cost` **Credits** (the resource gate) *and* a per-tech
+`ap_surcharge` **AP** (the tempo gate), spent both or neither. The **effective research AP
+surcharge** is `tech.ap_surcharge` when the tech overrides it, else the base
+`EconomyConfig.research_ap_cost` (1) — `Research.effective_research_ap_surcharge(state, tech,
+lab.owner)` below folds that lookup (and ADR-0012's faction fold, `== base` under Neutral).
+
 ```gdscript
 static func validate_start_research(state, lab: StructureState, tech: TechDef) -> ActionResult:
     # (1) lab.build_status == COMPLETED;  (2) lab.current_research_target == null (Idle);
     # (3) tech in legal_research_targets(state, lab)  [covers not-Completed, not-Under-Research-elsewhere, faction_allows];
-    # (4) AP.can_afford(state, lab.owner, Research.effective_research_cost(state, tech, lab.owner))  [ADR-0012 fold].
+    # (4) DUAL gate — both required, both-or-neither:
+    #       Credits.can_afford(state, lab.owner, Research.effective_research_cost(state, tech, lab.owner))     [ADR-0012 fold]
+    #       AND AP.can_afford(state, lab.owner, Research.effective_research_ap_surcharge(state, tech, lab.owner))
+    #     Credits short -> reason = Reason.CANT_AFFORD_CREDITS; AP-surcharge short -> reason = Reason.CANT_AFFORD.
     # Any failure -> ActionResult{ok=false, reason}. No mutation (ADR-0002).
 
 static func apply_start_research(state, lab, tech) -> Array[Event]:
-    # AP.spend(effective_research_cost); lab.current_research_target = tech;
+    # PAIRED spend (both legs were validated above; both-or-neither is safe per ADR-0002 — no rollback needed):
+    #   Credits.spend(state, lab.owner, effective_research_cost)
+    #   AP.spend(state, lab.owner, effective_research_ap_surcharge)
+    # lab.current_research_target = tech;
     # lab.research_turns_remaining = Research.effective_research_time(state, tech, lab.owner).
 
 static func validate_cancel_research(state, lab: StructureState) -> ActionResult:
@@ -136,7 +158,10 @@ static func validate_cancel_research(state, lab: StructureState) -> ActionResult
 
 static func apply_cancel_research(state, lab) -> Array[Event]:
     # refund = lab.current_research_target.research_cost * BaseProductionConfig.cancel_refund_pct / 100  (int div; ADR-0017 reuse)
-    # AP credit refund to owner; lab.current_research_target = null; research_turns_remaining = 0.
+    # Credits.credit(state, lab.owner, refund)  — refunds Credits to the owner (Credits pool only; the
+    # ap_surcharge AP already spent at commit is NEVER refunded — tempo is spent, matching B&P's build
+    # AP surcharge on cancel).
+    # lab.current_research_target = null; research_turns_remaining = 0.
 
 static func advance_research_timers(state: GameState, player: int) -> Array[Event]:
     # ADR-0008 step 3 body (order-independent vs advance_build_timers). For each of player's Labs with
@@ -144,13 +169,24 @@ static func advance_research_timers(state: GameState, player: int) -> Array[Even
     # has_<target>_tech flag true, clear current_research_target, append one TechCompletedEvent.
 ```
 
-- **Upfront cost** (Rule 3): full `research_cost` spent at start, not amortized (mirrors `build_cost`).
-- **Cancel refund** reuses ADR-0017's `BaseProductionConfig.cancel_refund_pct` fixed-point (integer division) — `floor(research_cost × 0.5)` = Attack/Defense 5, Economy 3 — cross-system config read, same pattern as Combat reading `defensive_attack_cost`. Research introduces **no new config Resource**: `research_cost`/`research_time` and the effect magnitudes (`RESEARCH_ATK_BONUS`/`DEFENSE_TECH_BONUS`/`ECONOMY_TECH_INCOME_BONUS`) live on the `TechDef` templates (ADR-0007); `ECONOMY_TECH_TIER_THRESHOLD` is AP-Economy-owned (EconomyConfig).
-- **Completion sets the flag** (Rule 8): `advance_research_timers` is the sole flag-writer; on reaching 0 it flips exactly the completing tech's `PlayerState` flag and clears the Lab target, matching ADR-0008's registered signature verbatim.
+- **Upfront cost** (Rule 3): full `research_cost` **Credits** spent at start, not amortized (mirrors
+  `build_cost`), *plus* the tech's `ap_surcharge` **AP**, also spent upfront, not amortized — both legs
+  of the dual cost are paid in full at commit, never partially.
+- **Cancel refund is Credits, not AP** (pivot 2026-08-05): cancel refunds `floor(research_cost × 0.5)`
+  **Credits** to the owner via `Credits.credit` — this is a refund to the owner's Credits pool, not an
+  AP credit; the wording is deliberately disambiguated from the `Credits` resource name. Reuses ADR-0017's
+  `BaseProductionConfig.cancel_refund_pct` fixed-point (integer division) = Attack/Defense 5, Economy 3 —
+  cross-system config read, same pattern as Combat reading `defensive_attack_cost`. The `ap_surcharge` AP
+  spent at commit is **never refunded** on cancel (tempo is spent). Research introduces **no new config
+  Resource**: `research_cost`/`research_time` and the effect magnitudes (`RESEARCH_ATK_BONUS`/
+  `DEFENSE_TECH_BONUS`/`ECONOMY_TECH_INCOME_BONUS`) live on the `TechDef` templates (ADR-0007), as does
+  each tech's `ap_surcharge` override; `ECONOMY_TECH_TIER_THRESHOLD` is AP & Credits Economy-owned
+  (`EconomyConfig`), as is the base `research_ap_cost` (1) the per-tech `ap_surcharge` defaults to.
+- **Completion sets the flag** (Rule 8): `advance_research_timers` is the sole flag-writer; on reaching 0 it flips exactly the completing tech's `PlayerState` flag and clears the Lab target, matching ADR-0008's registered signature verbatim. Unaffected by the dual-cost pivot — completion has no cost.
 
 ### D6 — `on_lab_destroyed` body (Rule 6; TR-research-008 trigger owned by ADR-0010)
 
-`GameState.destroy_entity` (ADR-0010) calls `Research.on_lab_destroyed(state, lab)` **while the Lab is still live** (before Grid/entities removal). In the derived-status model (D3) the revert is *automatic* — erasing the Lab removes its `current_research_target`, so the tech's Under-Research status vanishes with it. The hook is retained per ADR-0010's contract and, defensively, sets `lab.current_research_target = null` explicitly (harmless; the Lab is about to be erased). It **never** refunds `research_cost` (the boom punish) and **never** touches a completed `PlayerState` flag (permanence, Rule 6/8). A tech reverted this way reappears in `legal_research_targets` at any Completed Lab next query.
+`GameState.destroy_entity` (ADR-0010) calls `Research.on_lab_destroyed(state, lab)` **while the Lab is still live** (before Grid/entities removal). In the derived-status model (D3) the revert is *automatic* — erasing the Lab removes its `current_research_target`, so the tech's Under-Research status vanishes with it. The hook is retained per ADR-0010's contract and, defensively, sets `lab.current_research_target = null` explicitly (harmless; the Lab is about to be erased). It **never** refunds the spent `research_cost` **Credits** (the boom punish), **never** refunds the spent `ap_surcharge` **AP** (already spent as tempo), and **never** touches a completed `PlayerState` flag (permanence, Rule 6/8). A tech reverted this way reappears in `legal_research_targets` at any Completed Lab next query.
 
 ### Architecture Diagram
 
@@ -159,20 +195,22 @@ apply_action(action)                        [ADR-0002: sole mutation vector]
     ├── START_RESEARCH  → Research.validate_start_research / apply_start_research
     └── CANCEL_RESEARCH → Research.validate_cancel_research / apply_cancel_research
                             │
-   reads ────────────┬─────┴───────────────┬─────────────────────┐
-   AP.can_afford/spend│  StructureState     │  Techs.ALL registry  │  effective_* / faction_allows (ADR-0012)
-   (ADR-0006)         │  .current_research_ │  TechDef refs        │  effective_research_cost/_time
-                      │   target / _turns_  │  (ADR-0007 preload)  │  (== base under Neutral)
-                      │   remaining         │
-                      │  BaseProductionConfig.cancel_refund_pct (ADR-0017 reuse, cancel refund)
+   reads ────────────┬─────┴───────────────┬─────────────────────┬───────────────────────┐
+   Credits.can_afford/│  StructureState     │  Techs.ALL registry  │  effective_* / faction_ │  TechDef.ap_surcharge
+   spend/credit       │  .current_research_ │  TechDef refs        │  allows (ADR-0012)      │  (ADR-0007) else
+   AND AP.can_afford/  │   target / _turns_  │  (ADR-0007 preload)  │  effective_research_    │  EconomyConfig.
+   spend (dual gate,   │   remaining         │                     │  cost/_time             │  research_ap_cost
+   both-or-neither;    │                     │                     │  (== base under Neutral)│  (ADR-0006 base)
+   ADR-0006)           │  BaseProductionConfig.cancel_refund_pct (ADR-0017 reuse, Credit-refund fraction)
    writes (only inside apply / sequenced bodies):
-     apply_start_research   → spend + set Lab target/timer
-     apply_cancel_research  → refund + clear Lab target
+     apply_start_research   → PAIRED spend (Credits.spend research_cost + AP.spend ap_surcharge) + set Lab target/timer
+     apply_cancel_research  → Credits.credit refund (Credit pool only; AP surcharge never refunded) + clear Lab target
      advance_research_timers→ set PlayerState.has_<X>_tech + clear target (ADR-0008 step 3)   [SOLE flag writer]
      on_lab_destroyed       → clear target (auto-revert); NEVER touches completed flags/refund (ADR-0010 hook)
    queries (pure, live, derived):
      legal_research_targets(state, lab) -> Array[TechDef]
      has_attack_tech / has_defense_tech / has_economy_tech (state, player) -> bool
+     effective_research_ap_surcharge(state, tech, player) -> int   [D5: tech.ap_surcharge else research_ap_cost base]
 ```
 
 ### Key Interfaces
@@ -187,18 +225,20 @@ static func has_defense_tech(state: GameState, player: int) -> bool
 static func has_economy_tech(state: GameState, player: int) -> bool   # read by ADR-0007's economy_tech_income_bonus
 
 # Verb validate/apply pairs (dispatched by apply_action — ADR-0002)
+# Dual-cost, both-or-neither (pivot 2026-08-05): Credits (research_cost) AND AP (ap_surcharge).
 static func validate_start_research(state, lab: StructureState, tech: TechDef) -> ActionResult
 static func apply_start_research(state,   lab: StructureState, tech: TechDef) -> Array[Event]
 static func validate_cancel_research(state, lab: StructureState) -> ActionResult
-static func apply_cancel_research(state,   lab: StructureState) -> Array[Event]   # credits reused cancel_refund_pct
+static func apply_cancel_research(state,   lab: StructureState) -> Array[Event]   # refunds Credits to owner via Credits.credit (reused cancel_refund_pct); ap_surcharge AP never refunded
 
 # Start-of-turn + destruction contract bodies (declared by ADR-0008 / ADR-0010; sequenced/triggered by them)
 static func advance_research_timers(state: GameState, player: int) -> Array[Event]   # ADR-0008 step 3; SOLE flag writer
 static func on_lab_destroyed(state: GameState, lab: StructureState) -> void          # ADR-0010 destroy_entity hook
 
 # Effective (faction-folded) reads — Research-owned effective_X sites per ADR-0012; == base under Neutral
-static func effective_research_cost(state, tech: TechDef, player: int) -> int
+static func effective_research_cost(state, tech: TechDef, player: int) -> int              # Credits
 static func effective_research_time(state, tech: TechDef, player: int) -> int
+static func effective_research_ap_surcharge(state, tech: TechDef, player: int) -> int      # AP; tech.ap_surcharge else EconomyConfig.research_ap_cost base (ADR-0006), then ADR-0012 faction fold
 ```
 
 ## Alternatives Considered
@@ -218,7 +258,7 @@ static func effective_research_time(state, tech: TechDef, player: int) -> int
 ### Alternative 3: A `ResearchConfig` Resource for research constants
 - **Description**: A dedicated config Resource holding research magnitudes/costs.
 - **Pros**: Consistent with other per-system configs.
-- **Cons**: Redundant — `research_cost`/`research_time`/effect magnitudes are per-*tech* data that belong on the `TechDef` templates (ADR-0007), not a flat config; `CANCEL_REFUND_RATE` is already B&P's; `ECONOMY_TECH_TIER_THRESHOLD` is AP-Economy's.
+- **Cons**: Redundant — `research_cost`/`research_time`/effect magnitudes (and each tech's `ap_surcharge` override) are per-*tech* data that belong on the `TechDef` templates (ADR-0007), not a flat config; `CANCEL_REFUND_RATE` is already B&P's; `ECONOMY_TECH_TIER_THRESHOLD` and the base `research_ap_cost` are AP & Credits Economy's.
 - **Rejection Reason**: Tech data is template-shaped, not config-shaped; ADR-0018 introduces no new config Resource.
 
 ## Consequences
@@ -227,17 +267,19 @@ static func effective_research_time(state, tech: TechDef, player: int) -> int
 - Closes the final 3 Partial TRs → **200/200 covered**; completes the 18-ADR plan.
 - Concretely fulfills the forward-declared `advance_research_timers` (ADR-0008) and `on_lab_destroyed` (ADR-0010) bodies, and ADR-0011/0015/0016's `legal_research_targets` dependency.
 - Derived status + permanence-on-PlayerState make Rules 6/8 (survive Lab loss, revert-in-progress-only) structural, not enforced-by-review.
-- Uniform with BaseProduction/AP/Movement/Combat: same static-utility shape, apply_action dispatch, no new config Resource, clone-free.
+- Uniform with BaseProduction/AP & Credits/Movement/Combat: same static-utility shape, apply_action dispatch, no new config Resource, clone-free. The dual-cost gate reuses ADR-0002's existing validate-before-mutate atomicity — no new rollback machinery needed for the paired spend.
 
 ### Negative
 - `has_X_tech` flags are per-specific-tech fields on `PlayerState` — a 4th VS tech would need a new field (accepted: VS tree is fixed at 3).
 - `advance_research_timers`' body lives here while its sequencing lives in ADR-0008, and `on_lab_destroyed`'s body lives here while its trigger lives in ADR-0010 — a two-ADR read for each (mitigated by explicit cross-references both ways).
+- Research now reads two economy pools instead of one (`AP.can_afford`/`spend` **and** `Credits.can_afford`/`spend`/`credit`) — a slightly wider ADR-0006 surface than the pre-pivot single-pool gate (accepted: mirrors every other dual-cost economic action, not Research-specific).
 
 ### Risks
-- **`on_lab_destroyed` mistakenly refunding or touching a completed flag** would break the boom-punish (Rule 6) or permanence (Rule 8). *Mitigation*: the body only clears the in-progress target; it has no refund path and never writes a `PlayerState` flag; covered by the "destroyed mid-research → Not Started, no refund; completed flag survives all Labs destroyed" tests.
+- **`on_lab_destroyed` mistakenly refunding or touching a completed flag** would break the boom-punish (Rule 6) or permanence (Rule 8). *Mitigation*: the body only clears the in-progress target; it has no refund path (Credits or AP) and never writes a `PlayerState` flag; covered by the "destroyed mid-research → Not Started, no refund; completed flag survives all Labs destroyed" tests.
 - **Order-dependence within start-of-turn step 3** — `advance_research_timers` must be commutative with `advance_build_timers` (registered `start_of_turn_step_reordering` forbidden; Economy Tech's completion is income-affecting but the step-3/step-4 boundary, not intra-step order, guarantees the income snapshot sees it). *Mitigation*: neither timer body reads the other's output; income snapshot (step 4) strictly follows all of step 3.
 - **Same-tech double-completion** if mutual exclusion leaked. *Mitigation*: exclusion enforced at both `validate_start_research` and `legal_research_targets`; a second same-tech `start_research` is rejected before a second timer can exist (research-tech.md negative-space AC).
 - **`cancel_refund_pct` cross-system read** couples Research to ADR-0017's config. *Mitigation*: read-only shared constant (GDD Rule 7 explicitly reuses the same registered rate); no duplication.
+- **Partial spend across the dual gate** (Credits spent but AP surcharge not, or vice versa) would break both-or-neither atomicity. *Mitigation*: `validate_start_research` checks **both** `Credits.can_afford` and `AP.can_afford` before `apply_start_research` spends either (ADR-0002's validate-before-mutate); `apply_start_research` is only ever reached after both legs are confirmed affordable, so the paired spend cannot partially fail. Covered by the "affords Credits but not the AP surcharge (or vice-versa) → rejected, nothing spent from either pool" AC.
 
 ## GDD Requirements Addressed
 
@@ -246,9 +288,9 @@ static func effective_research_time(state, tech: TechDef, player: int) -> int
 | research-tech.md | Rule 1/8 — 3 flat permanent per-player unlocks, read live (TR-research-003) | D1 three named `PlayerState` bool flags; live `has_X_tech` accessors; sole writer `advance_research_timers` |
 | research-tech.md | Rule 3/4 — one tech at a time per Lab; parallel Labs; same tech not at 2 of a player's Labs (TR-research-004) | D2 per-Lab `current_research_target`/`research_turns_remaining`; cross-Lab exclusion at validate + legal query |
 | research-tech.md | Rule 4/Interface — `legal_research_targets` excludes Completed + Under-Research-elsewhere; empty for Under-Construction Lab (TR-research-005) | D4 exact filter set, faction_allows fold, canonical tech order, live recompute |
-| research-tech.md | Rule 3/7 — `start_research` spends upfront; `cancel_research` refunds `floor(cost×0.5)`, reverts to Not Started | D5 validate/apply pairs; refund reuses ADR-0017 `cancel_refund_pct` fixed-point |
-| research-tech.md | Rule 5 — research-timer advance completes at start-of-turn, effect live that turn | D5 `advance_research_timers` body (ADR-0008 sequences at step 3, before income snapshot) |
-| research-tech.md | Rule 6 — Lab destroyed mid-research: progress lost, no refund, revert to Not Started; completed techs survive all Labs dying | D3 derived status auto-reverts on Lab erasure; D6 `on_lab_destroyed` hook; flags on PlayerState never touched |
+| research-tech.md | Rule 3/7 — `start_research` is a dual-cost, both-or-neither spend (`research_cost` Credits + `ap_surcharge` AP) upfront; `cancel_research` refunds `floor(research_cost×0.5)` **Credits** only (AP surcharge never refunded), reverts to Not Started (pivot 2026-08-05) | D5 validate/apply pairs — dual gate at validate, paired spend at apply; Credit-only refund via `Credits.credit`, reusing ADR-0017 `cancel_refund_pct` fixed-point |
+| research-tech.md | Rule 5 — research-timer advance completes at start-of-turn, effect live that turn | D5 `advance_research_timers` body (ADR-0008 sequences at step 3, before income snapshot) — unaffected by the dual-cost pivot |
+| research-tech.md | Rule 6 — Lab destroyed mid-research: Credits and AP-surcharge progress both lost, no refund of either, revert to Not Started; completed techs survive all Labs dying | D3 derived status auto-reverts on Lab erasure; D6 `on_lab_destroyed` hook (no Credit or AP refund path); flags on PlayerState never touched |
 | research-tech.md | Rule 9 — deterministic, headless, clone-safe | Pure static functions over `GameState`; Labs iterated by `entity_id`, techs by registry order; no RNG (ADR-0003) |
 
 ## Performance Implications
@@ -261,15 +303,15 @@ static func effective_research_time(state, tech: TechDef, player: int) -> int
 No existing code. Greenfield: the Research/Tech epic implements this ADR. The `advance_research_timers` and `on_lab_destroyed` bodies (forward-declared by ADR-0008/0010) and the 3 PlayerState fields are implemented here at the same time.
 
 ## Validation Criteria
-- research-tech.md Pure-Logic gate passes against injected Grid + AP + Lab/tech fixtures: start legality (Completed+Idle+affordable), one-tech-per-Lab, cross-Lab same-tech exclusion (Lab A researching X ⇒ excluded at Lab B; second `start_research` rejected), per-player independence (A researching X ⇒ B may research X), Under-Construction Lab ⇒ empty `legal_research_targets`; timer decrement/completion + batch co-completion of *different* techs; destruction → Not Started + no refund + reappears in legal targets; completed flag survives all Labs destroyed; cancel refund 5/5/3; determinism under `clone()`.
-- Integration gate (real Grid + AP + Turn Manager + Unit + Combat + B&P): Lab build/cancel via real BaseProduction; Rule 5 ordering (tech live same turn it completes); Economy Tech + Economy Outpost co-completing → income reflects both (step-3-before-step-4); real Lab destroyed mid-research → revert observable via `legal_research_targets`.
+- research-tech.md Pure-Logic gate passes against injected Grid + AP + Credits + Lab/tech fixtures: start legality (Completed+Idle+affordable in **both** Credits and the AP surcharge), one-tech-per-Lab, cross-Lab same-tech exclusion (Lab A researching X ⇒ excluded at Lab B; second `start_research` rejected), per-player independence (A researching X ⇒ B may research X), Under-Construction Lab ⇒ empty `legal_research_targets`; both-or-neither rejection when only one of Credits/AP-surcharge is short (nothing spent from either pool); timer decrement/completion + batch co-completion of *different* techs; destruction → Not Started + no Credit refund + no AP-surcharge refund + reappears in legal targets; completed flag survives all Labs destroyed; cancel Credit refund 5/5/3 (AP surcharge never refunded); determinism under `clone()`.
+- Integration gate (real Grid + AP + Credits + Turn Manager + Unit + Combat + B&P): Lab build/cancel via real BaseProduction (Credits + `BUILD_AP_COST`, B&P's own dual-cost, distinct from Research's per-tech surcharge); Rule 5 ordering (tech live same turn it completes); Economy Tech + Economy Outpost co-completing → `credit_income` reflects both (step-3-before-step-4); real Lab destroyed mid-research → revert observable via `legal_research_targets`.
 - A `/architecture-review` after Accept confirms research-003/004/005 flip Covered (200/200) and no signature drift vs ADR-0008/0010/0011/0015.
 
 ## Related Decisions
 - ADR-0001 (state model) — PlayerState gains the 3 tech-unlock bool fields
 - ADR-0002 (apply_action) — start/cancel verb dispatch + atomicity + idempotent re-validate
-- ADR-0006 (AP economy) — cost gate
-- ADR-0007 (entity/stat schema) — TechDef templates, `Techs` registry, StructureState Lab fields; `economy_tech_income_bonus` body reads `has_economy_tech`
+- ADR-0006 (AP & Credits economy) — dual-cost gate (Credits `research_cost` + AP `ap_surcharge`); Credit-only cancel refund; base `research_ap_cost`
+- ADR-0007 (entity/stat schema) — TechDef templates (incl. `ap_surcharge` field), `Techs` registry, StructureState Lab fields; `economy_tech_income_bonus` body reads `has_economy_tech`
 - ADR-0008 (start-of-turn sequencing) — sequences `advance_research_timers` (step 3, commutative with build-timer advance)
 - ADR-0010 (combat/destruction) — `destroy_entity` calls `on_lab_destroyed` before Lab removal
 - ADR-0011 (AI) / ADR-0015 (command FSM) / ADR-0016 (HUD) — consumers of `legal_research_targets` + tech status

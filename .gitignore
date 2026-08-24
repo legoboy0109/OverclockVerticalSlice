@@ -154,3 +154,7 @@ production/session-state/active.md
 production/session-logs/
 # Per-developer agent memory — local learnings, not shared in VC
 .claude/agent-memory/
+# Cross-agent working notes (long-term local scratch memory)
+.agent/
+# Raw AI generations — bulky and reproducible from recorded seeds (see asset-manifest notes)
+art-source/generated/

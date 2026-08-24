@@ -80,6 +80,27 @@ extends Resource
 ## `build_cost`) — a siege-priority weight, not a sunk-cost figure.
 @export var hq_siege_value: int = 12
 
+## Score per tile of distance closed toward the ENEMY HQ, for a bare advance that is
+## not closing on the nearest enemy — [b]the siege drive[/b].
+##
+## [b]Why this exists.[/b] An AI-vs-AI simulation over 20 matches recorded ZERO HQ
+## damage across 4,182 turn-rows: the AI values the HQ as a TARGET generously
+## ([member hq_siege_value] 12) but had no term pulling it TOWARD one. Its only
+## positional objective was "close on the nearest enemy", and since both sides keep
+## producing, the nearest enemy is always a unit and the armies stall mid-map forever.
+## A high value on something you never stand next to is never realised. See
+## `production/playtests/swing-back-simulation-appendix-2026-08-21.md`.
+##
+## [b]Why it sits ABOVE [member positional_value_per_tile_closed] (0.16).[/b] Below it,
+## the AI keeps preferring to shuffle toward whichever enemy is nearest and the stall
+## simply returns. Actual attacks are unaffected — the move+attack combo loop scores far
+## higher than any bare advance — so this only ever competes with aimless advancing, and
+## there it should win: progress toward the objective beats progress toward nothing in
+## particular.
+##
+## Must stay above [member pass_threshold] (0.15) or the AI will decline to siege at all.
+@export var siege_value_per_tile_closed: float = 0.20
+
 ## Tolerance below which two `action_score` values are treated as tied,
 ## triggering the deterministic tie-break (lowest `ap_cost`, then lowest
 ## entity ID) instead of a fragile raw-float `==`.

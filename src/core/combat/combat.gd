@@ -493,6 +493,12 @@ static func validate(state: GameState, action: AttackAction) -> int:
 ## for the counter's own damage, so "never chains" holds by the shape of the
 ## code, not a runtime guard flag.
 ##
+## [b]Events returned[/b] (Story 008 / S5-06): one [DamageEvent] per hit that
+## lands — the primary always, the counter when it fires — each appended BEFORE
+## any [method GameState.destroy_entity] events it causes, so the array replays
+## as blow-then-death (ADR-0004 ordering). A committed attack therefore returns
+## one or two [DamageEvent]s and zero to two destruction events.
+##
 ## O(1): [method AP.spend] + one flag write + one [method damage] call + one
 ## clamp + (on lethal) one O(1) [method GameState.destroy_entity] call, plus
 ## — the counter step — three O(1) boolean conditions, one [method legal_targets]
@@ -510,6 +516,9 @@ static func apply(state: GameState, action: AttackAction) -> Array[Event]:
 	var events: Array[Event] = []
 	var dmg: int = damage(state, attacker, target)
 	_apply_damage_to(target, dmg)   # polymorphic: unit OR structure defender
+	# The blow is announced BEFORE any death it causes (ADR-0004 ordering): a
+	# consumer replaying events in order sees the hit land, then the kill.
+	events.append(DamageEvent.new(attacker.entity_id, target.entity_id, dmg))
 	if target.current_hp <= 0:
 		events.append_array(state.destroy_entity(target.entity_id))
 	# Story 006: conditional single counter — fires iff the defender survived
@@ -520,6 +529,9 @@ static func apply(state: GameState, action: AttackAction) -> Array[Event]:
 	if target.current_hp > 0 and target.type.can_counterattack and _in_defenders_profile(state, target, attacker):
 		var counter_dmg: int = damage(state, target, attacker)   # roles swapped
 		_apply_damage_to(attacker, counter_dmg)                  # polymorphic — attacker may be a StructureState (Story 005)
+		# Roles swapped here too: the counter's DamageEvent names the DEFENDER as
+		# its attacker_id, which is what makes the renderer lunge the right body.
+		events.append(DamageEvent.new(target.entity_id, attacker.entity_id, counter_dmg))
 		if attacker.current_hp <= 0:
 			events.append_array(state.destroy_entity(attacker.entity_id))
 	return events

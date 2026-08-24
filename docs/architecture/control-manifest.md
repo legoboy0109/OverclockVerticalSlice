@@ -345,6 +345,10 @@ each rule, see the referenced ADR.
 - **Command & Action Interface must consume `pick_at()` as its one click-routing entry point — never call `screen_to_grid` directly for routing** — source: ADR-0013
 - **Every on-board glyph must anchor at `grid_to_screen(tile) + GLYPH_OFFSETS[glyph_class]`, with `GLYPH_OFFSETS` authored as data, not hardcoded literals; hp legibility wins any offset conflict (enforced by authoring discipline, not runtime arbitration)** — source: ADR-0013
 - **Children of `OccupantLayer` must not set a `z_index` that fights the Y-sort** — source: ADR-0013
+- **Never call `TileMapLayer.set_cell()` (or query a cell) with a raw grid tile — always go through `BoardRenderer.cell_for(tile)`** — a grid tile is NOT a tile-map cell; Redot's `TILE_SHAPE_ISOMETRIC` layout uses a different basis than the hand-rolled dimetric pair, and painting raw tiles drifts up to 1408px across a 12×10 board — source: ADR-0013 (Amendment 2026-08-19)
+- **`TileSet.tile_size` is the 2× TEXTURE size (256×128) with both tile layers scaled 0.5; `TILE_WIDTH_PX`/`TILE_HEIGHT_PX` (128×64) remain the ON-SCREEN cell and must not be changed to match** — source: ADR-0013 (Amendment 2026-08-19)
+- **Every occupant sprite must be `centered = false` with `offset = (-width/2, -height)` so its bottom-centre is the ground-contact pivot, anchored per-texture (sprites are trimmed to opaque bounds and differ in size)** — source: ADR-0013, art-bible §8.4
+- **Cover must render as TWO nodes — a floor cell plus a separate Y-sorted prop — never one TileMapLayer cell** — a cell cannot participate in the occupant Y-sort — source: ADR-0013, art-bible §8.8
 - **`BoardRenderer` must read `GameState`/`GridState` read-only and react to the `action_applied` signal — it must never mutate authoritative state** — source: ADR-0013
 - **`BoardCursor` must be a headless `RefCounted` value object (`Vector2i grid_pos`) — no scene-tree reference, no input-polling of its own, no game rules** — source: ADR-0014
 - **`BoardCursor.step(direction, grid)` must map to grid-axis directions (`ui_up`→y-1, `ui_down`→y+1, `ui_left`→x-1, `ui_right`→x+1), never screen-axis/iso-visual directions** — source: ADR-0014
@@ -391,6 +395,7 @@ each rule, see the referenced ADR.
 
 ### Forbidden Approaches
 - **Never call `TileMapLayer.local_to_map()` for picking (nor `map_to_local()` for our own coordinate math)** — it has a documented accuracy bug for `TILE_SHAPE_ISOMETRIC` (GH#89423) and does not reliably invert the iso projection — source: ADR-0013
+  - *Bounded exception*: `BoardRenderer.cell_for()` uses `local_to_map()` solely to address the engine's OWN cell space (which engine cell covers a point our transform located). Engine forward and engine inverse are mutually exact — verified 0.0px over 120 tiles. This is never grid↔screen math and never picking — source: ADR-0013 (Amendment 2026-08-19)
 - **Never mix an engine `map_to_local()` forward transform with a hand-rolled inverse** — two independently-sourced math paths for what must be exact inverses risk drifting apart at edge pixels, a preview-vs-commit-style render-seam bug — source: ADR-0013
 - **Never render floor/overlay tiles as individually placed Polygon2D/Sprite2D nodes instead of `TileMapLayer`** — forfeits native batching the draw-call budget depends on — source: ADR-0013
 - **Never resolve clicks via pure diamond math (`screen_to_grid` alone) with no occupant-priority layer** — a tall sprite's overlapping silhouette could silently resolve to the wrong tile — source: ADR-0013

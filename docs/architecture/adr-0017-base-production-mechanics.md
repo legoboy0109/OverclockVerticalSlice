@@ -3,6 +3,15 @@
 ## Status
 Accepted
 
+> **Revised 2026-08-05 — economy pivot: dual-cost build/produce; Credit refund.** `ap-economy.md`
+> split the single AP pool into **AP** (tactical) + **Credits** (banked economic), per the
+> ADR-0006 revision. Build and Produce become **dual-cost** economic actions — Credits (main cost,
+> same numbers) **plus** a small AP surcharge (`build_ap_cost`/`produce_ap_cost`, owned by
+> `EconomyConfig`) — validated and spent both-or-neither. The cancel-build refund is now 50%
+> **Credits**, not AP. `DEFENSIVE_ATTACK_COST` (Defensive Structure fire) is untouched — combat
+> stays AP-only. See D4/D5/D6 below and the updated Key Interfaces block. Cross-reference:
+> `docs/architecture/change-impact-2026-08-05-ap-credits-economy.md`.
+
 ## Date
 2026-07-24
 
@@ -13,7 +22,7 @@ Accepted
 | **Engine** | Godot 4.6 / Redot 26.2 (Godot-4.x-compatible) |
 | **Domain** | Core (game logic / state mutation) |
 | **Knowledge Risk** | LOW — pure GDScript logic (static class, Dictionary/PackedInt32Array reads via Grid); no engine subsystem, no rendering, no post-cutoff API surface |
-| **References Consulted** | `docs/engine-reference/godot/VERSION.md`; established-pattern precedent ADRs `adr-0006` (AP static utility + config-as-Resource), `adr-0009` (Movement static utility + fixed-point config), `adr-0010` (Combat static utility + `destroy_entity` exit) |
+| **References Consulted** | `docs/engine-reference/godot/VERSION.md`; established-pattern precedent ADRs `adr-0006` (AP & Credits Economy — dual static utility + config-as-Resource), `adr-0009` (Movement static utility + fixed-point config), `adr-0010` (Combat static utility + `destroy_entity` exit) |
 | **Post-Cutoff APIs Used** | None |
 | **Verification Required** | None engine-specific. `legal_build_tiles` per-call cost is bounded by design (friendly-frontier candidate set); no perf spike gate (unlike ADR-0009/0011 search budgets). |
 | **Engine Review** | godot-specialist 2026-07-24 — NO BLOCKING issues. Confirmed: `RefCounted` static-utility shape, `Array[Vector2i]` typed returns, `sort_custom(Callable)` (not the deprecated string form), integer `/` truncation = floor for non-negative operands, Resource-ref `in`-membership on preload'd typed arrays, and `BaseProductionConfig`-via-logic-free-Autoload cross-read all idiomatic for 4.6 and consistent with ADR-0006/0009/0010. No deprecated/post-cutoff API referenced. One MINOR note folded into D3 + Risks (Dictionary-as-set determinism comment). TD-ADR strategic review skipped — Lean review mode. |
@@ -22,7 +31,7 @@ Accepted
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 (GameState/PlayerState, EntityState base, `duplicate_deep()` clone), ADR-0002 (apply_action verb dispatch, validate-before-mutate atomicity, stateless re-validation idempotency), ADR-0003 (determinism: integer state + fixed-point config + stable iteration order), ADR-0005 (GridState occupancy: `place`/`remove`/`occupant_at`/`is_passable`/`manhattan_distance`/`neighbors`), ADR-0006 (AP `can_afford`/`spend`, config-as-Resource via the `Balance`-style Autoload), ADR-0007 (StructureState/UnitState schema, `StructureState.BuildStatus` enum, `StructureTypeDef.producible_types`, preload'd type registry) |
+| **Depends On** | ADR-0001 (GameState/PlayerState, EntityState base, `duplicate_deep()` clone, `current_credits` field), ADR-0002 (apply_action verb dispatch, validate-before-mutate atomicity, stateless re-validation idempotency, dual-cost `CANT_AFFORD`/`CANT_AFFORD_CREDITS` Reason pair), ADR-0003 (determinism: integer state + fixed-point config + stable iteration order), ADR-0005 (GridState occupancy: `place`/`remove`/`occupant_at`/`is_passable`/`manhattan_distance`/`neighbors`), ADR-0006 (**AP & Credits Economy** — `AP.can_afford`/`spend`, `Credits.can_afford`/`spend`/`credit`, `EconomyConfig.build_ap_cost`/`produce_ap_cost` surcharges, config-as-Resource via the `Balance`-style Autoload), ADR-0007 (StructureState/UnitState schema, `StructureState.BuildStatus` enum, `StructureTypeDef.producible_types`, preload'd type registry) |
 | **Enables** | Closes the 4 forward-declared B&P mechanic contracts consumed by ADR-0011 (`legal_build_tiles`, `legal_deploy_tiles`) and ADR-0015 (`legal_build_tiles`/`legal_deploy_tiles`/`production_cap` for the Command FSM menu + overlays); unblocks the **Base & Production epic** implementation |
 | **Blocks** | Base & Production epic (build/produce/cancel stories) cannot start implementation until this ADR is Accepted |
 | **Ordering Note** | Coordinates-not-depends with ADR-0008 (this ADR supplies the concrete `BaseProduction.advance_build_timers` body that ADR-0008 forward-declared and *sequences* at start-of-turn step 3 — ADR-0008 owns WHEN, this ADR owns the transition), ADR-0010 (`GameState.destroy_entity` is the combat/terminal exit this ADR's lifecycle terminates into; `DEFENSIVE_ATTACK_COST` is B&P-owned config that Combat reads cross-system), and ADR-0012 (build/produce read through the faction `effective_build_cost`/`effective_build_time`/`effective_production_cap` folds — B&P-owned `effective_*` sites, == base under Neutral) |
@@ -53,7 +62,7 @@ The rest of Base & Production is already owned: structure *schema/fields* + `Bui
 
 ## Decision
 
-**`BaseProduction` is a static utility class** (`class_name BaseProduction extends RefCounted`, no instance state) exposing pure functions over `GameState`, exactly mirroring `AP` (ADR-0006), `Movement` (ADR-0009), and `Combat` (ADR-0010). The three player verbs — Build, Produce, CancelBuild — are typed `Action` subclasses (ADR-0002) whose `validate`/`apply` the `apply_action` verb-enum dispatcher routes to `BaseProduction.validate_*` / `apply_*`. No B&P instance ever lives on `GameState`, so the AI's per-candidate clone loop never copies it.
+**`BaseProduction` is a static utility class** (`class_name BaseProduction extends RefCounted`, no instance state) exposing pure functions over `GameState`, exactly mirroring `AP` and `Credits` (ADR-0006), `Movement` (ADR-0009), and `Combat` (ADR-0010). The three player verbs — Build, Produce, CancelBuild — are typed `Action` subclasses (ADR-0002) whose `validate`/`apply` the `apply_action` verb-enum dispatcher routes to `BaseProduction.validate_*` / `apply_*`. No B&P instance ever lives on `GameState`, so the AI's per-candidate clone loop never copies it.
 
 ### D1 — Structure lifecycle FSM (TR-baseprod-002)
 
@@ -68,14 +77,14 @@ The **persisted** lifecycle is the 2-value `StructureState.BuildStatus { UNDER_C
                                  (erased from entities_by_id + Grid — terminal)
 ```
 
-- `build()` creates a `StructureState` with `build_status = UNDER_CONSTRUCTION`, `build_turns_remaining = effective_build_time(...)`, and places it into Grid occupancy in the same atomic apply.
-- `advance_build_timers(state, player) -> Array[Event]` (the concrete body of ADR-0008's forward-declared contract) decrements `build_turns_remaining` on the player's Under-Construction structures and flips any reaching 0 to `COMPLETED`, appending one `StructureCompletedEvent` (ADR-0004/0008 payload) per completion. **This ADR owns the transition; ADR-0008 owns that it runs at start-of-turn step 3, before the AP income snapshot.**
+- `validate_build(state, player, structure_type, tile)` gates on a **DUAL** check (both-or-neither, ADR-0006 dual-cost contract): `Credits.can_afford(state, player, effective_build_cost(state, structure_type, player))` — on failure, `reason = CANT_AFFORD_CREDITS` — **AND** `AP.can_afford(state, player, Balance.economy.build_ap_cost)` — on failure, `reason = CANT_AFFORD` — plus the placement-legality check (`tile in legal_build_tiles(...)`, D3). `apply_build` (only after `validate_build` passes) is a **paired spend** — safe because `validate_build` already checked both pools (ADR-0002 validate-before-mutate) — `Credits.spend(state, player, effective_build_cost(...))` then `AP.spend(state, player, Balance.economy.build_ap_cost)` — then creates a `StructureState` with `build_status = UNDER_CONSTRUCTION`, `build_turns_remaining = effective_build_time(...)`, and places it into Grid occupancy, all in the same atomic apply.
+- `advance_build_timers(state, player) -> Array[Event]` (the concrete body of ADR-0008's forward-declared contract) decrements `build_turns_remaining` on the player's Under-Construction structures and flips any reaching 0 to `COMPLETED`, appending one `StructureCompletedEvent` (ADR-0004/0008 payload) per completion. **This ADR owns the transition; ADR-0008 owns that it runs at start-of-turn step 3, before the Credit income snapshot** (renamed from "AP income snapshot" — the income formula moved to `Credits.credit_income()` under ADR-0006's revision; the ordering guarantee itself is unchanged).
 - Combat destruction and voluntary cancel both terminate the entity via erasure — no lingering `DESTROYED` record. Combat routes through `GameState.destroy_entity` (ADR-0010); cancel routes through this ADR's `cancel_build` (see D5). This keeps a single "structure exists ⇔ it is in `entities_by_id` and occupies a Grid tile" invariant with no dead terminal rows to filter.
 - Per-instance runtime fields (`hp`, `build_turns_remaining`, `units_produced_this_turn`, `has_attacked`, `owner`) are **declared on `StructureState` by ADR-0007**; this ADR owns only the rules that transition them. Their per-turn reset (`units_produced_this_turn = 0`, `has_attacked = false`) is `Structure.reset_turn_flags` — forward-declared by ADR-0008 (step 2), B&P-owned semantics (registry `turn_flag_reset`); this ADR confirms that body.
 
 ### D2 — Status-agnostic occupancy (TR-baseprod-003)
 
-`build()` inserts the structure into the Grid occupancy index (ADR-0005) **at placement time, regardless of `BuildStatus`**. There is **no intangible-under-construction carve-out anywhere**: because occupancy is a single index that Movement (ADR-0009 — any occupant is a hard blocker) and Combat (ADR-0010 — any structure occupant is a legal target and blocks DIRECT line-of-fire) already consult, an Under-Construction structure blocks and is targetable *by construction of the shared index*, satisfying Rule 3 with zero new branch. Atomicity vs Grid: `Grid.place` + `AP.spend` occur inside one `apply_action` (ADR-0002 validate-before-mutate), so a rejected/unaffordable build leaves both AP and Grid untouched.
+`build()` inserts the structure into the Grid occupancy index (ADR-0005) **at placement time, regardless of `BuildStatus`**. There is **no intangible-under-construction carve-out anywhere**: because occupancy is a single index that Movement (ADR-0009 — any occupant is a hard blocker) and Combat (ADR-0010 — any structure occupant is a legal target and blocks DIRECT line-of-fire) already consult, an Under-Construction structure blocks and is targetable *by construction of the shared index*, satisfying Rule 3 with zero new branch. Atomicity vs Grid: `Grid.place` + the dual `Credits.spend` + `AP.spend` (D1) occur inside one `apply_action` (ADR-0002 validate-before-mutate), so a rejected/unaffordable build leaves Credits, AP, and Grid all untouched.
 
 ### D3 — `legal_build_tiles` (TR-baseprod-005)
 
@@ -128,26 +137,47 @@ static func legal_deploy_tiles(state: GameState, producer: StructureState, unit_
 static func validate_produce(state, producer: StructureState, unit_type: UnitTypeDef, tile: Vector2i) -> ActionResult:
     # (1) producer Completed;  (2) unit_type in producer.type.producible_types (Resource-ref membership);
     # (3) producer.units_produced_this_turn < effective_production_cap(state, producer, owner)  [ADR-0012 fold];
-    # (4) AP.can_afford(state, owner, Unit.effective_produce_cost(state, unit_type, owner))     [Unit-owned cost, ADR-0012 fold];
+    # (4) DUAL-COST gate (both-or-neither, ADR-0006 dual-cost contract):
+    #       Credits.can_afford(state, owner, Unit.effective_produce_cost(state, unit_type, owner))  [Unit-owned Credit cost, ADR-0012 fold]
+    #       -> on failure, reason = CANT_AFFORD_CREDITS
+    #       AND AP.can_afford(state, owner, Balance.economy.produce_ap_cost)                        [AP surcharge, EconomyConfig-owned]
+    #       -> on failure, reason = CANT_AFFORD
     # (5) tile in legal_deploy_tiles(state, producer, unit_type).
     # Any failure -> ActionResult{ ok=false, reason }. No mutation (ADR-0002).
 ```
 
-`apply_produce` (only after `validate_produce` passes, same atomic action): `AP.spend(cost)`; create a `UnitState` via the Unit epic's factory (ADR-0007 schema) as **Active** on `tile` (units have no build time — Unit Rule 2); `Grid.place`; `producer.units_produced_this_turn += 1`; append the unit's spawn event. `producible_types` membership is Resource-reference identity against the preload'd registry (ADR-0007 `runtime_load_of_type_templates` forbidden), never a string/enum compare. Re-validation is idempotent at commit (ADR-0002): if the deploy tile or producer status changed between preview and commit, `apply` re-runs `validate_produce` and rejects with no spend.
+`apply_produce` (only after `validate_produce` passes, same atomic action): a **paired spend**, both-or-neither and safe because `validate_produce` already checked both pools (ADR-0002 validate-before-mutate) — `Credits.spend(state, owner, credit_cost)` **then** `AP.spend(state, owner, Balance.economy.produce_ap_cost)`; create a `UnitState` via the Unit epic's factory (ADR-0007 schema) as **Active** on `tile` (units have no build time — Unit Rule 2); `Grid.place`; `producer.units_produced_this_turn += 1`; append the unit's spawn event. `producible_types` membership is Resource-reference identity against the preload'd registry (ADR-0007 `runtime_load_of_type_templates` forbidden), never a string/enum compare. Re-validation is idempotent at commit (ADR-0002): if the deploy tile or producer status changed between preview and commit, `apply` re-runs `validate_produce` and rejects with no spend from either pool.
+
+> **`produce_cost` is now Credit-denominated** (same numbers as the pre-pivot AP cost) — see D6a.
 
 ### D5 — `cancel_build` + refund (part of TR-baseprod-002, Rule 10)
 
-`cancel_build(structure)` validates: structure is owner's, `UNDER_CONSTRUCTION` (Completed structures cannot be cancelled — only combat-destroyed), and applies: **credit** `refund` AP to the owner's pool, `Grid.remove(position)`, `entities_by_id.erase(entity_id)`. Refund uses **integer fixed-point** (see D6), returned on the `ActionResult` so the Command FSM / HUD render it from the query rather than re-deriving it (registry `balance_constant_in_presentation_layer` forbidden). Combat destruction never calls `cancel_build`, so it never refunds (Rule 10 / AP Economy Rule 6).
+`cancel_build(structure)` validates: structure is owner's, `UNDER_CONSTRUCTION` (Completed structures cannot be cancelled — only combat-destroyed), and applies: **refund Credits to the owner** via `Credits.credit(state, owner, refund)` — `refund` is **50% of `effective_build_cost`, in the Credits pool** (D6a), **not** AP; `Grid.remove(position)`; `entities_by_id.erase(entity_id)`. **No AP is refunded** — the `build_ap_cost` surcharge already spent at build time is gone (the tempo was already paid; only the Credit main cost is partially recovered). Refund uses **integer fixed-point** (see D6a), returned on the `ActionResult` so the Command FSM / HUD render it from the query rather than re-deriving it (registry `balance_constant_in_presentation_layer` forbidden). Combat destruction never calls `cancel_build`, so it never refunds (Rule 10 / AP & Credits Economy Rule 8).
 
-### D6 — B&P-owned config (`BaseProductionConfig`)
+> **Wording note (disambiguation):** earlier drafts of this ADR used "credit" as the refund *verb*
+> ("credit refund AP to the owner's pool") — pre-pivot, when AP was the only pool, that read
+> unambiguously. Post-pivot, "credit" is also the name of a resource and a static class
+> (`Credits.credit()`), so the verb usage is confusing next to it. This ADR now always writes
+> "refund Credits to the owner" for the action and reserves "`credit()`" for the method name.
+
+### D6a — B&P-owned config (`BaseProductionConfig`)
 
 B&P's non-template constants live in a dedicated `BaseProductionConfig` (`extends Resource`, `.tres`), loaded once via the existing `Balance`-style logic-free Autoload (ADR-0006 `gameplay_config_storage` pattern) — never on `GameState`, so it is not deep-copied by the AI clone loop.
 
 | Field | Type | Value | Notes |
 |-------|------|-------|-------|
-| `cancel_refund_pct` | int | 50 | **Fixed-point percent** (not a float rate). `refund = build_cost * cancel_refund_pct / 100` via integer division — floors toward the harsher side exactly as `floor(build_cost × 0.5)` (4→2, 9→4, 6→3, odd 5→2). Keeps the AP-refund path integer-only per ADR-0003; matches ADR-0009's `soft_move_penalty_x10` fixed-point precedent. |
-| `defensive_attack_cost` | int | 1 | B&P-owned; **read cross-system by Combat** (ADR-0010) to price a Defensive Structure's fire (< unit `attack_cost` 2). Same cross-system-config-read pattern as EconomyConfig's tier threshold. |
+| `cancel_refund_pct` | int | 50 | **Fixed-point percent** (not a float rate). `refund = effective_build_cost * cancel_refund_pct / 100` via integer division, **paid in Credits** via `Credits.credit()` — floors toward the harsher side exactly as `floor(build_cost × 0.5)` (4→2, 9→4, 6→3, odd 5→2). Keeps the Credit-refund path integer-only per ADR-0003; matches ADR-0009's `soft_move_penalty_x10` fixed-point precedent. |
+| `defensive_attack_cost` | int | 1 | B&P-owned; **read cross-system by Combat** (ADR-0010) to price a Defensive Structure's fire (< unit `attack_cost` 2). **Stays AP-only** — combat, not an economic action; never dual-cost. Same cross-system-config-read pattern as EconomyConfig's tier threshold. |
 | `max_outpost_count` | int | 10 | **Disabled** in the VS (0 or a sentinel = off). Documented tuning lever only; `completed_outpost_count` is not count-capped in the VS. |
+
+> **Ownership split (post-pivot):** `BaseProductionConfig` owns `cancel_refund_pct` (the Credit
+> refund rate), `defensive_attack_cost` (AP-only combat pricing), and `max_outpost_count`. It does
+> **not** own the `build_ap_cost` / `produce_ap_cost` AP surcharges — those are **AP & Credits
+> Economy-owned**, declared on `EconomyConfig` (ADR-0006) and read cross-system by
+> `validate_build`/`apply_build`/`validate_produce`/`apply_produce` via `Balance.economy.build_ap_cost`
+> / `Balance.economy.produce_ap_cost`, the same cross-system-config-read pattern
+> `defensive_attack_cost` already uses in the other direction (Combat reads a B&P config field).
+> Two configs, two owners, one shared `Balance` Autoload — no field duplicated across them.
 
 > **GDD representation note (non-behavioral):** base-production.md states `CANCEL_REFUND_RATE = 0.5` (float). This ADR refines it to `cancel_refund_pct: int = 50` for ADR-0003 integer-path compliance. Numerically identical across the whole tunable range (0.3–0.6 → 30–60). A one-line GDD footnote is owed noting the fixed-point representation (no value/behavior change).
 
@@ -156,23 +186,25 @@ B&P's non-template constants live in a dedicated `BaseProductionConfig` (`extend
 ```
 apply_action(action)                         [ADR-0002: sole mutation vector]
     │  verb-enum dispatch
-    ├── BUILD        → BaseProduction.validate_build / apply_build
-    ├── PRODUCE      → BaseProduction.validate_produce / apply_produce
-    └── CANCEL_BUILD → BaseProduction.validate_cancel / apply_cancel
+    ├── BUILD        → BaseProduction.validate_build / apply_build     [DUAL-COST: Credits + AP surcharge]
+    ├── PRODUCE      → BaseProduction.validate_produce / apply_produce [DUAL-COST: Credits + AP surcharge]
+    └── CANCEL_BUILD → BaseProduction.validate_cancel / apply_cancel   [Credits-only refund, no AP]
                             │
-   reads ─────────────┬────┴─────────────┬───────────────────────┐
-   AP.can_afford/spend│  Grid.place/remove│  StructureTypeDef      │  effective_* (ADR-0012)
-   (ADR-0006)         │  occupant_at      │  .producible_types     │  effective_build_cost/
-                      │  is_passable      │  (ADR-0007 registry)   │  _time/_production_cap
-                      │  manhattan/neigh  │                        │  (== base under Neutral)
-                      │  (ADR-0005)       │
+   reads ─────────────┬────┴──────────────┬───────────────────────┐
+   Credits.can_afford/│  Grid.place/remove │  StructureTypeDef      │  effective_* (ADR-0012)
+   spend/credit  AND  │  occupant_at       │  .producible_types     │  effective_build_cost/
+   AP.can_afford/spend│  is_passable       │  (ADR-0007 registry)   │  _time/_production_cap
+   (ADR-0006; AP      │  manhattan/neigh   │                        │  (== base under Neutral)
+   surcharge read from│  (ADR-0005)        │
+   Balance.economy —  │
+   EconomyConfig-owned)│
    queries (pure, no mutation, live):
      legal_build_tiles(state, player, structure_type) -> Array[Vector2i]
      legal_deploy_tiles(state, producer, unit_type)   -> Array[Vector2i]
      advance_build_timers(state, player) -> Array[Event]   [body of ADR-0008 step 3 contract]
    terminal exits:
-     cancel_build → erase + refund      (this ADR)
-     destroy_entity (ADR-0010)          → erase, no refund
+     cancel_build → erase + refund Credits (50%, D6a) — no AP refund   (this ADR)
+     destroy_entity (ADR-0010)          → erase, no refund (Credits or AP)
 ```
 
 ### Key Interfaces
@@ -185,12 +217,15 @@ static func legal_build_tiles(state: GameState, player: int, structure_type: Str
 static func legal_deploy_tiles(state: GameState, producer: StructureState, unit_type: UnitTypeDef) -> Array[Vector2i]
 
 # Verb validate/apply pairs (dispatched by apply_action — ADR-0002)
+# BUILD and PRODUCE are DUAL-COST (Credits main cost + AP surcharge, both-or-neither — ADR-0006):
+#   validate_* : Credits.can_afford(...) [reason=CANT_AFFORD_CREDITS on fail] AND AP.can_afford(...) [reason=CANT_AFFORD on fail]
+#   apply_*    : Credits.spend(...) THEN AP.spend(...) — safe because validate_* already checked both (ADR-0002)
 static func validate_build(state, player: int, structure_type: StructureTypeDef, tile: Vector2i) -> ActionResult
 static func apply_build(state,   player: int, structure_type: StructureTypeDef, tile: Vector2i) -> Array[Event]
 static func validate_produce(state, producer: StructureState, unit_type: UnitTypeDef, tile: Vector2i) -> ActionResult
 static func apply_produce(state,   producer: StructureState, unit_type: UnitTypeDef, tile: Vector2i) -> Array[Event]
 static func validate_cancel(state, structure: StructureState) -> ActionResult
-static func apply_cancel(state,   structure: StructureState) -> Array[Event]   # credits refund
+static func apply_cancel(state,   structure: StructureState) -> Array[Event]   # refunds Credits only (50%, D6a); no AP refund
 
 # Start-of-turn contract body (declared by ADR-0008; sequenced by it at step 3)
 static func advance_build_timers(state: GameState, player: int) -> Array[Event]
@@ -218,8 +253,8 @@ static func effective_production_cap(state, producer: StructureState, player: in
 ### Alternative 3: Float cancel-refund rate (as written in the GDD)
 - **Description**: `CANCEL_REFUND_RATE: float = 0.5`, `refund = floori(build_cost * rate)`.
 - **Pros**: Verbatim GDD match.
-- **Cons**: Injects a float into the AP-refund path; ADR-0003 keeps the economy integer-only; ADR-0009 already set the scaled-int precedent.
-- **Rejection Reason**: Fixed-point `cancel_refund_pct: int` is numerically identical and determinism-clean; user-confirmed.
+- **Cons**: Injects a float into the Credit-refund path (pre-pivot: the AP-refund path); ADR-0003 keeps the economy integer-only; ADR-0009 already set the scaled-int precedent.
+- **Rejection Reason**: Fixed-point `cancel_refund_pct: int` is numerically identical and determinism-clean; user-confirmed. *(Unaffected by the 2026-08-05 pivot — only which pool the refund lands in changed, not the integer-fixed-point decision.)*
 
 ## Consequences
 
@@ -236,7 +271,9 @@ static func effective_production_cap(state, producer: StructureState, player: in
 ### Risks
 - **Signature drift** vs ADR-0011/0015 forward declarations. *Mitigation*: signatures here are transcribed to match the registry's forward-declared shapes (`legal_build_tiles(state, player, structure_type)`, `legal_deploy_tiles(state, producer, unit_type)`); a `/architecture-review` after Accept re-checks.
 - **`effective_production_cap` two-sided invariant** (ADR-0012 TR-faction-006): base cap 0 must stay 0 (a non-producer never becomes a producer via faction delta); base ≥ 1 → `max(1, base + delta)`. *Mitigation*: implemented as the two-branch form ADR-0012 specifies, not a single `max(0, …)` clamp; covered by the Neutral-inert regression test.
-- **`cancel_refund_pct` fixed-point** must use integer division (`build_cost * pct / 100`), not float then floor, to stay determinism-clean. *Mitigation*: stated in D6; unit test asserts 4/9/6/5 → 2/4/3/2. (godot-specialist 2026-07-24 confirmed GDScript integer `/` truncates toward zero = `floor` for these non-negative operands.)
+- **`cancel_refund_pct` fixed-point** must use integer division (`build_cost * pct / 100`), not float then floor, to stay determinism-clean. *Mitigation*: stated in D6a; unit test asserts 4/9/6/5 → 2/4/3/2. (godot-specialist 2026-07-24 confirmed GDScript integer `/` truncates toward zero = `floor` for these non-negative operands.)
+- **Dual-cost both-or-neither drift** (2026-08-05 pivot): `apply_build`/`apply_produce` must spend Credits and AP together, never one without the other, or a rejected/half-affordable action could leak a partial spend. *Mitigation*: both spends sit inside the single `apply_action` atomic step per ADR-0002, and are safe specifically *because* `validate_build`/`validate_produce` already gate on **both** pools first (ADR-0002 validate-before-mutate — the same discipline ADR-0006 relies on for its own dual-cost contract); a unit test should assert Credits-short and AP-surcharge-short cases each leave *both* pools and Grid unchanged.
+- **`CANT_AFFORD` vs `CANT_AFFORD_CREDITS` mix-up**: the two `Reason` values are easy to transpose (Credits-short must report `CANT_AFFORD_CREDITS`, AP-surcharge-short must report `CANT_AFFORD`). *Mitigation*: ADR-0002 already declares both in its `Reason` enum for exactly this pair; validate_build/validate_produce tests assert the reason matches the pool that was actually short, independently.
 - **`Dictionary`-as-set in `legal_build_tiles`** could mislead a future maintainer into reusing the idiom where the trailing `sort_custom` is dropped, tripping `nondeterministic_iteration_order` (ADR-0003). *Mitigation*: the transient dedup Dictionary's iteration order is never observed (only membership); the canonical returned order comes solely from `sort_custom(_by_tile_index)`. Comment in D3 flags this explicitly (godot-specialist 2026-07-24 MINOR note). `_by_tile_index` is a `static func(a,b)->bool` comparator with no captured state (matches ADR-0009's `_neighbors_in_fixed_order`).
 
 ## GDD Requirements Addressed
@@ -244,10 +281,10 @@ static func effective_production_cap(state, producer: StructureState, player: in
 | GDD System | Requirement | How This ADR Addresses It |
 |------------|-------------|--------------------------|
 | base-production.md | Rule 3 — structures occupy 1 tile, block movement + DIRECT LoF, targetable while building (TR-baseprod-003) | D2 status-agnostic single-index occupancy; blocking/targeting inherited from the shared Grid index consulted by Movement/Combat — no carve-out |
-| base-production.md | Rule 4 — build spends `build_cost`, places Under-Construction, occupies immediately | D1 `apply_build` + D2 atomic `AP.spend` + `Grid.place` in one `apply_action` |
+| base-production.md | Rule 4 — build spends `build_cost` **Credits** + `BUILD_AP_COST` AP surcharge (both-or-neither), places Under-Construction, occupies immediately | D1 `validate_build`/`apply_build` dual-cost gate + paired spend (`Credits.spend` + `AP.spend`, AP surcharge read from `Balance.economy.build_ap_cost`) + D2 atomic `Grid.place` in one `apply_action` |
 | base-production.md | Rule 5 — placement: empty+passable, manhattan==1 to friendly, >2 from every enemy structure, live (TR-baseprod-005) | D3 `legal_build_tiles` friendly-frontier candidate set + strict-`>2` standoff filter, recomputed each call, HQ excluded |
-| base-production.md | Rule 7 — produce: Completed producer, in `producible_types`, `production_cap`/turn, deploy adjacent empty (TR-baseprod-008) | D4 `validate_produce` 5-gate + `legal_deploy_tiles`; `apply_produce` spawns Active unit; Resource-ref membership |
-| base-production.md | Rule 10 — voluntary cancel refunds `floor(build_cost × 0.5)`; combat destruction refunds nothing | D5 `cancel_build` integer refund (D6 fixed-point) + erase; combat path via `destroy_entity` (ADR-0010) never refunds |
+| base-production.md | Rule 7 — produce: Completed producer, in `producible_types`, `production_cap`/turn, deploy adjacent empty, spends `produce_cost` **Credits** + `PRODUCE_AP_COST` AP surcharge (both-or-neither) (TR-baseprod-008) | D4 `validate_produce` dual-cost 5-gate + `legal_deploy_tiles`; `apply_produce` paired spend (`Credits.spend` + `AP.spend`) then spawns Active unit; Resource-ref membership |
+| base-production.md | Rule 10 — voluntary cancel refunds `floor(build_cost × 0.5)` in **Credits** (no AP refund); combat destruction refunds nothing | D5 `cancel_build` → `Credits.credit()` integer refund (D6a fixed-point) + erase; combat path via `destroy_entity` (ADR-0010) never refunds either pool |
 | base-production.md | Lifecycle table — Under-Construction/Completed/Destroyed/Removed (TR-baseprod-002) | D1 2-value stored `BuildStatus` + two terminal erasure exits (cancel/destroy) |
 | base-production.md | Rule 13 — deterministic, headless, clone-safe | Pure static functions over `GameState`; canonical tile-index ordering; no RNG (ADR-0003) |
 
@@ -261,14 +298,14 @@ static func effective_production_cap(state, producer: StructureState, player: in
 No existing code. Greenfield: the Base & Production epic implements this ADR. `advance_build_timers` and `Structure.reset_turn_flags` bodies (forward-declared by ADR-0008) are implemented here at the same time.
 
 ## Validation Criteria
-- Base-production.md Pure-Logic gate passes against injected Grid + AP fixtures: template inertness of Under-Construction structures; `legal_build_tiles` adjacency/standoff boundary cases (manhattan exactly 2 excluded, unit-or-structure adjacency, HQ excluded, empty when no legal tile); `produce` cap/type/deploy gates; `cancel_refund` = 2/4/3 (and 5→2); determinism under `clone()` (two clones of the same fixture, same action → field-wise equal; source unchanged).
-- Integration gate (real Grid + AP + Turn Manager + Unit): build→income timing (Rule 6 ordering, owned by ADR-0008 but exercised end-to-end here), produce→real Unit entity, live re-legalization after an enemy structure is destroyed.
-- A `/architecture-review` after Accept confirms the 4 TRs flip Covered and no signature drift vs ADR-0011/0015.
+- Base-production.md Pure-Logic gate passes against injected Grid + AP + Credits fixtures: template inertness of Under-Construction structures; `legal_build_tiles` adjacency/standoff boundary cases (manhattan exactly 2 excluded, unit-or-structure adjacency, HQ excluded, empty when no legal tile); `produce` cap/type/deploy gates; **dual-cost gates** — Credits-short → `CANT_AFFORD_CREDITS` with no spend, AP-surcharge-short → `CANT_AFFORD` with no spend, both-affordable → paired spend leaves both pools decremented and nothing else; `cancel_refund` = 2/4/3 Credits (and 5→2), zero AP refunded in every case; determinism under `clone()` (two clones of the same fixture, same action → field-wise equal; source unchanged).
+- Integration gate (real Grid + AP + Credits + Turn Manager + Unit): build→Credit-income timing (Rule 6 ordering, owned by ADR-0008 but exercised end-to-end here), produce→real Unit entity, live re-legalization after an enemy structure is destroyed.
+- A `/architecture-review` after Accept confirms the 4 TRs flip Covered and no signature drift vs ADR-0011/0015, and that the dual-cost gate matches ADR-0006's contract.
 
 ## Related Decisions
-- ADR-0002 (apply_action command model) — verb dispatch + atomicity + idempotent re-validate
+- ADR-0002 (apply_action command model) — verb dispatch + atomicity + idempotent re-validate; dual-Reason (`CANT_AFFORD`/`CANT_AFFORD_CREDITS`)
 - ADR-0005 (grid representation) — occupancy/placement primitives
-- ADR-0006 (AP economy) — cost gate + config-as-Resource pattern
+- ADR-0006 (AP & Credits Economy) — dual-cost gate (`Credits.can_afford`/`spend`/`credit` + `AP.can_afford`/`spend`), `EconomyConfig.build_ap_cost`/`produce_ap_cost` surcharges, config-as-Resource pattern
 - ADR-0007 (entity/stat schema) — `StructureState`, `BuildStatus`, `producible_types`, type registry
 - ADR-0008 (start-of-turn sequencing) — sequences `advance_build_timers`/`reset_turn_flags` bodies defined here
 - ADR-0010 (combat/destruction) — `destroy_entity` terminal exit; reads `defensive_attack_cost`

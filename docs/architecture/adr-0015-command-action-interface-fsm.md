@@ -3,6 +3,14 @@
 ## Status
 Accepted
 
+**Revised 2026-08-05** — economy pivot: the single AP pool split into two resources (AP +
+Credits, ADR-0006). This ADR adds `projected_remaining_credits` (D-1b sibling of
+`projected_remaining_ap`), extends the Pass-Through Invariant and Tier-1/5 consumption to cover
+`Credits.*` queries alongside `AP.*`, and makes Produce/Build/Research menu-affordability a dual
+gate (`Credits.can_afford AND AP.can_afford`) with the disabled reason naming the binding pool
+(`CANT_AFFORD` vs. `CANT_AFFORD_CREDITS`). Move/Attack are unaffected — AP-only throughout. See
+Addenda for the full change log.
+
 ## Date
 2026-07-24
 
@@ -13,7 +21,7 @@ Accepted
 | **Engine** | Redot 26.2 (Godot 4.6-compatible fork) |
 | **Domain** | Input / UI (FSM + preview/commit orchestration) |
 | **Knowledge Risk** | MEDIUM — the FSM core is pure GDScript logic (no engine API). The engine-touching parts (mouse-motion tile-change gating, the Cancel-Build hold timer, subscribing to `action_applied`) all consume surfaces ADR-0013 (`pick_at`) and ADR-0014 (`BoardCursor`, `input_locked`) already define and validate; this ADR introduces no new post-cutoff API of its own. The two HIGH-risk items in this cluster (iso picking, dual-focus input order) live in ADR-0013/0014 and are gated there. |
-| **References Consulted** | `docs/engine-reference/godot/VERSION.md`, `modules/input.md`, `modules/ui.md`, `breaking-changes.md`, `deprecated-apis.md`; `design/gdd/command-action-interface.md` (full); `design/gdd/game-hud.md` (the #9↔#10 shared-signal seam); `docs/architecture/adr-0002-apply-action-command-model.md`, `adr-0004-event-signal-architecture.md`, `adr-0009-reachable-search-pathfinding.md`, `adr-0010-combat-resolution-destruction-wincheck.md`, `adr-0013-isometric-board-rendering.md`, `adr-0014-input-focus-architecture.md` |
+| **References Consulted** | `docs/engine-reference/godot/VERSION.md`, `modules/input.md`, `modules/ui.md`, `breaking-changes.md`, `deprecated-apis.md`; `design/gdd/command-action-interface.md` (full, incl. the 2026-08-05 economy-pivot revision); `design/gdd/game-hud.md` (the #9↔#10 shared-signal seam); `docs/architecture/adr-0002-apply-action-command-model.md`, `adr-0004-event-signal-architecture.md`, `adr-0006-ap-economy-data-model-spend-contract.md` (revised for the pivot — `AP`/`Credits` static classes), `adr-0009-reachable-search-pathfinding.md`, `adr-0010-combat-resolution-destruction-wincheck.md`, `adr-0013-isometric-board-rendering.md`, `adr-0014-input-focus-architecture.md`, `adr-0017-base-production-mechanics.md` (dual-cost validate order) |
 | **Post-Cutoff APIs Used** | None new. The Cancel-Build hold is a `_process`-delta accumulator + `Input.is_action_pressed` poll (both stable ≤4.3, chosen over `create_timer` for free early-release detection — §2); the `input_locked` debounce reuses ADR-0014's `await get_tree().create_timer().timeout` (stable since 4.0). `InputEventMouseMotion`/`event.position` handling is unchanged since ≤4.3 and unaffected by the 4.6 dual-focus split (that changes `Control` focus routing only, not raw event delivery to a plain `Node`). |
 | **Verification Required** | None net-new — inherits ADR-0013's picking spike and ADR-0014's input-order/dual-focus spike as prerequisites (both must pass before this ADR's consuming code is trustworthy). This ADR's own logic is Logic-typed and covered by unit tests, not an engine spike. |
 
@@ -21,7 +29,7 @@ Accepted
 
 | Field | Value |
 |-------|-------|
-| **Depends On** | ADR-0001 (`GameState` read API — `active_player`, `match_status`, `entities()`, `entity_at()`, the selected entity), ADR-0002 (`apply_action`/`ActionResult` — the sole commit vector this FSM routes through, and the accept/reject it reacts to for Tier-4), ADR-0004 (`action_applied` signal — the board-change re-issue trigger, the commit-flash shared event, and how a `GameOver` transition is observed), ADR-0006 (`AP.can_afford`/`current_ap`/`income` — affordability + `projected_remaining_ap`), ADR-0009 (`Movement.reachable` — Tier-1 move set with `is_surcharged`), ADR-0010 (`Combat.legal_targets`/`legal_targets_from`/`preview_damage`/`blocked_reason` — Tier-1 attack set + D-3 hypothetical), ADR-0013 (`BoardRenderer.pick_at`/`grid_to_screen`/`set_overlay`/`clear_overlay` — picking + overlay render), ADR-0014 (`BoardCursor`, the active-locus precedence, `input_locked`, and `InputConfig` — the input substrate; this ADR **adds one field** to `InputConfig`) |
+| **Depends On** | ADR-0001 (`GameState` read API — `active_player`, `match_status`, `entities()`, `entity_at()`, the selected entity), ADR-0002 (`apply_action`/`ActionResult` — the sole commit vector this FSM routes through, and the accept/reject it reacts to for Tier-4; its `Reason` enum's `CANT_AFFORD`/`CANT_AFFORD_CREDITS` pair names the binding pool on a Tier-4 reject), ADR-0004 (`action_applied` signal — the board-change re-issue trigger, the commit-flash shared event, and how a `GameOver` transition is observed), ADR-0006 (**AP & Credits Economy, revised for the pivot** — `AP.can_afford`/`current_ap` for Move/Attack affordability + `projected_remaining_ap`; **`Credits.can_afford`/`current_credits`/`credit_income`** for the economic-verb dual gate + `projected_remaining_credits`; AP has no income term post-pivot), ADR-0009 (`Movement.reachable` — Tier-1 move set with `is_surcharged`), ADR-0010 (`Combat.legal_targets`/`legal_targets_from`/`preview_damage`/`blocked_reason` — Tier-1 attack set + D-3 hypothetical), ADR-0013 (`BoardRenderer.pick_at`/`grid_to_screen`/`set_overlay`/`clear_overlay` — picking + overlay render), ADR-0014 (`BoardCursor`, the active-locus precedence, `input_locked`, and `InputConfig` — the input substrate; this ADR **adds one field** to `InputConfig`), ADR-0017 (Base & Production — the economic-verb `apply_action` handlers this FSM's commits route into; dual-cost validate order) |
 | **Enables** | Command & Action Interface epic implementation (this ADR is the last architectural gate on it). No downstream ADR *depends* on it — it is a leaf Presentation system (command-action-interface.md: "Downstream dependents: None"). |
 | **Blocks** | Every Command & Action Interface story (selection, menu, preview, commit, cancel, End Turn, the four recompute tiers). |
 | **Ordering Note** | Lands after ADR-0013 (consumes `pick_at`/overlays) and ADR-0014 (consumes `BoardCursor`/`input_locked`/`InputConfig`). Coordinates with — but does not block — ADR-0016 (Game HUD): the commit-flash (this ADR) and the AP-tick (ADR-0016) both subscribe to ADR-0004's one `action_applied` signal; the `projected_remaining_ap` *number* this ADR produces renders on the HUD's *counter* (ADR-0016). The `INPUT_LOCK_MS ≥ AP_TICK_DURATION_MS` invariant ADR-0014 forward-declared is enforced by ADR-0016 at load. |
@@ -45,17 +53,22 @@ named highest-desync-risk item.
 
 ### Constraints
 - Static GDScript typing (`.claude/docs/technical-preferences.md`).
-- **Pass-Through Invariant (CR-2, TR-cmdui-010)**: this layer owns *no* cost/damage/legality/AP math
-  and holds *zero* copies of any owning-system balance constant. Every displayed value is the literal
-  return of an owning-system query, evaluated at render time.
+- **Pass-Through Invariant (CR-2, TR-cmdui-010)**: this layer owns *no* cost/damage/legality/AP/Credit
+  math and holds *zero* copies of any owning-system balance constant. Every displayed value is the
+  literal return of an owning-system query, evaluated at render time — now spanning **two pools'**
+  queries (`AP.*` and `Credits.*`) since the pivot, not one.
 - **No hover-only interactions** (`technical-preferences.md`, TR-cmdui-024): every interaction has a
   keyboard/gamepad path — satisfied by consuming ADR-0014's `BoardCursor` (the cursor position *is*
   the hover for non-mouse input) and native `Control` focus for the menu.
 - **Single mutation vector**: the FSM commits *only* via `GameState.apply_action` (ADR-0002); it
-  never writes state, never deducts AP, never re-validates legality itself (Tier-4 re-validation
-  happens *inside* the owning system's `apply_action`, and the FSM only reacts to the result).
+  never writes state, never deducts AP **or Credits**, never re-validates legality itself (Tier-4
+  re-validation happens *inside* the owning system's `apply_action`, and the FSM only reacts to the
+  result). The FSM previews both pools; it spends neither — `AP.spend()`/`Credits.spend()` run only
+  inside each acting system's `apply()` step (ADR-0006).
 - **All queries are side-effect-free** (a contract owed by the dependencies, ADR-0009/0010/0006) —
-  so the FSM may re-issue them freely on board-change without perturbing state.
+  so the FSM may re-issue them freely on board-change without perturbing state. This now covers
+  `Credits.can_afford`/`current_credits`/`credit_income` identically to their `AP.can_afford`/`current_ap`
+  counterparts (`credit_income` has no `AP.*` mirror — income is Credit-only post-pivot).
 - Board-change is defined against the **logical** `GameState` model, never scene-tree node presence
   (command-action-interface.md's hard implementation constraint).
 
@@ -68,8 +81,11 @@ named highest-desync-risk item.
   board-change; Tier-2 the D-3 `legal_targets(unit, from_tile)` batch once per `PREVIEW_MOVE` entry;
   Tier-3 O(1) hover reads; Tier-4 commit-time re-validation inside the owning `apply_action`
   (TR-cmdui-006/007/008/009).
-- Consumption contracts for Movement, Combat, Base & Production, AP Economy, and Turn Manager
-  (TR-cmdui-011/012/013/014/015), routing every commit through `apply_action`.
+- Consumption contracts for Movement, Combat, Base & Production, AP & Credits Economy, and Turn
+  Manager (TR-cmdui-011/012/013/014/015), routing every commit through `apply_action`. The AP &
+  Credits Economy contract is now **dual-pool**: Move/Attack gate on `AP.can_afford` alone;
+  Produce/Build/Research gate on `Credits.can_afford AND AP.can_afford` (both-or-neither), with the
+  disabled-verb reason naming whichever pool binds.
 - The commit-flash ↔ AP-tick single-shared-event wiring (TR-cmdui-023).
 
 ## Decision
@@ -92,21 +108,36 @@ static func next_state(current: State, trigger: Trigger, state: GameState) -> St
 
 ## PURE: the CR-4 contextual menu for a selected entity — the list of {verb, enabled, reason}.
 ## Calls ONLY the owning systems' side-effect-free queries (Movement.reachable, Combat.legal_targets,
-## AP.can_afford, BaseProduction.legal_* / production_cap). Holds no balance constant of its own.
+## AP.can_afford, Credits.can_afford, BaseProduction.legal_* / production_cap). Holds no balance
+## constant of its own. Move/Attack gate on AP.can_afford alone; Produce/Build/Research gate on
+## Credits.can_afford AND AP.can_afford (dual, both-or-neither — see menu_model note below).
 static func menu_model(state: GameState, entity: EntityState) -> Array[VerbEntry]: ...
 
-## PURE display derivations (Formulas D-1/D-2/D-3) — each computed EXCLUSIVELY from query returns.
-static func projected_remaining_ap(state: GameState, player: int, previewed_cost: int) -> int:
-    return AP.current_ap(state, player) - previewed_cost   # D-1: no re-derivation, one subtraction
+## PURE display derivations (Formulas D-1/D-1b/D-2/D-3) — each computed EXCLUSIVELY from query returns.
+static func projected_remaining_ap(state: GameState, player: int, previewed_ap_cost: int) -> int:
+    return AP.current_ap(state, player) - previewed_ap_cost        # D-1: no re-derivation, one subtraction
+static func projected_remaining_credits(state: GameState, player: int, previewed_credit_cost: int) -> int:
+    return Credits.current_credits(state, player) - previewed_credit_cost  # D-1b: Credits' sibling of D-1
 static func attack_possible_after_move(state: GameState, unit: UnitState, tile: Vector2i,
         reachable_cost: int) -> bool: ...                   # D-3: composes Combat.legal_targets_from + AP.can_afford
+                                                              # (AP-only — D-3 never touches Credits, GDD §D-3)
 ```
 
+`projected_remaining_credits` is `projected_remaining_ap`'s direct sibling — same shape, mirrored
+onto the Credits pool, called only for the Credit main-cost leg of an economic-action preview. An
+economic-action preview (Produce/Build/Research) calls **both** derivations for the same commit and
+renders them side by side (never summed or blended — D-4); Move/Attack previews call only
+`projected_remaining_ap`, since Move/Attack carry no Credit cost.
+
 Everything in `CommandFSM` is a pure function of `GameState` + the owning systems' (also pure)
-query returns, so **every Logic-typed AC (AC-1..10, 13..15, 24, 26, 30) tests it headless with no
-scene tree** — the same testability bar ADR-0011 set for `AI`. `menu_model` is the structural
+query returns, so **every Logic-typed AC (AC-1..10, 13..15, 24, 24b, 26, 30) tests it headless with
+no scene tree** — the same testability bar ADR-0011 set for `AI`. `menu_model` is the structural
 enforcement of the Pass-Through Invariant (§4): because it can only reach cost/legality data by
-*calling a query*, there is nowhere for a hardcoded balance constant to live.
+*calling a query*, there is nowhere for a hardcoded balance constant to live — now true of **both**
+pools' constants, not one. For Move/Attack, `menu_model` evaluates `AP.can_afford` alone; for
+Produce/Build/Research it evaluates `Credits.can_afford AND AP.can_afford` and, on failure, reports
+whichever conjunct(s) failed (mirroring ADR-0002's `CANT_AFFORD`/`CANT_AFFORD_CREDITS` `Reason`
+split) so the menu's disabled-verb reason always names the binding pool — both, if both fail.
 
 ```gdscript
 # command_interface.gd — the Presentation Node that drives the pure core
@@ -187,13 +218,18 @@ dependency contract, not this FSM's to enforce).
 Every display value flows through `CommandFSM`'s pure derivations (§1), which reach cost/damage/
 legality data **only by calling an owning system's query**. There is no code path in either
 `CommandFSM` or `CommandInterface` that references a balance constant (`move_cost`,
-`SOFT_MOVE_PENALTY`, `attack_cost`, `COVER_DR`, `CANCEL_REFUND_RATE`, …) by name — the refund shown
-for Cancel Build is Base & Production's `cancel_build` preview return, the damage shown is
+`SOFT_MOVE_PENALTY`, `attack_cost`, `COVER_DR`, `CANCEL_REFUND_RATE`, `produce_cost`, `build_cost`,
+`research_cost`, `PRODUCE_AP_COST`, `BUILD_AP_COST`, `RESEARCH_AP_COST`, …) by name — the refund
+shown for Cancel Build is Base & Production's `cancel_build` preview return (Credits only — the AP
+surcharge already spent is never refunded, GDD CR-6a/AC-18), the damage shown is
 `Combat.preview_damage`'s return, the surcharge split is `Movement.reachable`'s `is_surcharged` flag
-(TR-cmdui-011 — consumed, never inferred from `min_cost`). **A future lint/CI rule (candidate,
-per the GDD) greps this layer's two files for any owning-system constant name and fails on a match**
-— the same static-allowlist discipline ADR-0011 established for the AI's read set (CR-4). This is
-registered as a forbidden pattern so the constraint outlives this ADR.
+(TR-cmdui-011 — consumed, never inferred from `min_cost`), and an economic verb's dual-cost readout
+is `Credits.current_credits`/`Credits.can_afford` and `AP.current_ap`/`AP.can_afford` called
+side-by-side, never combined into one pool's math. **A future lint/CI rule (candidate, per the GDD)
+greps this layer's two files for any owning-system constant name — from either pool — and fails on
+a match** — the same static-allowlist discipline ADR-0011 established for the AI's read set (CR-4).
+This is registered as a forbidden pattern so the constraint outlives this ADR, and now covers
+`Credits.*` balance constants identically to `AP.*`'s.
 
 ### 5. Consumption + commit contracts (TR-cmdui-011..015); `InputConfig` gains one field
 
@@ -208,11 +244,23 @@ per the GDD's per-dependency contract table:
   the three blocked-shot states. Commit: an `AttackAction` through `apply_action`.
 - **Base & Production** (TR-cmdui-013): `legal_build_tiles`/`legal_deploy_tiles`/
   `completed_outpost_count`/per-producer `production_cap` (forward-declared by ADR-0011/0006,
-  implemented by the B&P epic) for the build/deploy overlays and pickers. Commit: `Build`/`Produce`/
-  `CancelBuild` actions through `apply_action`.
-- **AP Economy** (TR-cmdui-014): `can_afford`/`current_ap`/`income` (ADR-0006) for affordability
-  gating and `projected_remaining_ap` — the FSM never deducts AP (`spend()` runs inside each
-  system's `apply()`).
+  implemented by the B&P epic, ADR-0017) for the build/deploy overlays and pickers. Produce/Build
+  are **dual-cost**: the menu/preview gates each on `Credits.can_afford(credit_cost) AND
+  AP.can_afford(ap_surcharge)` before offering it. Commit: `Build`/`Produce`/`CancelBuild` actions
+  through `apply_action` — the FSM issues the action, ADR-0017's handler validates and spends both
+  pools atomically (both-or-neither) inside `apply()`, never this FSM.
+- **AP & Credits Economy** (TR-cmdui-014, revised for the pivot — dual-pool): `AP.can_afford`/
+  `AP.current_ap` (ADR-0006) for **Move/Attack** affordability gating and
+  `projected_remaining_ap` — unchanged by the pivot, AP-only (AP has no income term; income is
+  Credit-only). `Credits.can_afford`/
+  `Credits.current_credits`/`Credits.credit_income` (ADR-0006) for **Produce/Build/Research**
+  affordability gating and `projected_remaining_credits` — the pivot's new sibling surface,
+  consumed identically in shape to its `AP.*` counterpart. An economic verb's `menu_model` entry
+  calls **both** `AP.can_afford` and `Credits.can_afford`; a disabled economic verb's reason names
+  whichever conjunct failed (`CANT_AFFORD` for the AP surcharge, `CANT_AFFORD_CREDITS` for the
+  Credit main cost, per ADR-0002's `Reason` enum — both shown if both fail, GDD AC-8b). **The FSM
+  never deducts AP or Credits** — `AP.spend()`/`Credits.spend()` run only inside each acting
+  system's `apply()` (ADR-0006/ADR-0017); this FSM previews both pools, spends neither.
 - **Turn Manager / GameState** (TR-cmdui-015): reads `active_player`/`match_status`; routes every
   commit through `apply_action`; input is live **only** during the local player's Action phase
   (the Node ignores input triggers otherwise, staying inspection-only); both instances observe
@@ -251,10 +299,11 @@ Section D / combat GDD), so exactly one system calls `play()` and there is no do
         │   │                              _reachable/_targets/_after_move_attackable, _input_locked
         │   │  delegates every DECISION to ↓
         │   ▼
-        │  CommandFSM (RefCounted, pure) ── next_state() · menu_model() · D-1/D-2/D-3 derivations
+        │  CommandFSM (RefCounted, pure) ── next_state() · menu_model() · D-1/D-1b/D-2/D-3 derivations
         │        │  calls only side-effect-free queries:
-        │        ├─ Movement.reachable (ADR-0009)      ├─ AP.can_afford/current_ap/income (ADR-0006)
+        │        ├─ Movement.reachable (ADR-0009)      ├─ AP.can_afford/current_ap + Credits.can_afford/current_credits (ADR-0006)
         │        ├─ Combat.legal_targets(_from)/preview_damage (ADR-0010)
+        │        ├─ Credits.can_afford/current_credits/credit_income (ADR-0006) ── economic verbs only
         │        └─ BaseProduction.legal_build_tiles/legal_deploy_tiles/production_cap (fwd-decl)
         │
         ├─ render:  BoardRenderer.set_overlay()/clear_overlay()/grid_to_screen() (ADR-0013)
@@ -272,7 +321,8 @@ enum Trigger { SELECT_OWN, SELECT_ENEMY_OR_EMPTY, PICK_MOVE, PICK_ATTACK, PICK_P
                COMMIT, BACK_OUT, WAIT, END_TURN, OBSERVE_GAME_OVER }
 static func next_state(current: State, trigger: Trigger, state: GameState) -> State
 static func menu_model(state: GameState, entity: EntityState) -> Array[VerbEntry]   # {verb:int, enabled:bool, reason:int}
-static func projected_remaining_ap(state: GameState, player: int, previewed_cost: int) -> int
+static func projected_remaining_ap(state: GameState, player: int, previewed_ap_cost: int) -> int
+static func projected_remaining_credits(state: GameState, player: int, previewed_credit_cost: int) -> int  # D-1b, economic verbs only
 static func attack_possible_after_move(state: GameState, unit: UnitState, tile: Vector2i, reachable_cost: int) -> bool
 
 # command_interface.gd — top-level file, class_name CommandInterface extends Node
@@ -329,7 +379,8 @@ static func attack_possible_after_move(state: GameState, unit: UnitState, tile: 
 - The Command & Action Interface's transition and menu-filtering logic — the bulk of its 35 ACs — is
   unit-testable headless, so the interface's correctness is provable before any scene exists.
 - The Pass-Through Invariant is enforced by construction (the pure core has no place to hold a
-  balance constant) plus a greppable lint, not by reviewer vigilance alone.
+  balance constant, from either the AP or Credits pool) plus a greppable lint, not by reviewer
+  vigilance alone.
 - The four recompute tiers are pinned to concrete trigger points, resolving the GDD's flagged
   perf-budget items (Tier-2 fan-out, tile-change gating) with an O(1) hover guarantee.
 - The commit-flash ↔ AP-tick desync — the GDD's named top risk — is designed out by routing both
@@ -351,10 +402,11 @@ static func attack_possible_after_move(state: GameState, unit: UnitState, tile: 
   spikes passing. If either spike disproves its ADR's assumption, this ADR's consuming code changes.
   Mitigation: sequence the spikes (ADR-0013/0014) before implementing this ADR's stories.
 - **Board-change Tier-1 re-issue correctness depends on every query being genuinely side-effect-free**
-  — a purity contract owed by Movement/Combat/AP (ADR-0009/0010/0006), verified in *their* test
-  suites, not black-box-testable from this layer (command-action-interface.md's own caveat).
-  Mitigation: the purity obligation is already registered against those systems; this ADR only
-  consumes it.
+  — a purity contract owed by Movement/Combat/AP & Credits Economy (ADR-0009/0010/0006), verified in
+  *their* test suites, not black-box-testable from this layer (command-action-interface.md's own
+  caveat). This now includes `Credits.can_afford`/`current_credits`/`credit_income` identically to
+  their `AP.*` mirrors. Mitigation: the purity obligation is already registered against those
+  systems; this ADR only consumes it.
 - **The commit-flash ↔ AP-tick single-frame sync requires ADR-0016 to actually subscribe the AP-tick
   to `action_applied`** (not build an independent AP-delta poll) and to enforce `INPUT_LOCK_MS ≥
   AP_TICK_DURATION_MS` at load. Named here so ADR-0016's authoring pass cannot skip it — the same
@@ -379,11 +431,11 @@ static func attack_possible_after_move(state: GameState, unit: UnitState, tile: 
 | command-action-interface.md | TR-cmdui-007: Tier-2 batch legal_targets(unit,from_tile) across reachable frontier once per PREVIEW_MOVE entry | §3 Tier-2 (`_after_move_attackable` batched once per entry) |
 | command-action-interface.md | TR-cmdui-008: Tier-3 hover reads O(1) into precomputed sets | §3 Tier-3 (Vector2i-keyed dict lookup, no query re-run) |
 | command-action-interface.md | TR-cmdui-009: Tier-4 commit-time re-validation inside owning apply_action; UI reacts; reject → refresh Tier-1, spend 0 | §3 Tier-4 (reads `ActionResult.ok`; reject → re-issue Tier-1, stay in menu) |
-| command-action-interface.md | TR-cmdui-010: Pass-Through Invariant — zero balance constants, no local formula re-derive | §1 + §4 (pure `CommandFSM` reaches cost/legality only via queries; greppable lint + forbidden-pattern registration) |
+| command-action-interface.md | TR-cmdui-010: Pass-Through Invariant — zero balance constants (either pool), no local formula re-derive | §1 + §4 (pure `CommandFSM` reaches cost/legality only via queries, `AP.*` and `Credits.*` alike; greppable lint + forbidden-pattern registration) |
 | command-action-interface.md | TR-cmdui-011: consume reachable()→{tile,min_cost,is_surcharged}, render in-cap/over-cap from is_surcharged, never infer | §5 Movement bullet (renders from the `is_surcharged` flag directly) |
 | command-action-interface.md | TR-cmdui-012: consume Combat legal_targets/preview_damage/hypothetical overload; call atomic attack() | §5 Combat bullet + §3 Tier-1/Tier-2 |
-| command-action-interface.md | TR-cmdui-013: consume B&P legal_build_tiles/legal_deploy_tiles/completed_outpost_count/production_cap; call build/produce/cancel_build | §5 Base & Production bullet |
-| command-action-interface.md | TR-cmdui-014: consume AP can_afford/current_ap/income for affordability + projected_remaining_ap; UI never deducts | §5 AP bullet + §1 D-1 derivation |
+| command-action-interface.md | TR-cmdui-013: consume B&P legal_build_tiles/legal_deploy_tiles/completed_outpost_count/production_cap; dual-cost gate; call build/produce/cancel_build | §5 Base & Production bullet |
+| command-action-interface.md | TR-cmdui-014 (revised, pivot): consume `AP.can_afford`/`current_ap`/`income` for Move/Attack affordability + `projected_remaining_ap`; consume `Credits.can_afford`/`current_credits`/`credit_income` for Produce/Build/Research affordability + `projected_remaining_credits` (D-1b); economic verbs dual-gate both-or-neither; FSM never deducts either pool | §5 AP & Credits Economy bullet + §1 D-1/D-1b derivations |
 | command-action-interface.md | TR-cmdui-015: read active_player/phase, route commits via apply_action, scope to active player Action phase; both instances observe GameOver | §5 Turn Manager bullet + §2 (absorbing GAME_OVER observed by both instances via `action_applied`) |
 | command-action-interface.md | TR-cmdui-023: commit-flash (this) + AP tick-down (HUD) off single shared apply_action-result event, same frame | §6 (both subscribe to ADR-0004's single `action_applied`; this ADR owns the flash, ADR-0016 the tick) |
 
@@ -406,16 +458,24 @@ N/A — greenfield.
 ## Validation Criteria
 - **Transition table**: `next_state()` is exhaustively table-tested — every (state, trigger) pair
   returns the GDD States-table target; `GAME_OVER` is absorbing for every trigger.
-- **Menu filter**: `menu_model()` returns each verb enabled iff `is_legal AND can_afford` per its
-  owning query; disabled verbs carry the correct reason; both failure reasons surface when both fail
-  (AC-8) — all headless.
+- **Menu filter**: `menu_model()` returns each verb enabled iff `is_legal AND ap_can_afford` for
+  Move/Attack, or `is_legal AND credits_can_afford AND ap_can_afford` for Produce/Build/Research,
+  per its owning queries; disabled verbs carry the correct reason (`CANT_AFFORD` vs.
+  `CANT_AFFORD_CREDITS`, naming the binding pool); both/all failure reasons surface when multiple
+  fail (AC-8, AC-8b) — all headless.
 - **Pass-Through**: a grep of `command_fsm.gd`/`command_interface.gd` finds zero owning-system
-  balance-constant names (the candidate lint); `projected_remaining_ap`/`attack_possible_after_move`
-  return values equal to the queries' returns (AC-4/5/11).
+  balance-constant names from **either pool** (the candidate lint); `projected_remaining_ap`/
+  `projected_remaining_credits`/`attack_possible_after_move` return values equal to the queries'
+  returns (AC-4/5/5b/11); an economic-action preview always returns both D-1 and D-1b together,
+  never combined into one number (AC-5b).
+- **Dual-cost gate**: a Produce/Build/Research preview with Credits short (AP sufficient) disables
+  with `CANT_AFFORD_CREDITS`-derived reason "insufficient Credits"; the reverse (AP surcharge short,
+  Credits sufficient) disables with "insufficient AP"; both short shows both reasons (AC-6b, AC-8b).
 - **Tier-3 O(1)**: a hover sweep across the reachable frontier issues zero `reachable()`/
   `legal_targets()` calls after the Tier-1 entry query (spy/counter on the query functions).
 - **Tier-4 reject**: a commit on a tile made illegal since preview entry returns `ActionResult.ok ==
-  false`, spends 0 AP, and leaves the FSM in the menu with a refreshed overlay (AC-19/20).
+  false`, spends 0 AP **and 0 Credits**, and leaves the FSM in the menu with a refreshed overlay
+  (AC-19/20).
 - **GAME_OVER convergence**: both a committing and a non-committing `CommandInterface` instance enter
   `GAME_OVER` on the `action_applied` carrying the `GameOverEvent` (AC-34/35).
 - **Cancel-Build hold**: a hold ≥ `cancel_build_hold_ms` commits the refund; a bare click and a
@@ -426,16 +486,20 @@ N/A — greenfield.
   `validate()` inside `apply_action`, which this FSM reacts to but never re-implements)
 - ADR-0004: event/signal architecture (`action_applied` — the board-change re-issue trigger, the
   commit-flash shared event, and how `GAME_OVER` is observed by both instances)
-- ADR-0009 / ADR-0010 / ADR-0006: the Movement / Combat / AP query surfaces this FSM consumes read-only
+- ADR-0009 / ADR-0010 / ADR-0006: the Movement / Combat / AP & Credits query surfaces this FSM
+  consumes read-only (ADR-0006 revised for the pivot — now `AP.*` and `Credits.*` both)
+- ADR-0017: Base & Production (the dual-cost `apply_action` handlers Produce/Build/CancelBuild
+  commits route into; this FSM previews the dual gate, ADR-0017 validates and spends it atomically)
 - ADR-0013: isometric board rendering (`pick_at`/`grid_to_screen`/`set_overlay` — picking and overlay
   render; this FSM never re-derives iso math)
 - ADR-0014: input & focus (`BoardCursor`, active-locus precedence, `input_locked`, `InputConfig` —
   the input substrate; this ADR appends `cancel_build_hold_ms`)
 - ADR-0016 (forthcoming): Game HUD (co-subscriber to `action_applied` for the AP-tick; enforces the
-  `INPUT_LOCK_MS ≥ AP_TICK_DURATION_MS` invariant; renders this ADR's `projected_remaining_ap` on its
-  counter)
+  `INPUT_LOCK_MS ≥ AP_TICK_DURATION_MS` invariant; renders this ADR's `projected_remaining_ap` and
+  `projected_remaining_credits` on its counters)
 - `design/gdd/command-action-interface.md` — the full design this ADR makes concrete (States table,
-  CR-10 four tiers, Pass-Through Invariant, per-dependency contract table)
+  CR-10 four tiers, Pass-Through Invariant, per-dependency contract table; pivoted 2026-08-05 to the
+  dual AP+Credits economy, matched here)
 
 ## Addenda
 
@@ -457,3 +521,40 @@ the Command & Action Interface epic (Game HUD Story 006 was blocked on it):
   interface never calls into a HUD node, preserving the HUD's leaf status (TR-hud-020).
 - Tests: `tests/unit/command-action-interface/selection_changed_test.gd` (9, pass). Additive — no
   existing CAI behavior changed (full suite 730/730 green).
+
+### 2026-08-05 — Economy pivot: `projected_remaining_credits` + dual-cost preview/gate
+
+`ap-economy.md` split the single AP pool into two static resource classes — `AP` (unchanged shape)
+and the new `Credits` (ADR-0006, revised same day). This ADR is updated to match
+`command-action-interface.md`'s pivot revision:
+
+- **New pure derivation** `CommandFSM.projected_remaining_credits(state, player,
+  previewed_credit_cost) -> int` (§1) — `Credits.current_credits(state, player) -
+  previewed_credit_cost`, the direct sibling of `projected_remaining_ap` (D-1b). Called only for
+  economic-verb (Produce/Build/Research) previews, always alongside `projected_remaining_ap` for
+  the same commit, never combined into one number (GDD D-4).
+- **`menu_model()` (§1/§4) is now dual-gate for economic verbs**: `Credits.can_afford(credit_cost)
+  AND AP.can_afford(ap_surcharge)`, both-or-neither. Move/Attack are unchanged — `AP.can_afford`
+  alone. A disabled economic verb's reason names the binding pool, mirroring ADR-0002's
+  `CANT_AFFORD` (AP) / `CANT_AFFORD_CREDITS` (Credits) `Reason` split; both reasons surface if both
+  pools are short (GDD AC-6b/AC-8b).
+- **§5's AP Economy consumption contract (TR-cmdui-014) is now AP & Credits Economy**, split into
+  an unchanged AP-only leg (Move/Attack) and a new Credits leg (`Credits.can_afford`/
+  `current_credits`/`credit_income`) consumed identically in shape for Produce/Build/Research.
+- **Pass-Through Invariant (§4) scope widened**: the greppable balance-constant lint now covers
+  `Credits.*` constants (`produce_cost`, `build_cost`, `research_cost`, `PRODUCE_AP_COST`,
+  `BUILD_AP_COST`, `RESEARCH_AP_COST`) identically to `AP.*`'s pre-existing set. No new code path
+  was added that could hold one — `menu_model`/the D-1b derivation reach Credits data only via
+  `Credits.*` queries, same structural guarantee as the AP side.
+- **The FSM still never deducts either pool.** `AP.spend()`/`Credits.spend()` run only inside each
+  acting system's `apply()` (ADR-0006/ADR-0017); this FSM's job is unchanged — preview both, spend
+  neither. The Pass-Through Invariant and the "FSM owns no balance math" stance (§4, Constraints)
+  hold exactly as before, now scoped to two pools instead of one.
+- **No FSM state, transition, or Tier-1..4 mechanism changed.** The 7-state shape, the absorbing
+  `GAME_OVER`, the Cancel-Build hold sub-condition, and the four recompute tiers are untouched — the
+  pivot is additive to the derivation/consumption surface (§1/§5), not the state machine (§2/§3).
+  Cancel Build's refund remains Credits-only (the AP surcharge already spent is never refunded, GDD
+  CR-6a) — this was already true pre-pivot once ADR-0006 split the pools; restated here for clarity.
+- **No residuals against the GDD.** `command-action-interface.md`'s pivot revision (D-1b, dual-cost
+  D-2, CR-4/CR-8 binding-pool reasons) is fully represented above; where this ADR is silent, the
+  GDD's dual-cost model governs per the standing "GDD wins on disagreement" rule.
