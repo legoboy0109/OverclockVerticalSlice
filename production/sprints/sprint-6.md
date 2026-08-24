@@ -36,6 +36,37 @@ turn-rows, and zero again across 1,260 more after a siege drive was added and pr
 ★ **If this batch does not flip, nothing else in this sprint matters.** Run it early and often,
 not once at the end.
 
+### ✅ GATE PASSED — 2026-08-24, batch 5 (commit `2626f6d`, merged `ae120bc`)
+
+| Pass condition | Baseline | Batch 5 | |
+|---|---|---|---|
+| Resolve on **play**, not the round cap | 0/20 | **18/21** end by HQ destruction, mean 25 turns | ✅ |
+| **Non-zero HQ damage** at all | zero across 4,182 turn-rows | lowest HQ seen **1 of 40**; 608 rows carry damage | ✅ |
+| Not **seat-determined** | 95–100% one seat | kills split **P0 9 / P1 9** | ✅ |
+| Material advantage **converts** | +3 Troopers won 0 of 5 | **18/18** handicapped games | ✅ |
+| (economy bound) peak banked Credits | 5,724 and still climbing at turn 200 | **9,550**, flat — target was <15,000 | ✅ |
+
+**The 3 games that go the distance are the +0 mirror.** A deterministic AI on a symmetric
+board *should* tiebreak, so this is correct behaviour rather than residual stall — and the
+harness gives that cell **n=1, not n=3**: `variant` perturbs bonus-unit placement, and at +0
+handicap there are no bonus units. All three are byte-identical. Worth fixing in the harness
+before that cell is used to conclude anything.
+
+**What actually did it.** Four levers were tried. Three of them — bounding the economy,
+implementing `CREDIT_TO_AP_RATE`, and valuing production capacity — each found and fixed a
+genuine defect and each moved resolution **not at all**. The two that moved it were about
+incentives: production cooldowns (slower reinforcement) and, decisively, **making the objective
+outscore trading**. `_combat_value` scaled an HQ hit by `hp_removed / max_hp`, so a 5-damage
+chip scored 0.75 against 3.00 for killing a Trooper; units correctly broke off a reachable
+objective to fight. `hq_siege_value` 12 → 60 (break-even 48). See `.agent/notes.md` for the
+full post-mortem and the method lesson.
+
+> ⚠️ **One result to read sceptically:** 18/18 handicap conversion is a *total* correlation
+> between material advantage and victory. The gate asked for "more often than not" and got
+> determinism. That is the right direction, but it suggests the slice currently has no comeback
+> mechanism — worth a look during balance work, not now.
+
+
 ## ★★ Read before writing any code — two corrections that invalidate old measurements
 
 | # | What | Why it blocks measurement |
@@ -127,7 +158,7 @@ Note corrected. **A wrong note is worse than no note**, and this one had survive
 
 ## Definition of Done
 
-- [ ] ⛔ **S6-06 gate passed** — matches resolve on play, from both seats, with non-zero HQ damage
+- [x] ✅ **S6-06 gate passed** (2026-08-24, batch 5) — matches resolve on play, from both seats, with non-zero HQ damage
 - [ ] `CREDIT_TO_AP_RATE` ships at 0.01 and the lethal-floor invariant is re-verified
 - [ ] Derived upkeep yields 100/200/200/300 on the shipped roster
 - [ ] All Must Have tasks complete and passing their acceptance criteria
