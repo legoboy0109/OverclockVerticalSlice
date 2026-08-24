@@ -23,6 +23,16 @@ extends Resource
 ## per ADR-0003; numerically identical to the GDD's `floor(build_cost × 0.5)`
 ## across the whole tunable range (30–60). Story 005 owns the refund
 ## arithmetic itself — this Resource only stores the constant.
+## Infantry-cap slots a player has before building any Barracks
+## (`population-cap.md`). Per-FACTION once factions ship (domain D3); this is the
+## Democratic Alliance baseline.
+@export var base_infantry_cap: int = 4
+
+## Absolute ceiling on the infantry cap regardless of Barracks or tech. ★ With
+## `max_count` now hard-capping Barracks this rarely binds — it is retained as a
+## backstop against a faction authored with an extreme combination, not as a routine dial.
+@export var cap_hard_ceiling: int = 14
+
 @export var cancel_refund_pct: int = 50
 
 ## AP cost to fire a Defensive Structure — deliberately lower than the unit

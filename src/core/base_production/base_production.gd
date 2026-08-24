@@ -580,6 +580,11 @@ static func validate_produce(state: GameState, action: ProduceAction) -> int:
 		return Action.Reason.NOT_PRODUCIBLE
 	if producer.units_produced_this_turn >= effective_production_cap(state, producer, player):
 		return Action.Reason.PRODUCTION_CAP_REACHED
+	# ★ S6-04: the infantry cap (population-cap.md PC-2). Checked at PRODUCTION only --
+	# a player already above their cap (possible after a Barracks is destroyed, PC-6) is
+	# never forced to lose units, they simply cannot produce until back under.
+	if not Population.can_field(state, player, action.unit_type):
+		return Action.Reason.POPULATION_CAP_REACHED
 	# Dual-cost (ADR-0006 pivot): effective_produce_cost is the Credit main cost;
 	# produce also spends a PRODUCE_AP_COST AP surcharge. Legal iff BOTH afford.
 	var cost: int = Unit.effective_produce_cost(state, action.unit_type, player)

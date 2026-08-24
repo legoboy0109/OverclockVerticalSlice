@@ -27,6 +27,15 @@ enum TargetingMode { DIRECT, AREA }
 @export var attack_range: int
 @export var move_cost: int
 @export var soft_move_cap: int
+## Whether this unit consumes an infantry-cap slot (`population-cap.md` PC-4).
+##
+## ★ A per-UNIT property, deliberately not per-class: it is what lets the Galactic
+## Protectorate's robotic *infantry* be cap-exempt while still being infantry
+## (`faction-identity.md` CR-11a, the corpus's single sanctioned exemption). Vehicles and
+## aircraft set this false and are bounded instead through their crew, which is infantry
+## and does count (PC-8).
+@export var counts_toward_cap: bool = true
+
 ## Credits drained every turn while this unit is alive (S6-02, `unit-upkeep.md`).
 ## 0 is legal; negative fails schema validation.
 ##

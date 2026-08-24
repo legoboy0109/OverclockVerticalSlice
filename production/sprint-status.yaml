@@ -139,11 +139,32 @@ stories:
     name: "Population cap — base cap, cap_per_barracks, max_barracks, produce gate"
     file: "design/gdd/population-cap.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: "gameplay-programmer"
     estimate_days: 1.0
-    blocker: "s6-03"
-    completed: ""
+    blocker: ""
+    completed: "2026-08-24"
+    # ✅ DONE. Suite 1039/1039, 0 errors/failures/orphans; slice boots clean (exit 0).
+    # 15 new tests (population_cap_test.gd). Zero collateral churn -- the gate is at the
+    # PRODUCE call site only, and existing fixtures place units directly rather than
+    # producing them, so nothing existing tripped it.
+    # ★ PC-3 ("units under production count") needed NO machinery: production is INSTANT
+    #   (apply_produce creates and places the UnitState in one call), so there is no queue
+    #   for a unit to sit in. Documented in Population.current_population as the place
+    #   where it becomes real work if production ever goes multi-turn.
+    # ★★ TWO FINDINGS while writing the cap/upkeep cross-check test, both recorded in
+    #   population-cap.md:
+    #   1. The "cap binds first" relationship is BUILD-DEPENDENT, not universal. A
+    #      Barracks-only player maximises cap and minimises upkeep, so they sustain MORE
+    #      than their ceiling (cap-bound, upkeep never bites). A diversified player is
+    #      upkeep-bound. Both legitimate; the doc asserted it as universal.
+    #   2. The doc's own worked example compared the FULL cap (3 Barracks) against a
+    #      TWO-Barracks upkeep burden -- two different builds. Computed consistently the
+    #      claim does hold (cap 10 vs ~9 sustainable). Test now computes both sides from
+    #      ONE build, which is the only way the claim means anything.
+    # ⚠ The Factory still carries the renamed Economy Outpost's stats (400/100/1 rather
+    #   than the design's 1000/200/3) -- s6-03 renamed rather than re-statted deliberately.
+    #   Re-statting shifts these numbers and is owed before they are trusted.
     # Cap = how many you may field; upkeep = how long you can afford them. Tuned as a pair:
     # ceiling 10 at full build-out, sustainable ~8-9 -- you can always field a little more
     # than you can comfortably keep. Queued units count (else the gate does nothing).

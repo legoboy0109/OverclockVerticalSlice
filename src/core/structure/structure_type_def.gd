@@ -32,6 +32,15 @@ extends Resource
 ## ★ Structures that GENERATE value still pay. Exempting the Research Lab would make
 ## "build a Lab, research everything, sit" free, which is the unbounded-accumulation
 ## defect the PIVOT verdict diagnosed, wearing a different hat.
+## Infantry-cap slots this structure grants its owner while completed and alive
+## (`population-cap.md` PC-5). The Barracks is the only type that grants any.
+##
+## ★ Granting cap through an ATTACKABLE structure rather than an untouchable purchase is
+## the design point: destroying a Barracks lowers the enemy's ceiling, which is a way to
+## attack an army's *future* rather than its present — exactly the kind of reason to
+## attack the PIVOT verdict found the game lacking.
+@export var cap_bonus: int = 0
+
 ## Maximum number of this structure a player may have at once — completed AND under
 ## construction combined. ★ **0 means unlimited** (the pre-S6-03 behaviour), so adding
 ## this field changes nothing until a type opts in.

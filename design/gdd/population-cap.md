@@ -172,6 +172,36 @@ can look at the board and know both sides' ceilings.
 > cannot comfortably sustain a full one.** The cap is the wall; upkeep is what makes you stop before
 > you reach it. If either number moves, re-check this paragraph.
 >
+> ### ⚠ CORRECTED 2026-08-24 during S6-04 implementation — the worked example compared two different builds
+>
+> The claim below ("cap 10, sustainable 8–9") was reached by comparing the **full** cap
+> (3 Barracks) against a **2-Barracks** upkeep burden. Those are different builds, and the
+> comparison only means something computed from **one**. Done consistently:
+>
+> | Build | Cap | Structure upkeep | For army | Sustainable @200 |
+> |---|---:|---:|---:|---:|
+> | 3 Barracks + Factory + Lab | **10** | 600 | 1,900 | **~9** |
+> | 2 Barracks + Factory + Lab | **8** | 500 | 2,000 | **~10** ⚠ inverted |
+> | 3 Barracks only | **10** | 300 | 2,200 | **~11** ⚠ inverted |
+>
+> ★★ **The relationship is BUILD-DEPENDENT, not universal**, and that is a real design
+> property worth stating rather than a rounding detail. A player who builds **only
+> Barracks** maximises cap while minimising upkeep and can sustain *more* than their
+> ceiling — they are **cap-bound**, and upkeep never bites. A player who diversifies into a
+> Factory and a Lab pays their upkeep and becomes **upkeep-bound** instead.
+>
+> Both are legitimate positions and the tension between them is good texture. But the
+> original claim as written is only true for the *full* build, and any future tuning that
+> reasons from it must say which build it means. Pinned by
+> `tests/unit/population_cap_test.gd::test_the_cap_sits_just_above_what_upkeep_can_sustain_on_a_realistic_build`,
+> which computes both sides from one build.
+>
+> ⚠ **Also live:** the Factory currently carries the renamed Economy Outpost's stats
+> (`build_cost` 400, `upkeep` 100, `build_time` 1) rather than the design's
+> (1,000 / 200 / 3) — S6-03 renamed rather than re-statted, deliberately, to keep that
+> change reviewable. Re-statting moves the middle row above and is owed before the numbers
+> here are trusted.
+
 > ✅ **Re-checked 2026-08-24 against the new research-driven income.** At a fully-researched economy
 > (income **2,500**) with a realistic build (2 Barracks, 1 Factory, 1 Lab = 600 upkeep), **1,900**
 > Credits are available for an army, sustaining **8–9 units** at a roster mean upkeep of ~200. The Alliance's
