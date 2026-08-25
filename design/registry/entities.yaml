@@ -188,9 +188,10 @@ entities:
     production_cap: 2          # units/turn (Scout only)
     producible_types: [scout]  # HQ makes only the basic unit; Production Outpost unlocks the rest
     can_counterattack: false
+    production_cooldown_turns: 2  # 2026-08-25 (S7-10): was 3. Softened to make a one-unit material lead less punishing. ★ The cliff was never combat math — armies averaged only ~1.6 units per side, so ONE extra Trooper was a ~60% force advantage, and no combat tweak can make that anything but decisive. Money was not the limit (both sides banked a surplus); production RATE was. Exchange rate fell ~50% -> ~15% of decision quality, and the equal-play (0% degradation) row is UNCHANGED, so "no decided game reverses" is preserved — a skill amplifier, not a rubber band. ⚠ This is the same lever that fixed the S6-06 gate (S6-07), so it was measured against BOTH: gate re-verified at 19/22 resolve (was 18/22), 18/18 conversion, both seats. ⚠ +1 games now run 30-47 turns against a 60-turn cap (headroom ~26 -> ~13) — a FURTHER softening would start eroding "resolve on play"
     placed_at_setup: true      # never built or rebuilt during play; one per player
     added: 2026-07-21
-    revised: ""
+    revised: "2026-08-25"
     # The win target — destroying the enemy HQ ends the match (see win_condition). Highest hp on the
     # board (turn-3 rush is mathematically impossible: 10 Sniper hits / 20 AP min to destroy). def 2;
     # structures are COVER-IMMUNE (combat-resolution.md Rule 6), so the HQ mitigates only via def 2 on
