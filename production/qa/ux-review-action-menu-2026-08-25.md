@@ -82,10 +82,41 @@ omitted with reasoning. Contrast figures are measured, not asserted.
 Standard Cancel, Standard Button and the focus-indicator treatment are referenced rather than
 re-specified. No new pattern is invented without being flagged.
 
-### Verdict: **NEEDS REVISION**
+### ✅ RESOLUTION — both blocking issues fixed the same day (S7-07b)
+
+`design/ux/action-menu.md` revised 2026-08-25:
+
+| # | Fix |
+|---|---|
+| **B1** | Platform Target now reads **PC + Steam Deck, gamepad REQUIRED, floor 1280×800**, with a note recording what it used to say and why it was wrong |
+| **B2** | AC-22 extended to **1280×800**, 1920×1080 and 2560×1440. ★ New **AC-31** re-runs AC-6/7/8 (clearance, edge flip, vertical clamp) **at the floor specifically** — the plate rules are resolution-sensitive and the floor is where there is least room |
+
+★ **Found while fixing:** the GDD Alignment table carried a row labelled bare `AC-25`, which is
+`command-action-interface.md`'s AC-25 — colliding with **this** spec's own AC-25 two sections
+below. Two different requirements under one label in a single document. Now written as
+`` `command-action-interface.md` AC-25 ``. Confirmed 31 unique AC ids, no collisions.
+
+The two advisories are **not** fixed and remain open by choice: text legibility at 1280×800 is a
+project-wide Deck-Verified gap tracked in `technical-preferences.md`, and Redot/Godot dual-focus
+parity is now cheaply checkable against the S7-05 binary but was not checked here.
+
+### Verdict (at review time): **NEEDS REVISION**
 **Blocking**: 2 — both are the spec having been overtaken by the Steam Deck decision (S7-08), not
 authoring defects. **Advisory**: 2.
 
 ★ **Nothing here impugns the implementation.** Every behavioural claim verified against the code.
 The gap is that the platform moved under a spec written before it, and the acceptance criteria have
 not caught up.
+
+---
+
+## Post-fix status: ✅ **APPROVED**
+
+Both blocking issues resolved. No behavioural claim changed — the fixes were a stale header line
+and an acceptance-criterion gap, neither of which touched the implementation. The spec is
+implementation-current again.
+
+⚠ **The independence caveat stands unchanged.** Two reviews, two self-audits. The objective half
+(claim-versus-code verification, and re-checking the spec against config that has moved) is where
+every finding across both passes actually came from — and that half is sound. A subjective design
+and accessibility critique has still never been done by anyone other than the author.

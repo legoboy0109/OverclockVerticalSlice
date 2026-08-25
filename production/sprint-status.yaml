@@ -221,6 +221,22 @@ stories:
     estimate_days: 1.0
     blocker: ""
     completed: "2026-08-25"
+    # ✅ S7-07b — BOTH BLOCKING ISSUES FIXED the same day (design/ux/action-menu.md revised):
+    #   B1 Platform Target now reads PC + Steam Deck, gamepad REQUIRED, floor 1280x800, with a
+    #      note recording what it used to say and why it was wrong.
+    #   B2 AC-22 extended to 1280x800 / 1920x1080 / 2560x1440, PLUS a new AC-31 that re-runs
+    #      AC-6/7/8 (clearance, edge flip, vertical clamp) AT THE FLOOR SPECIFICALLY — the plate
+    #      rules are resolution-sensitive and the floor is where there is least room.
+    #   ★ FOUND WHILE FIXING: the GDD Alignment table carried a row labelled bare "AC-25", which
+    #     is command-action-interface.md's AC-25 — colliding with THIS spec's own AC-25 two
+    #     sections below. Two different requirements under one label in one document. Now
+    #     qualified. Verified 31 unique AC ids, no collisions.
+    #   The 2 ADVISORIES remain open by choice: text legibility at 1280x800 is a project-wide
+    #     Deck gap tracked in technical-preferences.md; Redot/Godot dual-focus parity is now
+    #     cheaply checkable against the s7-05 binary but was not checked.
+    #   Spec status: APPROVED post-fix. ⚠ Independence caveat UNCHANGED — two reviews, two
+    #     self-audits; the objective half is sound, the subjective half has never been done by
+    #     anyone but the author.
     # ✅ RUN. Verdict NEEDS REVISION — 2 blocking, 2 advisory. Report:
     #   production/qa/ux-review-action-menu-2026-08-25.md
     # ⚠⚠ INDEPENDENCE STILL NOT ACHIEVED, AND THIS IS THE SECOND TIME. s7-07 existed because the
