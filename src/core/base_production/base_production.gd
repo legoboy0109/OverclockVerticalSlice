@@ -12,9 +12,7 @@
 ## handler ([method validate_build]/[method apply_build]), [method effective_build_cost]/
 ## [method effective_build_time] (ADR-0012 folds, == base under Neutral),
 ## [method advance_build_timers] (the concrete body of ADR-0008 step 3),
-## [method completed_outpost_count] (the AP-income contract ADR-0006
-## forward-declared, previously served by [code]base_production_stub.gd[/code]
-## — deleted by this story), and [method defensive_attack_cost] (Combat's
+## and [method defensive_attack_cost] (Combat's
 ## cross-system config read, ADR-0010/ADR-0017, unchanged behavior from the
 ## stub it replaces).
 ##
@@ -34,8 +32,15 @@
 ## Usage:
 ## [codeblock]
 ## var tiles: Array[Vector2i] = BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
-## var n: int = BaseProduction.completed_outpost_count(state, 0)
+## var n: int = BaseProduction.structure_count(state, 0, StructureTypes.BARRACKS)
 ## [/codeblock]
+##
+## ⚠ [b]`completed_outpost_count()` was retired in S7-06.[/b] It counted COMPLETED Factories
+## for ADR-0006's AP-income contract, and S6-01 re-based income on research tiers — after which
+## nothing in `src/` called it for two sprints. [method structure_count] is the nearest
+## replacement but is [b]not[/b] a drop-in: it ignores
+## [member StructureState.build_status], so a caller that genuinely needs "completed only"
+## must filter for it.
 class_name BaseProduction
 extends RefCounted
 
@@ -336,37 +341,6 @@ static func can_build_more(state: GameState, player: int, structure_type: Struct
 	if structure_type.max_count <= 0:
 		return true
 	return structure_count(state, player, structure_type) < structure_type.max_count
-
-
-
-## The Credit-income contract (ADR-0006 forward-declared, TR-baseprod-007) —
-## replaces [code]base_production_stub.gd[/code]'s test-controllable stand-in;
-## [code]Credits.credit_income_breakdown[/code] calls this cross-system exactly as
-## it called the stub (repointed from [code]AP.ap_income_breakdown[/code] by the
-## pivot). Counts [param player]'s alive, owned structures where
-## [member StructureState.type] [code]==[/code] [constant StructureTypes.FACTORY]
-## (Resource-reference identity, never a string/enum compare) AND
-## [member StructureState.build_status] [code]==[/code]
-## [constant StructureState.BuildStatus.COMPLETED]. Excludes: opponent-owned,
-## Under-Construction, destroyed (not in [member GameState.entities_by_id] —
-## "alive" is defined by presence, ADR-0017 D1), the HQ, Production Outposts,
-## Research Labs, and Defensive Structures. Returns [code]0[/code], never
-## [code]null[/code], when nothing qualifies.
-##
-## O(entity count) — a single pass over [param state]'s entities
-## (control-manifest Performance Guardrail); called once per player per turn
-## via [code]Credits.add_income[/code] (ADR-0008 step 4b), never per-frame.
-static func completed_outpost_count(state: GameState, player: int) -> int:
-	var count: int = 0
-	for e: EntityState in state.entities():
-		if e.owner != player or not (e is StructureState):
-			continue
-		var structure: StructureState = e
-		if structure.type == StructureTypes.FACTORY and structure.build_status == StructureState.BuildStatus.COMPLETED:
-			count += 1
-	return count
-
-
 ## The AP cost a Defensive Structure attacker spends per [method Combat.apply]
 ## (ADR-0010/ADR-0017, TR-combat-012) — replaces
 ## [code]base_production_stub.gd[/code]'s test-controllable stand-in;

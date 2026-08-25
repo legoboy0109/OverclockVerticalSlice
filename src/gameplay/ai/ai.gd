@@ -25,7 +25,7 @@
 ## [code]Movement.reachable[/code], [code]Combat.legal_targets/
 ## legal_targets_from/preview_damage[/code], [code]AP.can_afford/current_ap/
 ## income[/code], [code]BaseProduction.legal_build_tiles/legal_deploy_tiles/
-## completed_outpost_count[/code], [code]Research.legal_research_targets[/code]
+## [code]Research.legal_research_targets[/code]
 ## (stubbed empty — Research epic not built), [code]GridState.
 ## manhattan_distance/terrain_at/occupant_at[/code] — plus public typed fields
 ## on entities already returned by those calls. This is a static-analysis /

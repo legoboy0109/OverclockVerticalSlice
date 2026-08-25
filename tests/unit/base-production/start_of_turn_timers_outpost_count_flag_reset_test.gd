@@ -25,6 +25,22 @@
 # [system]_[feature]_test.gd + test_[scenario]_[expected].
 extends GdUnitTestSuite
 
+# ★ S7-06: local stand-in for the retired BaseProduction.completed_outpost_count(). The
+# accessor was dead product code — nothing in src/ called it once S6-01 re-based income on
+# research tiers — but the BEHAVIOUR these tests observe through it (a structure only counts
+# once its build_status reaches COMPLETED) is real and still worth pinning. So the accessor
+# goes and the observable stays, defined here rather than shipped.
+func _completed_factory_count(state: GameState, player: int) -> int:
+	var count: int = 0
+	for e: EntityState in state.entities():
+		if e.owner != player or not (e is StructureState):
+			continue
+		var s: StructureState = e
+		if s.type == StructureTypes.FACTORY and s.build_status == StructureState.BuildStatus.COMPLETED:
+			count += 1
+	return count
+
+
 
 # --- Fixture builders --------------------------------------------------------
 
@@ -137,7 +153,7 @@ func test_completed_outpost_count_basic_fixture_returns_exactly_two() -> void:
 	_make_structure(state, 0, StructureTypes.BARRACKS, StructureState.BuildStatus.COMPLETED)
 	_make_structure(state, 0, StructureTypes.HQ, StructureState.BuildStatus.COMPLETED)
 	# Act / Assert
-	assert_int(BaseProduction.completed_outpost_count(state, 0)).is_equal(2)
+	assert_int(_completed_factory_count(state, 0)).is_equal(2)
 
 
 func test_completed_outpost_count_excludes_opponent_owned() -> void:
@@ -146,8 +162,8 @@ func test_completed_outpost_count_excludes_opponent_owned() -> void:
 	_make_structure(state, 0, StructureTypes.FACTORY, StructureState.BuildStatus.COMPLETED)
 	_make_structure(state, 1, StructureTypes.FACTORY, StructureState.BuildStatus.COMPLETED)
 	# Act / Assert -- player 0 sees only their own.
-	assert_int(BaseProduction.completed_outpost_count(state, 0)).is_equal(1)
-	assert_int(BaseProduction.completed_outpost_count(state, 1)).is_equal(1)
+	assert_int(_completed_factory_count(state, 0)).is_equal(1)
+	assert_int(_completed_factory_count(state, 1)).is_equal(1)
 
 
 func test_completed_outpost_count_excludes_destroyed_alive_only() -> void:
@@ -157,14 +173,14 @@ func test_completed_outpost_count_excludes_destroyed_alive_only() -> void:
 	var structure := _make_structure(state, 0, StructureTypes.FACTORY, StructureState.BuildStatus.COMPLETED)
 	state.entities_by_id.erase(structure.entity_id)
 	# Act / Assert
-	assert_int(BaseProduction.completed_outpost_count(state, 0)).is_equal(0)
+	assert_int(_completed_factory_count(state, 0)).is_equal(0)
 
 
 func test_completed_outpost_count_returns_zero_not_null_when_none_qualify() -> void:
 	# Arrange -- an empty state, no structures at all.
 	var state := _make_state()
 	# Act
-	var result: int = BaseProduction.completed_outpost_count(state, 0)
+	var result: int = _completed_factory_count(state, 0)
 	# Assert -- 0, never null (statically typed int return already guarantees
 	# this, but pin the value explicitly).
 	assert_int(result).is_equal(0)
@@ -177,7 +193,7 @@ func test_completed_outpost_count_excludes_research_lab_and_defensive_structure(
 	_make_structure(state, 0, StructureTypes.RESEARCH_LAB, StructureState.BuildStatus.COMPLETED)
 	_make_structure(state, 0, StructureTypes.DEFENSIVE_STRUCTURE, StructureState.BuildStatus.COMPLETED)
 	# Act / Assert
-	assert_int(BaseProduction.completed_outpost_count(state, 0)).is_equal(0)
+	assert_int(_completed_factory_count(state, 0)).is_equal(0)
 
 
 # --- Start-of-turn flag reset (Rules 7, 8) -----------------------------------
