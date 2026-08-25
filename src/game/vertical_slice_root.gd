@@ -91,11 +91,18 @@ const AI_PLAYER: int = 1
 ## than 60. This is a starting value to judge in play, not a locked one — change this
 ## single constant.
 ##
-## ★ [b]Note what the tiebreak rewards.[/b] [constant GameState.TiebreakMetric.UNIT_COUNT]
-## is the only implemented metric, so a capped game is won on unit COUNT. Combined with
-## the unbounded Credit accumulation the same simulation found, the theoretically optimal
-## line in a capped game is "bank, mass-produce cheap units, avoid fighting" — flagged
-## for the playtest to watch for, not fixed here.
+## ★ [b]What the tiebreak rewards.[/b] A capped game goes to whoever dealt more damage to
+## the enemy HQ ([constant GameState.TiebreakMetric.HQ_DAMAGE_DEALT], the default since
+## S7-17) — i.e. to whoever came closest to winning outright. It cannot be inflated by
+## producing or building.
+##
+## ⚠ [b]This note previously said UNIT_COUNT was "the only implemented metric".[/b] That was
+## true when written and was superseded on 2026-08-21, when TOTAL_HQ_HP landed and became
+## the default. **The stale text survived here for four days and directly caused a wrong
+## recommendation in S7-16** — a whole story was scoped to "change the tiebreak metric"
+## against a metric that had already been correct for days.
+## ⇒ A note describing another file's behaviour is a claim with an expiry date. When the
+##   behaviour moves, this kind of comment does not follow it.
 const VS_MAX_ROUNDS: int = 40
 
 ## Provisional camera zoom over the placeholder board (final feel = `/ux-design`).

@@ -81,8 +81,24 @@ enum WinReason {
 ## is a design decision rather than a gap to fill in. It is deliberately absent from
 ## this enum rather than present-but-broken.
 enum TiebreakMetric {
-	TOTAL_HQ_HP, ## Whose HQ is healthier — the spec default. See [method _compute_tiebreak_metric].
+	TOTAL_HQ_HP, ## Whose HQ is healthier. See [method _compute_tiebreak_metric].
 	UNIT_COUNT, ## How many UNITS each side has left. Structures do not count.
+	## ★ S7-17 — how much damage each side DEALT to the enemy HQ. The default.
+	##
+	## ⚠ [b]Identical in outcome to [constant TOTAL_HQ_HP] while both HQs share a max hp[/b],
+	## which is true of every shipping configuration today: scoring `40 - enemy_hp` and ranking
+	## by it orders the players exactly as scoring `own_hp` does. Verified by running the
+	## 12-opening mirror cell under both and getting the same winner in all 12 games.
+	##
+	## It is nonetheless the one that should be the default, for two reasons:
+	## [br]• [b]It stops being equivalent the moment HQs differ.[/b] `faction-identity` allows
+	##   per-faction structure deltas; the instant one side's HQ has more hp than the other's,
+	##   "whose HQ is healthier" rewards the side that was handed a bigger HQ, while "who dealt
+	##   more damage" keeps measuring play. The equivalence is a coincidence of the current
+	##   roster, not a property of the design.
+	## [br]• [b]It says what it means.[/b] A capped game is decided by progress toward the win
+	##   condition, and this metric states that directly instead of via its complement.
+	HQ_DAMAGE_DEALT,
 }
 
 ## Signal fired exactly once, synchronously, at the very end of
@@ -167,7 +183,7 @@ static var _dispatch_registered: bool = false
 ## `game-state-turn-manager.md` specifies. It measures progress toward the only real
 ## win condition, so a capped game is decided by who was closer to winning it —
 ## and, unlike a count, it cannot be inflated by building things.
-@export var tiebreak_metric: int = TiebreakMetric.TOTAL_HQ_HP
+@export var tiebreak_metric: int = TiebreakMetric.HQ_DAMAGE_DEALT
 
 
 ## Returns [param player]'s AP available to spend this turn. O(1) array index.
@@ -825,6 +841,22 @@ func _compute_tiebreak_metric() -> Array[int]:
 			for e: EntityState in entities():
 				if e is StructureState and (e as StructureState).is_hq():
 					counts[e.owner] += (e as StructureState).current_hp
+		TiebreakMetric.HQ_DAMAGE_DEALT:
+			# Each side scores the damage IT has dealt to the ENEMY HQ, i.e. its progress
+			# toward the actual win condition. A capped game therefore goes to whoever came
+			# closest to winning outright.
+			#
+			# ⚠ Reads max hp from the type, not a constant: the moment two HQs differ (a
+			# per-faction structure delta), this keeps measuring play while TOTAL_HQ_HP would
+			# start rewarding whoever was handed the bigger HQ.
+			#
+			# ★ Cannot be inflated by producing or building — the degeneracy that made the
+			# old entity count reward "boom and avoid combat".
+			for e: EntityState in entities():
+				if e is StructureState and (e as StructureState).is_hq():
+					var hq := e as StructureState
+					var dealt: int = maxi(0, hq.type.hp - hq.current_hp)
+					counts[1 - hq.owner] += dealt
 		TiebreakMetric.UNIT_COUNT:
 			# ★ Counts UNITS. It previously counted every entity — structures and the
 			# HQ included — which made the name a lie and handed capped games to
