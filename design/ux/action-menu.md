@@ -475,7 +475,7 @@ depends on game rules, the *set-up* is stated so the expected result follows fro
 | AC-2 | Select a unit that has already moved and attacked this turn. The menu still opens; Wait is the only bright row and every other row is dimmed with a short phrase beside it saying why | Integration |
 | AC-3 | Click an enemy unit, then empty ground. No menu appears in either case; the SELECTED panel still shows what was clicked | Integration |
 | AC-4 | Select a unit with no enemy in range and zero AP. The Attack row names **both** problems, not just the first | Logic |
-| AC-28 | While solvent, select any of your units: there is **no** Disband row. Go into deficit and select the same unit: the row appears, stating both what it costs and what it returns. Activate it once: the unit survives and the row reads "Confirm disband". Activate again: the unit is gone and the Credits arrive | Integration |
+| AC-28 | With nothing blocked, select any of your units: there is **no** Disband row. Now go into deficit — or fill your population to the cap — and select again: the row appears in either case, stating both what it costs and what it returns. Activate it once: the unit survives and the row reads "Confirm disband". Activate again: the unit is gone and the Credits arrive | Integration |
 | AC-29 | Select a structure while in deficit. There is still no Disband row — structures are never disbandable | Integration |
 | AC-30 | Arm Disband, then press Esc. The row reads "Disband" again, the unit is alive, and nothing was deselected | Integration |
 | AC-27 | Select a unit with an enemy adjacent and AP to spare. The Attack row states what attacking costs, alongside its shortcut, before any preview is opened. Drain the AP and re-select: the row still states the cost, now beside the reason | Integration |
@@ -537,39 +537,42 @@ accessibility item. It is now arm-then-confirm — see decision 5. *Kept visible
 "the two-step selection is already a confirmation" is a tempting argument and it was wrong, which is
 worth remembering.*
 
-**~~OQ-3~~ — RESOLVED 2026-08-25.** Disband has a row, and it appears **only while the player is in
-deficit** (user decision, revised the same day from an always-visible first cut).
+**~~OQ-3~~ — RESOLVED 2026-08-25.** Disband has a row, and it appears **only when disbanding would
+unblock something**: the player is in a Credit deficit, or at/over their population cap.
 
-Deficit is the situation `unit-upkeep.md` UR-7 built the verb for — it is the escape valve the whole
-deficit lock depends on, and before this the action was reachable from nothing at all. On every
-other turn the row would be a permanently visible, irreversible entry on every unit the player owns,
-for something most players use rarely.
+Those are the two states the verb exists to relieve. `unit-upkeep.md` UR-7 makes it the escape valve
+the whole deficit lock depends on; `population-cap.md` makes it the only *voluntary* way back under
+a ceiling that otherwise waits on attrition. Before this the action was reachable from nothing at
+all. Outside those two states the row would be a permanently visible, irreversible entry on every
+unit the player owns, for something most players use rarely.
+
+**"At cap" is `>=`, not `==`.** The cap *falls* when a Barracks dies (PC-6) and units above the new
+ceiling are deliberately not destroyed — so a player can sit strictly over cap, production-locked,
+which is exactly when a voluntary way back under matters most.
 
 When shown it states both halves of its trade up front (`1 AP · +100 CR back`) — the only verb that
 spends *and* pays out, so one figure alone would not let a player weigh it against holding the unit.
 It takes **two presses** like every destructive verb, and structures never get it at all (UR-7),
 dropped rather than greyed on the same rule that drops Cancel Build from a scout.
 
-**Not gated on the deficit lock**: the deficit is what *shows* this verb and must never be what
-*blocks* it — disband is the one action that reduces upkeep, so refusing it while in deficit would
-make a deficit unrecoverable by the player's own choice.
+**The blocked state is what SHOWS the verb and never what blocks it.** An offered Disband is gated
+on AP alone — never on the deficit lock that stops produce/build/research — because disband is the
+one action that *reduces* upkeep, and refusing it mid-deficit would make a deficit unrecoverable by
+the player's own choice.
 
-> ### ⚠ Two things this decision costs, recorded rather than argued away
+> ### ⚠ What this still costs, recorded rather than argued away
 >
-> **1 — It is a deliberate exception to this spec's own rule.** Everywhere else, a verb disabled by
-> the *situation* keeps a visible row with its reason, because that is what teaches the rules; only
-> verbs that do not apply to an entity's *kind* are dropped. `NOT_IN_DEFICIT` is situational and is
-> dropped anyway. The consequence is **discoverability**: a solvent player is never shown that
-> Disband exists, and first meets it in the turn they are already in trouble.
+> **It is a deliberate exception to this spec's own rule.** Everywhere else a verb disabled by the
+> *situation* keeps a visible row with its reason, because that is what teaches the rules; only
+> verbs that do not apply to an entity's *kind* are dropped. `NOTHING_BLOCKED` is situational and is
+> dropped anyway. The consequence is **discoverability**: a player with nothing blocked is never
+> shown that Disband exists, and first meets it in a turn where something has already gone wrong.
+> Mitigated but not removed by the second trigger — a population ceiling is a far more ordinary
+> situation than insolvency, so most players will now meet the verb sooner and under less pressure.
 >
-> **2 — Population cap has no other release valve.** Freeing population is a legitimate non-deficit
-> reason to disband, and while the row is hidden a solvent player at cap cannot reach it — they must
-> wait for a unit to die. If that turns out to bite in playtesting, the smallest fix is to show the
-> row when in deficit **or** at population cap, i.e. whenever disbanding would unblock something.
->
-> **The rules did not change.** `Upkeep.validate_disband` still accepts a solvent player's disband —
-> this hides an affordance, it does not forbid an action, and a test pins that distinction so a
-> UI-level gate can never harden into a rule.
+> **The rules did not change.** `Upkeep.validate_disband` still accepts a disband from a player with
+> nothing blocked — this hides an affordance, it does not forbid an action, and a test pins that
+> distinction so a UI-level gate can never harden into a rule.
 
 **~~OQ-5~~ — RESOLVED 2026-08-24.** The menu said "no route" to a unit standing in open ground
 that had simply run out of AP. `Movement.reachable()` applies its affordability cut *inside* the

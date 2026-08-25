@@ -239,21 +239,23 @@ func test_menu_model_owned_unit_with_affordable_reachable_tile_move_enabled() ->
 	assert_int(move_entry.reason).is_equal(CommandFSM.Reason.NONE)
 
 
-func test_disband_is_offered_only_while_the_player_is_in_deficit() -> void:
-	# ★ User decision, 2026-08-25. Disband is the escape valve UR-7 builds the
-	# deficit lock around, and that is the situation it exists for. A solvent player
-	# gets NOT_IN_DEFICIT, which the menu DROPS rather than renders — see
-	# ActionMenu._is_inapplicable for why that is a deliberate exception to the
-	# "situational disablement earns a visible row" rule, and what it costs.
+func test_disband_is_offered_only_when_it_would_unblock_something() -> void:
+	# ★ User decision, 2026-08-25 (revised the same day to add the second trigger).
+	# Disband appears when it would RELIEVE something — a Credit deficit or a
+	# population ceiling. Those are the two states it exists for; outside them it
+	# would be a permanently visible, irreversible row on every unit the player
+	# owns. A player with nothing blocked gets NOTHING_BLOCKED, which the menu DROPS
+	# rather than renders — see ActionMenu._is_inapplicable for why that is a
+	# deliberate exception to the "situational disablement earns a visible row" rule.
 	var state := _make_state(0)
 	var unit := _place_unit(state, 1, 0, Vector2i(3, 3), _make_unit_type())
 	state.per_player[0].current_ap = 10
 
-	var solvent: CommandFSM.VerbEntry = _find_entry(
+	var clear: CommandFSM.VerbEntry = _find_entry(
 		CommandFSM.menu_model(state, unit), CommandFSM.Verb.DISBAND
 	)
-	assert_bool(solvent.enabled).is_false()
-	assert_int(solvent.reason).is_equal(CommandFSM.Reason.NOT_IN_DEFICIT)
+	assert_bool(clear.enabled).is_false()
+	assert_int(clear.reason).is_equal(CommandFSM.Reason.NOTHING_BLOCKED)
 
 	state.per_player[0].in_deficit = true
 	var broke: CommandFSM.VerbEntry = _find_entry(
@@ -263,6 +265,57 @@ func test_disband_is_offered_only_while_the_player_is_in_deficit() -> void:
 		"a player in deficit must be offered the one action that reduces upkeep"
 	).is_true()
 	assert_int(broke.ap_cost).is_greater(0)
+
+
+func test_population_cap_offers_disband_even_to_a_solvent_player() -> void:
+	# ★★ The second trigger, and the reason it was added the same day. Freeing
+	# population is a legitimate NON-deficit reason to disband, and with only the
+	# deficit trigger a solvent player at cap was production-locked with no
+	# voluntary way out — they had to wait for a unit to die.
+	var state := _make_state(0)
+	var type := _make_unit_type()
+	var unit := _place_unit(state, 1, 0, Vector2i(3, 3), type)
+	state.per_player[0].current_ap = 10
+	assert_bool(state.per_player[0].in_deficit).is_false() # solvent throughout
+
+	# Fill to the ceiling. effective_cap is read rather than assumed so this stays
+	# correct if the faction base or a cap bonus is retuned.
+	var cap: int = Population.effective_cap(state, 0)
+	var next_id: int = 100
+	while Population.current_population(state, 0) < cap:
+		_place_unit(state, next_id, 0, Vector2i(next_id % 9, 8), type)
+		next_id += 1
+
+	var entry: CommandFSM.VerbEntry = _find_entry(
+		CommandFSM.menu_model(state, unit), CommandFSM.Verb.DISBAND
+	)
+	assert_bool(entry.enabled).override_failure_message(
+		"a solvent player at population cap must still be able to make room"
+	).is_true()
+
+
+func test_being_over_a_fallen_cap_offers_disband_too() -> void:
+	# ★ "At cap" is >=, not ==, and the difference is a real game state: the cap
+	# FALLS when a Barracks dies (population-cap.md PC-6) and units above the new
+	# ceiling are deliberately not destroyed. A player sitting strictly OVER cap is
+	# production-locked, which is exactly when a voluntary way back under matters
+	# most — an == test would have left them stranded.
+	var state := _make_state(0)
+	var type := _make_unit_type()
+	var unit := _place_unit(state, 1, 0, Vector2i(3, 3), type)
+	state.per_player[0].current_ap = 10
+
+	var cap: int = Population.effective_cap(state, 0)
+	var next_id: int = 200
+	while Population.current_population(state, 0) <= cap: # deliberately one PAST
+		_place_unit(state, next_id, 0, Vector2i(next_id % 9, 7), type)
+		next_id += 1
+	assert_int(Population.current_population(state, 0)).is_greater(cap)
+
+	var entry: CommandFSM.VerbEntry = _find_entry(
+		CommandFSM.menu_model(state, unit), CommandFSM.Verb.DISBAND
+	)
+	assert_bool(entry.enabled).is_true()
 
 
 func test_disband_in_deficit_is_still_gated_on_ap_and_nothing_else() -> void:

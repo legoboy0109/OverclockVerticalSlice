@@ -646,10 +646,12 @@ func test_choosing_a_different_verb_abandons_an_armed_cancel() -> void:
 # Disband — the second destructive verb (action-menu.md OQ-3)
 # ==============================================================================
 
-## Puts [param state]'s local player into deficit — the only situation in which the
-## menu offers Disband at all (user decision, 2026-08-25). Set directly rather than
-## engineered through upkeep: these tests are about the ROW, not about how a player
-## ends up insolvent.
+## Puts [param state]'s local player into deficit — one of the two situations in
+## which the menu offers Disband at all (the other is being at population cap; see
+## command_fsm_test.gd, which covers both triggers at the model level).
+##
+## Set directly rather than engineered through upkeep: these tests are about the
+## ROW, not about how a player ends up insolvent.
 func _in_deficit(state: GameState) -> GameState:
 	state.per_player[0].in_deficit = true
 	return state
@@ -748,16 +750,16 @@ func test_every_destructive_verb_is_registered_as_one() -> void:
 		assert_bool(ActionMenu.VERB_LABELS.has(verb)).is_true()
 
 
-func test_a_solvent_player_is_never_offered_disband() -> void:
-	# ★ User decision, 2026-08-25: the row appears ONLY while in deficit — the
-	# situation UR-7 built it for. On every other turn it would be a permanently
-	# visible, irreversible row on every unit the player owns, for an action most
-	# players use rarely.
+func test_a_player_with_nothing_blocked_is_never_offered_disband() -> void:
+	# ★ User decision, 2026-08-25: the row appears only when disbanding would
+	# RELIEVE something — a Credit deficit or a population ceiling. Outside those it
+	# would be a permanently visible, irreversible row on every unit the player
+	# owns, for an action most players use rarely.
 	#
-	# ⚠ This is a deliberate EXCEPTION to this spec's own rule that situational
-	# disablement earns a visible row. The cost is discoverability: a solvent player
-	# is never shown that Disband exists. Recorded in action-menu.md OQ-3.
-	var state := _make_state() # solvent
+	# ⚠ A deliberate EXCEPTION to this spec's own rule that situational disablement
+	# earns a visible row. The cost is discoverability: a player with nothing
+	# blocked is never shown that Disband exists. Recorded in action-menu.md OQ-3.
+	var state := _make_state() # solvent, and one unit is nowhere near the cap
 	var unit := _place_unit(state, 1, 0, Vector2i(5, 5))
 	var menu := _make_menu()
 
@@ -770,9 +772,9 @@ func test_hiding_disband_hides_an_affordance_never_the_action() -> void:
 	# ★★ THE test for this decision. The menu not offering a verb must never mean
 	# the rules refuse it — apply_action stays the single authority on legality, and
 	# a UI-level gate that hardened into a rule would be exactly the boundary
-	# violation the control manifest forbids. A solvent player's disband still
-	# commits if something dispatches one.
-	var state := _make_state() # solvent: no row
+	# violation the control manifest forbids. The disband still commits if something
+	# dispatches one, whatever the menu chose to show.
+	var state := _make_state() # nothing blocked: no row
 	var unit := _place_unit(state, 1, 0, Vector2i(5, 5))
 	state.per_player[0].current_ap = 10
 

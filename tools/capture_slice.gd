@@ -204,17 +204,19 @@ func _run() -> void:
 				# Solvent player: the Attack row is priced and there is NO Disband row.
 				_shot("03j-attack-priced")
 
-				# --- Disband, which only exists while in deficit --------------------
-				# Forced rather than played into: reaching a real deficit needs several
-				# turns of over-extension, and this shot is about the ROW, not about
-				# how a player ends up insolvent.
+				# --- Disband, offered only when it would unblock something ----------
+				# Two triggers: a Credit deficit or being at/over population cap. This
+				# forces the deficit one — reaching either for real takes several turns
+				# of over-extension, and the shot is about the ROW, not about how a
+				# player gets there. The cap trigger is covered at the model level
+				# (command_fsm_test.gd) and renders the identical row.
 				st0.per_player[0].in_deficit = true
 				slice.back_out()
 				slice.select_at_cursor()
 				for i: int in 22:
 					await get_tree().process_frame
 				await RenderingServer.frame_post_draw
-				_shot("03k-disband-in-deficit")
+				_shot("03k-disband-offered")
 
 				# ...and its ARMED state. Disband destroys a unit outright, so the
 				# two-press gate is the safety property most worth a picture.

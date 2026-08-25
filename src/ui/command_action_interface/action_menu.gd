@@ -209,7 +209,7 @@ const REASON_LABELS: Dictionary = {
 	CommandFSM.Reason.NO_DEPLOY_SPACE: "no space",
 	CommandFSM.Reason.NOT_UNDER_CONSTRUCTION: "nothing to cancel",
 	CommandFSM.Reason.NOT_A_UNIT: "not a unit",
-	CommandFSM.Reason.NOT_IN_DEFICIT: "only while in deficit",
+	CommandFSM.Reason.NOTHING_BLOCKED: "nothing to free up",
 	CommandFSM.Reason.INSUFFICIENT_CREDITS: "needs Credits",
 	CommandFSM.Reason.POPULATION_CAP_REACHED: "at pop cap",
 }
@@ -261,7 +261,7 @@ const REASON_ORDER: Array[int] = [
 	CommandFSM.Reason.NOT_A_PRODUCER,
 	CommandFSM.Reason.NOT_UNDER_CONSTRUCTION,
 	CommandFSM.Reason.NOT_A_UNIT,
-	CommandFSM.Reason.NOT_IN_DEFICIT,
+	CommandFSM.Reason.NOTHING_BLOCKED,
 	CommandFSM.Reason.NOT_COMPLETED,
 	CommandFSM.Reason.ALREADY_ATTACKED,
 	CommandFSM.Reason.OUT_OF_RANGE,
@@ -599,17 +599,17 @@ static func _cost_text(credit_cost: int, ap_cost: int, enabled: bool, reason: in
 ## Build on a unit, Disband on a structure — which teaches nothing and would put a
 ## dead row on almost every menu in the game.
 ##
-## ⚠ [constant CommandFSM.Reason.NOT_IN_DEFICIT] is the exception to the principle
+## ⚠ [constant CommandFSM.Reason.NOTHING_BLOCKED] is the exception to the principle
 ## and is here by explicit design decision (user, 2026-08-25). It is a SITUATIONAL
 ## reason, and this spec's own rule is that situational disablement earns a visible
-## row because that is what teaches the rules — a solvent player is never shown
-## that Disband exists. The trade was made knowingly: an irreversible row on every
-## unit on every turn was judged the worse cost. Recorded in
+## row because that is what teaches the rules — a player with nothing blocked is
+## never shown that Disband exists. The trade was made knowingly: an irreversible
+## row on every unit on every turn was judged the worse cost. Recorded in
 ## `design/ux/action-menu.md` OQ-3, including its discoverability consequence.
 static func _is_inapplicable(entry: CommandFSM.VerbEntry) -> bool:
 	return (entry.reason & CommandFSM.Reason.NOT_UNDER_CONSTRUCTION) != 0 \
 		or (entry.reason & CommandFSM.Reason.NOT_A_UNIT) != 0 \
-		or (entry.reason & CommandFSM.Reason.NOT_IN_DEFICIT) != 0
+		or (entry.reason & CommandFSM.Reason.NOTHING_BLOCKED) != 0
 
 
 ## The Disband row's payout, or empty for anything that cannot be disbanded.

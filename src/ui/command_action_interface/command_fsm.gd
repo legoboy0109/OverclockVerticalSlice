@@ -138,7 +138,7 @@ enum Reason {
 	NO_DEPLOY_SPACE = 128,      ## BaseProduction.legal_deploy_tiles() is empty.
 	NOT_UNDER_CONSTRUCTION = 256, ## Cancel Build: entity is not an owned, UNDER_CONSTRUCTION StructureState.
 	INSUFFICIENT_CREDITS = 512,   ## Credits.can_afford() returned false — the Credit main cost of a dual-cost economic action (Build/Produce) is unaffordable (ADR-0006 pivot). INSUFFICIENT_AP covers the AP-surcharge leg.
-	NOT_IN_DEFICIT = 4096,        ## Disband: the player is solvent, so the row is not offered at all (user decision 2026-08-25 — see [method _disband_entry]).
+	NOTHING_BLOCKED = 4096,       ## Disband: nothing is currently blocked that disbanding would relieve — not in deficit and not at population cap — so the row is not offered at all (user decision 2026-08-25; see [method _disband_entry]).
 	NOT_A_UNIT = 2048,            ## Disband: entity is not an own [UnitState] — the verb does not apply to this KIND of thing (structures are never disbanded; UR-7).
 	POPULATION_CAP_REACHED = 1024, ## Population.can_field() returned false — the army is at (or over) its population cap. Mirrors [constant Action.Reason.POPULATION_CAP_REACHED].
 }
@@ -660,35 +660,60 @@ static func _cancel_build_entry(state: GameState, entity: EntityState) -> VerbEn
 ## thing" answer that the menu drops rather than renders (see
 ## [method _cancel_build_entry] for the same treatment and why).
 ##
-## [b]Offered ONLY while the player is in deficit[/b] (user decision, 2026-08-25).
-## Disband is the escape valve `unit-upkeep.md` UR-7 builds the deficit lock
-## around, and that is the situation it exists for; on every other turn it would be
-## a permanently-visible, irreversible row on every unit the player owns, for an
-## action most players use rarely. A solvent player gets
-## [constant Reason.NOT_IN_DEFICIT], which the menu drops rather than renders.
+## [b]Offered only when disbanding would UNBLOCK something[/b] (user decision,
+## 2026-08-25): the player is in deficit, or at/over their population cap.
+##
+## Those are the two states disbanding relieves, and they are the reason the verb
+## exists — `unit-upkeep.md` UR-7 makes it the escape valve the deficit lock
+## depends on, and `population-cap.md` makes it the only voluntary way back under a
+## ceiling that otherwise waits on attrition. Outside them the row would be a
+## permanently visible, irreversible entry on every unit the player owns, for
+## something most players use rarely; a player with nothing blocked gets
+## [constant Reason.NOTHING_BLOCKED], which the menu drops rather than renders.
+##
+## [b]"At cap" is [code]>=[/code], not [code]==[/code], and that matters.[/b] The
+## cap FALLS when a Barracks dies (`population-cap.md` PC-6) and units above the
+## new ceiling are deliberately not destroyed — so a player can sit strictly OVER
+## cap, production-locked, which is precisely when a voluntary way back under is
+## most wanted.
 ##
 ## [b]The rules are unchanged.[/b] [method Upkeep.validate_disband] still accepts a
-## disband from a solvent player — this hides an affordance, it does not forbid an
-## action, and nothing here may become a rule. That distinction is what keeps
-## `apply_action` the single authority on legality.
-##
-## ⚠ [b]Consequence worth knowing[/b]: freeing population cap is a legitimate
-## non-deficit reason to disband, and while the row is hidden a player at cap and
-## solvent has no route to it. See `design/ux/action-menu.md` OQ-3.
+## disband from a player with nothing blocked — this hides an affordance, it does
+## not forbid an action, and nothing here may become a rule. That distinction is
+## what keeps `apply_action` the single authority on legality.
 ##
 ## When the row IS offered it is gated on AP alone — never on the deficit lock that
 ## blocks produce/build/research, since disband is the one action that REDUCES
 ## upkeep and locking it would make a deficit unrecoverable by the player's own
-## choice (UR-7).
+## choice (UR-7). The blocked state is what SHOWS this verb; it must never be what
+## blocks it.
 static func _disband_entry(state: GameState, entity: EntityState) -> VerbEntry:
 	if not (entity is UnitState) or entity.owner != state.active_player:
 		return VerbEntry.new(Verb.DISBAND, false, Reason.NOT_A_UNIT)
-	if not state.per_player[entity.owner].in_deficit:
-		return VerbEntry.new(Verb.DISBAND, false, Reason.NOT_IN_DEFICIT)
+	if not _disbanding_would_unblock(state, entity.owner):
+		return VerbEntry.new(Verb.DISBAND, false, Reason.NOTHING_BLOCKED)
 	var cost: int = Balance.economy.disband_ap_cost
 	if not AP.can_afford(state, entity.owner, cost):
 		return VerbEntry.new(Verb.DISBAND, false, Reason.INSUFFICIENT_AP, cost)
 	return VerbEntry.new(Verb.DISBAND, true, Reason.NONE, cost)
+
+
+## Whether [param player] is currently in a state that disbanding a unit would
+## relieve — the gate on whether the Disband row is offered at all.
+##
+## Two triggers, both read through their owning system rather than re-derived here:
+## the Credit deficit ([member PlayerState.in_deficit], set by
+## [method Upkeep.apply_turn_economy]) and the population ceiling
+## ([method Population.current_population] vs [method Population.effective_cap]).
+##
+## Isolated as its own function because it answers a question — "would disbanding
+## help right now?" — that is likely to grow a third trigger later, and because it
+## is the one place a future reader will look to learn why the row appeared.
+static func _disbanding_would_unblock(state: GameState, player: int) -> bool:
+	if state.per_player[player].in_deficit:
+		return true
+	return Population.current_population(state, player) \
+		>= Population.effective_cap(state, player)
 
 
 ## PURE: the Credit refund preview for disbanding [param unit] — what the player
