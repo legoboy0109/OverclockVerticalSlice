@@ -62,11 +62,29 @@ const BONUS_ID_BASE: int = 500
 ##
 ## Handicap cells are deliberately left untouched so the S6-06 gate numbers stay
 ## comparable across batches.
+## ★ S7-16: widened 4 -> 12. The mirror cell is the ONLY one that can measure a turn-order
+## effect — every handicap cell starts with a material asymmetry that swamps it — and at n=4 it
+## could not support tuning a compensation value. The first four entries are unchanged and in
+## their original order, so every batch recorded before S7-16 stays comparable.
+##
+## Each entry is an offset from a player's OWN HQ, applied in that player's own forward
+## direction, so both seats are seeded identically in their own frame. ⚠ Offsets of x=3 put the
+## two seeded Troopers in immediate contact (west lands on x=5, east on x=6) — that is a real
+## opening shape, not a mistake, and it belongs in the sample.
 const MIRROR_OPENINGS: Array[Vector2i] = [
 	Vector2i(0, 0),   # no seed units -- the original bare-HQ mirror, preserved as a baseline
 	Vector2i(2, -1),  # seeded forward and high
 	Vector2i(2, 1),   # seeded forward and low
-	Vector2i(3, 0),   # seeded further forward, level
+	Vector2i(3, 0),   # seeded further forward, level -- immediate contact
+	# --- S7-16 additions ---
+	Vector2i(1, 0),   # hugging the HQ, level
+	Vector2i(2, 0),   # forward, level
+	Vector2i(1, -2),  # close and wide high (lands on a cover tile)
+	Vector2i(1, 2),   # close and wide low  (lands on a cover tile)
+	Vector2i(2, -2),  # forward and wide high
+	Vector2i(2, 2),   # forward and wide low
+	Vector2i(3, -1),  # far forward, high -- immediate contact
+	Vector2i(3, 1),   # far forward, low  -- immediate contact
 ]
 
 
@@ -134,6 +152,10 @@ var _start_player_override: int = -1
 ## if the winner follows the west HQ, it is the position.
 var _swap_hqs: bool = false
 
+## ★ S7-16 — override [member EconomyConfig.first_turn_ap_bonus] for a batch, so the shipped
+## value is chosen from a curve rather than guessed. -1 = use the configured value.
+var _first_turn_ap_override: int = -1
+
 ## Variants per handicap cell (default 3 = the shipped batch). ★ Raised only for experiments:
 ## the +1 cell at 3 variants is n=6, which is too thin to read a gradient from — the S7-09
 ## sweep's first pass showed a non-monotone dip that was purely sample noise.
@@ -159,6 +181,8 @@ func _parse_args() -> void:
 			_start_player_override = clampi(int(arg.split("=")[1]), 0, 1)
 		elif arg == "--swap-hqs":
 			_swap_hqs = true
+		elif arg.begins_with("--first-turn-ap="):
+			_first_turn_ap_override = maxi(0, int(arg.split("=")[1]))
 		elif arg.begins_with("--variants="):
 			_variants = clampi(int(arg.split("=")[1]), 1, _VARIANT_Y_OFFSETS.size())
 	if _degrade_favoured_pct != 0 or _only_handicap != -1 or _variants != 3 or _plain_map:
@@ -185,6 +209,11 @@ static func _draw(game: int, turn: int) -> int:
 
 
 func _run() -> void:
+	# ⚠ Mutates the shared EconomyConfig resource for the whole batch. Acceptable in a
+	# measurement tool; never do this in shipped code.
+	if _first_turn_ap_override >= 0:
+		Balance.economy.first_turn_ap_bonus = _first_turn_ap_override
+		print("SIM_FIRST_TURN_AP,bonus=%d" % _first_turn_ap_override)
 	var game: int = 0
 	for handicap: int in HANDICAPS:
 		if _only_handicap != -1 and handicap != _only_handicap:
