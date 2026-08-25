@@ -130,6 +130,21 @@ const COVER_PROP_TEXTURE_PATH: String = "res://assets/art/terrain/tile_cover_cle
 ## sprites [EntitySpriteFeed] owns in the same layer.
 const COVER_PROP_NAME_PREFIX: String = "CoverProp_"
 
+## ★ Screen-pixel lift that puts a cover prop's base diamond ON its tile instead of half a tile
+## north of it — the exact defect structures had, fixed the same way (S6-29).
+##
+## A cover prop is anchored bottom-centre at [method grid_to_screen], which returns the tile
+## CENTRE. That is right for a unit, whose feet are the bottom of its art, and wrong for anything
+## standing on a base diamond: the diamond's bottom VERTEX is the lowest drawn pixel, and the
+## vertex sits half a tile-height BELOW the centre. Without this the whole prop floats.
+##
+## [b]Derived, never hand-tuned[/b], exactly like [constant EntitySpriteFeed.STRUCTURE_GROUND_INSET_PX]:
+## the prop is drawn one tile wide, so under the 2:1 dimetric projection its base diamond is
+## [constant TILE_HEIGHT_PX] tall and half of that is the vertex-to-centre distance. Retuning the
+## tile metrics moves this in step; a literal 32.0 would silently drift.
+const COVER_PROP_GROUND_INSET_PX: float = TILE_WIDTH_PX \
+	* (TILE_HEIGHT_PX / TILE_WIDTH_PX) * 0.5
+
 ## Coarse cross-tree z-index band for [member floor_layer] (ADR-0013 §2).
 ## Sits outside the Y-sort group — never compared against occupant Y.
 const FLOOR_Z_INDEX: int = 0
@@ -603,7 +618,13 @@ func _add_cover_prop(tile: Vector2i) -> void:
 	prop.centered = false
 	prop.scale = Vector2.ONE * TILE_LAYER_SCALE
 	var size: Vector2 = texture.get_size()
-	prop.offset = Vector2(-size.x * 0.5, -size.y)
+	# ★ S8-10: the inset is divided by the draw scale because Sprite2D.offset is applied in
+	# TEXTURE space, pre-scale, while the inset is authored in SCREEN pixels — the same reason
+	# EntitySpriteFeed._pivot_offset divides. Applied to OFFSET, never to position: position is
+	# the Y-sort key and the anchor pick_regions builds its tile rect from, and both must keep
+	# meaning "the tile" rather than "the drawn pixels".
+	var inset: float = COVER_PROP_GROUND_INSET_PX / TILE_LAYER_SCALE if TILE_LAYER_SCALE != 0.0 else 0.0
+	prop.offset = Vector2(-size.x * 0.5, -size.y + inset)
 	prop.position = grid_to_screen(tile)
 	occupant_layer.add_child(prop)
 

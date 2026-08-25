@@ -223,23 +223,39 @@ func test_a_disabled_row_is_not_focusable_so_traversal_only_stops_where_it_can_a
 			assert_int(row.focus_mode).is_equal(Control.FOCUS_ALL)
 
 
-func test_an_enabled_verb_shows_the_players_live_binding_not_a_hardcoded_letter() -> void:
-	# AC-15. The hint is read from the InputMap on every open, so a rebind is
-	# reflected without this widget knowing the Settings screen exists.
+func test_a_verb_row_does_not_advertise_a_per_verb_key() -> void:
+	# ★ CHANGED 2026-08-26 from a playtest report. This test previously asserted the opposite —
+	# that the Move row printed its live `board_act` binding (the spec's old AC-15).
+	#
+	# A row is activated by focusing it and pressing select, so printing a second, per-verb key
+	# beside it was a competing instruction for the same outcome: two routes advertised, one
+	# needed. Same "two sources of truth for one choice" reasoning that retired the type-cycle
+	# bindings in S6-30.
+	#
+	# ⚠ The BINDING is deliberately still live — see the test below. Only the advertising is gone.
 	var state := _make_state()
 	var unit := _place_unit(state, 1, 0, Vector2i(5, 5))
 	var menu := _make_menu()
 
 	menu.open(state, unit, Vector2(400, 400), 128.0)
 
-	var expected: String = ""
-	for event: InputEvent in InputMap.action_get_events(&"board_act"):
-		if event is InputEventKey:
-			var key: InputEventKey = event
-			var code: int = key.physical_keycode if key.physical_keycode != 0 else key.keycode
-			expected = "[%s]" % OS.get_keycode_string(code)
-			break
-	assert_str(_hint_of(_row_named(menu, "Move"))).is_equal(expected)
+	assert_str(_hint_of(_row_named(menu, "Move"))).override_failure_message(
+		"The Move row is printing a per-verb shortcut again. Rows are chosen by selecting them; " +
+		"a key printed beside one is a second instruction for the same outcome."
+	).is_empty()
+
+
+func test_the_verb_bindings_themselves_are_still_live() -> void:
+	# ★ The other half, and the reason the change is safe: dropping the on-row HINT must not
+	# quietly unbind the accelerators. They stay usable, stay rebindable in Settings, and stay the
+	# fast path for a player who has learned them.
+	for action: StringName in [&"board_act", &"board_attack", &"board_produce", &"board_build"]:
+		assert_bool(InputMap.has_action(action)).override_failure_message(
+			"%s was unbound. The playtest decision was to stop ADVERTISING these keys, not to " % action +
+			"remove them — unbinding also drops them from the Settings rebind table."
+		).is_true()
+		assert_array(InputMap.action_get_events(action)).override_failure_message(
+			"%s exists but has no events bound." % action).is_not_empty()
 
 
 func test_the_first_enabled_row_takes_keyboard_focus_on_open() -> void:
@@ -291,10 +307,55 @@ func test_the_attack_row_shows_what_attacking_costs() -> void:
 	).contains("%d AP" % Combat.attack_cost_for(attacker))
 
 
-func test_a_priced_row_keeps_its_shortcut_alongside_the_price() -> void:
-	# The price is added to the right-hand column, not swapped in for what was
-	# there — a player learning the keyboard must not lose the hint by gaining a
-	# number.
+func test_a_non_producer_gets_no_produce_row_at_all() -> void:
+	# ★ Reported from play 2026-08-26: every ordinary unit carried a permanent
+	# "Produce — not a producer" row. NOT_A_PRODUCER is structural in exactly the sense
+	# NOT_A_UNIT and NOT_UNDER_CONSTRUCTION already were — no amount of play makes a Trooper a
+	# producer — so it is hidden rather than dimmed. Its omission from _is_inapplicable was an
+	# oversight, not a decision.
+	var state := _make_state()
+	var unit := _place_unit(state, 1, 0, Vector2i(5, 5))
+	var menu := _make_menu()
+
+	menu.open(state, unit, Vector2(400, 400), 128.0)
+
+	assert_object(_row_named(menu, "Produce")).override_failure_message(
+		"A plain unit is showing a Produce row. A verb that can NEVER apply to this kind of " +
+		"entity teaches nothing and puts a dead row on almost every menu in the game."
+	).is_null()
+	# ⚠ And the menu is not simply empty — the verbs that DO apply are still there.
+	assert_object(_row_named(menu, "Move")).is_not_null()
+	assert_object(_row_named(menu, "Wait")).is_not_null()
+
+
+func test_a_situational_block_still_shows_a_dimmed_row_with_its_reason() -> void:
+	# ★★ The other side of the line, and the whole design. Structural is hidden; SITUATIONAL stays
+	# visible BECAUSE the dimmed row is what teaches the rule — a player who never sees
+	# "no targets" never learns that Attack needs something in range.
+	var state := _make_state()
+	var attacker := _place_unit(state, 1, 0, Vector2i(5, 5)) # no enemy anywhere near
+	var menu := _make_menu()
+
+	menu.open(state, attacker, Vector2(400, 400), 128.0)
+
+	var row: Node = _row_named(menu, "Attack")
+	assert_object(row).override_failure_message(
+		"Attack was hidden for a SITUATIONAL reason. Only structural inapplicability is hidden — " +
+		"hiding 'no targets' would remove the only place the rule is ever stated."
+	).is_not_null()
+	assert_str(_hint_of(row)).override_failure_message(
+		"A dimmed row must say WHY, or it is just an unexplained dead row."
+	).is_not_empty()
+
+
+func test_a_priced_row_shows_its_price_and_nothing_else() -> void:
+	# ★ CHANGED 2026-08-26 alongside the shortcut-hint removal. This previously asserted the price
+	# JOINED the shortcut rather than replacing it — "a player learning the keyboard must not lose
+	# the hint by gaining a number". With per-verb hints gone, the price is the whole column.
+	#
+	# ★ Attack is the only verb whose price is a single number knowable before any preview opens,
+	# which is why it alone carries one: Move's is per-tile and Produce's is per-type, so naming
+	# either here would mean inventing a figure.
 	var state := _make_state()
 	var attacker := _place_unit(state, 1, 0, Vector2i(5, 5))
 	_place_unit(state, 2, 1, Vector2i(5, 6))
@@ -303,10 +364,11 @@ func test_a_priced_row_keeps_its_shortcut_alongside_the_price() -> void:
 	menu.open(state, attacker, Vector2(400, 400), 128.0)
 
 	var hint: String = _hint_of(_row_named(menu, "Attack"))
-	assert_str(hint).contains("AP")
 	assert_str(hint).override_failure_message(
-		"the shortcut hint was displaced by the price instead of joining it"
-	).contains("[")
+		"An enabled Attack row must still state what attacking costs before it is pressed."
+	).contains("AP")
+	assert_str(hint).override_failure_message(
+		"A per-verb shortcut is back on a priced row: %s" % hint).not_contains("[")
 
 
 func test_a_disabled_attack_row_shows_price_AND_reason() -> void:
