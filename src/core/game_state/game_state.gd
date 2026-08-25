@@ -335,6 +335,21 @@ func start_turn(player: int) -> Array:
 
 	# 4a. AP reset — flat budget + capped carryover (ADR-0006; not income-driven).
 	AP.reset_turn(self, player)
+	# ★ S7-16: one-off compensation for the measured SECOND-mover advantage. On a symmetric
+	# board with no fog and deterministic combat, the player who moves first must commit into
+	# the open and the second answers with full information — across 12 symmetric openings the
+	# second mover won 10, every one of them on the round-cap unit-count tiebreak.
+	#
+	# Fires exactly once per match: round_number is still 1 for BOTH players' opening turns
+	# (it increments only when control returns to starting_player), so the starting_player
+	# guard is what makes this one-off rather than twice.
+	#
+	# ⚠ Deliberately additive AFTER reset_turn rather than folded into it: reset_turn is the
+	# per-turn AP rule and applies to every turn of the match, while this is a one-time
+	# handicap. Keeping them separate stops a future carryover change from silently scaling
+	# the compensation. Defaults to 0 — inert unless configured.
+	if round_number == 1 and player == starting_player and Balance.economy.first_turn_ap_bonus > 0:
+		per_player[player].current_ap += Balance.economy.first_turn_ap_bonus
 	# 4b. Credit economy — bank NET income (gross - upkeep) AFTER step 3, so a
 	# structure completing this turn is already paying its own upkeep. Also sets
 	# PlayerState.in_deficit, which locks produce/build/research for this turn

@@ -117,6 +117,61 @@ extends Resource
 ## below, NOT cutting this back (that re-creates the idle-army problem).
 @export var ap_carryover_cap: int = 15
 
+## ★ S7-16 — one-off AP granted to the player who moves FIRST, on their first turn only.
+##
+## [b]Compensation for a measured second-mover advantage.[/b] With every enumeration-order bias
+## removed (S7-13/14/15) the mirror cell — the only cell that can measure a turn-order effect,
+## since every handicap cell starts with a material asymmetry that swamps it — reads:
+## [codeblock]
+##   12 symmetric openings, alternating who starts
+##   the SECOND mover wins 10/12
+##   the two the FIRST mover wins are the only two that resolve on play (43 turns)
+## [/codeblock]
+## ★ The shape matters: the second mover's ten wins are all at the round cap, decided by the
+## unit-count tiebreak. The first player commits into the open, the second answers with full
+## information about that commitment, and the first ends marginally behind on units. That is
+## exactly the mechanism `S5-04` guessed at before any of this was measured.
+##
+## ⚠ [b]Direction was reversed twice before it was trusted.[/b] Measured with the movement bias
+## present it looked like a FIRST-mover advantage; with movement fixed but placement still
+## biased it looked like one again. Only once the seat matrix read a clean 7/7 did the sign
+## settle. **Do not re-derive this from a partially-cleaned batch.**
+##
+## Applied by [method GameState.start_turn] on round 1 to
+## [member GameState.starting_player] only. 0 disables it entirely.
+##
+## ⛔⛔ [b]MEASURED AND IT DOES NOT WORK. Ships at 0 deliberately — do not raise it without
+## reading this.[/b] Swept 0 / 5 / 10 / 15 / 20 / 30 against the 12-opening mirror cell:
+## [codeblock]
+##   bonus    first-mover wins    resolved on play    mean turns
+##     0           2/12                2/12              73.8
+##     5           2/12                2/12              73.8
+##    10           2/12                2/12              73.8
+##    15           2/12                2/12              73.8
+##    20           2/12                2/12              73.8
+##    30           2/12                2/12              73.8
+## [/codeblock]
+## Not one game changed, at any value, including one that DOUBLES the opening turn. The bonus
+## verifiably lands (turn-1 AP reads 30 → 60 in the batch rows), so this is a real negative,
+## not another silent no-op.
+##
+## ★★ [b]Why: AP was never the scarce resource.[/b] The first player spends [b]11 of 30[/b] AP
+## on turn 1, and by turn 3 is sitting at 45 — [member ap_carryover_cap] saturated — while
+## spending 6. **They already discard AP every single turn.** Handing them more is handing them
+## more of something they are throwing away.
+##
+## ★ And the advantage being compensated is [b]informational, not economic[/b]: the second
+## mover answers a commitment it can already see. No amount of a non-binding currency addresses
+## that.
+##
+## ⚠ Kept rather than deleted so the idea is not re-tried from scratch. A compensation that
+## could work has to be denominated in something actually scarce — production rate
+## (`production_cooldown_turns` is the binding constraint, S7-10) or material. ★ Or note that
+## all ten second-mover wins are [b]round-cap tiebreak[/b] wins on unit count, while the only
+## two games that resolve on play go to the FIRST mover — which suggests the effect may be an
+## artifact of the tiebreak metric rather than a play advantage at all.
+@export var first_turn_ap_bonus: int = 0
+
 # --- AP logistics surcharges (economy-owned; read by B&P / Research per action) ---
 
 ## AP surcharge spent (on top of the Credit cost) to produce a unit — the tempo

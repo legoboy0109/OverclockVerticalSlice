@@ -603,6 +603,57 @@ stories:
     #     caps that cell at 4 — widen it before choosing a compensation value.
     # Suite 1260/1260, 0 orphans.
 
+  - id: "s7-16"
+    name: "Widen the mirror cell 4 -> 12; first-turn AP compensation MEASURED AS INERT"
+    file: "production/playtests/s7-16-first-turn-compensation-2026-08-25.md"
+    priority: must-have
+    status: done
+    owner: "systems-designer + qa-lead"
+    estimate_days: 0.5
+    blocker: ""
+    completed: "2026-08-25"
+    # ✅ MIRROR CELL WIDENED 4 -> 12 symmetric openings. The first four are unchanged and in
+    #   their original order, so every pre-S7-16 batch stays comparable. Seats split P0 6 / P1 6
+    #   -- the s7-15 fairness result holds at triple the sample.
+    # ★★ AND THE SHAPE n=4 COULD NOT SHOW: the second mover wins 10/12, and EVERY ONE OF THOSE
+    #   TEN IS A ROUND-CAP TIEBREAK ON UNIT COUNT. The only two games that RESOLVE ON PLAY are
+    #   won by the FIRST mover.
+    #   ⇒ The "second-mover advantage" may not be a play advantage at all. In a dead-even
+    #     deterministic mirror neither side breaks through, the game times out, and whoever is
+    #     marginally ahead on units takes it — the first player, having committed first, is
+    #     marginally behind at timeout. THAT IS A PROPERTY OF THE TIEBREAK METRIC, NOT OF PLAY.
+    #
+    # ⛔⛔ FIRST-TURN AP COMPENSATION DOES NOT WORK. Implemented as
+    #   EconomyConfig.first_turn_ap_bonus (GameState.start_turn, round 1, starting player only)
+    #   and swept 0/5/10/15/20/30 against the widened cell:
+    #     EVERY value: first-mover 2/12, resolved 2/12, mean 73.8 turns. NOT ONE GAME CHANGED,
+    #     including a bonus that DOUBLES the opening turn.
+    #   ⚠ A REAL NEGATIVE, NOT A SILENT NO-OP — verified: batch rows show turn-1 AP 30 -> 60.
+    #     Checked precisely because a flat result had already turned out to be a no-op twice
+    #     this sprint.
+    #   ★★ WHY IT CANNOT WORK: AP WAS NEVER THE SCARCE RESOURCE.
+    #       turn 1 (P0 acts): ap 30 -> 19   (11 spent of 30)
+    #       turn 3 (P0 acts): ap 45 -> 39   ( 6 spent of 45)  <- carryover cap SATURATED
+    #     The first player ALREADY DISCARDS AP EVERY TURN. More is more of what they throw away.
+    #   ★ And the advantage is INFORMATIONAL, not economic — the second mover answers a
+    #     commitment it can already see. A non-binding currency cannot address that.
+    #   ★ SAME SHAPE AS TWO EARLIER FINDINGS: s7-10 "money is not the constraint, production
+    #     rate is"; s7-11 cover could not register because the AI cannot use it.
+    #     ⇒ BEFORE COMPENSATING WITH A RESOURCE, CHECK THAT THE RESOURCE IS ACTUALLY BINDING.
+    #   The knob SHIPS AT 0 and is KEPT rather than deleted, with the negative recorded beside
+    #   it, so the idea is not re-tried from scratch.
+    #
+    # ⇒ THREE OPTIONS, ALL DESIGN CALLS (user's):
+    #   1. ★ RECOMMENDED — change the TIEBREAK METRIC. All ten second-mover wins are unit-count
+    #      tiebreaks; deciding a capped game on HQ DAMAGE DEALT would likely favour the player
+    #      who pressed first. Smallest change, targets the actual deciding mechanism.
+    #   2. Compensate in a BINDING currency — production_cooldown_turns is the measured
+    #      constraint (s7-10); start the first player one cooldown tick ahead.
+    #   3. Accept it. A perfectly symmetric deterministic mirror arguably SHOULD be a draw, and
+    #      a tiebreak is arbitrary by nature. With ANY material asymmetry (the +1 cell) seats are
+    #      exactly 7/7 and material converts 14/14.
+    # Suite 1260/1260.
+
   # --- Carried, human-gated, NOT on this sprint's critical path ---
   - id: "s5-03-observer"
     name: "★ S5-03 naive-observer session (~20 min) — the last unscripted half"
