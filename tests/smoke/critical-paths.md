@@ -47,11 +47,37 @@
 
 ## Performance
 
-16. No visible frame rate drops on target hardware (60 FPS target).
-17. No memory growth over 5 minutes of play.
+> ✅ **Now runnable.** These returned "not profiled" in every smoke report up to 2026-08-25
+> because no target hardware was named and the memory ceiling read `[TO BE CONFIGURED]`.
+> The **Steam Deck floor** and the budgets in `technical-preferences.md` give them
+> thresholds, so they pass or fail rather than abstain.
 
-> ⚠ Both performance entries are **unrunnable as written**: no target-hardware baseline
-> exists (`technical-preferences.md` still reads `[TO BE CONFIGURED]` for the memory
-> ceiling), so there is no threshold to pass or fail against. They have been reported as
-> "not profiled" in every smoke report to date. **Either set the baseline or retire them** —
-> a check that can only ever return "not measured" is noise in the gate.
+16. **Frame rate** — 60 FPS at 1280×800 with no visible drops during camera moves, menu
+    transitions, and an AI turn playing out. Fail if sustained below 60.
+17. **Peak resident memory** — under the **1 GB** ceiling; note it if it crosses the **700 MB**
+    soft alert. Baseline to compare against: **145 MB** headless (2026-08-25), and headless
+    holds no textures, so a rendered figure of ~400–600 MB is expected and fine.
+18. **Idle cost** — the game must not render a static board at full rate while waiting on the
+    player. ⛔ **Currently FAILS**: `low_processor_usage_mode` is unset. On the floor target
+    that is battery and heat spent on nothing.
+
+### How to measure without a Deck
+
+Both 16 and 17 can be sampled on a desktop; neither is a substitute for the device.
+
+```bash
+# Peak resident memory of a real slice run, sampled from /proc.
+( ./redot --headless --quit-after 600 res://scenes/vertical_slice.tscn >/dev/null 2>&1 & P=$!
+  M=0; while kill -0 $P 2>/dev/null; do
+    R=$(grep VmHWM /proc/$P/status 2>/dev/null | awk '{print $2}')
+    [ -n "$R" ] && [ "$R" -gt "$M" ] && M=$R
+  done; echo "peak RSS: $((M/1024)) MB" )
+```
+
+⚠ `/usr/bin/time -v` is **not installed on this machine** — use the loop above, not `time`.
+⚠ Headless renders nothing, so this measures logic and resource loading only. A windowed
+run is needed for the real figure, and the Deck for the real *answer*.
+
+> ★ **Do not quote any of these on a store page until a Deck has run the build.** They are
+> desktop measurements reasoned to a target, which is enough for a regression gate and not
+> enough for a spec claim.
