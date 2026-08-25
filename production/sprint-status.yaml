@@ -654,6 +654,57 @@ stories:
     #      exactly 7/7 and material converts 14/14.
     # Suite 1260/1260.
 
+  - id: "s7-17"
+    name: "Tiebreak metric -> HQ damage dealt (correctness; changes no outcome)"
+    file: "production/playtests/s7-17-tiebreak-metric-2026-08-25.md"
+    priority: must-have
+    status: done
+    owner: "systems-designer"
+    estimate_days: 0.25
+    blocker: ""
+    completed: "2026-08-25"
+    # ⚠⚠ FIRST, A CORRECTION TO s7-16. It recommended this change on the grounds that "all ten
+    #   second-mover wins are unit-count tiebreaks". THAT WAS WRONG. I repeated the stale note
+    #   on VS_MAX_ROUNDS ("UNIT_COUNT is the only implemented metric") instead of checking; the
+    #   enum itself flags that note as superseded on 2026-08-21. The shipped default was ALREADY
+    #   TOTAL_HQ_HP and was working correctly — in the capped mirror games the winner is always
+    #   the side with the healthier HQ (hq0=4/hq1=38 -> P1; hq0=26/hq1=16 -> P0; etc).
+    #   ⇒ The stale comment has now been corrected AT SOURCE, with a note on why it mattered:
+    #     a comment describing ANOTHER file's behaviour is a claim with an expiry date, and this
+    #     one cost a mis-scoped story.
+    # ✅ HQ_DAMAGE_DEALT implemented and made the default anyway, because it is the right
+    #   expression even though it changes nothing today:
+    #   ★ MATHEMATICALLY IDENTICAL to TOTAL_HQ_HP while both HQs share a max hp — P0 wins under
+    #     damage-dealt iff (max - hp1) > (max - hp0) iff hp0 > hp1, which IS the TOTAL_HQ_HP
+    #     comparison. VERIFIED, not argued: mirror cell returns IDENTICAL WINNERS 12/12, and a
+    #     unit test pins the ordering agreement across seven damage configurations.
+    #   WHY SHIP IT:
+    #     1. It stops being equivalent the moment the HQs differ. faction-identity allows
+    #        per-faction structure deltas; the instant one HQ has more hp, "whose HQ is
+    #        healthier" rewards WHOEVER WAS HANDED THE BIGGER HQ, while "who dealt more damage"
+    #        keeps measuring play. The equivalence is a coincidence of today's roster.
+    #     2. It says what it means — a capped game is decided by progress toward the win
+    #        condition, stated directly rather than via its complement.
+    #   ⇒ A CORRECTNESS / FUTURE-PROOFING CHANGE, NOT A BALANCE CHANGE.
+    # ⛔ SO THE FIRST-MOVE DISADVANTAGE IS REAL PLAY, NOT A METRIC ARTIFACT. This eliminates
+    #   s7-16's option 1. The second mover GENUINELY DEALS MORE HQ DAMAGE, under a metric that
+    #   was already measuring the right thing.
+    #   POSITION NOW:
+    #     seat bias                     ✅ FIXED (s7-13/14/15) — seats 7/7, material 14/14
+    #     first-turn AP compensation    ⛔ INERT — AP was never scarce (s7-16)
+    #     tiebreak metric               ⛔ WAS ALREADY CORRECT — this only makes it robust
+    #     first-move disadvantage       ⚠ REAL AND UNADDRESSED — second mover wins 10/12 mirror
+    #   WHAT IS LEFT (user's call):
+    #     - compensate in a BINDING currency: production_cooldown_turns is the measured
+    #       constraint (s7-10); start the first player one tick ahead. Unlike AP, which the
+    #       first player already discards every turn.
+    #     - or ACCEPT: a perfectly symmetric deterministic mirror may simply favour the
+    #       responder, and real matches are never perfectly symmetric. ★ Note the two mirror
+    #       games that RESOLVE ON PLAY are both won by the FIRST mover — the disadvantage only
+    #       appears in games that time out.
+    # GATE re-run (now 30 games: 12 mirror + 18 handicap): material converts 18/18, seats
+    #   P0 15 / P1 15 exactly even, 20/30 resolve on play, mean 30.4 turns. Suite 1262/1262.
+
   # --- Carried, human-gated, NOT on this sprint's critical path ---
   - id: "s5-03-observer"
     name: "★ S5-03 naive-observer session (~20 min) — the last unscripted half"

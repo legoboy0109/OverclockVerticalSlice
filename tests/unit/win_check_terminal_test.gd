@@ -291,10 +291,54 @@ func test_max_rounds_reached_no_hq_destroyed_tiebreak_picks_higher_unit_count() 
 # UNIT_COUNT was also implemented as a count of EVERY entity, structures and HQ
 # included, which made a capped game a contest of who built more.
 
-func test_total_hq_hp_is_the_default_metric() -> void:
+func test_hq_damage_dealt_is_the_default_metric() -> void:
 	# Asserted WITHOUT setting it, so a silent change to the default fails here.
+	# ★ S7-17: was TOTAL_HQ_HP. The two are identical in outcome while both HQs share a max
+	# hp — see the equivalence test below — but HQ_DAMAGE_DEALT keeps measuring PLAY once a
+	# per-faction structure delta makes the two HQs differ, where "whose HQ is healthier"
+	# would start rewarding whoever was handed the bigger HQ.
 	var state := _make_state(2, 0)
-	assert_int(state.tiebreak_metric).is_equal(GameState.TiebreakMetric.TOTAL_HQ_HP)
+	assert_int(state.tiebreak_metric).is_equal(GameState.TiebreakMetric.HQ_DAMAGE_DEALT)
+
+
+func test_hq_damage_dealt_and_total_hq_hp_agree_while_both_hqs_share_a_max_hp() -> void:
+	# ★ The equivalence, pinned rather than assumed. Scoring `max - enemy_hp` ranks the players
+	# exactly as scoring `own_hp` does, so switching the default in S7-17 changed no outcome —
+	# which is precisely why it was safe to switch, and why a future asymmetric HQ is the case
+	# that will make them diverge.
+	var full: int = StructureTypes.HQ.hp
+	for damage_pair: Array in [[10, 0], [0, 10], [7, 3], [3, 7], [30, 29], [1, 1], [0, 0]]:
+		var a := _make_state(2, 0)
+		_add_hq(a, 0, full - damage_pair[0])
+		_add_hq(a, 1, full - damage_pair[1])
+		a.tiebreak_metric = GameState.TiebreakMetric.TOTAL_HQ_HP
+		var b := _make_state(2, 0)
+		_add_hq(b, 0, full - damage_pair[0])
+		_add_hq(b, 1, full - damage_pair[1])
+		b.tiebreak_metric = GameState.TiebreakMetric.HQ_DAMAGE_DEALT
+		var m_hp: Array[int] = a._compute_tiebreak_metric()
+		var m_dmg: Array[int] = b._compute_tiebreak_metric()
+		# NOT equal element-wise — they are complements. What must match is the ORDERING.
+		var hp_leader: int = 0 if m_hp[0] > m_hp[1] else (1 if m_hp[1] > m_hp[0] else -1)
+		var dmg_leader: int = 0 if m_dmg[0] > m_dmg[1] else (1 if m_dmg[1] > m_dmg[0] else -1)
+		assert_int(dmg_leader).override_failure_message(
+			"HQ damage taken %s: TOTAL_HQ_HP ranks P%d ahead, HQ_DAMAGE_DEALT ranks P%d. " % [damage_pair, hp_leader, dmg_leader] +
+			"They must agree while both HQs share a max hp, or S7-17 silently changed outcomes."
+		).is_equal(hp_leader)
+
+
+func test_hq_damage_dealt_scores_the_damage_a_player_dealt_not_the_damage_it_took() -> void:
+	# The direction is the whole point and is easy to invert by accident.
+	var state := _make_state(2, 0)
+	state.tiebreak_metric = GameState.TiebreakMetric.HQ_DAMAGE_DEALT
+	_add_hq(state, 0, StructureTypes.HQ.hp)          # P0 untouched
+	_add_hq(state, 1, StructureTypes.HQ.hp - 12)     # P0 dealt 12 to P1's HQ
+	var m: Array[int] = state._compute_tiebreak_metric()
+	assert_int(m[0]).override_failure_message(
+		"P0 damaged P1's HQ by 12, so P0 must score 12 — scoring the damage TAKEN instead " +
+		"would hand capped games to whoever was hit hardest."
+	).is_equal(12)
+	assert_int(m[1]).is_equal(0)
 
 
 func test_default_tiebreak_picks_the_player_whose_hq_is_healthier() -> void:
