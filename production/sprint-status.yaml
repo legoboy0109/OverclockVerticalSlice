@@ -479,6 +479,74 @@ stories:
     # Harness gained --start-player=N and --swap-hqs. Suite 1253/1253. No production behaviour
     # changed by this story.
 
+  - id: "s7-14"
+    name: "★★ Fix the tie-break mirror-invariantly, and re-validate everything downstream"
+    file: "production/playtests/s7-14-tiebreak-fix-2026-08-25.md"
+    priority: must-have
+    status: done
+    owner: "ai-programmer + qa-lead"
+    estimate_days: 1.0
+    blocker: ""
+    completed: "2026-08-25"
+    # ✅ DONE. Replaces "first tile enumerated wins" with a tie-break in EACH PLAYER'S OWN FRAME,
+    # applied everywhere a destination is chosen (advance, siege, retreat, move+attack combo):
+    #   1. closer to the enemy HQ  (each seat measures toward its own opponent)
+    #   2. closer to the HQ-to-HQ axis  (prefer the lane over a flank drift)
+    #   3. smaller coordinate on the axis PERPENDICULAR to the HQ-to-HQ line
+    # ★ Step 3 is the subtle one: a total deterministic order needs SOME coordinate key, but a
+    #   coordinate key is only harmful on the axis the players are mirrored across. Taking it
+    #   perpendicular makes both seats express the IDENTICAL preference — the bias becomes
+    #   SHARED rather than SIDED, and shared is fair.
+    # ⛔ Deliberately NOT reversing Movement's neighbour order: that is a different arbitrary
+    #   direction that merely tests well on an east-west map. The order is Movement's own
+    #   determinism contract and was never the bug; treating enumeration order as a DECISION
+    #   RULE was.
+    # ★ Retreat and the attack combo now fold into a PER-ENTITY local best before competing
+    #   globally — a tile-versus-tile comparison across two different entities is meaningless.
+    #   _Candidate carries its destination tile for the same reason.
+    #
+    # RE-RUN 1 — S6-06 GATE:
+    #   seat split       P0 6 / P1 16  ->  P0 12 / P1 10   ✅ essentially even
+    #   material converts        15/18  ->  16/18          ✅
+    #   handicapped resolving on play   ->  18/18          ✅
+    #   resolve on play (all)    20/22  ->  18/22
+    #   ★ The 20 -> 18 is CORRECT, not a regression: all four MIRROR games now reach the cap,
+    #     where before two were won outright. A genuinely symmetric deterministic match SHOULD
+    #     tiebreak; one side winning it was the bias, not play.
+    #
+    # RE-RUN 2 — SKILL SWEEP (+1 cell, n=14, underdog wins):
+    #   degrade    0%    5%   10%   15%   20%   30%   40%   50%
+    #   before   0/14  1/14  3/14  6/14  5/14  9/14  9/14 11/14
+    #   after    2/14  4/14  4/14  4/14  7/14  9/14  9/14 12/14
+    #   ★ THE 0% ROW MOVED OFF ZERO. A one-unit lead at equal play now converts 12/14 rather
+    #     than 14/14. The old perfect determinism was PARTLY THE SEAT BIAS fixing outcomes; the
+    #     game now has real variance at the top of the curve while still converting "more often
+    #     than not", which is what the gate actually asks for.
+    #
+    # RE-RUN 3 — SEAT MATRIX:
+    #   +0 starts=P0   P0 1:P1 3  ->  P0 3:P1 1
+    #   +0 starts=P1   P0 1:P1 3  ->  P0 1:P1 3
+    #   +1 starts=P0   P0 0:P1 14 ->  P0 9:P1 5
+    #   +1 starts=P1   P0 4:P1 10 ->  P0 8:P1 6
+    #   ★★ THE MIRROR CELL NOW SHOWS A CLEAN, SYMMETRIC FIRST-MOVER ADVANTAGE. Before, P1 won
+    #     3/4 REGARDLESS of who started (a seat effect). Now WHOEVER MOVES FIRST wins 3/4, from
+    #     either seat. The seat bias is gone and an ordinary turn-order advantage is what remains.
+    #   ⇒ THIS IS WHERE THE USER'S FIRST-TURN AP REDUCTION BECOMES THE RIGHT TOOL. It was the
+    #     wrong remedy while the seat bias dominated (turn order then contributed nothing, and
+    #     moving first was if anything a slight DISADVANTAGE). With the tie-break fixed, the
+    #     residual asymmetry in a perfectly symmetric match is EXACTLY a first-move advantage.
+    #   ⚠ n=4 per mirror condition — symmetric across both, which is encouraging, but wants more
+    #     openings before a VALUE is chosen. MIRROR_OPENINGS caps that cell at 4.
+    #
+    # ⚠ RESIDUAL, STATED PLAINLY: the +1 cell still leans P0/west (9/14 and 8/14, ~60/40) where
+    #   fair is 7/7. Large improvement on 14/0, but not zero. Unmeasured candidates:
+    #     - BaseProduction.legal_deploy_tiles ALSO uses _neighbors_in_fixed_order, so
+    #       deploy-tile choice for produced units is still enumeration-ordered
+    #     - the map is 10 tall with both HQs on rank 5 (5 north, 4 south), so "prefer smaller y"
+    #       has marginally more room north — shared between seats, but not neutral
+    # Suite 1260/1260 (+7). Slice boots clean. New suite pins the violated property: whatever a
+    # west-based unit prefers, an east-based unit must prefer the MIRROR IMAGE of it.
+
   # --- Carried, human-gated, NOT on this sprint's critical path ---
   - id: "s5-03-observer"
     name: "★ S5-03 naive-observer session (~20 min) — the last unscripted half"

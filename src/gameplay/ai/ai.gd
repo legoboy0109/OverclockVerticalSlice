@@ -81,12 +81,19 @@ class _Candidate extends RefCounted:
 	var score: float
 	var ap_cost: int
 	var entity_id: int
+	## ★ S7-13: the destination this candidate moves to (the attacker's own tile for a
+	## stationary attack). Carried so an exact tie between two equally-good candidates from
+	## the SAME entity can be settled by [method AI._tile_wins_tie] rather than by whichever
+	## tile [method Movement.reachable] enumerated first. Vector2i.ZERO when not applicable.
+	var dest_tile: Vector2i
 
-	func _init(a: Action = null, s: float = -INF, cost: int = 0, id: int = -1) -> void:
+	func _init(a: Action = null, s: float = -INF, cost: int = 0, id: int = -1, \
+			dest: Vector2i = Vector2i.ZERO) -> void:
 		action = a
 		score = s
 		ap_cost = cost
 		entity_id = id
+		dest_tile = dest
 
 
 ## Deterministic tie-break comparator (Story 005, AC-1; ADR-0011 §2 verbatim;
@@ -136,6 +143,78 @@ static func _is_better(score: float, ap_cost: int, entity_id: int, \
 	if ap_cost != best_ap_cost:
 		return ap_cost < best_ap_cost
 	return entity_id < best_entity_id
+
+
+## The player's own HQ, or [code]null[/code]. Sibling of [method _enemy_hq].
+static func _own_hq(state: GameState, owner: int) -> StructureState:
+	for e: EntityState in state.entities():
+		if e.owner != owner:
+			continue
+		if e is StructureState and (e as StructureState).is_hq():
+			return e as StructureState
+	return null
+
+
+## True iff the HQ-to-HQ axis runs more east-west than north-south. Ties (a perfectly
+## diagonal layout) resolve to horizontal — arbitrary, but consistent for both seats, which
+## is the only property that matters here.
+static func _axis_is_horizontal(own: StructureState, enemy: StructureState) -> bool:
+	if own == null or enemy == null:
+		return true
+	return absi(enemy.position.x - own.position.x) >= absi(enemy.position.y - own.position.y)
+
+
+## ★★ Mirror-invariant tie-break between two candidate destination tiles that have already
+## tied on every scored criterion. True iff [param tile] should displace [param best_tile].
+##
+## [b]Why this exists — S7-13.[/b] Without it, ties were settled by whichever tile
+## [method Movement.reachable] happened to enumerate first, because the folds use
+## [method _is_better], which requires STRICTLY better to replace. `Movement` expands
+## neighbours in a fixed N→E→S→W order for determinism, so "first enumerated" silently meant
+## "furthest East".
+##
+## ⚠ [b]That is not symmetric between the seats.[/b] For a player whose HQ is on the west
+## side, the easterly tile is TOWARD the enemy; for the player on the east side, the very
+## same preference points BACK toward their own base. One side got pulled into the open while
+## the other consolidated — and in a deterministic game with no hidden information, whoever
+## commits first loses the exchange. Measured on the +1 handicap cell: the east seat won
+## [b]14 of 14[/b] games regardless of which side held the extra unit, and material advantage
+## converted only 7/14. It is also the true cause of S5-04's "the player who moves first loses
+## every mirror", which was never about moving first.
+##
+## [b]The rule, in each player's OWN frame:[/b]
+## [br]1. Closer to the enemy HQ. Each seat measures toward its own opponent, so the
+##    comparison means the same thing on both sides of the board.
+## [br]2. Closer to the HQ-to-HQ axis — prefer the lane over a flank drift.
+## [br]3. Smaller coordinate on the axis PERPENDICULAR to the HQ-to-HQ line, as the final
+##    deterministic key.
+##
+## ★ Step 3 is the subtle one. A coordinate key is unavoidable if the order is to stay total
+## and deterministic, but it is only harmful on the axis the two players are mirrored across.
+## Taking it on the PERPENDICULAR axis means both seats express the identical preference —
+## the bias becomes shared rather than sided, and shared is fair.
+##
+## ⛔ Do NOT "fix" this by reversing Movement's neighbour order. That is a different arbitrary
+## direction which merely tests well on an east-west map and would bias the other way on a
+## north-south one. The order there is Movement's own determinism contract and is not the bug;
+## treating enumeration order as a decision rule was.
+static func _tile_wins_tie(state: GameState, tile: Vector2i, best_tile: Vector2i, \
+		enemy_hq: StructureState, axis_horizontal: bool) -> bool:
+	if enemy_hq != null:
+		var d_new: int = state.grid.manhattan_distance(tile, enemy_hq.position)
+		var d_old: int = state.grid.manhattan_distance(best_tile, enemy_hq.position)
+		if d_new != d_old:
+			return d_new < d_old
+		var axis_at: int = enemy_hq.position.y if axis_horizontal else enemy_hq.position.x
+		var lat_new: int = absi((tile.y if axis_horizontal else tile.x) - axis_at)
+		var lat_old: int = absi((best_tile.y if axis_horizontal else best_tile.x) - axis_at)
+		if lat_new != lat_old:
+			return lat_new < lat_old
+	var perp_new: int = tile.y if axis_horizontal else tile.x
+	var perp_old: int = best_tile.y if axis_horizontal else best_tile.x
+	if perp_new != perp_old:
+		return perp_new < perp_old
+	return false # Indistinguishable on every invariant measure — keep the incumbent.
 
 
 ## The AI's single public entry point (ADR-0011 §1, TR-ai-001/003). Pure,
@@ -241,11 +320,21 @@ static func _score_move_and_attack_candidates(lookahead: GameState, entity: Enti
 	if entity is UnitState and not Unit.can_attack(entity):
 		return best
 
+	# ★ S7-13: attacks fold into a LOCAL best for this entity first, then compete globally
+	# once. Folding straight into `best` meant an exact tie between two equally-good attacks
+	# launched from DIFFERENT tiles was settled by whichever tile Movement enumerated first —
+	# the same east-preference that decided matches. A tile-versus-tile tie-break is only
+	# meaningful within one entity's own options, hence the local fold.
+	var enemy_hq: StructureState = _enemy_hq(lookahead, entity.owner)
+	var axis_horizontal: bool = _axis_is_horizontal(_own_hq(lookahead, entity.owner), enemy_hq)
+	var local := _Candidate.new()
+
 	# Stationary (zero-move) attacks from the entity's real position.
 	for tr: Combat.TargetResult in Combat.legal_targets(lookahead, entity):
 		var target: EntityState = lookahead.entity_at(tr.tile)
 		var cost: int = _attack_ap_cost_for(entity)
-		best = _consider_attack(lookahead, entity, target, entity.position, tr.tile, cost, best)
+		local = _consider_attack(lookahead, entity, target, entity.position, tr.tile, cost, local, \
+			enemy_hq, axis_horizontal)
 
 	# Move+attack combos — every reachable tile, scored via legal_targets_from
 	# at the combined move + attack AP cost (Edge Cases, AC-21). Structures
@@ -256,13 +345,18 @@ static func _score_move_and_attack_candidates(lookahead: GameState, entity: Enti
 			for tr: Combat.TargetResult in Combat.legal_targets_from(lookahead, unit, r.tile):
 				var target: EntityState = lookahead.entity_at(tr.tile)
 				var cost: int = r.min_cost + _attack_ap_cost_for(unit)
-				best = _consider_attack(lookahead, unit, target, r.tile, tr.tile, cost, best)
+				local = _consider_attack(lookahead, unit, target, r.tile, tr.tile, cost, local, \
+					enemy_hq, axis_horizontal)
 
 		# Bare, non-attacking repositioning (Story 004: positional/retreat,
 		# Edge Cases). Tiles-normalized, NOT AP-cost-divided (the documented
 		# exception to CR-3's value-per-AP scale) — see
 		# [method _score_positional_and_retreat_candidates].
 		best = _score_positional_and_retreat_candidates(lookahead, unit, best)
+
+	if local.action != null and _is_better(local.score, local.ap_cost, local.entity_id, \
+			best.score, best.ap_cost, best.entity_id):
+		best = local
 
 	return best
 
@@ -301,6 +395,17 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 	# tile that ends CLOSEST to the nearest enemy (max progress in one move),
 	# tie-broken among equally-close tiles by the standard comparator (score — e.g.
 	# a setup tile — then cheapest path).
+	# ★ S7-13: retreat now folds into a LOCAL best before competing globally, matching the
+	# advance and siege folds. Previously it folded straight into `best`, which may already
+	# hold another unit's candidate — and a tile-versus-tile tie-break across two different
+	# units is meaningless. Same fold shape, so the chosen retreat is unchanged except where
+	# it was previously decided by enumeration order.
+	var ret_found: bool = false
+	var ret_tile: Vector2i = Vector2i.ZERO
+	var ret_tiles_moved: int = 0
+	var ret_score: float = 0.0
+	var ret_ap_cost: int = 0
+
 	var adv_found: bool = false
 	var adv_tile: Vector2i = Vector2i.ZERO
 	var adv_tiles_moved: int = 0
@@ -315,6 +420,9 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 	# progress ties on a per-tile rate, so folding each through the global tie-break
 	# would pick the 1-tile step and the unit would crawl.
 	var hq: StructureState = _enemy_hq(lookahead, unit.owner)
+	# ★ S7-13: the frame this unit's tie-breaks are expressed in. Computed once — _own_hq
+	# walks the entity list, and this must not run per candidate tile.
+	var axis_horizontal: bool = _axis_is_horizontal(_own_hq(lookahead, unit.owner), hq)
 	var siege_dist_before: int = -1
 	if hq != null:
 		siege_dist_before = lookahead.grid.manhattan_distance(unit.position, hq.position)
@@ -347,8 +455,19 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 			var value: float = _retreat_value(threat_dist_before, threat_dist_after, \
 				lookahead.grid.is_cover(r.tile.x, r.tile.y))
 			var score: float = value / float(tiles_moved)
-			if _is_better(score, r.min_cost, unit.entity_id, best.score, best.ap_cost, best.entity_id):
-				best = _Candidate.new(_make_move_action(unit, r.tile, tiles_moved), score, r.min_cost, unit.entity_id)
+			var r_take: bool = false
+			if not ret_found:
+				r_take = true
+			elif _is_better(score, r.min_cost, unit.entity_id, ret_score, ret_ap_cost, unit.entity_id):
+				r_take = true
+			elif not _is_better(ret_score, ret_ap_cost, unit.entity_id, score, r.min_cost, unit.entity_id):
+				r_take = _tile_wins_tie(lookahead, r.tile, ret_tile, hq, axis_horizontal)
+			if r_take:
+				ret_found = true
+				ret_tile = r.tile
+				ret_tiles_moved = tiles_moved
+				ret_score = score
+				ret_ap_cost = r.min_cost
 			continue # Anti-oscillation: no advance/SETUP candidate this call.
 
 		# Siege is evaluated BEFORE the nearest-enemy closure gate below, because the
@@ -370,6 +489,11 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 				elif hq_dist_after == siege_dist_after \
 						and _is_better(s_score, r.min_cost, unit.entity_id, siege_score, siege_ap_cost, unit.entity_id):
 					s_take = true
+				elif hq_dist_after == siege_dist_after \
+						and not _is_better(siege_score, siege_ap_cost, unit.entity_id, s_score, r.min_cost, unit.entity_id):
+					# ★ S7-13: exact tie — decide in this unit's own frame, never by
+					# whichever tile Movement enumerated first.
+					s_take = _tile_wins_tie(lookahead, r.tile, siege_tile, hq, axis_horizontal)
 				if s_take:
 					siege_found = true
 					siege_tile = r.tile
@@ -416,6 +540,12 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 			take = true
 		elif effective_dist == adv_effective_dist and _is_better(score, r.min_cost, unit.entity_id, adv_score, adv_ap_cost, unit.entity_id):
 			take = true
+		elif effective_dist == adv_effective_dist \
+				and not _is_better(adv_score, adv_ap_cost, unit.entity_id, score, r.min_cost, unit.entity_id):
+			# ★ S7-13: exact tie on frontier, score and AP cost. This is the case that used to
+			# fall through to "whichever Movement enumerated first" — i.e. furthest East — and
+			# it is what handed the east seat 14 of 14 close games.
+			take = _tile_wins_tie(lookahead, r.tile, adv_tile, hq, axis_horizontal)
 		if take:
 			adv_found = true
 			adv_tile = r.tile
@@ -424,6 +554,9 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 			adv_effective_dist = effective_dist
 			adv_score = score
 			adv_ap_cost = r.min_cost
+
+	if ret_found and _is_better(ret_score, ret_ap_cost, unit.entity_id, best.score, best.ap_cost, best.entity_id):
+		best = _Candidate.new(_make_move_action(unit, ret_tile, ret_tiles_moved), ret_score, ret_ap_cost, unit.entity_id)
 
 	if adv_found and _is_better(adv_score, adv_ap_cost, unit.entity_id, best.score, best.ap_cost, best.entity_id):
 		best = _Candidate.new(_make_move_action(unit, adv_tile, adv_tiles_moved), adv_score, adv_ap_cost, unit.entity_id)
@@ -623,8 +756,14 @@ static func _make_move_action(unit: UnitState, dest: Vector2i, tiles_moved: int)
 ## fold path (never two parallel copies). The constructed [AttackAction] is
 ## returned unattempted — [b]never applied[/b] here; only the caller
 ## ([code]AITurnDriver[/code]) ever calls [code]apply_action[/code] (ADR-0011 §1).
+## ★ S7-13: [param enemy_hq]/[param axis_horizontal] describe the attacker's own frame, so an
+## EXACT tie between two equally-good firing tiles is settled by [method _tile_wins_tie]
+## rather than by whichever tile [method Movement.reachable] enumerated first. [param best]
+## must be the caller's per-entity local best — a tile-versus-tile comparison across two
+## different entities is meaningless.
 static func _consider_attack(lookahead: GameState, attacker: EntityState, target: EntityState, \
-		from_tile: Vector2i, target_tile: Vector2i, ap_cost: int, best: _Candidate) -> _Candidate:
+		from_tile: Vector2i, target_tile: Vector2i, ap_cost: int, best: _Candidate, \
+		enemy_hq: StructureState = null, axis_horizontal: bool = true) -> _Candidate:
 	if not AP.can_afford(lookahead, attacker.owner, ap_cost):
 		return best
 
@@ -634,7 +773,11 @@ static func _consider_attack(lookahead: GameState, attacker: EntityState, target
 	var base_score: float = value / float(ap_cost)
 	var score: float = _action_score(base_score, is_kill)
 
-	if _is_better(score, ap_cost, attacker.entity_id, best.score, best.ap_cost, best.entity_id):
+	var take: bool = _is_better(score, ap_cost, attacker.entity_id, best.score, best.ap_cost, best.entity_id)
+	if not take and best.action != null \
+			and not _is_better(best.score, best.ap_cost, best.entity_id, score, ap_cost, attacker.entity_id):
+		take = _tile_wins_tie(lookahead, from_tile, best.dest_tile, enemy_hq, axis_horizontal)
+	if take:
 		var action: Action
 		if from_tile == attacker.position:
 			# Stationary attack — the unit is already on the firing tile, so a
@@ -657,7 +800,7 @@ static func _consider_attack(lookahead: GameState, attacker: EntityState, target
 			var move_cost: int = ap_cost - _attack_ap_cost_for(attacker)
 			action = _make_move_action(attacker as UnitState, from_tile, \
 					_tiles_moved_for(attacker as UnitState, move_cost))
-		return _Candidate.new(action, score, ap_cost, attacker.entity_id)
+		return _Candidate.new(action, score, ap_cost, attacker.entity_id, from_tile)
 	return best
 
 
