@@ -64,7 +64,7 @@ TARGETS = [
     for a in ("scout", "trooper", "heavy", "sniper") for f in ("e", "w")
 ] + [
     ("structures", f"struct_{n}_rush_idle.png", f"struct_{n}_idle_glow.png")
-    for n in ("hq", "production_outpost", "economy_outpost", "defensive_structure", "research_lab")
+    for n in ("hq", "barracks", "factory", "defensive_structure", "research_lab")
 ]
 
 

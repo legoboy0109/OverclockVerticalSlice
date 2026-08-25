@@ -69,11 +69,17 @@ UNITS = (
 # (runtime name, master stem, axis, shipped px)
 STRUCTURES = (
     ("hq",                 "hq_%s_r7_c2_clean.png",      "w", 512),
-    ("production_outpost", "outpost_%s_r5_c3_clean.png", "w", 384),
+    # ★ Runtime name is BARRACKS (S6-03 rename); the master stem keeps its
+    # original "outpost_" prefix because that is what the generation run produced.
+    # The runtime name is the load-bearing half — EntitySpriteCatalog derives it
+    # from StructureTypeDef.display_name, so a stale name here regenerates files
+    # NOTHING READS.
+    ("barracks",           "outpost_%s_r5_c3_clean.png", "w", 384),
     # The three one-tile structures ship at 256 = 2x the 128px on-screen tile width.
     # The renderer fits every structure to one tile anyway
     # (EntitySpriteFeed.STRUCTURE_TARGET_WIDTH_PX), so this only sets source detail.
-    ("economy_outpost",    "econ_%s_r5_c2_clean.png",    "w", 256),
+    # ★ Runtime name is FACTORY (S6-03 rename). Same note as Barracks above.
+    ("factory",            "econ_%s_r5_c2_clean.png",    "w", 256),
     ("defensive_structure","def_%s_r2_c2_clean.png",     "w", 256),
     ("research_lab",       "lab_%s_r6_c2_clean.png",     "w", 256),
 )

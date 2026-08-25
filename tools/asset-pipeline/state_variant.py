@@ -71,7 +71,7 @@ def _targets() -> list[tuple[str, str]]:
                                           f"unit_{a}_{hue}_{f}_idle_01.png"),
                              os.path.join(ART, "units",
                                           f"unit_{a}_{hue}_{f}_destroyed_01.png")))
-    for n in ("hq", "production_outpost", "economy_outpost", "defensive_structure", "research_lab"):
+    for n in ("hq", "barracks", "factory", "defensive_structure", "research_lab"):
         for hue in ("rush", "boom", "neutral"):
             jobs.append((os.path.join(ART, "structures", f"struct_{n}_{hue}_idle.png"),
                          os.path.join(ART, "structures",
