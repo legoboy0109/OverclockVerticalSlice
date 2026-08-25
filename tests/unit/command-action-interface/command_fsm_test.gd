@@ -450,7 +450,7 @@ func test_menu_model_attack_already_attacked_disabled_regardless_of_ap_or_range(
 # not hidden (menu_model always returns a full 5-row set) or erroring.
 # ==============================================================================
 
-func test_menu_model_always_returns_all_five_verb_rows_never_hides_a_verb() -> void:
+func test_menu_model_always_returns_a_row_for_every_verb_never_hides_one() -> void:
 	var state := _make_state(0)
 	var type := _make_unit_type(1, 8, 1)
 	var unit := _place_unit(state, 1, 0, Vector2i(0, 0), type)
@@ -458,15 +458,24 @@ func test_menu_model_always_returns_all_five_verb_rows_never_hides_a_verb() -> v
 
 	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, unit)
 
-	# Five fixed rows (Cancel Build added by Story 004) — indexing by Verb value
-	# stays valid. A unit's Cancel-Build row is disabled (NOT_UNDER_CONSTRUCTION),
-	# not hidden.
-	assert_int(menu.size()).is_equal(5)
+	# ★ Derived from the enum, not a hardcoded count. This test asserted "5" and
+	# broke on the day Disband was added (2026-08-25) — correctly, but for the
+	# wrong reason: what MATTERS is that the model reports on every verb it knows
+	# about, whatever that set currently is. Counting off the enum keeps that
+	# property true as verbs come and go, and still fails loudly if menu_model ever
+	# starts omitting one.
+	#
+	# The MODEL never hides a verb. The WIDGET drops the ones disabled because they
+	# do not apply to this kind of entity (ActionMenu._is_inapplicable) — that is a
+	# rendering choice made downstream of this, on a complete model.
+	assert_int(menu.size()).is_equal(CommandFSM.Verb.size())
 	var verbs: Array[int] = []
 	for entry: CommandFSM.VerbEntry in menu:
 		verbs.append(entry.verb)
-	assert_array(verbs).contains([CommandFSM.Verb.MOVE, CommandFSM.Verb.ATTACK, \
-		CommandFSM.Verb.PRODUCE, CommandFSM.Verb.WAIT, CommandFSM.Verb.CANCEL_BUILD])
+	for verb: int in CommandFSM.Verb.values():
+		assert_array(verbs).override_failure_message(
+			"menu_model returned no row for verb %d" % verb
+		).contains([verb])
 
 
 func test_menu_model_empty_legal_targets_attack_disabled_no_targets_not_erroring() -> void:
@@ -572,7 +581,9 @@ func test_menu_model_under_construction_structure_still_selects_wait_enabled_ap_
 
 	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, producer)
 
-	assert_int(menu.size()).is_equal(5)
+	# Enum-derived, for the same reason as the row-count test above: the point is
+	# that the model reports on every verb, not that there happen to be N of them.
+	assert_int(menu.size()).is_equal(CommandFSM.Verb.size())
 	var move_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.MOVE)
 	var attack_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.ATTACK)
 	var produce_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.PRODUCE)
@@ -587,6 +598,12 @@ func test_menu_model_under_construction_structure_still_selects_wait_enabled_ap_
 	assert_bool(wait_entry.enabled).is_true()
 	# Story 004: an under-construction owned structure DOES offer Cancel Build.
 	assert_bool(cancel_entry.enabled).is_true()
+	# ...and never Disband, whatever its state: structures are not disbanded (UR-7).
+	# The two destructive verbs are mutually exclusive by entity KIND, which is what
+	# keeps a menu from ever offering two ways to destroy the same thing.
+	var disband_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.DISBAND)
+	assert_bool(disband_entry.enabled).is_false()
+	assert_int(disband_entry.reason).is_equal(CommandFSM.Reason.NOT_A_UNIT)
 
 
 func test_menu_model_non_producer_structure_produce_disabled_not_a_producer() -> void:

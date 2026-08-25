@@ -138,6 +138,16 @@ const SUBMENU_FADE_SEC: float = 0.12
 ## What [constant CommandFSM.Verb.CANCEL_BUILD]'s row says once it is ARMED and one
 ## more activation will destroy the structure. See [method _on_verb_row_pressed]
 ## for why that verb alone takes two presses.
+## What each destructive verb's row says once ARMED. Per-verb, not one shared
+## string: "Confirm cancel" on a Disband row would name the wrong act at the
+## moment the player is being asked to be sure about it.
+const CONFIRM_LABELS: Dictionary = {
+	CommandFSM.Verb.CANCEL_BUILD: "Confirm cancel",
+	CommandFSM.Verb.DISBAND: "Confirm disband",
+}
+
+## Kept for the tests and callers that name it directly; the map above is the
+## source of truth.
 const CONFIRM_LABEL: String = "Confirm cancel"
 
 ## The armed row's right-hand column — it replaces the shortcut hint, because the
@@ -153,7 +163,22 @@ const VERB_LABELS: Dictionary = {
 	CommandFSM.Verb.PRODUCE: "Produce",
 	CommandFSM.Verb.WAIT: "Wait",
 	CommandFSM.Verb.CANCEL_BUILD: "Cancel Build",
+	CommandFSM.Verb.DISBAND: "Disband",
 }
+
+## The verbs that DESTROY something for a partial refund, and therefore take the
+## two-press arm-then-confirm gate instead of committing on one activation.
+##
+## Membership is the whole safety rule, so it is a list rather than a check
+## scattered through [method _on_verb_row_pressed]: adding a destructive verb means
+## adding it here, and forgetting to would ship an irreversible action on a single
+## click. `interaction-patterns.md`'s *Hold-to-Confirm Refund* defines the class —
+## "any action that destroys committed progress/investment for a partial refund,
+## where a single click would be too easy to trigger accidentally".
+const DESTRUCTIVE_VERBS: Array[int] = [
+	CommandFSM.Verb.CANCEL_BUILD,
+	CommandFSM.Verb.DISBAND,
+]
 
 ## The input action whose CURRENT binding is drawn as each verb's shortcut hint.
 ## Read live from the [InputMap] on every open, never hardcoded, so a player who
@@ -183,6 +208,7 @@ const REASON_LABELS: Dictionary = {
 	CommandFSM.Reason.PRODUCTION_CAP_REACHED: "cap reached",
 	CommandFSM.Reason.NO_DEPLOY_SPACE: "no space",
 	CommandFSM.Reason.NOT_UNDER_CONSTRUCTION: "nothing to cancel",
+	CommandFSM.Reason.NOT_A_UNIT: "not a unit",
 	CommandFSM.Reason.INSUFFICIENT_CREDITS: "needs Credits",
 	CommandFSM.Reason.POPULATION_CAP_REACHED: "at pop cap",
 }
@@ -233,6 +259,7 @@ static func commit_rejection_text(reason: int) -> String:
 const REASON_ORDER: Array[int] = [
 	CommandFSM.Reason.NOT_A_PRODUCER,
 	CommandFSM.Reason.NOT_UNDER_CONSTRUCTION,
+	CommandFSM.Reason.NOT_A_UNIT,
 	CommandFSM.Reason.NOT_COMPLETED,
 	CommandFSM.Reason.ALREADY_ATTACKED,
 	CommandFSM.Reason.OUT_OF_RANGE,
@@ -340,7 +367,8 @@ func open(state: GameState, entity: EntityState, anchor_screen: Vector2, \
 		CommandFSM.menu_model(state, entity),
 		CommandFSM.produce_options(state, entity),
 		_refund_text(state, entity),
-		_is_stood_down(entity)
+		_is_stood_down(entity),
+		_disband_refund_text(entity)
 	)
 	_reposition()
 	_show_with_fade()
@@ -452,10 +480,15 @@ func _plate_style() -> StyleBoxFlat:
 ## does not apply to this KIND of entity is noise.
 func _fill_rows(model: Array[CommandFSM.VerbEntry], \
 		produce_options: Array[CommandFSM.ProduceOption], refund: String = "", \
-		stood_down: bool = false) -> void:
+		stood_down: bool = false, disband_refund: String = "") -> void:
 	var items: Array[Dictionary] = []
 	for entry: CommandFSM.VerbEntry in model:
-		if entry.verb == CommandFSM.Verb.CANCEL_BUILD and not entry.enabled:
+		# A verb disabled because it does not apply to this KIND of entity is noise,
+		# not information: "Cancel Build — nothing to cancel" on every scout, and
+		# "Disband — not a unit" on every structure, would put two dead rows on
+		# almost every menu in the game. A verb disabled by the SITUATION (no AP, no
+		# targets) still earns its row — that is what teaches the rules.
+		if not entry.enabled and _is_inapplicable(entry):
 			continue
 		var right: String = ""
 		if not entry.enabled:
@@ -483,6 +516,12 @@ func _fill_rows(model: Array[CommandFSM.VerbEntry], \
 			# Hold-to-Confirm Refund pattern's "see the cost before you commit"
 			# promise, applied to a negative-outcome action.
 			right = refund
+		elif entry.verb == CommandFSM.Verb.DISBAND:
+			# What it costs AND what it returns: disband is the only verb that both
+			# spends and pays out, and a player weighing it against holding the unit
+			# needs both halves of that trade in front of them.
+			right = _priced(entry.ap_cost, disband_refund if entry.enabled \
+				else reason_text(entry.reason))
 		else:
 			right = _shortcut_for(entry.verb)
 		items.append({
@@ -549,6 +588,23 @@ static func _cost_text(credit_cost: int, ap_cost: int, enabled: bool, reason: in
 	if not enabled:
 		text += "  " + reason_text(reason)
 	return text
+
+
+## Whether [param entry] is disabled because its verb does not apply to this KIND
+## of entity — as opposed to being disabled by the current situation. Only the
+## former is dropped from the menu; see [method _fill_rows].
+static func _is_inapplicable(entry: CommandFSM.VerbEntry) -> bool:
+	return (entry.reason & CommandFSM.Reason.NOT_UNDER_CONSTRUCTION) != 0 \
+		or (entry.reason & CommandFSM.Reason.NOT_A_UNIT) != 0
+
+
+## The Disband row's payout, or empty for anything that cannot be disbanded.
+## Read through [method CommandFSM.disband_preview] — the same Pass-Through query
+## discipline the Cancel Build refund uses.
+static func _disband_refund_text(entity: EntityState) -> String:
+	if not (entity is UnitState):
+		return ""
+	return "+%d CR back" % CommandFSM.disband_preview(entity as UnitState)
 
 
 ## Whether [param entity] carries the per-turn stand-down mark. Duplicated from
@@ -902,7 +958,7 @@ func _on_verb_row_pressed(verb: int, produce_options: Array[CommandFSM.ProduceOp
 			# Produce chooses nothing by itself — a produce order without a type is
 			# not an order. The row opens the submenu and the SUBMENU commits.
 			_open_submenu(produce_options)
-		CommandFSM.Verb.CANCEL_BUILD:
+		CommandFSM.Verb.CANCEL_BUILD, CommandFSM.Verb.DISBAND:
 			# ★ Two presses, not one (`design/ux/action-menu.md` decision 5).
 			#
 			# `interaction-patterns.md`'s [i]Hold-to-Confirm Refund[/i] governs this
@@ -950,7 +1006,7 @@ func _arm(verb: int) -> void:
 	var row: Button = _row_for(verb)
 	if row == null:
 		return
-	row.text = CONFIRM_LABEL
+	row.text = CONFIRM_LABELS.get(verb, CONFIRM_LABEL)
 	for child: Node in row.get_children():
 		if child is Label:
 			(child as Label).text = CONFIRM_HINT

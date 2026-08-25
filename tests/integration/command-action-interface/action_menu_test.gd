@@ -643,6 +643,101 @@ func test_choosing_a_different_verb_abandons_an_armed_cancel() -> void:
 
 
 # ==============================================================================
+# Disband — the second destructive verb (action-menu.md OQ-3)
+# ==============================================================================
+
+func test_a_unit_offers_disband_with_its_price_and_its_payout() -> void:
+	# ★ Disband is the only verb that both SPENDS and PAYS OUT, and a player
+	# weighing it against simply holding the unit needs both halves of that trade
+	# in front of them before committing to anything.
+	var state := _make_state()
+	var unit := _place_unit(state, 1, 0, Vector2i(5, 5))
+	var menu := _make_menu()
+
+	menu.open(state, unit, Vector2(400, 400), 128.0)
+
+	var row: Button = _row_named(menu, "Disband")
+	assert_object(row).override_failure_message(
+		"a unit must offer Disband — before 2026-08-25 the action existed and was "
+		+ "reachable from nothing at all"
+	).is_not_null()
+	assert_bool(row.disabled).is_false()
+	var hint: String = _hint_of(row)
+	assert_str(hint).contains("AP")
+	assert_str(hint).override_failure_message(
+		"the Disband row must state the refund before either press"
+	).contains(str(CommandFSM.disband_preview(unit)))
+
+
+func test_a_structure_is_never_offered_disband() -> void:
+	# UR-7: structures are not disbanded. The row is DROPPED rather than shown
+	# greyed out, because "Disband — not a unit" on every structure teaches nothing
+	# and costs a row on every base menu in the game.
+	var state := _make_state()
+	var producer := _place_producer(
+		state, 2, 0, Vector2i(4, 4), [_make_unit_type("Scout")] as Array[UnitTypeDef]
+	)
+	var menu := _make_menu()
+
+	menu.open(state, producer, Vector2(400, 400), 128.0)
+
+	assert_object(_row_named(menu, "Disband")).is_null()
+
+
+func test_disband_takes_two_presses_like_every_destructive_verb() -> void:
+	# ★★ The safety property that matters most about this row. Disband destroys a
+	# unit outright for a partial refund — the textbook case for the pattern
+	# library's Hold-to-Confirm Refund — and unlike Cancel Build it is available on
+	# EVERY unit, every turn. A single-press Disband would put an irreversible
+	# action one careless click away on almost every menu in the game.
+	var state := _make_state()
+	var unit := _place_unit(state, 1, 0, Vector2i(5, 5))
+	var menu := _make_menu()
+	var chosen: Array[int] = []
+	menu.verb_chosen.connect(func(v: int) -> void: chosen.append(v))
+
+	menu.open(state, unit, Vector2(400, 400), 128.0)
+	_row_named(menu, "Disband").emit_signal("pressed")
+
+	assert_bool(menu.is_armed(CommandFSM.Verb.DISBAND)).is_true()
+	assert_int(chosen.size()).is_equal(0)
+
+	_row_named(menu, ActionMenu.CONFIRM_LABELS[CommandFSM.Verb.DISBAND]).emit_signal("pressed")
+	assert_int(chosen.size()).is_equal(1)
+	assert_int(chosen[0]).is_equal(CommandFSM.Verb.DISBAND)
+
+
+func test_an_armed_disband_names_disbanding_not_cancelling() -> void:
+	# Per-verb confirm labels: "Confirm cancel" on a Disband row would name the
+	# wrong act at the exact moment the player is being asked to be sure about it.
+	var state := _make_state()
+	var unit := _place_unit(state, 1, 0, Vector2i(5, 5))
+	var menu := _make_menu()
+
+	menu.open(state, unit, Vector2(400, 400), 128.0)
+	_row_named(menu, "Disband").emit_signal("pressed")
+
+	assert_object(_row_named(menu, "Confirm disband")).is_not_null()
+	assert_object(_row_named(menu, "Confirm cancel")).is_null()
+
+
+func test_every_destructive_verb_is_registered_as_one() -> void:
+	# ★ The list IS the safety rule. A destructive verb missing from
+	# DESTRUCTIVE_VERBS commits on one press with no gate and nothing else would
+	# catch it — so this asserts the two known ones are on it, and that anything on
+	# it is a verb the menu actually knows how to label.
+	assert_array(ActionMenu.DESTRUCTIVE_VERBS).contains(
+		[CommandFSM.Verb.CANCEL_BUILD, CommandFSM.Verb.DISBAND]
+	)
+	for verb: int in ActionMenu.DESTRUCTIVE_VERBS:
+		assert_bool(ActionMenu.CONFIRM_LABELS.has(verb)).override_failure_message(
+			"destructive verb %d has no armed-state label — its row would arm and "
+			% verb + "look completely unchanged"
+		).is_true()
+		assert_bool(ActionMenu.VERB_LABELS.has(verb)).is_true()
+
+
+# ==============================================================================
 # The player-level Build picker (CR-5)
 # ==============================================================================
 

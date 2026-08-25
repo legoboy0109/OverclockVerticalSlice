@@ -152,7 +152,7 @@ only placement that reads as belonging to its button.
 | Menu plate | `HudPanel` palette (`BACKING` / `BORDER`) so it reads as the same HUD, not as OS chrome | — (chrome, not interaction) |
 | Verb row | Label + right-hand column: the verb's AP price where it has a single one, then its shortcut or its disablement reason | **Standard Button** |
 | Disabled verb row | Same row, dimmed label + reason text; visible, never hidden, never recoloured | **Affordability Dimming** |
-| Cancel Build row | Shows the refund up front; arms on first activation, commits on second | **Hold-to-Confirm Refund** (toggle variant — see decision 5) |
+| Destructive rows (Cancel Build, Disband) | Show the payout up front; arm on first activation, commit on second, relabel while armed | **Hold-to-Confirm Refund** (toggle variant — see decision 5) |
 | Submenu plate | Second plate, same palette, listing produce/build options with dual costs | **Standard Button** + **Affordability Dimming** |
 | Focus indicator | Engine-native focus ring, a distinct `StyleBox` from hover | **Three-State Focus Indicator** |
 | Back-out | Right-click / ESC / pad B, one level per press | **Standard Cancel** |
@@ -433,7 +433,7 @@ those words describe is queried, never stored here.
   | Priced verb column (worst case) | "2 AP · no targets, needs AP" (27) | **54** | A price, a middle dot, then the multi-reason budget above. The widest right-hand column the verb menu can produce |
   | Unit / structure name | "Defensive Structure" (19) | **24** | Widens the picker only |
   | Cost line | "600 CR + 2 AP" (13) | **20** | Currency abbreviations are themselves translatable |
-  | Armed-confirm label | "Confirm cancel" (14) | **20** | Must stay visibly different from "Cancel Build", or the arm state reads as no change |
+  | Armed-confirm label | "Confirm cancel" (14), "Confirm disband" (15) | **20** | Must stay visibly different from its resting label ("Cancel Build", "Disband"), or the arm state reads as no change |
 
   ⚠ **The last row is a correctness constraint, not a layout one.** The arm-then-confirm gate
   (decision 5) works because the row visibly changes; a translation whose confirm label reads
@@ -475,6 +475,9 @@ depends on game rules, the *set-up* is stated so the expected result follows fro
 | AC-2 | Select a unit that has already moved and attacked this turn. The menu still opens; Wait is the only bright row and every other row is dimmed with a short phrase beside it saying why | Integration |
 | AC-3 | Click an enemy unit, then empty ground. No menu appears in either case; the SELECTED panel still shows what was clicked | Integration |
 | AC-4 | Select a unit with no enemy in range and zero AP. The Attack row names **both** problems, not just the first | Logic |
+| AC-28 | Select any of your units. A Disband row is present, stating both what it costs and what it returns. Activate it once: the unit survives and the row reads "Confirm disband". Activate again: the unit is gone and the Credits arrive | Integration |
+| AC-29 | Select a structure. There is no Disband row at all | Integration |
+| AC-30 | Arm Disband, then press Esc. The row reads "Disband" again, the unit is alive, and nothing was deselected | Integration |
 | AC-27 | Select a unit with an enemy adjacent and AP to spare. The Attack row states what attacking costs, alongside its shortcut, before any preview is opened. Drain the AP and re-select: the row still states the cost, now beside the reason | Integration |
 | AC-5 | With the menu open, press ↓ repeatedly. Focus visits only bright rows and never lands on a dimmed one. Clicking a dimmed row does nothing | Integration |
 | AC-6 | The menu never touches the sprite it belongs to: there is at least one tile of clear board between the entity and the menu's near edge | Logic |
@@ -534,8 +537,29 @@ accessibility item. It is now arm-then-confirm — see decision 5. *Kept visible
 "the two-step selection is already a confirmation" is a tempting argument and it was wrong, which is
 worth remembering.*
 
-**OQ-3 — Does the menu need a Disband row?** `DisbandAction` exists and is reachable from nothing.
-Out of scope here; named so it is not lost.
+**~~OQ-3~~ — RESOLVED 2026-08-25.** Disband now has a row on every own unit's menu, showing both
+halves of its trade up front (`1 AP · +100 CR back`) — it is the only verb that spends *and* pays
+out, and a player weighing it against simply holding the unit needs both figures before committing
+to anything. Structures never get the row at all (UR-7: structures are not disbanded), dropped
+rather than greyed, on the same rule that drops Cancel Build from a scout.
+
+**It takes two presses**, like every destructive verb — the *Hold-to-Confirm Refund* class. That
+matters more here than for Cancel Build: Cancel Build only appears on an under-construction
+structure, which is rare, whereas Disband is on **every unit, every turn**. Without the gate, an
+irreversible action would sit one careless click away on almost every menu in the game.
+`ActionMenu.DESTRUCTIVE_VERBS` is the list that decides this, and a test asserts every verb on it
+has an armed-state label — a destructive verb missing from the list would commit on one press with
+nothing else to catch it.
+
+**Not gated on the deficit lock**, deliberately: disband is the one action that *reduces* upkeep, so
+greying it out while in deficit would have the interface reintroduce the trap the rules were written
+to avoid (UR-7).
+
+⚠ **Open, and worth a playtest**: whether a permanently-visible Disband row is the right amount of
+prominence for an action most players will use rarely. The alternative is showing it only while in
+deficit — safer and tidier, but it hides a legitimate action (freeing population cap is a real
+non-deficit reason to disband). Shipped always-visible because a verb a player cannot find is worse
+than one they must confirm.
 
 **~~OQ-5~~ — RESOLVED 2026-08-24.** The menu said "no route" to a unit standing in open ground
 that had simply run out of AP. `Movement.reachable()` applies its affordability cut *inside* the

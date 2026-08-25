@@ -1073,6 +1073,13 @@ func _on_menu_verb_chosen(verb: int) -> void:
 			_cmd.enter_preview(_state, entity, CommandFSM.State.PREVIEW_ATTACK)
 			_refresh_cost_preview()
 			_flash_msg("Attack: pick a highlighted target. Esc to go back.")
+		CommandFSM.Verb.DISBAND:
+			# Reached only on the SECOND press — ActionMenu holds the arm-then-confirm
+			# gate for every destructive verb, so by the time this fires the player
+			# has activated a row that read "Confirm disband".
+			var disband := DisbandAction.new()
+			disband.entity_id = entity.entity_id # action.player set by commit.
+			_cmd.dispatch_commit(disband, _state)
 		CommandFSM.Verb.CANCEL_BUILD:
 			# ★ Committed directly rather than through Story 004's timed hold.
 			# That hold exists to stop a BARE KEYPRESS destroying a structure by

@@ -202,6 +202,18 @@ func _run() -> void:
 					await get_tree().process_frame
 				await RenderingServer.frame_post_draw
 				_shot("03j-attack-priced")
+
+				# ...and the ARMED state of a destructive row. Disband is available on
+				# every unit every turn, so its two-press gate is the safety property
+				# most worth having a picture of.
+				var armed: Button = _find_verb_row(slice, CommandFSM.Verb.DISBAND)
+				if armed != null:
+					armed.emit_signal("pressed")
+					for i: int in 12:
+						await get_tree().process_frame
+					await RenderingServer.frame_post_draw
+					_shot("03k-disband-armed")
+				slice.back_out() # disarms; nothing is destroyed
 				slice.back_out()
 				await get_tree().process_frame
 
@@ -276,6 +288,22 @@ func _run() -> void:
 		get_tree().paused = false
 	print("done")
 	get_tree().quit()
+
+
+## The action menu's row for [param verb], found by the meta tag ActionMenu puts on
+## each one — never by label, since an ARMED row deliberately stops reading as its
+## own verb name.
+func _find_verb_row(slice: Node, verb: int) -> Button:
+	var menu: Node = slice._action_menu
+	if menu == null:
+		return null
+	var plate: Node = menu.get_node_or_null(^"MenuPlate")
+	if plate == null or plate.get_child_count() == 0:
+		return null
+	for child: Node in plate.get_child(0).get_children():
+		if child is Button and (child as Button).get_meta(&"verb", -1) == verb:
+			return child
+	return null
 
 
 func _shot(name: String) -> void:

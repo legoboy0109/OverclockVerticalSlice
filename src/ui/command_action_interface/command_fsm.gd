@@ -119,7 +119,7 @@ const NO_SINGLE_COST: int = -1
 ## structure — see [method _cancel_build_entry]. Deliberately excludes Build
 ## (CR-5: Build is a player-level command, never part of a selected entity's
 ## own menu).
-enum Verb { MOVE, ATTACK, PRODUCE, WAIT, CANCEL_BUILD }
+enum Verb { MOVE, ATTACK, PRODUCE, WAIT, CANCEL_BUILD, DISBAND }
 
 ## Disablement reason flags (powers of two — see [member VerbEntry.reason]'s
 ## doc comment for why this is a bitmask, not a single code). Each flag names
@@ -138,6 +138,7 @@ enum Reason {
 	NO_DEPLOY_SPACE = 128,      ## BaseProduction.legal_deploy_tiles() is empty.
 	NOT_UNDER_CONSTRUCTION = 256, ## Cancel Build: entity is not an owned, UNDER_CONSTRUCTION StructureState.
 	INSUFFICIENT_CREDITS = 512,   ## Credits.can_afford() returned false — the Credit main cost of a dual-cost economic action (Build/Produce) is unaffordable (ADR-0006 pivot). INSUFFICIENT_AP covers the AP-surcharge leg.
+	NOT_A_UNIT = 2048,            ## Disband: entity is not an own [UnitState] — the verb does not apply to this KIND of thing (structures are never disbanded; UR-7).
 	POPULATION_CAP_REACHED = 1024, ## Population.can_field() returned false — the army is at (or over) its population cap. Mirrors [constant Action.Reason.POPULATION_CAP_REACHED].
 }
 
@@ -252,7 +253,8 @@ static func next_state(current: State, trigger: Trigger, _state: GameState) -> S
 ##
 ## Returns exactly one [VerbEntry] per [enum Verb] value, always in
 ## [code]Verb[/code] declaration order (Move, Attack, Produce, Wait, Cancel
-## Build) — [b]Wait is always present and always enabled[/b] (CR-4: "Wait
+## Build, Disband — the two DESTRUCTIVE verbs last, so a menu never puts an
+## irreversible row where a routine one was a moment ago) — [b]Wait is always present and always enabled[/b] (CR-4: "Wait
 ## (always — ends this entity's involvement without spending)"), satisfying
 ## AC-10's "Wait clickable" even for a fully-spent entity. [b]Cancel Build[/b]
 ## ([constant Verb.CANCEL_BUILD], Story 004) is enabled only for an owned,
@@ -324,6 +326,7 @@ static func menu_model(state: GameState, entity: EntityState) -> Array[VerbEntry
 	menu.append(_produce_entry(state, entity))
 	menu.append(VerbEntry.new(Verb.WAIT, true, Reason.NONE))
 	menu.append(_cancel_build_entry(state, entity))
+	menu.append(_disband_entry(state, entity))
 	return menu
 
 
@@ -646,6 +649,41 @@ static func _cancel_build_entry(state: GameState, entity: EntityState) -> VerbEn
 	if structure.owner != state.active_player:
 		return VerbEntry.new(Verb.CANCEL_BUILD, false, Reason.NOT_UNDER_CONSTRUCTION)
 	return VerbEntry.new(Verb.CANCEL_BUILD, true, Reason.NONE)
+
+
+## Builds the Disband [VerbEntry] (`design/ux/action-menu.md` OQ-3).
+##
+## [b]Units only[/b] (`unit-upkeep.md` UR-7): a structure is never disbanded, so a
+## structure — or anything the active player does not own — yields
+## [constant Reason.NOT_A_UNIT], the "this verb does not apply to this KIND of
+## thing" answer that the menu drops rather than renders (see
+## [method _cancel_build_entry] for the same treatment and why).
+##
+## Otherwise gated on AP alone. [b]Deliberately not gated on the deficit lock[/b]
+## that blocks produce/build/research: disband is the one action that REDUCES
+## upkeep, so locking it while in deficit would make a deficit unrecoverable by the
+## player's own choice (UR-7). Greying it out here would be the interface
+## reintroducing a trap the rules were written to avoid.
+static func _disband_entry(state: GameState, entity: EntityState) -> VerbEntry:
+	if not (entity is UnitState) or entity.owner != state.active_player:
+		return VerbEntry.new(Verb.DISBAND, false, Reason.NOT_A_UNIT)
+	var cost: int = Balance.economy.disband_ap_cost
+	if not AP.can_afford(state, entity.owner, cost):
+		return VerbEntry.new(Verb.DISBAND, false, Reason.INSUFFICIENT_AP, cost)
+	return VerbEntry.new(Verb.DISBAND, true, Reason.NONE, cost)
+
+
+## PURE: the Credit refund preview for disbanding [param unit] — what the player
+## gets back, shown on the row BEFORE either press of the confirmation gate
+## (the *Hold-to-Confirm Refund* pattern's "see the cost before you commit"
+## promise, applied to a negative-outcome action).
+##
+## Reaches the value only through [method Upkeep.disband_refund], never a local
+## rate (Pass-Through Invariant, ADR-0015 §4) — the sibling of
+## [method cancel_build_preview], which does the same for the other destructive
+## verb. O(1).
+static func disband_preview(unit: UnitState) -> int:
+	return Upkeep.disband_refund(unit.type)
 
 
 ## PURE: the AP refund preview for cancelling [param structure] under
