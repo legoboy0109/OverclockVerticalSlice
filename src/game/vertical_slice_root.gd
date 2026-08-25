@@ -378,6 +378,13 @@ func _build_command_interface() -> void:
 	_cmd.set_local_player(LOCAL_PLAYER)
 	_cmd.set_input_config(InputConfig.new())
 	_cmd.attach_to_state(_state)
+	# ★ 2026-08-24 (/ux-review advisory 8). GameState.action_applied fires on
+	# SUCCESS only, and dispatch_commit returns "a commit was dispatched", not "it
+	# worked" — so a refused commit used to reach nothing here and the player was
+	# told nothing at all. They would read that as the input not registering and
+	# press again. Now every rejection says why, in the same voice the greyed-out
+	# menu rows use.
+	_cmd.commit_rejected.connect(_on_commit_rejected)
 
 
 func _build_hud() -> void:
@@ -582,6 +589,19 @@ func _refresh_status() -> void:
 		"[B] build   [Tab] end turn   [[ ] jump cursor")
 	_status_label.text = "\n".join(lines)
 	_layout_status() # the widest line just changed; re-clamp before it is drawn.
+
+
+## Renders a refused commit as the status line's transient reason.
+##
+## Wording comes from [method ActionMenu.commit_rejection_text] rather than from a
+## local table, so the sentence a player reads after a refusal matches the one on
+## the greyed-out row that would have predicted it.
+func _on_commit_rejected(reason: int) -> void:
+	_flash_msg("Refused: %s" % ActionMenu.commit_rejection_text(reason))
+	# The board did not change, but the menu's affordability may have been what was
+	# wrong — reopen it so the player can see the verb greyed out with its reason
+	# rather than only reading the transient line.
+	_open_action_menu()
 
 
 ## Sets the transient feedback line and repaints the overlay.

@@ -113,6 +113,23 @@ extends Node
 ## the same frame by construction (never one polling/reacting to the other).
 signal commit_flash_requested(result: ActionResult)
 
+## A commit was dispatched and the owning system REJECTED it. Carries the
+## [enum Action.Reason] the validator returned.
+##
+## [b]Why this needs its own signal.[/b] [signal GameState.action_applied] is
+## emitted on success only (ADR-0004 step 7), and [method dispatch_commit] returns
+## whether a commit was [i]dispatched[/i], not whether it succeeded — so before
+## 2026-08-24 a rejected commit reached nothing at all. The player pressed confirm
+## on a highlighted tile, the action was refused, and the interface said nothing:
+## no flash, no menu refresh, no reason. That is the exact silent-failure the
+## contextual menu exists to end, surviving one layer below it.
+##
+## Rejections are rare by construction (every commit path pre-checks legality
+## against the same queries the validators use), but "rare" is what makes a silent
+## one so hard for a player to interpret — they will assume the input did not
+## register and press again.
+signal commit_rejected(reason: int)
+
 
 ## Selection/inspection target change (ADR-0016 §6 / ADR-0015 §6 seam,
 ## TR-hud-013): emitted whenever this interface's persistent selection OR
@@ -728,9 +745,13 @@ func _on_commit_result(result: ActionResult, state: GameState, entity: EntitySta
 ## [code]action.player[/code] once before [code]apply_action[/code].
 func commit(state: GameState, action: Action) -> ActionResult:
 	if not is_input_live(state):
+		commit_rejected.emit(Action.Reason.NOT_ACTIVE_PLAYER)
 		return ActionResult.new(false, Action.Reason.NOT_ACTIVE_PLAYER, [])
 	action.player = _local_player
 	var result: ActionResult = state.apply_action(action)
+	if not result.ok:
+		# Surfaced, never swallowed — see [signal commit_rejected].
+		commit_rejected.emit(result.reason)
 	# Story 008 post-commit convergence (this committing instance). Read directly
 	# from [param state] so this is correct even without an [method attach_to_state]
 	# subscription; the shared handler independently converges non-committing

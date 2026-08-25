@@ -671,6 +671,50 @@ func test_the_menu_driven_build_flow_actually_commits_at_the_cursor() -> void:
 	assert_bool(state.entity_at(legal[0]) is StructureState).is_true()
 
 
+func test_a_refused_commit_tells_the_player_why_instead_of_nothing() -> void:
+	# ★ 2026-08-24 (/ux-review advisory 8). GameState.action_applied is emitted on
+	# SUCCESS only (ADR-0004 step 7), and dispatch_commit returns "a commit was
+	# dispatched" rather than "it worked" — so a refused commit reached nothing in
+	# the slice. The player pressed confirm, the action was refused, and the screen
+	# said nothing: they would read that as the input not registering and press
+	# again. Rejections are rare (every path pre-checks against the same queries the
+	# validators use), and rare is exactly what makes a silent one unreadable.
+	var root := _make_root()
+	var state := root.state()
+
+	# Force a refusal the pre-checks cannot catch: a legal-looking action aimed at
+	# a player who is not the active one.
+	var action := EndTurnAction.new()
+	action.player = 0
+	state.active_player = 1
+	root.command_interface().commit(state, action)
+
+	assert_str(root.status_text()).override_failure_message(
+		"a refused commit must say why — silence is the failure being fixed"
+	).contains("Refused")
+
+
+func test_rejection_wording_comes_from_the_same_vocabulary_the_menu_uses() -> void:
+	# The greyed-out row that would have predicted the refusal and the line the
+	# player reads after it must speak the same way. Two tables in two files drift
+	# into two vocabularies.
+	assert_str(ActionMenu.commit_rejection_text(Action.Reason.CANT_AFFORD)).is_equal("needs AP")
+	assert_str(ActionMenu.commit_rejection_text(Action.Reason.CANT_AFFORD_CREDITS)) \
+		.is_equal("needs Credits")
+	# ...and the same phrases the menu's own disabled rows use.
+	assert_str(ActionMenu.reason_text(CommandFSM.Reason.INSUFFICIENT_AP)).is_equal("needs AP")
+	assert_str(ActionMenu.reason_text(CommandFSM.Reason.INSUFFICIENT_CREDITS)) \
+		.is_equal("needs Credits")
+
+
+func test_an_unmapped_rejection_still_says_something_naming_its_code() -> void:
+	# A rejection the interface cannot name is still one the player must be told
+	# about — and the code makes it reportable.
+	var text: String = ActionMenu.commit_rejection_text(9999)
+	assert_str(text).is_not_empty()
+	assert_str(text).contains("9999")
+
+
 func test_camera_frames_the_whole_board_within_the_view() -> void:
 	# The fit-to-board camera must show every board tile at boot (regression for the
 	# "board off-screen / window too small" report — old fixed zoom 2.0 clipped it).

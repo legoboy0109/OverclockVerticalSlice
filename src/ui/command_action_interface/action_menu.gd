@@ -89,8 +89,16 @@ const LABEL_ENABLED: Color = Color(0.90, 0.94, 1.0)
 const LABEL_FOCUS: Color = Color(1.0, 1.0, 1.0)
 
 ## Disabled verb label — greyscale, never a hue. Hue means ownership on this
-## screen (art-bible), so tinting a dead row red would collide with that.
-const LABEL_DISABLED: Color = Color(0.46, 0.50, 0.56)
+## screen (art-bible), so tinting a dead row red would collide with that, and
+## *Affordability Dimming* forbids a hue-based unavailability signal outright.
+##
+## ★ Raised from [code]Color(0.46, 0.50, 0.56)[/code] on 2026-08-24. The plate is
+## 88% opaque, so whatever is behind it bleeds through: over the board's dark
+## ground the old value measured 4.65:1, but over the tan over-cap move overlay —
+## the brightest thing that can sit under a menu — it fell to 4.27:1, under the
+## 4.5:1 WCAG AA floor for body text at this size. Sized against that worst case
+## with headroom, not against the comfortable one. See the spec's contrast table.
+const LABEL_DISABLED: Color = Color(0.50, 0.54, 0.60)
 ## The shortcut hint. Dim on purpose: it is there to be learned, not read.
 const HINT: Color = Color(0.52, 0.60, 0.70)
 ## Disablement reason text. Dimmer than an enabled label and warmer than the hint,
@@ -178,6 +186,45 @@ const REASON_LABELS: Dictionary = {
 	CommandFSM.Reason.INSUFFICIENT_CREDITS: "needs Credits",
 	CommandFSM.Reason.POPULATION_CAP_REACHED: "at pop cap",
 }
+
+## Player-facing phrasing for an [enum Action.Reason] a validator returned when a
+## commit was REJECTED (see [signal CommandInterface.commit_rejected]).
+##
+## [b]Deliberately here, beside [constant REASON_LABELS], and not in the scene
+## glue that renders it.[/b] These are two different enums —
+## [enum CommandFSM.Reason] says why a verb is greyed out, [enum Action.Reason]
+## says why a dispatched commit was refused — but they are the same VOICE speaking
+## to the same player about the same action, moments apart. Split across two files
+## they would drift into two vocabularies ("needs AP" here, "not enough action
+## points" there), which is precisely the drift that made the pre-menu interface
+## hard to read.
+const COMMIT_REJECTION_LABELS: Dictionary = {
+	Action.Reason.NOT_ACTIVE_PLAYER: "not your turn",
+	Action.Reason.CANT_AFFORD: "needs AP",
+	Action.Reason.CANT_AFFORD_CREDITS: "needs Credits",
+	Action.Reason.ILLEGAL_TARGET: "not a legal target",
+	Action.Reason.OUT_OF_RANGE: "out of range",
+	Action.Reason.TILE_OCCUPIED: "that tile is taken",
+	Action.Reason.NOT_LEGAL_BUILD_TILE: "can't build there",
+	Action.Reason.PRODUCTION_CAP_REACHED: "cap reached",
+	Action.Reason.NOT_COMPLETED: "still building",
+	Action.Reason.NOT_PRODUCIBLE: "this producer can't make that",
+	Action.Reason.NOT_LEGAL_DEPLOY_TILE: "can't deploy there",
+	Action.Reason.NOT_UNDER_CONSTRUCTION: "nothing to cancel",
+	Action.Reason.GAME_OVER: "the match is over",
+	Action.Reason.NO_SUCH_ENTITY: "that entity is gone",
+}
+
+
+## One line explaining a rejected commit, for [param reason].
+##
+## Falls back to a generic phrase rather than an empty string for an unmapped
+## reason: a rejection the interface cannot name is still a rejection the player
+## must be told about, and saying nothing is the failure mode being fixed. The
+## fallback names the code so a bug report can carry it.
+static func commit_rejection_text(reason: int) -> String:
+	return COMMIT_REJECTION_LABELS.get(reason, "the action was refused (code %d)" % reason)
+
 
 ## Order the reason flags are read in when a row carries several. Fixed rather than
 ## derived from the enum's numeric order so the wording of a multi-reason row is

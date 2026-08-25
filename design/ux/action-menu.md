@@ -1,10 +1,14 @@
 # UX Spec: Contextual Action Menu
 
-> **Status**: Reviewed — **revised 2026-08-24** after `/ux-review` found 6 blocking issues; all 6
+> **Status**: Reviewed — **revised 2026-08-24** after `/ux-review`. All **6 blocking** issues
 > resolved (pattern-library conformance, Cancel Build's confirmation gate, registered animation
-> timings, the AP/Credit projected-cost echo, the phantom lock glyph, and the missing
-> performance/resolution criteria). ⚠ The review was a **self-audit by the spec's own author** —
-> an independent pass would carry more weight.
+> timings, the AP/Credit projected-cost echo, the phantom lock glyph, missing
+> performance/resolution criteria) and all **8 advisory** issues resolved (measured contrast, the
+> refused-commit state, the states-that-do-not-exist note, null/trigger columns on Data
+> Requirements, localisation budgets, tester-evaluable acceptance criteria, the `hud.md`
+> reconciliation, and decision 1's overclaim).
+> ⚠ The review was a **self-audit by the spec's own author** — an independent pass would carry more
+> weight, and the four spec-accuracy findings are the kind an author reliably misses.
 > **Author**: main session, from `design/gdd/command-action-interface.md` + four user decisions (2026-08-24)
 > **Last Updated**: 2026-08-24
 > **Journey Phase(s)**: Core in-match loop — every AP-costed action passes through this surface
@@ -115,6 +119,13 @@ The player-level Build picker (CR-5) has no entity to float beside, so it does *
 above. It hangs off the HUD's Build control: its **bottom-right corner lands on the ACTIONS panel's
 top-right corner**, so the list grows *up and to the left*, out of the button that summoned it.
 
+**Cross-document note.** `hud.md` Zone B is the HUD's fixed control corner, and this picker anchors
+there without being HUD chrome: it is a transient popover belonging to the Build control that opens
+it, gone the moment a type is chosen or the player backs out. `hud.md` has been updated to record
+both this and the fact that the CAI's *verb* menu legitimately draws over the board interior — its
+"board interior stays clear" rule is about HUD-owned chrome, and Zone D's "one on-board, one
+off-board" phrasing was about the detail panel specifically, not a blanket rule.
+
 The verb menu's flip rule would be meaningless here — a plate anchored in a screen corner has no
 "other side" to flip to, and centring it on the anchor the way the verb menu does put half the list
 below the screen edge and the rest under the status legend. Growing inward from the corner is the
@@ -216,8 +227,24 @@ A disabled produce row names **the binding pool** — "needs Credits" or "needs 
 | **Input locked** (post-commit debounce, `input_lock_ms`) | Menu visible, rows inert; no visual change — the window is 120ms and a flicker would read as a fault |
 | **Opponent's turn / game over** | Closed |
 
+| **Commit refused** | The status line reads `Refused: <reason>` and the menu re-opens re-filtered, so the verb that failed is now visibly greyed out with the same wording |
+
 **Every row is visible in every variant.** A verb is never hidden for being unavailable — that is
 the whole point of CR-4, and it is what lets a player learn the rules from the interface.
+
+**Three states this surface does not have, and why** — stated because their absence is a design
+fact, not an oversight:
+
+- **No loading state.** Every value the menu renders comes from a synchronous, side-effect-free
+  query against in-memory game state. There is no fetch, so there is no waiting. AC-23 pins this:
+  the menu is built and on screen within one frame of the selection.
+- **No empty state.** `menu_model()` always returns Wait, and Wait is always enabled (CR-4:
+  "Wait — always"), so the plate can never render with nothing on it. The nearest thing is an
+  entity with no legal action, which is AC-2's case: Wait live, everything else disabled with a
+  reason.
+- **No error state for the MODEL.** The queries behind the menu are total — they return a disabled
+  verb with a reason rather than failing. The only failure that can reach the player is a
+  **refused commit**, which is a distinct thing and has its own row in the table above.
 
 ---
 
@@ -321,16 +348,26 @@ information through motion alone, so that costs no meaning.
 
 ## Data Requirements
 
-| Needs | Source | Notes |
-|---|---|---|
-| Which verbs, enabled, and why not | `CommandFSM.menu_model(state, entity)` | Already built and tested |
-| Which unit types, their dual costs, affordability | `CommandFSM.produce_options(state, entity)` | **New** — pure, same query-only discipline |
-| Verb labels and reason wording | This spec's tables, held in the widget | Localisation-ready strings, no concatenated fragments |
-| The entity's screen anchor | `BoardRenderer.grid_to_screen` via the camera transform | Same anchor the sprite uses |
-| Shortcut glyph per verb | `InputMap` / `GameSettings` bindings | Must reflect a **rebound** key, never a hardcoded letter |
-| Projected AP after the previewed action | `CommandFSM.projected_remaining_ap(state, player, cost)` | Never a local subtraction — the counter and the FSM must not be able to disagree |
-| Projected Credits after an economic action | `Credits.current_credits` − the action's Credit cost | Shown **only** for Build/Produce; an unchanged `1000 → 1000` on Move would be noise |
-| The refund a Cancel Build would return | `CommandFSM.cancel_build_preview(state, structure)` | Rendered on the row **before** either press |
+Nothing here is fetched, polled or cached: every row is a synchronous query against in-memory game
+state, read at the moment the menu is built or refreshed. That is why there is no loading state and
+why "update frequency" is a *trigger*, not an interval.
+
+| Needs | Source | Updated on | If unavailable |
+|---|---|---|---|
+| Which verbs, enabled, and why not | `CommandFSM.menu_model(state, entity)` | Menu open, and every re-open after a commit | Cannot be — the query is total; an entity with no legal action returns all-disabled + Wait |
+| Which unit types, their dual costs, affordability | `CommandFSM.produce_options(state, entity)` | Submenu open | Returns an **empty array** for a non-producer or an unfinished one; the submenu is never opened off a disabled row, so the empty case is unreachable rather than rendered |
+| Which structures, their dual costs, placeability | `CommandFSM.build_options(state, player, types)` | Build picker open | Empty roster → the picker does not open at all (the HUD Build control is inert) |
+| Projected AP after the previewed action | `CommandFSM.projected_remaining_ap(state, player, cost)` | Preview entered; **and every cursor step**, since a move's price is per-tile | Cursor off the legal set → the echo **closes**, rather than showing a stale or zero projection |
+| Projected Credits after an economic action | `Credits.current_credits` − the action's Credit cost | Preview entered (Build/Produce only) | Non-economic verb → echo closed, not shown unchanged |
+| The refund a Cancel Build would return | `CommandFSM.cancel_build_preview(state, structure)` | Menu open | Not an under-construction structure → the row is dropped, so no refund is owed a value |
+| The entity's screen anchor | `BoardRenderer.grid_to_screen` via the camera transform | Menu open, camera move, window resize | No board (menu context) → the menu is not opened |
+| Shortcut glyph per verb | `InputMap` / `GameSettings` bindings | Read fresh on every menu open | Action unbound → **empty string**, and the row simply shows no hint (never a stale default letter) |
+| Verb labels, reason phrases, rejection phrases | `ActionMenu`'s own constant tables | Static | — |
+
+**On that last row**: the widget owning this is *copy*, not game state, and the distinction is the
+whole of the "UI must never own game state" rule. It holds no number, no legality and no cost — it
+holds the words used to say them, which is exactly what a presentation layer is for. Every value
+those words describe is queried, never stored here.
 
 ---
 
@@ -357,6 +394,22 @@ information through motion alone, so that costs no meaning.
 - **Shortcut hints render the live binding**, so a player who has remapped Move sees their key.
 - **UI scale** (`GameSettings.ui_scale`) applies — the menu is a `Control` under the same scale
   factor as the rest of the HUD.
+- **Text contrast**, measured rather than asserted. The plate is 88% opaque, so whatever sits
+  behind it bleeds through; the numbers that matter are the worst case, which is the tan over-cap
+  move overlay, not the board's dark ground.
+
+  | Element | On the board's dark ground | On the tan over-cap overlay (worst case) |
+  |---|---|---|
+  | Enabled label | 16.2:1 | 14.9:1 |
+  | Focused label | 18.7:1 | 17.2:1 |
+  | **Disabled label** | 5.3:1 | **4.9:1** |
+  | Shortcut hint | 6.4:1 | 5.9:1 |
+  | Reason text | 6.0:1 | 5.5:1 |
+
+  All clear the 4.5:1 WCAG AA floor for body text at this size. ⚠ The disabled label was
+  `Color(0.46, 0.50, 0.56)` until 2026-08-24, which measured **4.27:1** against that worst case —
+  passing over the dark board and failing over a bright overlay, i.e. failing exactly when a move
+  preview was open behind the menu. Retune against the worst case, never the comfortable one.
 
 ---
 
@@ -365,6 +418,23 @@ information through motion alone, so that costs no meaning.
 - Verb labels, reason phrases and the cost format are whole strings, never assembled from
   fragments; the cost line is a single format string with positional arguments so a translator can
   reorder currency and number.
+- **Character budgets.** These are design targets for translators, not hard truncation limits —
+  the plate sizes to its content, so overrunning them widens the menu rather than clipping text.
+  Each already carries the ~40% expansion typical of English→German/Russian.
+
+  | Element | English today | Budget | What overrunning costs |
+  |---|---|---|---|
+  | Verb label | "Cancel Build" (12) | **18** | Widens the plate; at ~28 it starts covering tiles the flip cannot save it from |
+  | Reason phrase | "already attacked" (16) | **22** | Widens the plate; multi-reason rows concatenate, so this is the one to watch |
+  | Multi-reason row (2 joined) | "no targets, needs AP" (20) | **46** | Two budgeted phrases plus ", " |
+  | Unit / structure name | "Defensive Structure" (19) | **24** | Widens the picker only |
+  | Cost line | "600 CR + 2 AP" (13) | **20** | Currency abbreviations are themselves translatable |
+  | Armed-confirm label | "Confirm cancel" (14) | **20** | Must stay visibly different from "Cancel Build", or the arm state reads as no change |
+
+  ⚠ **The last row is a correctness constraint, not a layout one.** The arm-then-confirm gate
+  (decision 5) works because the row visibly changes; a translation whose confirm label reads
+  near-identically to its resting label would silently weaken a destructive-action safeguard.
+  Flag it for the translator explicitly.
 - The plate sizes to its content, so a longer translation widens the menu rather than clipping —
   which makes the placement flip (rule 2) load-bearing in verbose languages, not decorative.
 - The submenu affordance (`>`) and the disabled marker are ASCII, not letters, and need no
@@ -392,33 +462,35 @@ information through motion alone, so that costs no meaning.
 
 ## Acceptance Criteria
 
+Written to be checkable by a tester who has not read this document or the code. Where a criterion
+depends on game rules, the *set-up* is stated so the expected result follows from what is on screen.
+
 | # | Criterion | Type |
 |---|---|---|
-| AC-1 | Selecting an owned entity with ≥1 legal action opens the menu; every enabled row's verb satisfies its `menu_model()` predicate | Integration |
-| AC-2 | Selecting an owned entity with **no** legal action still opens the menu, with Wait enabled and every other verb disabled-with-reason | Integration |
-| AC-3 | Selecting an enemy, neutral or empty tile does not open the menu | Integration |
-| AC-4 | A disabled row renders its reason text; a row disabled for two reasons renders both | Logic |
-| AC-5 | A disabled row is not focusable and does not respond to click | Integration |
-| AC-6 | The menu's default position leaves ≥1 tile-width of clearance from the entity's anchor | Logic |
-| AC-7 | When the default position would overflow the viewport, the menu flips to the opposite side and remains fully on-screen | Logic |
-| AC-8 | The menu is clamped vertically but never horizontally, at any board edge | Logic |
-| AC-9 | Every enabled verb is reachable by ↑/↓ + Enter with no mouse | Integration |
-| AC-10 | Back-out from the submenu returns to the parent menu; back-out from the menu deselects; back-out from a preview re-opens the menu | Integration |
-| AC-11 | Esc with nothing selected opens the pause overlay; Esc with a selection backs out instead | Integration |
-| AC-12 | After a commit the menu re-opens on the same entity, re-filtered — or closes if that entity died | Integration |
-| AC-13 | Produce submenu lists every producible type with its dual cost; an unaffordable type is disabled naming the binding pool | Logic |
-| AC-14 | Wait closes the menu and deselects, spending no AP and no Credits | Integration |
-| AC-15 | Shortcut hints render the player's current binding, not a hardcoded default | Integration |
-| AC-16 | `reduced_motion` makes every open/close/dim transition instant | Integration |
-| AC-17 | The on-screen control legend no longer names the retired cycle bindings | UI |
-| AC-18 | Cancel Build does not commit on its first activation: the row relabels and the structure survives. A second activation commits it | Integration |
-| AC-19 | Backing out of an armed Cancel Build disarms it and leaves the menu open — it does not also dismiss the menu or commit | Integration |
-| AC-20 | The Cancel Build row states the refund before either press | Integration |
-| AC-21 | Entering any preview opens the AP counter's `current → projected` echo; a Move preview updates it per cursor tile; Build and Produce open the Credit echo alongside it; leaving the preview by any route clears both | Integration |
-| AC-22 | The menu is fully on screen, overlaps no HUD panel, and clips no row at **1920×1080 and 2560×1440** — the two resolutions `technical-preferences.md` names — for the verb menu, the Produce submenu and the Build picker | UI |
-| AC-23 | The menu appears within **one frame** of the selection that opens it: no asynchronous load, no deferred build. Its 150ms fade is opacity only and never delays a row from being clickable | Integration |
-
----
+| AC-1 | Select a unit that has AP and open ground around it. The menu opens with a row for Move, Attack and Wait; Move and Wait are bright and respond to Enter, and nothing on the row set is hidden | Integration |
+| AC-2 | Select a unit that has already moved and attacked this turn. The menu still opens; Wait is the only bright row and every other row is dimmed with a short phrase beside it saying why | Integration |
+| AC-3 | Click an enemy unit, then empty ground. No menu appears in either case; the SELECTED panel still shows what was clicked | Integration |
+| AC-4 | Select a unit with no enemy in range and zero AP. The Attack row names **both** problems, not just the first | Logic |
+| AC-5 | With the menu open, press ↓ repeatedly. Focus visits only bright rows and never lands on a dimmed one. Clicking a dimmed row does nothing | Integration |
+| AC-6 | The menu never touches the sprite it belongs to: there is at least one tile of clear board between the entity and the menu's near edge | Logic |
+| AC-7 | Select a unit against the right edge of the board. The menu opens on its **left** instead, fully on screen | Logic |
+| AC-8 | Select a unit at the very top and then the very bottom of the board. The menu slides up/down to stay on screen but never moves sideways onto the entity | Logic |
+| AC-9 | Complete a full move using only the keyboard: cursor to the unit, Enter, ↓/↑ to Move, Enter, cursor to a highlighted tile, Enter. No mouse at any point | Integration |
+| AC-10 | Open Produce, then press Esc three times. First closes the type list and leaves the verb menu up; second closes the menu and deselects; third opens the pause overlay | Integration |
+| AC-11 | With nothing selected, Esc opens pause. With a unit selected, the same key backs out instead and pause does **not** appear | Integration |
+| AC-12 | Move a unit that still has AP left. The menu re-opens on that same unit with Attack now evaluated afresh. Move a unit into a counterattack that kills it: the menu closes and nothing is left selected | Integration |
+| AC-13 | Select a producer while holding enough Credits for the cheapest unit but not the dearest. The list shows both, the cheap one bright, the dear one dimmed and saying it needs Credits — not a generic "unavailable" | Logic |
+| AC-14 | Note your AP and Credits, press Wait. Both are unchanged and nothing is selected | Integration |
+| AC-15 | Rebind Move to a different key in Settings, then open a menu. The Move row shows the new key | Integration |
+| AC-16 | Turn on Reduced Motion. The menu, submenu and picker appear and disappear instantly, with no fade | Integration |
+| AC-17 | Nothing on screen mentions `[C]` or `[V]`, and pressing either key does nothing | UI |
+| AC-18 | Select a structure you are still building and activate Cancel Build **once**. The structure is still there and the row now reads "Confirm cancel". Activate again: it is destroyed and the refund is credited | Integration |
+| AC-19 | Arm Cancel Build, then press Esc. The row goes back to reading "Cancel Build", the menu stays open, the structure survives, and nothing is deselected | Integration |
+| AC-20 | The Cancel Build row states how much AP comes back **before** it is pressed at all | Integration |
+| AC-21 | Enter a Move preview: the AP counter reads `current → projected`, and the projected figure changes as the cursor moves between tiles of different cost. Open a Build preview: the Credits counter shows its own `current → projected` alongside it. Leave either preview by any route — commit, Esc, right-click — and both counters go back to a single number | Integration |
+| AC-22 | Repeat AC-1, AC-13 and the Build picker at **1920×1080 and 2560×1440**. Nothing is clipped, nothing overlaps a HUD panel, and no row is cut off | UI |
+| AC-23 | The menu is on screen in the same frame as the selection that opened it; its fade changes opacity only and a row can be clicked before the fade finishes | Integration |
+| AC-24 | Force a commit to be refused (e.g. act on the opponent's turn). The status line says `Refused:` followed by a plain-language reason — never silence | Integration |
 
 ## Open Questions
 
