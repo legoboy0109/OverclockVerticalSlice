@@ -3,6 +3,11 @@
 > **Verdict: PIVOT** · **Date**: 2026-08-24 · **Stage**: Pre-Production (unchanged)
 > **Scope under test**: `production/vertical-slice/scope.md` (APPROVED 2026-07-27)
 > **Story**: S5-05 · **Sprints covered**: 3 (build) → 4 → 5 (validation)
+>
+> ⚠️ **READ §Addendum A BEFORE ACTING ON ANYTHING BELOW.** The PIVOT verdict stands as decided,
+> but Sprint 6 fixed the failure this report diagnosed and **the fix was not the one prescribed
+> here**. The batch now resolves 18 of 22 games on play; S5-03 and S5-04 have both been run.
+> Sections 1–4 describe a build that no longer exists. **Addendum A is the current measurement.**
 
 ---
 
@@ -174,3 +179,141 @@ keeping.
 > **Stage remains Pre-Production.** A PIVOT verdict does not advance the gate; it spawns the
 > focused follow-up recorded in `PIVOT-NOTE.md`, after which the slice is re-validated and
 > `/gate-check pre-production` is re-run.
+
+---
+
+## Addendum A — the post-fix measurement (2026-08-25)
+
+> **Added at Sprint 6 close-out**, discharging this sprint's Definition-of-Done item *"REPORT.md
+> updated with the post-fix measurement."* **This addendum does not re-issue the verdict.** §7's
+> PIVOT stands as what was decided on 2026-08-24 with the evidence available then. What follows is
+> what the follow-up sprint measured, so a future `/vertical-slice` re-run starts from facts rather
+> than from this report's now-superseded premises.
+
+### A.1 The root cause named in §3 is fixed, and the fix is measured
+
+`PIVOT-NOTE.md` §3 prescribed five things. Four are closed:
+
+| # | PIVOT-NOTE item | Status |
+|---|---|---|
+| 1 | **Bound the economy** | ✅ Closed (S6-01/02). Income is finite by construction — `BASE_INCOME 1000 + 500/tier`, hard ceiling 2,500 — and upkeep drains the stock. **Neither half works alone:** a capped income with no drain still climbs linearly, which is exactly the 5,724 the original batch measured |
+| 2 | **Re-measure the siege term** | ✅ Closed, **and the prediction was wrong** — see A.2 |
+| 3 | **Shorter, more decisive natural arc** | ◐ Partial. Games resolve at a mean of ~25–29 turns against a 30-round cap. The arc is decisive but the margin to the cap is thin |
+| 4 | **Re-run the AI-vs-AI batch** | ✅ Closed. Gate passed 2026-08-24 (batch 5, `2626f6d`) |
+| 5 | **Then run S5-03 and S5-04 for real** | ✅ Both run 2026-08-24 (S6-12, S6-14) — see A.3 |
+
+### A.2 ★★ The measurement that matters most is what *didn't* work
+
+The original diagnosis — *"the economy is unbounded, so building always outscores fighting"* — was
+**correct about the symptom and wrong about the lever.**
+
+Four levers were tried. **Three of them each found and fixed a genuine defect, and each moved
+resolution not at all:**
+
+- bounding the economy (S6-01/02) — the change this report itself prescribed as *the* fix;
+- implementing `CREDIT_TO_AP_RATE`, which turned out never to have existed outside doc comments;
+- valuing production capacity (S6-06).
+
+**The two that moved it were about incentives, not correctness:** a per-producer cooldown, and
+decisively `hq_siege_value` **12 → 60**. `_combat_value` had been scaling an HQ hit by
+`hp_removed / max_hp`, so a 5-damage chip scored **0.75** against **3.00** for killing a Trooper.
+Units were correctly breaking off a reachable objective to go and fight, because that is what they
+were being paid to do.
+
+> ★ **The lesson, and it generalises past this project: a correct system that rewards the wrong
+> thing plays exactly like a broken one.** Every defect found by the first three levers was real.
+> Fixing all of them changed nothing a player would notice. **Stop predicting what will fix a
+> behaviour and measure each change against the batch** — four predictions were made across this
+> sprint and one landed.
+
+> ★★ **A trap worth not rebuilding.** The first capacity model scaled a Barracks' value by cap
+> *utilisation*. It correctly stopped over-building — and created a loop that *held the stalemate
+> in place*: armies cannot grow → utilisation stays low → Barracks looks worthless → throughput
+> stays low → armies cannot grow. The AI built ~0.4 Barracks per match. **A gate that keys on the
+> symptom of the problem it is meant to solve will preserve that problem.**
+
+### A.3 The two human-gated criteria, four sprints owed, both now measured
+
+★ Both had been carried as "blocked on the user" since Sprint 3. **Both turned out to be mostly
+scriptable.** The blocker was never really the human — it was that nobody had asked which *parts*
+needed one.
+
+**S5-03 iso-legibility (S6-12) — CONDITIONAL PASS.** `tools/CaptureLegibility.tscn` +
+`analyse_legibility.py` answer 5 of the gate's 6 measurements with no human at all. Silhouettes,
+aspect read, stage contrast, depth stacking and act-state-under-crowding all pass. **One blocking
+defect: the Sniper did not read as owned** (hue coverage 13.3% vs a roster mean of 50.1%; faction
+ΔE76 12.9, below reliable discrimination) — on the longest-ranged unit, the one most needing
+identification at distance. **Fixed in S6-13**: coverage 13.3% → **43.5%**, ΔE76 12.9 → **66.5**,
+silhouette untouched.
+
+> ★ **The rule this produced, and it should govern every wave-2 unit:** contrast splits between
+> accent and mass. Accent-vs-stage passes everywhere (4.26–7.17:1); whole-unit-vs-stage never does
+> (1.80–2.46:1). **An archetype's accent coverage IS its legibility** — Heavy at 62% and Sniper at
+> 13% share a palette, and coverage was the entire difference.
+
+**S5-04 swing-back (S6-14) — PASSES both stated requirements.** Zero lead changes across all 18
+handicapped games (*no decided game reverses* — unambiguous). The four mirror matches average **48%
+of the game still in doubt with 6.75 lead changes**, one running to the final turn with twelve.
+
+### A.4 ⛔ What the post-fix measurement newly discovered — and it is not small
+
+**The cliff between "alive" and "over" is one unit wide.**
+
+| Handicap | Window of doubt | Lead changes |
+|---|---:|---:|
+| **+0** (mirror) | **48 %** | **6.75** |
+| **+1** (one Trooper) | **3 %** | **0.00** |
+| +2 / +3 | 0 % | 0.00 |
+
+A single extra Trooper takes the game from *changes hands seven times* to *never changes hands at
+all*, with no gradient between. **The game's entire drama budget lives in an exactly-even position.**
+
+Diagnosed the same day (S6-15) and **partly explained by a defect**: `legal_deploy_tiles` returned
+the producer's four orthogonal neighbours and `is_passable` is false for any occupied tile, so
+**four enemy units standing on a spawn ring ended that player's game permanently.** The trace shows
+the underdog locked out from turn 14 holding **6,500 Credits**, full AP, no deficit, population
+headroom — every gate green except *nowhere to put it*.
+
+★ **That defect was created by the fix in A.2.** Before the objective outscored trading, the AI
+never pushed toward an enemy HQ, so nothing ever camped a spawn ring. No GDD anticipated it.
+
+**Fixed in S6-16** (deploy radius 1 → 2): the losing player is on the board 10.3% → **23.1%** of
+turns, and dead banked Credits fall 7,500 → 3,200. **⚠ And the cliff did not move** — the +1 cell
+still shows zero lead changes. **The latch was a defect; the cliff is a design question, and fixing
+the first is what separated them.** Being able to play is not the same as being able to come back.
+
+> ⇒ **This is the finding a re-verdict has to weigh.** It is not a bug and it is not obviously
+> wrong: `game-concept.md` rejects comeback mechanics explicitly, twice, and requirement 1 passing
+> is that rejection working. The narrower question is whether there is a *skill* route back from
+> one unit down, and the measurement currently says no. ★ **Wave 2 does not lack decisions — it
+> lacks a recoverable middle**, and more unit variety will not create one.
+
+**Also unexplained:** the first player loses all four mirror games, by real HQ margins (widest
+11 vs 36), not by tiebreak technicality. n=4 against one deterministic AI — a signal, not a proof.
+
+### A.5 Where the §2 criteria now stand
+
+| §10 PROCEED criterion | At verdict (2026-08-24) | Now |
+|---|---|---|
+| Full loop completed unguided | ✅ MET | ✅ MET, and materially strengthened — the slice was not honestly *playable* at verdict time (invisible cursor, painted-text "buttons" no input could activate, costs labelled in the wrong currency). S6-17…S6-30 fixed all of it |
+| Built within the time box at representative quality | ✅ MET | ✅ MET |
+| **Iso-legibility PASS** | ⛔ NOT RUN | ◐ **CONDITIONAL PASS** — 5 of 6 measurements pass, the one blocking defect is fixed. ⛔ Owes the naive-observer session (~20 min) |
+| **Swing-back PASS** | ⛔ UNASSESSABLE (no game became decided) | ✅ **PASSES both stated requirements** — with the A.4 concern, which is neither requirement failing |
+| Tempo fantasy is **felt** | ⛔ UNTESTED | ⛔ **STILL UNTESTED.** Analyses A/C/D remain owed |
+
+★ **Analysis D is the one that matters.** Sprint 4 split one budget into two on the premise that
+paying a tempo price for economic investment would feel *deliberate* rather than fiddly. Every
+measurement since has confirmed the mechanism works. **None has tested whether it feels like
+anything**, and the whole two-budget design rests on it.
+
+### A.6 What a re-verdict needs
+
+**Not this document's call, and not an agent's.** For the record, what is left:
+
+1. **S5-03's naive-observer session** — ~20 minutes, one person who has not seen the game; three
+   questions in §6 of the playtest report.
+2. **S5-04's Analyses A, C and D** — especially **D**.
+3. **A direction call on A.4** — whether the one-unit cliff is the design working as intended or a
+   gap to fill. It shapes what wave 2 is *for*, so it wants answering before content scope.
+
+Everything a script can measure has been measured. What remains is what a person has to judge.
