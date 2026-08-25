@@ -41,7 +41,17 @@ dist/
 # === Engine: Redot / Godot ===
 .godot/
 *.translation
-export_presets.cfg
+# Godot's default ignores export_presets.cfg because on some platforms it carries
+# signing credentials (Android keystore passwords in particular). Ours is Linux-only
+# and holds none, and leaving it untracked is how six sprints passed with NO export
+# preset at all — and therefore with two export-fatal defects nobody could see.
+# Tracked deliberately so the export path is reproducible and tests/unit/
+# export_safety_test.gd guards something real.
+# ⚠ If a platform needing credentials is ever added, split them into
+# export_credentials.cfg (which Godot writes separately) and ignore THAT, never
+# re-ignore this whole file.
+!export_presets.cfg
+export_credentials.cfg
 # GdUnit4 generated test reports (HTML/XML) — regenerated on every run
 reports/
 # Redot editor binary + local symlink (136 MB — do not commit; each dev supplies their own)
@@ -158,3 +168,4 @@ production/session-logs/
 .agent/
 # Raw AI generations — bulky and reproducible from recorded seeds (see asset-manifest notes)
 art-source/generated/
+builds/

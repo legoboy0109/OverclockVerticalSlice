@@ -1,32 +1,51 @@
-## Research — TEST STUB for the forward-declared Research / Tech contract.
+## Research — the forward-declared Research / Tech contract (ADR-0006/0008/0018).
 ##
-## ⚠️ TEMPORARY. This is NOT the real Research system — it is a thin,
-## test-controllable stub for the ONE function AP Economy forward-declares
-## (ADR-0006). The real [code]Research[/code] lands with the Research / Tech epic.
+## [b]Promoted out of `tests/helpers/stubs/research_stub.gd` on 2026-08-25 (S7-01),
+## for exactly the reason [Structure] was promoted the day before.[/b] This class
+## was declared under `tests/` while production code called it in three places:
+## [br]• [method Unit.effective_attack] → [method attack_tech_bonus]
+## [br]• [method Unit.effective_defense] → [method defense_tech_bonus]
+## [br]• [method GameState.start_turn] step 3 → [method advance_research_timers],
+##   [b]unconditionally, on every turn of every match[/b]
 ##
-## [b]DELETE THIS FILE when the real [code]Research[/code] class is created in
-## [code]src/[/code].[/b] GDScript [code]class_name[/code] is project-global, so
-## the real class and this stub would collide (duplicate global class name).
+## ⚠ [b]It would have failed on export.[/b] GDScript `class_name` is project-global
+## and the editor registers it from anywhere in the project, so it resolved
+## in-editor and in the headless test run and nothing ever failed. A release preset
+## that excludes `tests/` — the normal thing to do — strips the script that defines
+## `Research`, and both `unit.gd` and `game_state.gd` then fail to resolve a global
+## class they reference. That is the core of the game, in the build a player would
+## actually run and in no build a developer tests.
 ##
-## Only ONE stub declaration of [code]class_name Research[/code] may exist in the
-## project — this file. AP-001, AP-003, GS-003 test suites all share it; never
-## redeclare it per test file.
+## ★ This is the [b]second[/b] instance of the same defect found in two days. The
+## guard against a third is automated: `tests/unit/export_safety_test.gd` fails if
+## any symbol declared under `tests/` is referenced from `src/` or `tools/`.
 ##
-## GS-003 (ADR-0008) extends this stub with [method advance_research_timers] —
-## [method GameState.start_turn]'s step-3 forward-declared research-timer
-## contract — plus [method queue_completion], the test hook that drives it.
+## [b]Still a forward declaration, and deliberately so.[/b] The real Research / Tech
+## epic (ADR-0018: [TechDef] templates, research timers, per-Lab progress) is not
+## built in this corpus. What lives here is the minimum production surface its
+## callers already depend on, with real defaults, plus the setters those callers'
+## tests use to drive it. When the epic lands, the magnitudes should come from
+## [TechDef] templates and the `set_*` / [method queue_completion] / [method reset]
+## control surface should go with them.
 ##
-## [b]Design note — this stub returns a test-set OPAQUE value, it does NOT compute
-## the cap.[/b] Per ADR-0006, [method economy_tech_income_bonus] returns the
-## [i]fully-capped[/i] term (already
-## [code]has_economy_tech ? ECONOMY_TECH_INCOME_BONUS × min(n, ECONOMY_TECH_TIER_THRESHOLD) : 0[/code]),
-## and AP adds it [b]verbatim[/b], never re-applying the cap. Keeping the stub a
-## dumb value-holder (rather than re-deriving the formula) is deliberate: it
-## keeps AP-001's double-cap regression test meaningful — the test sets the
-## expected already-capped value (e.g. 6 for BOTH n=6 and n=7, proving the cap
-## re-engages) and asserts AP adds it as-is. If the stub itself computed the cap,
-## it could hide or encode the very bug the test exists to catch (the 2026-07-24
-## architecture-review C3 defect: 36 vs 6 at n=6).
+## ⚠ [b]Do not read the `set_*` helpers as an invitation.[/b] Nothing in `src/` may
+## call them — they exist so the forward declaration is drivable until the epic
+## replaces it, and `export_safety_test.gd` does not police that. Production reads
+## the three getters and nothing else.
+##
+## [b]Design note — [method economy_tech_income_bonus] returns an OPAQUE, already-capped
+## value, it does NOT compute the cap.[/b] Per ADR-0006 it returns the fully-capped
+## term and AP adds it [b]verbatim[/b], never re-applying the cap. Keeping it a dumb
+## value-holder rather than re-deriving the formula is deliberate: it keeps AP-001's
+## double-cap regression test meaningful — the test sets the expected already-capped
+## value (e.g. 6 for BOTH n=6 and n=7, proving the cap re-engages) and asserts AP
+## adds it as-is. If this computed the cap it could hide the very bug the test exists
+## to catch (the 2026-07-24 architecture-review C3 defect: 36 vs 6 at n=6).
+##
+## ⚠ No production call site remains for [method economy_tech_income_bonus]: S6-01
+## re-based income on research tiers and deleted the outpost-and-econ-tech path.
+## Kept because AP-001's regression tests still pin the contract, and because the
+## real epic will need it back.
 ##
 ## Usage in a test:
 ## [codeblock]

@@ -1,5 +1,14 @@
 # Visual Entity & Screen Inventory — Vertical Slice
 
+> ⚠ **Naming note (S6-03 rename, recorded 2026-08-25).** *Production Outpost* is now the
+> **Barracks** and *Economy Outpost* is now the **Factory**. Prose below that predates the rename
+> is left in its original wording deliberately — it records which generation run produced which
+> look, and rewriting it would falsify that history. **The runtime names are `struct_barracks_*`
+> and `struct_factory_*`**, derived from `StructureTypeDef.display_name` by
+> `EntitySpriteCatalog.texture_path()`. The pre-rename duplicates were deleted in S7-04; they had
+> survived as byte-identical copies because S6-03's rename copied rather than moved.
+
+
 > **Generated:** 2026-07-27 (Sprint 2 · S2-07, art-director-owned)
 > **Scope:** Vertical Slice entity set only (per `production/vertical-slice/scope.md` §5).
 > **Sources:** `design/registry/entities.yaml`, `design/art/art-bible.md` (§3 Shape Language,

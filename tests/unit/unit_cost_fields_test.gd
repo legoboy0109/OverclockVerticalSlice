@@ -3,7 +3,7 @@
 # Covers the acceptance criteria in
 # production/epics/unit-system/story-006-movement-ap-cost-fields.md:
 #   AC-1: the cost-ladder arithmetic guard (Heavy investment > floor income).
-#   AC-2: UnitConfig.surcharge_for returns the integer-ceil over-cap surcharge.
+#   AC-2: UnitBalance.surcharge_for returns the integer-ceil over-cap surcharge.
 # Plus rigorous coverage of the fixed-point ceil math across all four units and
 # the penalty=1.5 rounding boundary (via the injectable surcharge_with_penalty
 # primitive — no global-autoload dependency).
@@ -34,23 +34,26 @@ func test_heavy_produce_plus_one_move_plus_attack_exceeds_floor_income() -> void
 
 
 # --- AC-2: surcharge_for integer-ceil (default penalty 2.0, via the autoload) --
+# ★ Moved UnitConfig.surcharge_for -> UnitBalance.surcharge_for on 2026-08-25 (S7-02):
+#   on UnitConfig it formed a parse-time cycle with the Autoload that preloads it,
+#   which the editor and this suite both resolve and an exported build cannot.
 
 func test_surcharge_for_scout_move_cost_1_returns_2_at_default_penalty() -> void:
 	# ceil(1 * 2.0) = 2
-	assert_int(UnitConfig.surcharge_for(UnitTypes.SCOUT.move_cost)).is_equal(2)
+	assert_int(UnitBalance.surcharge_for(UnitTypes.SCOUT.move_cost)).is_equal(2)
 
 
 func test_surcharge_for_heavy_move_cost_3_returns_6_at_default_penalty() -> void:
 	# ceil(3 * 2.0) = 6
-	assert_int(UnitConfig.surcharge_for(UnitTypes.HEAVY.move_cost)).is_equal(6)
+	assert_int(UnitBalance.surcharge_for(UnitTypes.HEAVY.move_cost)).is_equal(6)
 
 
 func test_surcharge_for_all_four_units_at_default_penalty() -> void:
 	# Scout 1→2, Trooper 2→4, Heavy 3→6, Sniper 2→4 (all ceil(cost * 2.0)).
-	assert_int(UnitConfig.surcharge_for(UnitTypes.SCOUT.move_cost)).is_equal(2)
-	assert_int(UnitConfig.surcharge_for(UnitTypes.TROOPER.move_cost)).is_equal(4)
-	assert_int(UnitConfig.surcharge_for(UnitTypes.HEAVY.move_cost)).is_equal(6)
-	assert_int(UnitConfig.surcharge_for(UnitTypes.SNIPER.move_cost)).is_equal(4)
+	assert_int(UnitBalance.surcharge_for(UnitTypes.SCOUT.move_cost)).is_equal(2)
+	assert_int(UnitBalance.surcharge_for(UnitTypes.TROOPER.move_cost)).is_equal(4)
+	assert_int(UnitBalance.surcharge_for(UnitTypes.HEAVY.move_cost)).is_equal(6)
+	assert_int(UnitBalance.surcharge_for(UnitTypes.SNIPER.move_cost)).is_equal(4)
 
 
 # --- Config smoke-check: the .tres value the autoload loads ------------------

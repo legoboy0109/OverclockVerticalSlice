@@ -35,8 +35,8 @@ and re-run, or the change is lost on the next pass.
 | `units/heavy` | 3 hues × `e`/`w` | 139×148 | ~74px tall |
 | `units/sniper` | 3 hues × `e`/`w` | 156 tall | ~78px tall — the tallest infantry (§3.1 posture axis) |
 | `structures/hq` | 3 hues | 512×485 | **one tile wide** — see the footprint note below |
-| `structures/production_outpost` | 3 hues | 384×385 | one tile wide |
-| `structures/economy_outpost` | 3 hues | 256 wide | one tile wide |
+| `structures/barracks` | 3 hues | 384×385 | one tile wide — *renamed from `production_outpost`, S6-03* |
+| `structures/factory` | 3 hues | 256 wide | one tile wide — *renamed from `economy_outpost`, S6-03* |
 | `structures/defensive_structure` | 3 hues | 256×234 | one tile wide |
 | `structures/research_lab` | 3 hues | 256×457 | one tile wide, tall mast overhangs |
 
@@ -170,7 +170,7 @@ temporally consistent frames (same limitation as facings).
 
 Prioritize **rush + boom** (the board wires those; neutral is optional, for menus).
 - `units/` — `scout`, `trooper`, `heavy` (× facings × states × hues)
-- `structures/` — `hq`, `production_outpost` (× states × hues; Production Outpost is pre-placed → no construction sprites)
+- `structures/` — `hq`, `barracks` (× states × hues; the Barracks is pre-placed → no construction sprites)
 - `terrain/` — `tile_plain`, `tile_cover` (+ wear variants; cover ships as a floor cell + a Y-sorted prop, §8.8)
 
 ## Format & git
