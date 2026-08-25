@@ -124,16 +124,9 @@ func _run_one_turn(state: GameState) -> void:
 
 
 func _build() -> GameState:
-	var map := MapDefinition.new()
-	map.width = MAP_WIDTH
-	map.height = MAP_HEIGHT
-	map.mode = MapDefinition.Mode.AUTHORED
-	var terrain := PackedByteArray()
-	terrain.resize(MAP_WIDTH * MAP_HEIGHT)
-	terrain.fill(GridState.Terrain.PLAIN)
-	map.authored_terrain = terrain
-	map.hq_tiles = [HQ_A, HQ_B]
-	map.deploy_tiles = []
+	# ★ S7-11: shared with the slice via VSMap — see its header on why this is not
+	# hand-built here any more.
+	var map: MapDefinition = VSMap.build()
 
 	var state: GameState = GameState.start_match(map, 0)
 	state.max_rounds = VerticalSliceRoot.VS_MAX_ROUNDS

@@ -331,6 +331,51 @@ stories:
     #   pushing +1 games into round-cap territory and erode "resolve on play". This step fits; the
     #   next one probably does not.
 
+  - id: "s7-11"
+    name: "★★ Turn cover on, and teach the AI to use it"
+    file: "production/playtests/s7-11-cover-2026-08-25.md"
+    priority: must-have
+    status: done
+    owner: "systems-designer + ai-programmer"
+    estimate_days: 1.0
+    blocker: ""
+    completed: "2026-08-25"
+    # ✅ DONE. User's brief: "turn on cover and teach the AI to use it."
+    # ★ COVER NEEDED NO NEW MECHANICS. cover_dr, GridState.is_cover, BoardRenderer cover props
+    #   and tile_cover art all shipped in the Foundation sprints and had been INERT ever since,
+    #   because NO MAP EVER PLACED A TILE. Four hand-built copies of the VS map (slice,
+    #   simulator, 2 diagnostic tools) agreed only because all four were trivially blank.
+    # 1. NEW src/core/map/vs_map.gd — ONE authored map, the four duplicates now call it.
+    #    simulate_matches.gd's own header demands it mirror the slice; that promise was kept
+    #    only by everything being empty.
+    # 2. 8 cover tiles of 120 (~7%), mirror-symmetric, clear of both deploy rings.
+    # 3. AI: only the MOVE half needed code. ★ ATTACK scoring already accounted for cover and
+    #    always had — _consider_attack values through Combat.preview_damage, which applies
+    #    cover_dr. A test pins that so nobody adds a second term and double-counts.
+    #    AIConfig.cover_value 0.30, sized between a tile of progress (0.16) and a setup (0.4).
+    # ★★ TWO MEASURED RESULTS THAT CAME OUT BACKWARDS:
+    #   a) "Let a unit trade one tile of progress for cover" made cover usage WORSE:
+    #      blind 5.5% -> score-only 6.1% -> with discount 4.7%. A unit that steps back into
+    #      cover is further away, so next turn it advances and LEAVES. Cover rewards a defender
+    #      who stays put and THIS AI NEVER STAYS PUT. cover_tile_discount kept at 0 with the
+    #      finding written beside it.
+    #   b) Cover in the lane both sides must cross turns CLOSE GAMES INTO DRAWS. First layout
+    #      (14 tiles incl. the centre HQ-to-HQ pair): resolve-on-play 19/22 -> 15/22, and the
+    #      +1 cell went 1/6 -> 5/6 reaching the round cap. Handicaps +2/+3 untouched at 25-30
+    #      turns throughout — ALL the damage was in the nearly-even games. ⇒ COVER BELONGS
+    #      WHERE A PLAYER CHOOSES TO FIGHT, NOT WHERE THEY ARE FORCED TO. Lane now open.
+    # GATE re-verified (8 tiles): resolve 17/22 (no-cover 19/22, 14-tile 15/22), conversion
+    #   18/18, seats P0 9 / P1 13, mean 33.2 turns, cover occupancy 4.7% of unit-turns.
+    #   Suite 1253/1253 (+17 new tests). Menu and slice both boot with zero errors.
+    # ⚠ THE AI USES COVER ONLY LIGHTLY (4.7% vs ~7% of the board). It is an aggressive agent
+    #   that is nearly always moving. A genuinely cover-aware tactician needs a HOLD-POSITION
+    #   BEHAVIOUR — a real AI feature, not a weight. The player benefits far more than the AI,
+    #   and that half is not measured here at all.
+    # ⛔ NEXT LEVER, AND IT IS A DESIGN CALL: VS_MAX_ROUNDS (30) is now the binding constraint
+    #   on close games — it was calibrated before BOTH the S7-10 cooldown change and cover.
+    #   5 of the 7 unresolved games are the +0/+1 close cells. Raising it converts stalemates
+    #   into finishes at the cost of longer matches.
+
   # --- Carried, human-gated, NOT on this sprint's critical path ---
   - id: "s5-03-observer"
     name: "★ S5-03 naive-observer session (~20 min) — the last unscripted half"

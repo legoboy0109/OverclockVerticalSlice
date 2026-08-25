@@ -305,6 +305,8 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 	var adv_tile: Vector2i = Vector2i.ZERO
 	var adv_tiles_moved: int = 0
 	var adv_dist_after: int = nearest_enemy_dist_before
+	## Distance the fold actually compares on — see the S7-11 note at the take-decision.
+	var adv_effective_dist: int = nearest_enemy_dist_before
 	var adv_score: float = 0.0
 	var adv_ap_cost: int = 0
 
@@ -342,7 +344,8 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 		if is_wounded_and_threatened:
 			var threat_dist_before: int = threat.distance
 			var threat_dist_after: int = lookahead.grid.manhattan_distance(r.tile, threat.entity.position)
-			var value: float = _retreat_value(threat_dist_before, threat_dist_after)
+			var value: float = _retreat_value(threat_dist_before, threat_dist_after, \
+				lookahead.grid.is_cover(r.tile.x, r.tile.y))
 			var score: float = value / float(tiles_moved)
 			if _is_better(score, r.min_cost, unit.entity_id, best.score, best.ap_cost, best.entity_id):
 				best = _Candidate.new(_make_move_action(unit, r.tile, tiles_moved), score, r.min_cost, unit.entity_id)
@@ -385,23 +388,40 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 		# Requiring strict closure makes bare advances distance-monotonic.
 		if dist_after >= nearest_enemy_dist_before:
 			continue
+		var dest_is_cover: bool = lookahead.grid.is_cover(r.tile.x, r.tile.y)
 		var sets_up: bool = _sets_up_attack_next_turn(lookahead, unit, r.tile)
-		var value: float = _positional_value(nearest_enemy_dist_before, dist_after, sets_up)
+		var value: float = _positional_value(nearest_enemy_dist_before, dist_after, sets_up, dest_is_cover)
 		var score: float = value / float(tiles_moved)
 		# Keep the furthest-advancing tile (smallest resulting distance); among tiles
 		# reaching the same closest frontier, break ties with the standard comparator.
+		#
+		# ★ S7-11: the frontier is compared on EFFECTIVE distance, which counts a Cover tile
+		# as [member AIConfig.cover_tile_discount] tiles nearer than it is. Without this the
+		# cover term was very nearly inert — this fold picks strictly by distance first and
+		# consults `score` only among tiles at the IDENTICAL frontier, so a cover bonus could
+		# only ever break an exact tie. Measured: scoring cover but folding on raw distance
+		# moved cover occupancy 0.192 -> 0.218 units per turn-row, i.e. the AI kept walking
+		# past cover to gain one more tile of approach.
+		#
+		# ⚠ This does NOT weaken the anti-oscillation guarantee. The strict-closure gate above
+		# (`dist_after >= nearest_enemy_dist_before -> continue`) is untouched, so every
+		# advance still closes real distance; the discount only chooses WHICH closing tile,
+		# never whether to close. A unit can now accept slightly less progress to end in
+		# cover, which is the entire point.
+		var effective_dist: int = dist_after - (AIBalance.ai.cover_tile_discount if dest_is_cover else 0)
 		var take: bool = false
 		if not adv_found:
 			take = true
-		elif dist_after < adv_dist_after:
+		elif effective_dist < adv_effective_dist:
 			take = true
-		elif dist_after == adv_dist_after and _is_better(score, r.min_cost, unit.entity_id, adv_score, adv_ap_cost, unit.entity_id):
+		elif effective_dist == adv_effective_dist and _is_better(score, r.min_cost, unit.entity_id, adv_score, adv_ap_cost, unit.entity_id):
 			take = true
 		if take:
 			adv_found = true
 			adv_tile = r.tile
 			adv_tiles_moved = tiles_moved
 			adv_dist_after = dist_after
+			adv_effective_dist = effective_dist
 			adv_score = score
 			adv_ap_cost = r.min_cost
 
@@ -416,23 +436,34 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 
 ## `positional_value(move)` (GDD Edge Cases, AC-20/AC-32):
 ## `POSITIONAL_VALUE_PER_TILE_CLOSED × max(0, dist_before − dist_after) +
-## (sets_up_attack_next_turn(dest) ? SETUP_ADVANCE_BONUS : 0)`. Pure arithmetic
+## (sets_up_attack_next_turn(dest) ? SETUP_ADVANCE_BONUS : 0) +
+## (dest_is_cover ? COVER_VALUE : 0)` — the last term added in S7-11. Pure arithmetic
 ## — isolated so the worked example (Heavy/Scout both ≈0.16, AC-20) and the
 ## setup-bonus proof (AC-32) are directly testable without re-deriving the
 ## enumeration.
-static func _positional_value(dist_before: int, dist_after: int, sets_up_attack_next_turn: bool) -> float:
+static func _positional_value(dist_before: int, dist_after: int, sets_up_attack_next_turn: bool, \
+		dest_is_cover: bool = false) -> float:
 	var value: float = AIBalance.ai.positional_value_per_tile_closed * float(maxi(0, dist_before - dist_after))
 	if sets_up_attack_next_turn:
 		value += AIBalance.ai.setup_advance_bonus
+	if dest_is_cover:
+		value += AIBalance.ai.cover_value
 	return value
 
 
 ## `retreat_value(move)` (GDD Edge Cases, AC-31):
-## `RETREAT_VALUE_PER_TILE_FLED × max(0, threat_dist_after − threat_dist_before)`.
+## `RETREAT_VALUE_PER_TILE_FLED × max(0, threat_dist_after − threat_dist_before) +
+## (dest_is_cover ? COVER_VALUE : 0)` — the last term added in S7-11, so a wounded unit
+## prefers to break contact INTO cover rather than into the open.
 ## Pure arithmetic, isolated for direct testing exactly like
 ## [method _positional_value].
-static func _retreat_value(threat_dist_before: int, threat_dist_after: int) -> float:
-	return AIBalance.ai.retreat_value_per_tile_fled * float(maxi(0, threat_dist_after - threat_dist_before))
+static func _retreat_value(threat_dist_before: int, threat_dist_after: int, \
+		dest_is_cover: bool = false) -> float:
+	var value: float = AIBalance.ai.retreat_value_per_tile_fled \
+		* float(maxi(0, threat_dist_after - threat_dist_before))
+	if dest_is_cover:
+		value += AIBalance.ai.cover_value
+	return value
 
 
 ## True iff [param unit] is at or below [code]AIBalance.ai.retreat_hp_fraction[/code]
