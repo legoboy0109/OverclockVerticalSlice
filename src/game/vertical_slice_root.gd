@@ -70,17 +70,33 @@ const AI_PLAYER: int = 1
 ## with one side starting three Troopers up. See
 ## `production/playtests/swing-back-simulation-appendix-2026-08-21.md`.
 ##
-## [b]Why 30.[/b] The simulation showed unit counts stabilising by round 20-30 and the
-## economy well developed by 25, so 30 rounds leaves room for a full arc without the
-## indefinite drag. It is a starting value for the S5-04 session to judge, not a locked
-## one — change this single constant.
+## [b]Why 40 (raised from 30, S7-12).[/b] 30 was calibrated in Sprint 5, when unit counts
+## stabilised by round 20-30. Two later changes lengthened matches and neither re-derived
+## it: S7-10's faster HQ reinforcement (bigger armies) and S7-11's cover (−1 damage, so
+## longer engagements). By S7-11 the cap had become the [b]binding constraint on close
+## games[/b] — the nearly-even +1 handicap cell had 3 of 6 games ending on the cap rather
+## than on play, while +2 and +3 finished comfortably at 25-30 turns.
+##
+## Measured across the full 22-game batch:
+## [codeblock]
+##   cap    resolve on play    +1 cell reaching the cap
+##    30        17/22                  3/6
+##    40        20/22                  0/6      <-- shipped
+## [/codeblock]
+## At 40 every handicapped game finishes on play. The mirror cell still tiebreaks 2 of 4,
+## which is correct rather than residual: a deterministic AI on a symmetric board SHOULD
+## reach the cap sometimes.
+##
+## ⚠ Cost: mean match length 33 → 39 turns, and a capped game now runs 80 turns rather
+## than 60. This is a starting value to judge in play, not a locked one — change this
+## single constant.
 ##
 ## ★ [b]Note what the tiebreak rewards.[/b] [constant GameState.TiebreakMetric.UNIT_COUNT]
 ## is the only implemented metric, so a capped game is won on unit COUNT. Combined with
 ## the unbounded Credit accumulation the same simulation found, the theoretically optimal
 ## line in a capped game is "bank, mass-produce cheap units, avoid fighting" — flagged
 ## for the playtest to watch for, not fixed here.
-const VS_MAX_ROUNDS: int = 30
+const VS_MAX_ROUNDS: int = 40
 
 ## Provisional camera zoom over the placeholder board (final feel = `/ux-design`).
 # Camera framing. The board is fit into the viewport minus these HUD-reserved

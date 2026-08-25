@@ -109,6 +109,13 @@ var _only_handicap: int = -1
 ## Usage: `./redot --headless tools/SimulateMatches.tscn -- --plain`
 var _plain_map: bool = false
 
+## ★ S7-12 — override the round cap for a batch, so the shipped value can be CHOSEN from a
+## curve rather than guessed. 0 = use [constant VerticalSliceRoot.VS_MAX_ROUNDS].
+##
+## The cap became the binding constraint on close games after S7-10 (faster reinforcement)
+## and S7-11 (cover) both lengthened matches — it was calibrated before either.
+var _max_rounds_override: int = 0
+
 ## Variants per handicap cell (default 3 = the shipped batch). ★ Raised only for experiments:
 ## the +1 cell at 3 variants is n=6, which is too thin to read a gradient from — the S7-09
 ## sweep's first pass showed a non-monotone dip that was purely sample noise.
@@ -128,6 +135,8 @@ func _parse_args() -> void:
 			_only_handicap = int(arg.split("=")[1])
 		elif arg == "--plain":
 			_plain_map = true
+		elif arg.begins_with("--max-rounds="):
+			_max_rounds_override = maxi(0, int(arg.split("=")[1]))
 		elif arg.begins_with("--variants="):
 			_variants = clampi(int(arg.split("=")[1]), 1, _VARIANT_Y_OFFSETS.size())
 	if _degrade_favoured_pct != 0 or _only_handicap != -1 or _variants != 3 or _plain_map:
@@ -137,8 +146,9 @@ func _parse_args() -> void:
 	# ★ Always announce the terrain actually in play. The S7-10 cover experiment silently
 	# no-opped (PackedByteArray is a value type) and produced a sweep byte-identical to its
 	# own baseline; the numbers were clean, confident and meaningless. Report, do not assume.
-	print("SIM_TERRAIN,cover_tiles=%d,of=%d,plain=%s" % [
-		0 if _plain_map else VSMap.COVER_TILES.size(), VSMap.WIDTH * VSMap.HEIGHT, str(_plain_map)
+	print("SIM_TERRAIN,cover_tiles=%d,of=%d,plain=%s,max_rounds=%d" % [
+		0 if _plain_map else VSMap.COVER_TILES.size(), VSMap.WIDTH * VSMap.HEIGHT, str(_plain_map),
+		_max_rounds_override if _max_rounds_override > 0 else VerticalSliceRoot.VS_MAX_ROUNDS
 	])
 
 
@@ -292,7 +302,8 @@ func _build_match(favoured: int, handicap: int, variant: int) -> GameState:
 	var state: GameState = GameState.start_match(map, starting_player)
 	# Mirror the slice: the round cap is armed there, so simulating without it would
 	# measure a configuration that no longer ships.
-	state.max_rounds = VerticalSliceRoot.VS_MAX_ROUNDS
+	state.max_rounds = _max_rounds_override if _max_rounds_override > 0 \
+		else VerticalSliceRoot.VS_MAX_ROUNDS
 	state.per_player[0].faction = Factions.RUSH
 	state.per_player[1].faction = Factions.BOOM
 	state.per_player[0].is_ai_controlled = true
