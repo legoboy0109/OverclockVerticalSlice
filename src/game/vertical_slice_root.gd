@@ -46,10 +46,13 @@ extends Node2D
 ## Board dimensions and HQ placement for the slice's authored map. Within
 ## [MapDefinition]'s [code][MIN_DIM, MAX_DIM][/code] range; HQs mutually reachable
 ## across an all-Plain board.
-const MAP_WIDTH: int = 12
-const MAP_HEIGHT: int = 10
-const HQ_A: Vector2i = Vector2i(2, 5)
-const HQ_B: Vector2i = Vector2i(9, 5)
+# ★ S7-11: aliases onto [VSMap], which is the single authored definition. Kept as names
+# here because ~a dozen call sites read them; redefining the VALUES here is what would let
+# the slice and the match simulator drift apart.
+const MAP_WIDTH: int = VSMap.WIDTH
+const MAP_HEIGHT: int = VSMap.HEIGHT
+const HQ_A: Vector2i = VSMap.HQ_A
+const HQ_B: Vector2i = VSMap.HQ_B
 
 ## The human player is 0; the AI is player 1 (VS 1v1, ADR-0011).
 const LOCAL_PLAYER: int = 0
@@ -216,16 +219,10 @@ func _ready() -> void:
 # --- Build steps -------------------------------------------------------------
 
 func _build_match() -> void:
-	var map := MapDefinition.new()
-	map.width = MAP_WIDTH
-	map.height = MAP_HEIGHT
-	map.mode = MapDefinition.Mode.AUTHORED
-	var terrain := PackedByteArray()
-	terrain.resize(MAP_WIDTH * MAP_HEIGHT)
-	terrain.fill(GridState.Terrain.PLAIN)
-	map.authored_terrain = terrain
-	map.hq_tiles = [HQ_A, HQ_B]
-	map.deploy_tiles = []
+	# ★ S7-11: the map is authored ONCE in VSMap and shared by the slice, the match
+	# simulator and both diagnostic tools. It used to be hand-built in all four, which
+	# agreed only for as long as every tile was Plain — see VSMap's header.
+	var map: MapDefinition = VSMap.build()
 
 	_state = GameState.start_match(map, LOCAL_PLAYER)
 	# Faction / AI assignment is a direct Setup-phase field write (no

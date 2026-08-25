@@ -95,6 +95,49 @@ extends Resource
 ## and the nearest threat (tiles-normalized).
 @export var retreat_value_per_tile_fled: float = 0.20
 
+## ★ S7-11 — flat `positional_value` / `retreat_value` bonus for ENDING a move on a
+## Cover tile.
+##
+## [b]Sized against what Cover actually buys.[/b] [member CombatConfig.cover_dr] is a flat
+## −1 damage, and only for a [UnitState] defender (structures are cover-immune,
+## combat-resolution Rule 6). Against the roster's commonest attack (Trooper, 3) that turns
+## a 2-hit kill into a 3-hit kill — about +50% effective durability, which is worth more
+## than closing one tile (0.16) and less than enabling a next-turn attack (0.4).
+##
+## ⚠ [b]Applied only to tiles the AI would already consider[/b] — a strictly-closing advance,
+## or a wounded unit's retreat. It deliberately does NOT create a new "sidestep onto cover"
+## move category: a non-closing move scored on a flat bonus is exactly the shape that made
+## the AI ping-pong until its AP drained, which is why every branch in
+## `_score_positional_and_retreat_candidates` carries a strict-progress gate. Cover breaks
+## ties among good moves; it never becomes a reason to stop advancing.
+##
+## ⚠ The attack side needs no term at all — `_consider_attack` scores through
+## [method Combat.preview_damage], which already applies `cover_dr`, so a target standing in
+## cover scores lower automatically and always has.
+@export var cover_value: float = 0.30
+
+## ★ S7-11 — how many tiles of approach a Cover tile is worth when the advance fold picks
+## which closing tile to take.
+##
+## [b]Measured at 0, and that is not laziness.[/b] The obvious idea — let a unit accept one
+## tile less progress to end in cover — was implemented and tested, and it made cover usage
+## WORSE, not better:
+##
+## [codeblock]
+## cover-blind AI (incidental only)      5.5 % of units standing in cover
+## cover_value only (tie-break)          6.1 %
+## cover_value + discount 1              4.7 %   <-- worse than blind
+## [/codeblock]
+##
+## ★ The reason is instructive: a unit that steps back into cover is further from the enemy,
+## so next turn it advances again and immediately LEAVES the cover. The discount bought more
+## time walking, not more time protected. **Cover pays a defender who stays put, and this AI
+## does not stay put** — every branch of its movement scoring is advance, siege or retreat.
+##
+## Left as a live knob because it becomes correct the moment the AI gains a hold-position
+## behaviour. Until then it should stay 0.
+@export var cover_tile_discount: int = 0
+
 ## `ap_cost_opponent_paid_for` weight for the enemy HQ (which has no
 ## `build_cost`) — a siege-priority weight, not a sunk-cost figure.
 ## ★★ RAISED 12 -> 60 (S6-07c, user's lever: "make the objective outscore trading").
