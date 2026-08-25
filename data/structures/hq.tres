@@ -7,7 +7,7 @@
 script = ExtResource("1")
 display_name = "HQ"
 hp = 40
-production_cooldown_turns = 3
+production_cooldown_turns = 2
 max_count = 1
 upkeep = 0
 build_cost = 0

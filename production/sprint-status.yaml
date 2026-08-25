@@ -281,6 +281,56 @@ stories:
     # ⛔ WHAT REMAINS IS A TUNING QUESTION FOR THE USER, not a structural one: one Trooper is
     #   worth roughly 30-35% of decision quality. Is a one-unit lead meant to be that strong?
 
+  - id: "s7-10"
+    name: "★ Make a one-unit lead less punishing — HQ production cooldown 3 → 2"
+    file: "production/playtests/s7-10-cliff-tuning-2026-08-25.md"
+    priority: must-have
+    status: done
+    owner: "systems-designer + qa-lead"
+    estimate_days: 0.5
+    blocker: ""
+    completed: "2026-08-25"
+    # ✅ DONE. User's brief: "adjust it to make it slightly less punishing, then run another batch."
+    # FIVE levers tried, ONE worked:
+    #   1. Trooper hp 6 -> 7 (removes the Sniper one-shot)   ⛔ WORSE (underdog wins 6/14 -> 1/14 @50%)
+    #   2. Trooper hp 6 -> 5 (adds a Heavy one-shot)          ◐ inert
+    #   3. Cover on the map, 12% and 20%                      ◐ COMPLETELY inert
+    #   4. Unit counterattacks enabled                        ⛔ neutral to slightly worse
+    #   5. HQ production_cooldown_turns 3 -> 2                ✅ WORKED
+    # ★★ WHY THE FIRST FOUR FAILED, and it is ONE reason: every SYMMETRIC combat rule is applied
+    #   more times by the side with more units. Tougher units, lethal units, cover, counterattacks
+    #   -- each is worth more to whoever has more bodies to use it with. Lever 1 is the clearest:
+    #   harder-to-kill units LENGTHEN engagements, and a longer engagement lets a numerical
+    #   advantage compound further. ⇒ YOU CANNOT DAMP A NUMERICAL ADVANTAGE WITH A RULE THAT
+    #   SCALES WITH UNIT COUNT.
+    # ★ Lever 3 failed for a SECOND reason: the AI has NO terrain awareness at all (ai.gd never
+    #   calls is_cover), so cover cannot register in any AI-vs-AI measurement.
+    #   ⚠ And underneath that: COVER HAS NEVER BEEN USED BY ANYTHING. Both this harness and
+    #     VerticalSliceRoot fill their maps with Terrain.PLAIN. cover_dr, GridState.is_cover and
+    #     shipped tile_cover art all exist and NO MAP PLACES A SINGLE COVER TILE. The game's whole
+    #     positional dimension is built and switched off.
+    # ★★ THE ACTUAL DIAGNOSIS came from looking at the board, not the rules: armies average ~1.6
+    #   units PER SIDE (mean 3.22 on board, peak 5). At that size ONE extra Trooper is a ~60% force
+    #   advantage. Money was not the constraint (both sides bank a surplus, peak 3,200) --
+    #   production RATE was, i.e. the HQ cooldown.
+    # RESULT (+1 handicap, n=14, underdog wins):
+    #   degrade    0%    5%   10%   15%   30%   50%
+    #   shipped  0/14  0/14  1/14  1/14  1/14  6/14
+    #   tuned    0/14  1/14  3/14  6/14  9/14 11/14
+    #   ⇒ Exchange rate ~50% -> ~15% of decision quality (~3.3x reduction).
+    #   ★★ THE 0% ROW IS UNCHANGED. Equal play from one unit down still converts EVERY time, so
+    #     S5-04 requirement 1 ("no decided game reverses") is preserved by construction. This is a
+    #     SKILL AMPLIFIER, NOT A RUBBER BAND -- the distinction game-concept.md actually cares about.
+    # ⚠ ARGUABLY MORE THAN "SLIGHTLY": 3.3x is large, and the cooldown is an INTEGER, so 3 -> 2 is
+    #   the smallest step this lever has. A gentler change would need a different lever.
+    # ✅ THE TRADE MEASURED, because this is the same lever that fixed the S6-06 gate (S6-07):
+    #   resolve on play 18/22 -> 19/22 (BETTER), conversion 18/18 unchanged, both seats,
+    #   mean turns 28.9 -> 34.3 (~19% longer). Suite 1236/1236.
+    # ⚠ HEADROOM IS THE THING TO WATCH: +1 games moved from 31-34 turns to 30-47 against a 60-turn
+    #   round cap, so headroom fell ~26 -> ~13 turns. A FURTHER softening of this lever would start
+    #   pushing +1 games into round-cap territory and erode "resolve on play". This step fits; the
+    #   next one probably does not.
+
   # --- Carried, human-gated, NOT on this sprint's critical path ---
   - id: "s5-03-observer"
     name: "★ S5-03 naive-observer session (~20 min) — the last unscripted half"

@@ -100,6 +100,26 @@ var _degrade_favoured_pct: int = 0
 ## full batch is ~25 minutes against ~7 for one cell.
 var _only_handicap: int = -1
 
+## ★ S7-10 EXPERIMENT KNOB — cover density on the simulated map, as a percentage.
+##
+## [b]Why this exists.[/b] Every measurement this project has ever taken ran on a board with
+## [b]no terrain at all[/b]: both this harness and [method VerticalSliceRoot._build_match] fill
+## their map with [code]GridState.Terrain.PLAIN[/code]. Cover is fully implemented — a
+## [member CombatConfig.cover_dr] constant, [method GridState.is_cover], and shipped
+## `tile_cover` art from S4 — and [b]no map in the project places a single cover tile.[/b]
+##
+## ⇒ That matters for the swing question specifically. With every tile identical, the only
+## variables in an exchange are unit count and position, so **unit count dominates by
+## construction**. Cover is the game's built-in way for a well-placed defender to win a fight
+## they are numerically losing — i.e. exactly the "skill route back" the cliff work is about,
+## built and never switched on.
+##
+## ⚠ [b]Default 0 keeps the harness faithful to the shipped slice[/b], which is also plain.
+## This knob measures what cover WOULD do; it does not decide that the game should have it.
+##
+## Tiles are placed mirror-symmetrically about the vertical axis so neither seat is favoured.
+var _cover_pct: int = 0
+
 ## Variants per handicap cell (default 3 = the shipped batch). ★ Raised only for experiments:
 ## the +1 cell at 3 variants is n=6, which is too thin to read a gradient from — the S7-09
 ## sweep's first pass showed a non-monotone dip that was purely sample noise.
@@ -117,11 +137,13 @@ func _parse_args() -> void:
 			_degrade_favoured_pct = int(arg.split("=")[1])
 		elif arg.begins_with("--only-handicap="):
 			_only_handicap = int(arg.split("=")[1])
+		elif arg.begins_with("--cover="):
+			_cover_pct = clampi(int(arg.split("=")[1]), 0, 40)
 		elif arg.begins_with("--variants="):
 			_variants = clampi(int(arg.split("=")[1]), 1, _VARIANT_Y_OFFSETS.size())
-	if _degrade_favoured_pct != 0 or _only_handicap != -1 or _variants != 3:
-		print("SIM_CONFIG,degrade_favoured_pct=%d,only_handicap=%d,variants=%d" % [
-			_degrade_favoured_pct, _only_handicap, _variants
+	if _degrade_favoured_pct != 0 or _only_handicap != -1 or _variants != 3 or _cover_pct != 0:
+		print("SIM_CONFIG,degrade_favoured_pct=%d,only_handicap=%d,variants=%d,cover_pct=%d" % [
+			_degrade_favoured_pct, _only_handicap, _variants, _cover_pct
 		])
 
 
@@ -252,6 +274,7 @@ func _build_match(favoured: int, handicap: int, variant: int) -> GameState:
 	var terrain := PackedByteArray()
 	terrain.resize(MAP_WIDTH * MAP_HEIGHT)
 	terrain.fill(GridState.Terrain.PLAIN)
+	terrain = _scatter_cover(terrain)
 	map.authored_terrain = terrain
 	map.hq_tiles = [HQ_A, HQ_B]
 	map.deploy_tiles = []
@@ -333,3 +356,67 @@ func _bonus_tile(favoured: int, index: int, variant: int) -> Vector2i:
 	var dir: int = 1 if favoured == 0 else -1
 	var dy: int = _VARIANT_Y_OFFSETS[variant % _VARIANT_Y_OFFSETS.size()]
 	return Vector2i(hq.x + dir * (1 + index), hq.y + dy)
+
+
+## Paints [member _cover_pct] percent of the board as Cover, mirror-symmetric about the
+## vertical axis. No-op at the default 0.
+##
+## ★ Symmetry is not cosmetic here. The batch already alternates the starting player because
+## on a symmetric board that is the only asymmetry there is; an asymmetric cover layout would
+## quietly hand one seat an advantage and every "not seat-determined" reading downstream would
+## be measuring the map instead of the game.
+##
+## ⚠ HQ tiles and their immediate surroundings are left clear so cover never interacts with
+## the deploy ring — that rule has caused one game-ending defect already (the S6-15 latch) and
+## this experiment has no business perturbing it.
+## ⚠ [b]Returns the array rather than mutating in place.[/b] A [PackedByteArray] is a value
+## type in GDScript — mutating a parameter writes to a local copy and the caller keeps the
+## original. The first version of this took the array and mutated it, and the sweep came back
+## byte-identical to the no-cover baseline: the knob silently did nothing. ★ Same family as the
+## S7-03 guard that could not fail — **an experiment that quietly no-ops produces clean,
+## confident, meaningless numbers.** The `SIM_COVER` line below exists so that can never happen
+## again unnoticed.
+func _scatter_cover(terrain: PackedByteArray) -> PackedByteArray:
+	if _cover_pct <= 0:
+		return terrain
+	var target: int = (MAP_WIDTH * MAP_HEIGHT * _cover_pct) / 100
+	var placed: int = 0
+	# Walk the left half in a fixed order; mirror each placement to the right half.
+	for x: int in range(1, MAP_WIDTH / 2):
+		for y: int in MAP_HEIGHT:
+			if placed >= target:
+				_report_cover(placed)
+				return terrain
+			var here := Vector2i(x, y)
+			var mirror := Vector2i(MAP_WIDTH - 1 - x, y)
+			if _too_close_to_a_hq(here) or _too_close_to_a_hq(mirror):
+				continue
+			# Fixed deterministic pattern rather than a draw: every third tile on a
+			# staggered diagonal, which spreads cover instead of clumping it.
+			if (x * 3 + y * 5) % 7 >= 3:
+				continue
+			terrain[here.y * MAP_WIDTH + here.x] = GridState.Terrain.COVER
+			terrain[mirror.y * MAP_WIDTH + mirror.x] = GridState.Terrain.COVER
+			placed += 2
+	_report_cover(placed)
+	return terrain
+
+
+## Emitted once per match so a run can be checked for "did the knob actually do anything".
+var _cover_reported: bool = false
+
+
+func _report_cover(placed: int) -> void:
+	if _cover_reported:
+		return
+	_cover_reported = true
+	print("SIM_COVER,requested_pct=%d,tiles_placed=%d,of=%d" % [
+		_cover_pct, placed, MAP_WIDTH * MAP_HEIGHT
+	])
+
+
+func _too_close_to_a_hq(tile: Vector2i) -> bool:
+	for hq: Vector2i in [HQ_A, HQ_B]:
+		if absi(tile.x - hq.x) + absi(tile.y - hq.y) <= 2:
+			return true
+	return false
