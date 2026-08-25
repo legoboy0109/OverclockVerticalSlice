@@ -179,11 +179,16 @@ const DESTRUCTIVE_VERBS: Array[int] = [
 	CommandFSM.Verb.CANCEL_BUILD,
 	CommandFSM.Verb.DISBAND,
 ]
-
-## The input action whose CURRENT binding is drawn as each verb's shortcut hint.
-## Read live from the [InputMap] on every open, never hardcoded, so a player who
-## has rebound Move sees the key they chose (`design/ux/action-menu.md` AC-15).
-## A verb absent from this map simply shows no hint.
+## Verb -> the InputMap action that also triggers it directly, skipping the menu.
+##
+## ⚠ [b]No longer rendered on the rows[/b] (2026-08-26, user decision from playtest): a row is
+## activated by focusing it and pressing select, so printing a second, per-verb key beside it was
+## a competing instruction for the same outcome — the same "two sources of truth for one choice"
+## reasoning that retired the type-cycle bindings in S6-30.
+##
+## ★ The BINDINGS themselves are deliberately kept. They remain live, remain rebindable in
+## Settings, and remain the fast path for a player who has learned them; only the on-row
+## advertising is gone. This table is what maps them, so it stays.
 const VERB_SHORTCUTS: Dictionary = {
 	CommandFSM.Verb.MOVE: &"board_act",
 	CommandFSM.Verb.ATTACK: &"board_attack",
@@ -502,11 +507,11 @@ func _fill_rows(model: Array[CommandFSM.VerbEntry], \
 			# Move's is per-tile and Produce's is per-type, so neither can be named
 			# here without inventing a figure — those stay bare, and their prices
 			# appear where they become knowable (the tile readout, the submenu).
-			right = _priced(entry.ap_cost, _shortcut_for(entry.verb))
+			right = _priced(entry.ap_cost, "")
 		elif entry.verb == CommandFSM.Verb.PRODUCE:
 			# ASCII ">" rather than a triangle: the fallback font has no glyph for
 			# one and would draw a tofu box.
-			right = "> " + _shortcut_for(entry.verb)
+			right = ">"
 		elif entry.verb == CommandFSM.Verb.WAIT and stood_down:
 			# Wait stays ENABLED when already stood down (CR-4: "Wait — always"), and
 			# pressing it again is idempotent. The row says so rather than looking
@@ -525,7 +530,7 @@ func _fill_rows(model: Array[CommandFSM.VerbEntry], \
 			right = _priced(entry.ap_cost, disband_refund if entry.enabled \
 				else reason_text(entry.reason))
 		else:
-			right = _shortcut_for(entry.verb)
+			right = ""
 		items.append({
 			"label": VERB_LABELS.get(entry.verb, "?"),
 			"right": right,
@@ -595,9 +600,19 @@ static func _cost_text(credit_cost: int, ap_cost: int, enabled: bool, reason: in
 ## Whether [param entry] is disabled for a reason the menu should DROP the row
 ## over rather than render it greyed out.
 ##
-## Two of the three are "this verb does not apply to this KIND of entity" — Cancel
-## Build on a unit, Disband on a structure — which teaches nothing and would put a
-## dead row on almost every menu in the game.
+## Three of the four are "this verb does not apply to this KIND of entity" — Cancel Build on a
+## unit, Disband on a structure, Produce on something that produces nothing — which teaches
+## nothing and would put a dead row on almost every menu in the game.
+##
+## ★ [constant CommandFSM.Reason.NOT_A_PRODUCER] was added 2026-08-26 from a playtest report:
+## every ordinary unit was carrying a permanent "Produce — not a producer" row. It is structural
+## in exactly the sense the other two are — no amount of play makes a Trooper a producer — so it
+## belongs here, and its omission was an oversight rather than a decision.
+##
+## ⚠ The line this predicate draws is [b]structural vs situational[/b], and it is the whole design.
+## A situational block ("needs AP", "no targets", "already attacked") keeps its visible dimmed row
+## BECAUSE that row is what teaches the rule — a player who never sees "needs AP" never learns
+## that attacking costs AP. Only "this verb can never apply to this kind of thing" is hidden.
 ##
 ## ⚠ [constant CommandFSM.Reason.NOTHING_BLOCKED] is the exception to the principle
 ## and is here by explicit design decision (user, 2026-08-25). It is a SITUATIONAL
@@ -609,6 +624,7 @@ static func _cost_text(credit_cost: int, ap_cost: int, enabled: bool, reason: in
 static func _is_inapplicable(entry: CommandFSM.VerbEntry) -> bool:
 	return (entry.reason & CommandFSM.Reason.NOT_UNDER_CONSTRUCTION) != 0 \
 		or (entry.reason & CommandFSM.Reason.NOT_A_UNIT) != 0 \
+		or (entry.reason & CommandFSM.Reason.NOT_A_PRODUCER) != 0 \
 		or (entry.reason & CommandFSM.Reason.NOTHING_BLOCKED) != 0
 
 
@@ -729,22 +745,6 @@ static func reason_text(mask: int) -> String:
 		if mask & flag:
 			parts.append(REASON_LABELS[flag])
 	return ", ".join(parts)
-
-
-## The player's CURRENT binding for [param verb]'s shortcut, bracketed, or an
-## empty string when the verb has no shortcut or the action is unbound. Read live every time so a
-## rebind is reflected without this widget knowing the Settings screen exists — and so is a
-## device switch, since [InputGlyphs] answers for whichever device the player last touched.
-func _shortcut_for(verb: int) -> String:
-	if not VERB_SHORTCUTS.has(verb):
-		return ""
-	# ★ S8-06: delegated to InputGlyphs, which answers for the device the player is CURRENTLY
-	# using. This function previously matched InputEventKey only, so on a gamepad it returned an
-	# empty string and the row showed no shortcut at all — every binding already had a pad event,
-	# and none of them were ever displayed.
-	return InputGlyphs.label_for(VERB_SHORTCUTS[verb])
-
-
 # --- Submenu ----------------------------------------------------------------
 
 ## Opens the per-type Produce submenu beside the parent plate, dims the parent and

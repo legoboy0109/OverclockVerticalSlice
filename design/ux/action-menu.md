@@ -12,6 +12,24 @@
 > ⚠ The review was a **self-audit by the spec's own author** — an independent pass would carry more
 > weight, and the four spec-accuracy findings are the kind an author reliably misses.
 >
+> ### ⛔ REVISED 2026-08-26 from a play session — two behaviour changes
+> **1. Structurally inapplicable verbs are now HIDDEN, not dimmed.** A verb that can never apply
+> to the selected *kind* of thing — Produce on a non-producer, Cancel Build on a finished
+> structure, Disband on a structure — is dropped from the menu. Reported in play: every ordinary
+> unit carried a permanent *"Produce — not a producer"* row.
+> ★ **The line is structural vs situational, and that line is the design.** A situational block
+> (*needs AP*, *no targets*, *already attacked*) keeps its dimmed, reasoned row **because that row
+> is what teaches the rule** — a player who never sees "needs AP" never learns that attacking
+> costs AP. ⚠ This narrows `command-action-interface.md` **CR-4** ("legal+affordable verbs,
+> disabled-with-reason otherwise"), which did not distinguish the two cases; CR-4's intent is
+> preserved for every reason a player can actually clear.
+>
+> **2. Rows no longer print per-verb shortcut keys.** A row is activated by focusing it and
+> pressing select, so a key printed beside it was a second instruction for the same outcome — the
+> same "two sources of truth for one choice" reasoning that retired the type-cycle bindings in
+> S6-30. ★ **The bindings themselves are kept**: still live, still rebindable in Settings, still
+> the fast path for a player who has learned them. Only the advertising is gone.
+>
 > **Re-reviewed 2026-08-25 (S7-07)** — `production/qa/ux-review-action-menu-2026-08-25.md`.
 > Verdict was **NEEDS REVISION** on 2 blocking issues, **both now fixed here**: the stale Platform
 > Target line and AC-22's resolution set, which tested only sizes *larger* than the shipping floor.
@@ -274,6 +292,7 @@ fact, not an oversight:
 | Focus a verb | Hover | ↑ / ↓ | D-pad ↑ / ↓ |
 | Choose focused verb | Left-click | Enter | A |
 | Verb accelerator (skip the menu) | — | M / A / P / B | X / Y / RB / LB |
+| ⚠ *(accelerators are **not printed on the rows**, 2026-08-26 — they remain bound and rebindable)* | | | |
 | Open submenu | Click `Produce ▸` | Enter or → on the row | A or → |
 | Back out one level | Right-click | Esc | B |
 | Commit inside a preview | Left-click a highlighted tile | Enter on the cursor tile | A |
@@ -506,7 +525,8 @@ depends on game rules, the *set-up* is stated so the expected result follows fro
 | AC-14 | Note your AP and Credits, press Wait. Both are unchanged and nothing is selected | Integration |
 | AC-25 | After Wait, the unit stops glowing on the board, the ACTIONS panel's idle count drops by one, and pressing the jump-cursor key no longer stops on it. Re-select it: every verb it had is still available, and using one makes it glow and count again | Integration |
 | AC-26 | Stand a unit down, then end the turn and come back. It is glowing and counted again — a stand-down lasts exactly one turn | Integration |
-| AC-15 | Rebind Move to a different key in Settings, then open a menu. The Move row shows the new key | Integration |
+| AC-15 | Rebind Move to a different key in Settings, then use it on the board: the rebound key still triggers Move. ⚠ **Revised 2026-08-26** — previously *"the Move row shows the new key"*. Rows no longer print per-verb shortcuts at all (see the playtest revision note); the **binding stays live and rebindable**, it is simply not advertised on the row | Integration |
+| AC-32 | Select an ordinary unit. There is **no Produce row at all** — not a dimmed one. Select a producer: the row is there. Now drain a unit's AP and select it: Attack is still **present and dimmed, with a reason** | Integration |
 | AC-16 | Turn on Reduced Motion. The menu, submenu and picker appear and disappear instantly, with no fade | Integration |
 | AC-17 | Nothing on screen mentions `[C]` or `[V]`, and pressing either key does nothing | UI |
 | AC-18 | Select a structure you are still building and activate Cancel Build **once**. The structure is still there and the row now reads "Confirm cancel". Activate again: it is destroyed and the refund is credited | Integration |

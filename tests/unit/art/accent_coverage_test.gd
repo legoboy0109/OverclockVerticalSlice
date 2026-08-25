@@ -193,3 +193,27 @@ func test_the_roster_does_not_drift_apart_in_ownership_signal() -> void:
 		"It was 4.7x when the Sniper defect was live — one unit far harder to identify than its " +
 		"neighbours is the shape of that defect, whatever the absolute numbers."
 	).is_less_equal(_MAX_ROSTER_SPREAD)
+
+
+# --- Cover prop ground contact (S8-10) --------------------------------------------------------
+
+func test_a_cover_prop_sits_on_its_tile_not_above_it() -> void:
+	# ★ Reported from play 2026-08-26: cover floated half a tile north of the ground, the exact
+	# defect structures had in S6-29 and fixed the same way.
+	#
+	# A prop is anchored bottom-centre at grid_to_screen(), which returns the tile CENTRE. That is
+	# right for a unit — feet ARE the bottom of the art — and wrong for anything standing on a base
+	# diamond, whose lowest drawn pixel is the diamond's bottom VERTEX, half a tile-height below
+	# the centre. The inset is the correction.
+	assert_float(BoardRenderer.COVER_PROP_GROUND_INSET_PX).override_failure_message(
+		"The cover ground inset must be half a tile height (%.1f). Anything else re-floats the " % (BoardRenderer.TILE_HEIGHT_PX * 0.5) +
+		"prop or sinks it — and it must stay DERIVED from the tile metrics, not a literal."
+	).is_equal_approx(BoardRenderer.TILE_HEIGHT_PX * 0.5, 0.001)
+
+
+func test_the_cover_inset_matches_the_structure_inset_rule() -> void:
+	# ★ Both are "half the base diamond's height for something drawn one tile wide". Pinning them
+	# to each other means a change to the projection ratio moves both, and a change to only one is
+	# visible here as a disagreement rather than as a subtly floating sprite on the board.
+	assert_float(BoardRenderer.COVER_PROP_GROUND_INSET_PX).is_equal_approx(
+		EntitySpriteFeed.STRUCTURE_GROUND_INSET_PX, 0.001)
