@@ -405,6 +405,10 @@ func _build_command_interface() -> void:
 	# press again. Now every rejection says why, in the same voice the greyed-out
 	# menu rows use.
 	_cmd.commit_rejected.connect(_on_commit_rejected)
+	# ★ S8-06: the legend names whichever device the player last touched, so it has to redraw when
+	# they switch. InputGlyphs emits only on an actual CHANGE, never per event, so this is not a
+	# per-frame cost.
+	InputGlyphs.device_changed.connect(_on_input_device_changed)
 
 
 func _build_hud() -> void:
@@ -605,10 +609,36 @@ func _refresh_status() -> void:
 	# and their costs in place, and the type pickers show the types — so all of that
 	# moved to where the decision is actually made, and what is left is the handful
 	# of controls that belong to no selection.
-	lines.append("[Arrows] cursor   [Enter] confirm   [Esc] back   " +
-		"[B] build   [Tab] end turn   [[ ] jump cursor")
+	lines.append(_legend_text())
 	_status_label.text = "\n".join(lines)
 	_layout_status() # the widest line just changed; re-clamp before it is drawn.
+
+
+## Redraws the status line when the player swaps between keyboard/mouse and a pad, so the legend
+## never names a control the device in their hands does not have.
+func _on_input_device_changed(_device: int) -> void:
+	_refresh_status()
+
+
+## The control legend, named for the device the player is CURRENTLY holding.
+##
+## ★ S8-06: this was a hardcoded keyboard string. Every binding has had a gamepad event since
+## S6-17/S6-20, so a player on a pad was being told to press keys they do not have — a Steam Deck
+## Verified failure, and the Deck is the hardware floor (S7-08).
+##
+## ⚠ Cursor movement and confirm/back are engine-default actions (`ui_*`), so they are asked for
+## by name like everything else rather than spelled out — that way a rebind moves them too.
+func _legend_text() -> String:
+	var parts: PackedStringArray = []
+	for pair: Array in [
+		[&"ui_up", "cursor"], [&"ui_accept", "confirm"], [&"ui_cancel", "back"],
+		[&"board_build", "build"], [&"board_end_turn", "end turn"],
+		[&"board_cursor_cycle", "jump cursor"],
+	]:
+		var label: String = InputGlyphs.label_for(pair[0])
+		if label != "":
+			parts.append("%s %s" % [label, pair[1]])
+	return "   ".join(parts)
 
 
 ## Renders a refused commit as the status line's transient reason.

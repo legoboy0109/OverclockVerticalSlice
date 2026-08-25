@@ -42,6 +42,14 @@ Balance="*res://src/core/economy/balance.gd"
 ; ran on default bindings until the player happened to open settings.
 Settings="*res://src/core/settings/settings_service.gd"
 
+; ★ 2026-08-25 (S8-06). Names a bound action the way the device the player is CURRENTLY
+; using names it — "[B]" on a keyboard, "[LB]" on a pad. Every binding has had a gamepad
+; event since S6-17/S6-20, but nothing DISPLAYED them, so a controller player was told to
+; press keys they do not have. A Steam Deck Verified criterion, not a nicety.
+; Needs to be a Node (it watches _input for the active device), hence an Autoload rather
+; than a static helper. No dependencies, so order does not matter.
+InputGlyphs="*res://src/ui/input/input_glyphs.gd"
+
 ; Thin, logic-free registry Autoload (ADR-0007), mirroring Balance's idiom.
 ; Preloads the 4 VS UnitTypeDef presets once at boot; any system reads
 ; UnitTypes.SCOUT/TROOPER/HEAVY/SNIPER as a bare global reference.
@@ -104,6 +112,36 @@ enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg")
 ; because the settings screen (S6-24) lets a player rebind it.
 ; ui_up/ui_down/ui_left/ui_right are NOT redefined here — they use Godot's
 ; built-in engine defaults (arrow keys + D-pad), unmodified.
+; ⛔⛔ 2026-08-25 (S8-06) — ui_accept / ui_cancel are DECLARED HERE BECAUSE REDOT 26.2 SHIPS THEM
+; WITH NO GAMEPAD EVENTS AT ALL. Verified by dumping InputMap.action_get_events() on a clean
+; project: ui_accept had Enter / Kp Enter / Space, ui_cancel had Escape, and neither had a single
+; joypad button. (ui_up and the other directions DO carry D-pad + stick, so this is specific to
+; these two.)
+;
+; That made CONFIRM and BACK OUT — the two most fundamental controls in the game — unreachable on
+; a controller, on a project whose hardware floor is the Steam Deck (S7-08). It also silently
+; falsified two Approved specs: action-menu.md's Interaction Map promises A=confirm and B=back,
+; and pause.md records "B works with no project binding" because ui_cancel is engine-default.
+; ⚠ It was engine-default. The default just does not include a pad.
+;
+; ⚠ Declaring a built-in action here REPLACES its defaults wholesale, so the original keyboard
+; events are restored explicitly below — dropping them would trade a gamepad bug for a keyboard one.
+; Found by S8-06's glyph work: asking "what is this action called on a pad?" is what exposed that
+; the answer was "nothing".
+ui_accept={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194309,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194310,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":32,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":0,"pressure":0.0,"pressed":false,"script":null)
+]
+}
+ui_cancel={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194305,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":1,"pressure":0.0,"pressed":false,"script":null)
+]
+}
 board_cursor_cycle={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":91,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
