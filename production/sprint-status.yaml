@@ -376,6 +376,53 @@ stories:
     #   5 of the 7 unresolved games are the +0/+1 close cells. Raising it converts stalemates
     #   into finishes at the cost of longer matches.
 
+  - id: "s7-12"
+    name: "Raise the round cap 30 → 40 — and the seat bias it uncovered"
+    file: "production/playtests/s7-12-round-cap-2026-08-25.md"
+    priority: must-have
+    status: done
+    owner: "systems-designer + qa-lead"
+    estimate_days: 0.5
+    blocker: ""
+    completed: "2026-08-25"
+    # ✅ DONE. 30 rounds was calibrated in Sprint 5; TWO later changes lengthened matches and
+    # neither re-derived it — s7-10 (faster reinforcement, bigger armies) and s7-11 (cover, -1
+    # damage per hit). The cap had become the binding constraint, and SELECTIVELY so: the
+    # nearly-even +1 cell had 3/6 games ending on the cap while +2/+3 finished at 25-30 turns.
+    #   cap 30: resolve 17/22, +1 cell 3/6 capped, mean 33.2 turns
+    #   cap 40: resolve 20/22, +1 cell 0/6 capped, mean 38.7 turns   <-- shipped
+    # ✅ Every handicapped game now finishes on play. The 2 remaining unresolved are the mirror
+    #   cell, which is CORRECT — a deterministic AI on a symmetric board should tiebreak.
+    # ⚠ Cost: mean 33 -> 39 turns; a capped game runs 80 turns instead of 60.
+    #
+    # ⛔⛔ WHAT IT UNCOVERED, and this is bigger than the cap change:
+    #   Conversion moved 18/18 -> 15/18, which LOOKS like the comeback earlier sprints hunted
+    #   for. IT IS NOT. All three "upsets" are the same game: P1 wins ALL SIX +1 games
+    #   regardless of which side got the extra Trooper, and all four mirrors.
+    #   ⇒ IN CLOSE GAMES THE WINNER IS THE SEAT, NOT THE PLAY.
+    #   Ruled out, each by measurement:
+    #     - NOT turn order — the mirror cell alternates the starting player and P1 wins either way
+    #     - NOT the faction — rush/boom/neutral all carry unit_deltas = [], mechanically identical
+    #     - NOT the cover layout — tile symmetry is pinned by a test, and the RESOLVED mirrors go
+    #       to P1 on a plain board too (--plain --max-rounds=40)
+    #   What cover DID change: plain mirrors split 2/2, cover mirrors 4/0 to P1 — the difference
+    #   is entirely in the two games that reach the cap and are decided by the unit-count
+    #   TIEBREAK. Cover moved who wins a tiebreak; it did not create the bias.
+    #   ★ The bias PREDATES all of it. S5-04 saw it at n=4 as "a signal, not a proof". Raising
+    #     the cap did not cause it — IT STOPPED HIDING IT.
+    #
+    # ⇒ CONSEQUENCES FOR NUMBERS ALREADY RECORDED:
+    #   - s6-06's "18/18 converts" was partly the cap truncating games the favoured side was
+    #     losing and awarding them on unit count.
+    #   - s7-09/s7-10 swept the +1 cell, the cell most affected. Their RELATIVE comparisons
+    #     (measured under identical conditions) hold; the absolute "one Trooper ≈ N% of decision
+    #     quality" framing now carries an asterisk.
+    #   ⛔ NO CLOSE-GAME MEASUREMENT SHOULD BE TRUSTED until the seat asymmetry is explained.
+    #     Next diagnostic: find which tie-break in the engine or AI is not mirror-invariant. The
+    #     board, the mirror seeding and the deploy rules have each been checked and ARE symmetric.
+    # Suite 1253/1253. Menu + slice boot clean. Harness gained --max-rounds=N so the shipped
+    # value was CHOSEN FROM A CURVE rather than guessed.
+
   # --- Carried, human-gated, NOT on this sprint's critical path ---
   - id: "s5-03-observer"
     name: "★ S5-03 naive-observer session (~20 min) — the last unscripted half"
