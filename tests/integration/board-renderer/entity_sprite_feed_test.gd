@@ -623,13 +623,43 @@ func test_units_keep_the_flat_two_times_art_scale() -> void:
 	assert_float((_entity_sprites(renderer)[0] as Sprite2D).scale.x).is_equal_approx(0.5, 0.0001)
 
 
-func test_structure_pivot_stays_at_ground_contact_after_the_footprint_fit() -> void:
-	# Arrange — the fit changes scale, and offset is applied pre-scale, so this is the
-	# regression that would catch the two going out of step.
+func test_structure_base_diamond_is_centred_on_its_tile_not_floating_above_it() -> void:
+	# Arrange — a structure's ground contact is a base DIAMOND, not a point, so the
+	# bottom of its trimmed art is that diamond's bottom VERTEX. Anchoring the vertex
+	# to the tile centre (what a bare bottom-centre pivot does, and what shipped
+	# before 2026-08-24) lifts the whole footprint half a tile clear of its own tile.
+	# The fit also changes scale while offset is applied PRE-scale, so this is the
+	# regression that catches the inset and the fit going out of step.
 	var renderer := _make_renderer()
 	var feed := _make_feed(renderer)
 	var tile := Vector2i(4, 6)
 	var entities: Array[EntityState] = [_make_structure(1, 0, tile, StructureTypes.HQ)]
+
+	# Act
+	feed.sync(entities)
+
+	# Assert — the drawn bottom edge sits BELOW the tile centre by exactly the
+	# bottom-vertex-to-centre distance of a one-tile base diamond, which places the
+	# diamond's own centre on the tile centre.
+	var sprite: Sprite2D = _entity_sprites(renderer)[0]
+	var top_left: Vector2 = sprite.position + sprite.offset * sprite.scale
+	var drawn: Vector2 = sprite.texture.get_size() * sprite.scale
+	var bottom_centre := Vector2(top_left.x + drawn.x * 0.5, top_left.y + drawn.y)
+	var expected: Vector2 = renderer.grid_to_screen(tile) \
+		+ Vector2(0.0, EntitySpriteFeed.STRUCTURE_GROUND_INSET_PX)
+	assert_vector(bottom_centre).is_equal_approx(expected, Vector2(0.01, 0.01))
+	# And the anchor itself did NOT move — position is the Y-sort key and the tile
+	# rect pick_regions builds from, so the inset must live in offset alone.
+	assert_vector(sprite.position).is_equal_approx(renderer.grid_to_screen(tile), Vector2(0.01, 0.01))
+
+
+func test_unit_pivot_takes_no_ground_inset_because_its_contact_is_a_point() -> void:
+	# Arrange — the companion to the structure case above: whatever the inset does
+	# for buildings, it must never displace a unit, whose feet ARE its bottom edge.
+	var renderer := _make_renderer()
+	var feed := _make_feed(renderer)
+	var tile := Vector2i(2, 3)
+	var entities: Array[EntityState] = [_make_unit(1, 0, tile, UnitTypes.SCOUT)]
 
 	# Act
 	feed.sync(entities)

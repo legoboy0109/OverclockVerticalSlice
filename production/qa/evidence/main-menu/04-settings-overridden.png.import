@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cuk17x8p6rgc0"
-path="res://.godot/imported/03-unit-selected-move-range.png-61df6f5cd2b7f7f33c9b95a2751118f4.ctex"
+uid="uid://c8ysqfn5pmfo4"
+path="res://.godot/imported/04-settings-overridden.png-baab1cd388dda9b2ac2017cb620b43b9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://production/qa/evidence/slice-ui/03-unit-selected-move-range.png"
-dest_files=["res://.godot/imported/03-unit-selected-move-range.png-61df6f5cd2b7f7f33c9b95a2751118f4.ctex"]
+source_file="res://production/qa/evidence/main-menu/04-settings-overridden.png"
+dest_files=["res://.godot/imported/04-settings-overridden.png-baab1cd388dda9b2ac2017cb620b43b9.ctex"]
 
 [params]
 

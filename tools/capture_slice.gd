@@ -69,10 +69,72 @@ func _run() -> void:
 				slice.move_cursor(step)
 				await get_tree().process_frame
 			slice.select_at_cursor()
-			for i: int in 4:
+			for i: int in 20:
 				await get_tree().process_frame
 			await RenderingServer.frame_post_draw
-			_shot("03-unit-selected-move-range")
+			_shot("03-unit-selected-action-menu")
+
+			# --- The verb's PREVIEW, which is what a menu pick opens ------------
+			# The menu hides itself here on purpose: the overlay it just opened is
+			# what the player now has to read, and a plate over it would compete.
+			slice.open_verb_preview(CommandFSM.Verb.MOVE)
+			for i: int in 20:
+				await get_tree().process_frame
+			await RenderingServer.frame_post_draw
+			_shot("03b-move-preview")
+
+			# --- Back out: preview -> menu, spending nothing --------------------
+			slice.back_out()
+			for i: int in 20:
+				await get_tree().process_frame
+			await RenderingServer.frame_post_draw
+			_shot("03c-backed-out-to-menu")
+
+	# --- A PRODUCER's menu + its per-type submenu -----------------------------
+	# The case the old one-key-per-command scheme could not show at all: which
+	# types this producer can make, what each costs, and which are out of reach.
+	var hq := Vector2i(-1, -1)
+	for e: EntityState in slice.state().entities():
+		if e is StructureState and e.owner == 0:
+			hq = e.position
+			break
+	if hq.x >= 0:
+		for i: int in 60:
+			var c: Vector2i = slice.cursor_tile()
+			if c == hq:
+				break
+			var step := Vector2i(
+				signi(hq.x - c.x) if c.x != hq.x else 0,
+				signi(hq.y - c.y) if c.x == hq.x else 0)
+			if step == Vector2i.ZERO:
+				break
+			slice.move_cursor(step)
+			await get_tree().process_frame
+		slice.select_at_cursor()
+		for i: int in 20:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		_shot("03d-structure-selected-menu")
+
+		slice.open_produce_picker()
+		for i: int in 20:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		_shot("03e-produce-submenu")
+		slice.back_out()
+		slice.back_out()
+		await get_tree().process_frame
+
+	# --- The player-level Build picker (CR-5: it belongs to no entity) ---------
+	if slice.has_method("open_build_picker"):
+		slice.open_build_picker()
+		for i: int in 20:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		_shot("03f-build-picker")
+		slice.back_out()
+		await get_tree().process_frame
+
 	# --- Focus the menu, as a gamepad would with Back/Select -------------------
 	if slice.has_method("toggle_menu_focus"):
 		slice.toggle_menu_focus()

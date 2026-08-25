@@ -396,7 +396,12 @@ func test_produce_unit_type_selection_cycles_and_deploys_the_selected_type() -> 
 	root.cycle_produce_type()
 	var chosen: UnitTypeDef = root.selected_produce_type()
 	assert_bool(chosen != first).is_true()
-	assert_str(root.status_text()).contains(chosen.display_name) # overlay reflects it
+	# ★ 2026-08-24: the status overlay no longer names the produce type. It used to,
+	# because the type was a HIDDEN cycled value with nowhere else to be read; the
+	# action menu's Produce submenu now lists every type with its live cost, so the
+	# legend went back to being a legend. What must still hold is that the roster
+	# offers the type and that producing it deploys it — both asserted below.
+	assert_bool(root._produce_roster().has(chosen)).is_true()
 
 	# Produce deploys the SELECTED type at the cursor (from a producer offering it).
 	var deploy: Array[Vector2i] = GameStateReader.new(state).legal_deploy_tiles(30, chosen)
@@ -425,7 +430,12 @@ func test_under_construction_producer_excluded_from_roster_until_complete() -> v
 	# type, and the overlay flags the building producer.
 	root.cycle_produce_type()
 	assert_bool(outpost.type.producible_types.has(root.selected_produce_type())).is_false()
-	assert_str(root.status_text()).contains("building")
+	# ★ 2026-08-24: the "X building (N turns)" note left the status overlay with the
+	# rest of the produce copy. What it existed to tell the player — that an
+	# unfinished producer's units are not available yet — is now told where the
+	# choice is made: the Produce submenu simply does not list them, and the verb row
+	# itself reads "still building". The ROSTER assertion above is the real invariant
+	# and it still holds.
 
 	# Complete it → its types join the roster and one becomes producible.
 	outpost.build_status = StructureState.BuildStatus.COMPLETED
@@ -457,7 +467,23 @@ func test_act_with_no_ap_flashes_an_ap_reason_instead_of_silently_doing_nothing(
 	assert_bool(root.select_at_cursor()).is_true()
 	_move_cursor_to(root, Vector2i(5, 6)) # a cursor move clears any prior flash first.
 	assert_bool(root.act_at_cursor()).is_false() # can't move or attack with 0 AP
-	assert_str(root.status_text()).contains("AP left") # ...but the overlay says why.
+	# ★ 2026-08-24: the reason now comes from CommandFSM's own Reason bitmask via
+	# ActionMenu.reason_text ("needs AP") rather than from a bespoke hint string, so
+	# the keyboard accelerator and the greyed-out menu row give the same explanation
+	# instead of two hand-written ones that could drift apart.
+	# ★ 2026-08-24: the reason now comes from CommandFSM's own Reason bitmask via
+	# ActionMenu.reason_text rather than from a bespoke hint string, so the keyboard
+	# accelerator and the greyed-out menu row give the SAME explanation instead of
+	# two hand-written ones that could drift apart.
+	#
+	# ⚠ The wording here is "no route", not "needs AP", and that is the model's
+	# answer rather than a rendering slip: Movement.reachable() is itself AP-bounded,
+	# so at 0 AP it returns an EMPTY set and CommandFSM._move_entry reports
+	# OUT_OF_RANGE — its INSUFFICIENT_AP branch only fires when the set is non-empty
+	# but every tile is too expensive, which 0 AP can never produce. Recorded as
+	# action-menu.md OQ-5; this test pins the invariant that MATTERS (the player is
+	# told why, never silently ignored) rather than one of the two phrasings.
+	assert_str(root.status_text()).contains("Move unavailable")
 
 
 func test_selecting_a_unit_renders_its_range_overlay_without_error() -> void:
@@ -477,38 +503,47 @@ func test_selecting_a_unit_renders_its_range_overlay_without_error() -> void:
 	assert_int(root.command_interface().selected_id()).is_equal(11)
 
 
-func test_status_overlay_surfaces_selected_build_type_legend_and_updates_on_cycle() -> void:
+func test_status_legend_names_the_selection_independent_controls_only() -> void:
+	# ★ REWRITTEN 2026-08-24 for the action menu. This test used to assert that the
+	# legend named the current Build type, its [C] cycle key, a "Produce [P]:" line
+	# with a live cost, and eleven bindings across two lines — because every verb was
+	# its own key and every type choice was a hidden cycled value with nowhere else
+	# to be read. All of that moved to where the decision is made: the menu shows the
+	# verbs and their shortcuts, the pickers show the types and their costs.
+	#
+	# What is left, and what this now pins, is the complement: the legend names the
+	# controls that belong to NO selection. Those have no other home, and an unnamed
+	# binding is an unreachable feature — the failure mode that left cursor-jump
+	# declared, unhandled and unused for four sprints.
 	var root := _make_root()
+	var legend: String = root.status_text()
 
-	# The overlay surfaces info the committed HUD widgets don't: the currently
-	# selected Build type, its cycle key, the produce readout, and the controls legend.
-	var first: StructureTypeDef = root.selected_buildable()
-	assert_str(root.status_text()).contains(first.display_name) # e.g. "Economy Outpost"
-	assert_str(root.status_text()).contains("[C] cycle")
-	assert_str(root.status_text()).contains("Produce [P]:")
-	# ★ 2026-08-24: the legend now names the pad button beside every key, because a
-	# controller player cannot guess a mapping they cannot see.
-	assert_str(root.status_text()).contains("[Tab/Back] end turn")
-	# ★ Every bound verb is named with BOTH inputs. An unnamed binding is an
-	# unreachable feature, which is exactly how cursor-jump sat unused: declared,
-	# unhandled, unbound on a pad, and absent from the legend.
-	assert_str(root.status_text()).contains("jump cursor")
-	assert_str(root.status_text()).contains("pause")
-	assert_str(root.status_text()).contains("[Arrows/D-pad] cursor")
-	# ★ The HUD action-panel focus toggle is named too — it is the ONLY way a gamepad
-	# reaches the HUD's Build/End Turn buttons, so an unnamed binding is an
-	# unreachable feature. Reads "panel" since 2026-08-24, when "menu" became
-	# ambiguous with the pause menu that now exists.
-	assert_str(root.status_text()).contains("panel")
-	# ★ And costs are labelled CR + AP, not "AP" — build/produce spend BOTH, and the
-	# label claimed the wrong currency for the game's most common action.
-	assert_str(root.status_text()).contains(" CR + ")
+	assert_str(legend).contains("cursor")     # how to move around the board
+	assert_str(legend).contains("confirm")    # how to act on the tile you are on
+	assert_str(legend).contains("back")       # how to get out of anything
+	assert_str(legend).contains("end turn")   # how to finish
+	assert_str(legend).contains("jump cursor")
+	assert_str(legend).contains("build")      # the one player-level verb (CR-5)
 
-	# Cycling the build type updates the overlay to the next type in one keypress.
-	root.cycle_buildable()
-	var second: StructureTypeDef = root.selected_buildable()
-	assert_bool(second.display_name != first.display_name).is_true()
-	assert_str(root.status_text()).contains(second.display_name) # e.g. "Production Outpost"
+
+func test_status_legend_no_longer_names_the_retired_cycle_bindings() -> void:
+	# action-menu.md AC-17. The [C]/[V] type-cycle commands were REMOVED, not
+	# rebound — the submenu shows every type outright, so a cycle would be a second
+	# way to mutate a choice the menu already displays. A legend that still named
+	# them would be telling the player about keys that do nothing, which is the exact
+	# failure the whole menu exists to end.
+	var root := _make_root()
+	var legend: String = root.status_text()
+
+	assert_str(legend).not_contains("[C] cycle")
+	assert_str(legend).not_contains("[V] cycle")
+	assert_str(legend).not_contains("cycle Build")
+	assert_bool(InputMap.has_action(&"board_build_cycle")).override_failure_message(
+		"the retired cycle action must be gone from the InputMap, not just from the legend"
+	).is_false()
+	assert_bool(InputMap.has_action(&"board_produce_cycle")).is_false()
+	# ...and its replacement must exist, or Attack has no accelerator at all.
+	assert_bool(InputMap.has_action(&"board_attack")).is_true()
 
 
 func test_camera_frames_the_whole_board_within_the_view() -> void:

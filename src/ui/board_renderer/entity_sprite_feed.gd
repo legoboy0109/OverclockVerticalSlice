@@ -24,6 +24,9 @@
 ##    [member Sprite2D.offset]; sizes differ per asset, so a shared frame must
 ##    never be assumed. This is what lets
 ##    [code]position = grid_to_screen(tile)[/code] work with no extra offset.
+##    [b]Structures are the one exception[/b] — their ground contact is a base
+##    diamond rather than a point, so their pivot carries
+##    [constant STRUCTURE_GROUND_INSET_PX]. See [method _pivot_offset].
 ## [br]3. [b]Facing[/b] — only [code]e[/code] and [code]w[/code] are authored; see
 ##    [method EntitySpriteCatalog.facing_for_delta].
 ##
@@ -75,6 +78,32 @@ const MISSING_TEXTURE_SIZE: Vector2i = Vector2i(128, 128)
 ## alternative — giving structures a genuine multi-tile footprint in [GridState] —
 ## was considered and rejected as an ADR-0005-scale change mid-sprint.
 const STRUCTURE_TARGET_WIDTH_PX: float = BoardRenderer.TILE_WIDTH_PX
+
+## Screen-space distance a structure sprite is pushed DOWN from the plain
+## bottom-centre pivot, so its drawn base sits ON the tile instead of above it.
+##
+## [b]The bug this exists to prevent (user-reported, 2026-08-24: "structures are
+## placed too high over the space they occupy").[/b] Sprites are trimmed to their
+## opaque bounds and anchored bottom-centre at [method BoardRenderer.grid_to_screen],
+## which returns the tile's CENTRE (verified against
+## [method TileMapLayer.map_to_local] — the floor cell drawn for a tile is centred
+## on exactly that point). For a UNIT that is correct: a unit's ground contact is
+## effectively a point at its feet, and its feet are the bottom of its trimmed art.
+## A STRUCTURE's ground contact is not a point but a whole base DIAMOND, and the
+## bottom of its trimmed art is that diamond's BOTTOM VERTEX, not its centre.
+## Anchoring the bottom vertex to the tile centre therefore lifts the entire
+## footprint half a tile-height clear of the tile it stands on — the building
+## visually squats on its northern neighbour while its ownership decal (correctly
+## centred on the tile) sits detached below it.
+##
+## [b]Derived, never hand-tuned.[/b] A structure is fitted to
+## [constant STRUCTURE_TARGET_WIDTH_PX] wide, so under the 2:1 dimetric projection
+## its base diamond is that width times [constant BoardRenderer.TILE_HEIGHT_PX] /
+## [constant BoardRenderer.TILE_WIDTH_PX] tall; half of that is the bottom-vertex-
+## to-centre distance. Retuning the footprint width therefore moves this in step —
+## a literal 32.0 here would silently drift the moment the fit changed.
+const STRUCTURE_GROUND_INSET_PX: float = STRUCTURE_TARGET_WIDTH_PX \
+	* (BoardRenderer.TILE_HEIGHT_PX / BoardRenderer.TILE_WIDTH_PX) * 0.5
 
 ## The board whose [member BoardRenderer.occupant_layer] this feed populates, and
 ## whose [method BoardRenderer.grid_to_screen] is the one placement anchor.
@@ -253,8 +282,9 @@ func sync(entities: Array[EntityState]) -> void:
 
 ## Creates or updates the [Sprite2D] for [param entity]: resolves facing from
 ## observed travel, resolves and applies the texture, re-anchors the
-## bottom-centre pivot for THIS texture's size, and places it at
-## [method BoardRenderer.grid_to_screen] with no extra offset.
+## pivot for THIS texture's size ([method _pivot_offset] — bottom-centre for a
+## unit, ground-inset for a structure), and places it at
+## [method BoardRenderer.grid_to_screen].
 func _refresh_entity(entity: EntityState) -> void:
 	var id: int = entity.entity_id
 	# A live entity arriving on an id that is mid-death-echo means the simulation
@@ -282,7 +312,7 @@ func _refresh_entity(entity: EntityState) -> void:
 	# to their opaque bounds so every asset differs, and a structure is fitted to its
 	# one-tile footprint rather than to the flat 2x art scale.
 	sprite.scale = _scale_for(entity, size)
-	sprite.offset = Vector2(-size.x * 0.5, -size.y)
+	sprite.offset = _pivot_offset(entity, size, sprite.scale)
 	# Composed, not assigned: an in-flight §8.5 motion tween owns the offset term
 	# and this sync owns the tile term. See [member _offsets].
 	sprite.position = _board.grid_to_screen(entity.position) + _offset_for(id)
@@ -746,7 +776,11 @@ func _build_wreck(entity_id: int, sprite: Sprite2D) -> Sprite2D:
 	wreck.centered = false
 	wreck.texture = load(path)
 	var size: Vector2 = wreck.texture.get_size()
-	wreck.offset = Vector2(-size.x * 0.5, -size.y)
+	# Same pivot rule as the body it replaces (INCLUDING the structure ground
+	# inset), and against the PARENT's scale, which this child inherits — a wreck
+	# that used the bare bottom-centre pivot would jump half a tile north on the
+	# frame a structure died.
+	wreck.offset = _pivot_offset(entity, size, sprite.scale)
 	# Starts transparent (so it can fade IN over the body) and already DARK — the
 	# wreck is the dead thing, and it should never appear at live brightness even
 	# for a frame. Alpha is animated; the rgb multiply is not.
@@ -946,6 +980,29 @@ func _refresh_glow(entity: EntityState, sprite: Sprite2D, facing: String) -> voi
 		return   # unchanged — do not touch the uniforms (AC-6)
 	glow.set_instance_shader_parameter(&"glow_mode", float(mode))
 	_glow_states[id] = [mode, pulse_base]
+
+
+## The [member Sprite2D.offset] that puts [param entity]'s ground-contact point on
+## its tile, for a texture of [param texture_size] drawn at [param scale].
+##
+## Bottom-centre for a unit; bottom-centre pushed down by
+## [constant STRUCTURE_GROUND_INSET_PX] for a structure — see that constant for
+## why the two differ. The inset is divided by [param scale] because
+## [member Sprite2D.offset] is applied in TEXTURE space, pre-scale, while the
+## inset is authored in SCREEN pixels; a structure's scale is the footprint fit
+## (not the flat 2x), so the two are never interchangeable. Guards a zero scale
+## rather than dividing by it.
+##
+## [b]Deliberately not applied to [member Node2D.position].[/b] Position is the
+## Y-sort key ([member Node2D.y_sort_enabled] on the occupant layer) and the anchor
+## [method pick_regions] builds a tile rect from; both want the TILE, not the drawn
+## pixels. Moving the drawing without moving the anchor is exactly what
+## [member Sprite2D.offset] is for.
+static func _pivot_offset(entity: EntityState, texture_size: Vector2, scale: Vector2) -> Vector2:
+	var inset: float = 0.0
+	if entity is StructureState and scale.y != 0.0:
+		inset = STRUCTURE_GROUND_INSET_PX / scale.y
+	return Vector2(-texture_size.x * 0.5, -texture_size.y + inset)
 
 
 ## The draw scale for [param entity] whose texture measures [param texture_size].

@@ -91,6 +91,21 @@ const CAMERA_FIT_MARGIN: float = 0.95
 const CAMERA_ZOOM_MAX: float = 3.0
 const CAMERA_ZOOM_STEP: float = 1.12
 
+## Horizontal screen margin the status plate must leave free on EACH side, in
+## pixels — the columns the bottom corner HUD panels own.
+##
+## Sized off [GameHud]'s own bottom-corner geometry: LOG is 210 wide at x+16 from
+## the left edge, ACTIONS is 200 wide at x-216 from the right, so 240 clears the
+## wider of the two with room to spare at either edge. Kept here rather than
+## imported from [GameHud] because the plate is the slice's own scene glue, not a
+## HUD widget — if the two ever need to agree formally, that is the HUD chrome
+## sign-off's call, not this file's.
+const STATUS_SIDE_RESERVE_PX: float = 240.0
+
+## Floor for the status plate's clamped width, so a very narrow window degrades to
+## a small overlapping plate rather than a one-word-per-line column.
+const STATUS_MIN_WIDTH_PX: float = 280.0
+
 var _state: GameState = null
 var _reader: GameStateReader = null
 var _board: BoardRenderer = null
@@ -111,6 +126,40 @@ var _hud: GameHud = null
 ## follow-up. Reads public queries only, never mutates state.
 var _status_layer: CanvasLayer = null
 var _status_label: Label = null
+
+## ★ 2026-08-24 — the contextual action menu (`design/ux/action-menu.md`).
+##
+## The verb surface CR-1's loop always specified and the slice never had: before
+## this, every verb was a separate keyboard key, which cannot express CR-4's
+## "shown disabled with its reason, not hidden" because a key that does nothing
+## looks exactly like a key that does not exist. Lives in [member _status_layer]
+## rather than under [member _hud] so it draws ABOVE the HUD panels (it is
+## transient and must never be hidden behind a corner plate) but BELOW nothing
+## else — the pause and game-over overlays own their own layers above it.
+var _action_menu: ActionMenu = null
+
+## The unit type chosen in the Produce submenu, held while
+## [constant CommandFSM.State.PREVIEW_PRODUCE] is open so the commit at the cursor
+## knows what to deploy. Cleared on every preview exit — a stale type here would
+## deploy something the player did not just pick.
+var _pending_produce: UnitTypeDef = null
+
+## The structure type the Build flow will place, held for the same reason and for
+## the same lifetime as [member _pending_produce].
+var _pending_build: StructureTypeDef = null
+
+## The legal tiles of the open Produce/Build preview, painted as the
+## [constant BoardRenderer.OverlayClass.BUILD_DEPLOY_GO_TILE] overlay.
+##
+## [b]Slice-owned, not [CommandInterface]-owned, and deliberately so.[/b] That
+## class's Tier-1/2 recompute covers PREVIEW_MOVE and PREVIEW_ATTACK only —
+## ADR-0015 §3 scopes the tiers to `reachable()`/`legal_targets()` and explicitly
+## leaves Base & Production's own preview queries out. Adding a fourth tier family
+## to a heavily-specified class in order to light up deploy tiles would be a much
+## larger change than the feature needs; the slice paints these itself through the
+## sanctioned [method BoardRenderer.set_overlays] path.
+var _preview_tiles: Array[Vector2i] = []
+
 var _ai_driver: AITurnDriver = null
 
 ## True while an AI turn is playing out. Guards against overlapping drives (a
@@ -356,7 +405,11 @@ func _wire_hud_controls() -> void:
 	var controls: HudControlsWidget = _hud.controls()
 	if controls == null:
 		return
-	controls.build_requested.connect(func() -> void: request_build_at_cursor())
+	# ★ 2026-08-24: Build now opens a TYPE PICKER rather than immediately placing
+	# whatever type happened to be cycled. The [C] cycle key it used to depend on is
+	# gone (action-menu.md decision 2), and "place the hidden current selection" was
+	# never a thing the button could explain anyway.
+	controls.build_requested.connect(open_build_picker)
 	controls.end_turn_requested.connect(func() -> void: try_end_human_turn())
 
 
@@ -396,6 +449,13 @@ func _build_status_overlay() -> void:
 	_status_label.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_status_label.position = Vector2(0, -26)
+	# ★ 2026-08-24 (user-reported: "the central info panel is covering two of the text
+	# boxes"). This label sizes itself to its own longest line, and the control legend
+	# is ~1280px wide at 1600px — so the plate reached under the LOG panel on the left
+	# and the ACTIONS panel on the right, hiding the Build button. Wrapping is what
+	# makes the width a CHOICE rather than whatever the text happens to be; the width
+	# itself is clamped in [method _layout_status] to the band the corner panels leave.
+	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status_label.add_theme_font_size_override("font_size", 14)
 	_status_label.add_theme_color_override("font_color", Color(0.92, 0.95, 1.0))
 	# ★ 2026-08-24: a real backing plate, not just an outline. This block carries the
@@ -413,6 +473,76 @@ func _build_status_overlay() -> void:
 	backing.content_margin_right = 18
 	_status_label.add_theme_stylebox_override("normal", backing)
 	_status_layer.add_child(_status_label)
+	# Re-clamp on resize: the reserve is measured from the screen EDGES (both corner
+	# panels are edge-anchored), so the usable band changes with the window.
+	_status_label.get_viewport().size_changed.connect(_layout_status)
+	_layout_status()
+	_build_action_menu()
+
+
+## Builds the contextual action menu and wires its four outcomes to the same entry
+## points the keyboard accelerators use, so a menu pick and a keypress can never
+## drift apart in behaviour (the discipline [method _wire_hud_controls] already
+## established for the HUD's buttons).
+func _build_action_menu() -> void:
+	_action_menu = ActionMenu.new()
+	_action_menu.configure(Settings.settings != null and Settings.settings.reduced_motion)
+	_status_layer.add_child(_action_menu)
+	_action_menu.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_action_menu.verb_chosen.connect(_on_menu_verb_chosen)
+	_action_menu.produce_type_chosen.connect(_on_menu_produce_chosen)
+	_action_menu.dismissed.connect(deselect)
+	# Wait and dismissal do the same thing TODAY and are still wired separately —
+	# see ActionMenu.waited's doc comment and action-menu.md OQ-1: the simulation
+	# has no stood-down flag yet, and collapsing the two signals here would erase
+	# the distinction the open question needs in order to be answerable.
+	_action_menu.waited.connect(deselect)
+
+
+## Clamps the status plate to the horizontal band the bottom corner panels leave
+## free, so it can never draw over them at any window size.
+##
+## [b]Why a computed clamp and not a hand-set width.[/b] The two panels it must
+## avoid are anchored to the screen edges and keep a constant inset from them
+## ([code]GameHud[/code]: LOG bottom-left, ACTIONS bottom-right), so the free band
+## is [code]viewport.x - 2 * STATUS_SIDE_RESERVE_PX[/code] at every resolution —
+## one expression that stays true instead of a magic number that is right at 1600
+## and wrong at 1920.
+##
+## The clamp is a MINIMUM size, not a size: with [constant Control.GROW_DIRECTION_BOTH]
+## on a centre anchor, Godot grows the control symmetrically about that anchor, so
+## the plate still hugs short text (a one-line "Your turn" stays a small centred
+## box) and only widens to the band when the text needs it — at which point
+## [member Label.autowrap_mode] wraps rather than letting it spill into the corners.
+## Content margins are subtracted because the plate's border sits outside the text.
+func _layout_status() -> void:
+	if _status_label == null:
+		return
+	var band: float = _status_label.get_viewport_rect().size.x - 2.0 * STATUS_SIDE_RESERVE_PX
+	var margins: float = 0.0
+	var backing: StyleBox = _status_label.get_theme_stylebox("normal")
+	if backing != null:
+		margins = backing.get_margin(SIDE_LEFT) + backing.get_margin(SIDE_RIGHT)
+	_status_label.custom_minimum_size.x = maxf(
+		STATUS_MIN_WIDTH_PX, minf(_widest_status_line(), band - margins)
+	)
+
+
+## Pixel width of the widest line currently in the status text, measured with the
+## label's own font and size — the width the plate WOULD take with no clamp.
+## Measured rather than assumed because the legend's length changes with the
+## selected build/produce type and with any transient flash message.
+func _widest_status_line() -> float:
+	var font: Font = _status_label.get_theme_font("font")
+	if font == null:
+		return 0.0
+	var font_size: int = _status_label.get_theme_font_size("font_size")
+	var widest: float = 0.0
+	for line: String in _status_label.text.split("\n"):
+		widest = maxf(widest, font.get_string_size(
+			line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size
+		).x)
+	return widest
 
 
 ## Recomposes the overlay text from public queries: turn indicator, the current
@@ -434,41 +564,24 @@ func _refresh_status() -> void:
 		var how: String = "opponent HQ destroyed" if _hq_destroyed() \
 			else "round limit reached (%d) - decided on unit count" % VS_MAX_ROUNDS
 		_status_label.text = ">> MATCH OVER - %s (%s)" % [who, how]
+		_layout_status()
 		return
 	lines.append(">> AI thinking..." if _ai_running else ">> Your turn")
 
-	var build_type: StructureTypeDef = selected_buildable()
-	if build_type != null:
-		var cost: int = BaseProduction.effective_build_cost(_state, build_type, LOCAL_PLAYER)
-		var afford: String = "affordable" if _reader.can_afford_build(LOCAL_PLAYER, build_type) else "too expensive"
-		# ★ Was "%d AP" — a straight mislabel. effective_build_cost returns CREDITS;
-		# the AP part is a separate flat surcharge, and the action needs BOTH
-		# (ADR-0006 dual-cost, both-or-neither). The label never got updated when
-		# the economy split in two, so the game was telling the player the wrong
-		# currency for its single most common action.
-		lines.append("Build [B]: %s - %d CR + %d AP (%s)    [C] cycle" % [
-			build_type.display_name, cost, Balance.economy.build_ap_cost, afford])
-
-	var produce_type: UnitTypeDef = selected_produce_type()
-	if produce_type != null:
-		var pcost: int = Unit.effective_produce_cost(_state, produce_type, LOCAL_PLAYER)
-		var pafford: String = "affordable" if _reader.can_afford_produce(LOCAL_PLAYER, produce_type) else "too expensive"
-		lines.append("Produce [P]: %s - %d CR + %d AP (%s)    [V] cycle" % [
-			produce_type.display_name, pcost, Balance.economy.produce_ap_cost, pafford])
-
-	var building: String = _building_producer_note()
-	if building != "":
-		lines.append(building) # explains why the produce roster is limited while a producer builds.
-
 	if _flash != "":
-		lines.append("(!) " + _flash) # why the last action did nothing.
+		lines.append("(!) " + _flash) # what the last action did, or why it did nothing.
 
-	# Both input methods named on one line — a controller player should not have to
-	# guess which pad button maps to a key they can see.
-	lines.append("[Arrows/D-pad] cursor   [Enter/A] select   [M/X] move-attack   " +
-		"[B/Y] build  [C/LB] cycle   [P/B] produce  [V/RB] cycle   [Tab/Back] end turn   " +
-		"[Esc/Start] pause   [`/R3] panel   [[ /L3] jump cursor")
+	# ★ 2026-08-24 — the legend used to name ELEVEN bindings across two lines, plus
+	# a "Build [B]: <type> - <cost> ... [C] cycle" line and a Produce twin, because
+	# every verb was its own key and every type choice was a hidden cycled value the
+	# player could only read here. The action menu shows the verbs, their shortcuts
+	# and their costs in place, and the type pickers show the types — so all of that
+	# moved to where the decision is actually made, and what is left is the handful
+	# of controls that belong to no selection.
+	lines.append("[Arrows] cursor   [Enter] confirm   [Esc] back   " +
+		"[B] build   [Tab] end turn   [[ ] jump cursor")
 	_status_label.text = "\n".join(lines)
+	_layout_status() # the widest line just changed; re-clamp before it is drawn.
 
 
 ## Sets the transient feedback line and repaints the overlay.
@@ -487,21 +600,6 @@ func _act_hint(unit: UnitState) -> String:
 	if not can_move and not can_attack:
 		return "%s can't act — only %d AP left this turn (End Turn to refresh)." % [unit.type.display_name, ap]
 	return "%s: aim at a highlighted tile — blue = move, red outline = attack." % unit.type.display_name
-
-
-## A one-line note about the first own producer still under construction (its units
-## are unavailable until it completes, which is why they are absent from the produce
-## roster). Empty when no such producer exists.
-func _building_producer_note() -> String:
-	if _reader == null:
-		return ""
-	for e: EntityState in _reader.entities():
-		if e is StructureState and e.owner == LOCAL_PLAYER:
-			var s: StructureState = e as StructureState
-			if s.build_status != StructureState.BuildStatus.COMPLETED and not s.type.producible_types.is_empty():
-				var turns: int = int(_reader.structure_info(s.entity_id).get("build_turns_remaining", 0))
-				return "* %s building (%d turn%s) - its units unlock when done" % [s.type.display_name, turns, "" if turns == 1 else "s"]
-	return ""
 
 
 ## The producible unit-type roster: the union (deduped, stable order) of every own
@@ -582,6 +680,14 @@ func _on_action_applied(result: ActionResult) -> void:
 	_refresh_open_preview() # the board changed under any open range overlay.
 	_refresh_occupant_pick_regions() # entities moved/spawned/died — re-author the click targets.
 	_dispatch_motion(result)
+	# ★ 2026-08-24 — CR-4's "the menu re-filters for the same entity" (AC-25/AC-12).
+	# CommandInterface._reselect_after_commit has already decided whether the actor
+	# survives with a legal action left (ENTITY_SELECTED) or the selection collapses
+	# (IDLE); this re-reads that decision and re-opens or closes accordingly, so a
+	# move->attack chain is one sequence and a unit that dies to a counterattack
+	# leaves no menu hanging over an empty tile.
+	_clear_placement_preview()
+	_open_action_menu()
 	_refresh_status() # AP/affordability/selection may have changed.
 
 
@@ -685,6 +791,19 @@ func _process(delta: float) -> void:
 	_feed.advance_glow(delta)
 
 
+## ★ 2026-08-24 — restructured around the action menu.
+##
+## Two things changed in kind, not just in detail:
+## [br]1. [b]Back-out is checked before pause[/b], and the SAME key does both. See
+##    [method back_out] for why that is the resolution to the GDD/pause-spec
+##    collision over Esc rather than a hack.
+## [br]2. [b]Confirm is context-sensitive[/b] ([method commit_at_cursor]) instead of
+##    every verb owning a key. The per-verb actions that remain are accelerators
+##    into a preview, not commits.
+##
+## Direction keys are NOT handled here while the menu holds focus — a focused
+## Control consumes them first (ADR-0014 §2), which is exactly what keeps menu
+## traversal and board-cursor movement from colliding.
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"ui_up"):
 		move_cursor(Vector2i.UP)
@@ -695,28 +814,27 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed(&"ui_right"):
 		move_cursor(Vector2i.RIGHT)
 	elif event.is_action_pressed(&"ui_accept"):
-		select_at_cursor()
-	# ★ 2026-08-24: these six were raw `event.keycode` matches, which made every
-	# verb past "move the cursor and select" keyboard-only — a controller could
-	# navigate the board and then do nothing with it. They are named actions now,
-	# each carrying both its key and a pad button (see project.godot), so adding an
-	# input method never means hunting through a match statement again.
+		commit_at_cursor()
+	elif event.is_action_pressed(&"board_pause"):
+		# Back-out FIRST. Esc means "cancel what I am in" whenever there is something
+		# to cancel, and "pause" only when there is not (action-menu.md decision 1).
+		# Ordering it the other way round would make it impossible to leave a preview
+		# from the keyboard without opening the pause overlay on the way.
+		if not back_out():
+			open_pause()
+		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed(&"board_act"):
-		act_at_cursor()
-	elif event.is_action_pressed(&"board_build"):
-		request_build_at_cursor()
-	elif event.is_action_pressed(&"board_build_cycle"):
-		cycle_buildable()
+		open_verb_preview(CommandFSM.Verb.MOVE)
+	elif event.is_action_pressed(&"board_attack"):
+		open_verb_preview(CommandFSM.Verb.ATTACK)
 	elif event.is_action_pressed(&"board_produce"):
-		request_produce_at_cursor()
-	elif event.is_action_pressed(&"board_produce_cycle"):
-		cycle_produce_type()
+		open_produce_picker()
+	elif event.is_action_pressed(&"board_build"):
+		open_build_picker()
 	elif event.is_action_pressed(&"board_end_turn"):
 		try_end_human_turn()
 	elif event.is_action_pressed(&"board_menu_focus"):
 		toggle_menu_focus()
-	elif event.is_action_pressed(&"board_pause"):
-		open_pause()
 	elif event.is_action_pressed(&"board_cursor_cycle"):
 		jump_cursor()
 	elif event is InputEventMouseButton and event.pressed:
@@ -725,12 +843,97 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			_zoom_camera(1.0 / CAMERA_ZOOM_STEP) # wheel down: zoom out (to the fit floor)
 		elif event.button_index == MOUSE_BUTTON_LEFT:
-			select_at_mouse()                    # left-click: pick + select an own unit
+			_on_left_click()
+		elif event.button_index == MOUSE_BUTTON_RIGHT:
+			back_out() # the mouse half of CR-1's "right-click or ESC" cancel.
 	elif event is InputEventMouseMotion and (event.button_mask & MOUSE_BUTTON_MASK_MIDDLE) != 0:
 		_camera.position -= event.relative / _camera.zoom # middle-drag: free pan
 
 
-# --- Keyboard board control (works around the blocked click-pick seam) -------
+## Left-click: inside an open preview a click on a highlighted tile COMMITS
+## (CR-6's single-click commit); otherwise it selects what was clicked.
+##
+## The board cursor is moved to the clicked tile first so both paths act on the
+## same tile — which is also what keeps the mouse and keyboard from ever
+## disagreeing about where "here" is.
+func _on_left_click() -> void:
+	if _board == null:
+		return
+	if _in_preview():
+		var tile: Vector2i = _board.screen_to_grid(_board.get_local_mouse_position())
+		if _state.grid != null and _state.grid.in_bounds(tile.x, tile.y) and _cursor != null:
+			_cursor.grid_pos = tile
+			_sync_cursor_highlight()
+			commit_at_cursor()
+		return
+	select_at_mouse()
+
+
+## Whether a preview of any kind is open — the Command & Action Interface's own
+## Move/Attack previews or the slice-owned Build/Produce placement previews.
+func _in_preview() -> bool:
+	if not _preview_tiles.is_empty():
+		return true
+	match _cmd.fsm_state():
+		CommandFSM.State.PREVIEW_MOVE, CommandFSM.State.PREVIEW_ATTACK, \
+		CommandFSM.State.PREVIEW_PRODUCE, CommandFSM.State.PREVIEW_BUILD:
+			return true
+		_:
+			return false
+
+
+## Accelerator: jumps the current selection straight into [param verb]'s preview,
+## skipping the menu.
+##
+## [b]Routes through the same handler the menu row does[/b] — never a second
+## implementation — but gated on the verb actually being ENABLED for this entity.
+## That gate is what keeps an accelerator honest: a hotkey that could enter a
+## preview the menu greys out would be a way to reach an illegal action the UI says
+## is unavailable. When the verb is unavailable the menu opens instead, so the
+## player is shown WHY rather than being ignored.
+func open_verb_preview(verb: int) -> bool:
+	if _cmd == null or not _cmd.is_input_live(_state):
+		return false
+	var entity: EntityState = _state.entities_by_id.get(_cmd.selected_id())
+	if entity == null:
+		# Nothing selected: try to select what the cursor is on, then retry once.
+		if not select_at_cursor():
+			return false
+		entity = _state.entities_by_id.get(_cmd.selected_id())
+		if entity == null:
+			return false
+	for entry: CommandFSM.VerbEntry in CommandFSM.menu_model(_state, entity):
+		if entry.verb == verb:
+			if not entry.enabled:
+				_flash_msg("%s unavailable: %s" % [
+					ActionMenu.VERB_LABELS.get(verb, "?"), ActionMenu.reason_text(entry.reason)
+				])
+				_open_action_menu()
+				return false
+			_action_menu.close()
+			_on_menu_verb_chosen(verb)
+			return true
+	return false
+
+
+## Accelerator: opens the Produce type submenu for the current selection. Same
+## enabled-gate discipline as [method open_verb_preview].
+func open_produce_picker() -> bool:
+	if _cmd == null or not _cmd.is_input_live(_state):
+		return false
+	var entity: EntityState = _state.entities_by_id.get(_cmd.selected_id())
+	if entity == null and not select_at_cursor():
+		return false
+	entity = _state.entities_by_id.get(_cmd.selected_id())
+	if not (entity is StructureState):
+		_flash_msg("Select a producer first — Produce belongs to a structure.")
+		return false
+	_open_action_menu()
+	_action_menu.open_produce_submenu(CommandFSM.produce_options(_state, entity))
+	return true
+
+
+# --- Keyboard board control (works around the blocked click-pick seam) -------# --- Keyboard board control (works around the blocked click-pick seam) -------
 
 ## Moves the grid cursor one tile along [param direction] (a grid-axis [Vector2i])
 ## and peeks the entity now under it into the detail panel (unpinned). A no-op at
@@ -759,18 +962,347 @@ func move_cursor(direction: Vector2i) -> bool:
 func select_at_cursor() -> bool:
 	if _cursor == null:
 		return false
+	# ★ 2026-08-24 — two changes, both from the action menu.
+	#
+	# 1. STRUCTURES select too. This used to gate on `entity is UnitState`, so a
+	#    Barracks could never be selected and its Produce verb was reachable only
+	#    through a global [P] hotkey that guessed which producer the player meant.
+	#    CR-3 says you select an entity you own; a producer is one.
+	# 2. Selection opens the MENU, not a move preview. Auto-entering PREVIEW_MOVE
+	#    was the right stand-in while there was no menu — it put SOMETHING on screen
+	#    on select — but it also decided the verb for the player, and it is the
+	#    reason Attack needed its own hotkey to be reachable at all. CR-1's loop is
+	#    select -> menu -> verb -> preview, and this is the "-> menu" step.
 	var entity: EntityState = _state.entity_at(_cursor.grid_pos)
-	if entity is UnitState and entity.owner == LOCAL_PLAYER:
-		var unit: UnitState = entity as UnitState
-		var ok: bool = _cmd.try_select(_state, unit)
+	if entity != null and entity.owner == LOCAL_PLAYER:
+		var ok: bool = _cmd.try_select(_state, entity)
 		if ok:
-			# Selecting a unit opens its move preview, so its range is on screen the
-			# instant it is picked rather than after a second keypress. Showing a
-			# unit's reach IS a move preview, so this uses the FSM's own
-			# PREVIEW_MOVE state rather than inventing a parallel highlight.
-			_cmd.enter_preview(_state, unit, CommandFSM.State.PREVIEW_MOVE)
+			_open_action_menu()
 		return ok
 	return false
+
+
+# --- Contextual action menu (design/ux/action-menu.md) -----------------------
+
+## Opens (or re-opens) the action menu on whatever is currently selected.
+##
+## Called on every selection AND after every commit — CR-4's menu "re-filters for
+## the same entity" so a move->attack chain is one sequence rather than a
+## re-selection (AC-25/AC-12). Rebuilding is what re-filters it: the rows come
+## straight from [method CommandFSM.menu_model] against the now-current AP,
+## `has_attacked` and board.
+##
+## Closes instead of opening when there is nothing to command — no selection, the
+## selection is not ours, or it is not our live turn.
+func _open_action_menu() -> void:
+	if _action_menu == null or _cmd == null or _state == null:
+		return
+	var entity: EntityState = _state.entities_by_id.get(_cmd.selected_id())
+	if entity == null or entity.owner != LOCAL_PLAYER or not _cmd.is_input_live(_state):
+		_action_menu.close()
+		return
+	_action_menu.open(
+		_state, entity, _entity_screen_anchor(entity.position), _screen_tile_width()
+	)
+
+
+## The screen-space point a menu anchors to for an entity standing on [param tile]
+## — the tile's own ground anchor, run through the board's canvas transform so the
+## camera's pan and zoom are folded in.
+##
+## [b]The same anchor the sprite uses[/b] ([method BoardRenderer.grid_to_screen]),
+## deliberately: a menu that anchored to anything else would drift away from its
+## entity the moment the board and the HUD disagreed about where that entity is.
+func _entity_screen_anchor(tile: Vector2i) -> Vector2:
+	if _board == null:
+		return Vector2.ZERO
+	return _board.get_global_transform_with_canvas() * _board.grid_to_screen(tile)
+
+
+## One board tile's CURRENT on-screen width in pixels — the board's constant tile
+## width scaled by the live camera zoom. The menu's one-tile clearance is a
+## SCREEN-space distance, so it has to follow the zoom; a constant 128 would leave
+## the plate overlapping the entity when zoomed out and adrift when zoomed in.
+func _screen_tile_width() -> float:
+	if _board == null:
+		return BoardRenderer.TILE_WIDTH_PX
+	var scale_x: float = absf(_board.get_global_transform_with_canvas().get_scale().x)
+	return BoardRenderer.TILE_WIDTH_PX * scale_x
+
+
+## Routes a chosen verb into its preview. Move and Attack use the
+## [CommandInterface]'s own preview states; Cancel Build commits directly (see
+## below). Produce never arrives here — it opens the submenu instead, and the
+## submenu's chosen TYPE is what routes ([method _on_menu_produce_chosen]).
+func _on_menu_verb_chosen(verb: int) -> void:
+	var entity: EntityState = _state.entities_by_id.get(_cmd.selected_id())
+	if entity == null:
+		return
+	match verb:
+		CommandFSM.Verb.MOVE:
+			_pending_produce = null
+			_pending_build = null
+			_cmd.enter_preview(_state, entity, CommandFSM.State.PREVIEW_MOVE)
+			_flash_msg("Move: pick a highlighted tile. Esc to go back.")
+		CommandFSM.Verb.ATTACK:
+			_pending_produce = null
+			_pending_build = null
+			_cmd.enter_preview(_state, entity, CommandFSM.State.PREVIEW_ATTACK)
+			_flash_msg("Attack: pick a highlighted target. Esc to go back.")
+		CommandFSM.Verb.CANCEL_BUILD:
+			# ★ Committed directly rather than through Story 004's timed hold.
+			# That hold exists to stop a BARE KEYPRESS destroying a structure by
+			# accident. Reaching this row already costs a deliberate two-step —
+			# select the structure, then activate a row that says "Cancel Build" —
+			# so the accident the hold guards against cannot happen here. The hold
+			# gesture stays intact for any direct-input path that wants it.
+			var cancel := CancelBuildAction.new()
+			cancel.structure_tile = entity.position
+			_cmd.dispatch_commit(cancel, _state)
+
+
+## Routes a chosen produce TYPE into the deploy-tile preview. The type is held in
+## [member _pending_produce] until the player picks a tile, because a
+## [ProduceAction] needs both and they are chosen in two separate steps.
+func _on_menu_produce_chosen(unit_type: UnitTypeDef) -> void:
+	var entity: EntityState = _state.entities_by_id.get(_cmd.selected_id())
+	if not (entity is StructureState):
+		return
+	_pending_build = null
+	_pending_produce = unit_type
+	_cmd.enter_preview(_state, entity, CommandFSM.State.PREVIEW_PRODUCE)
+	_preview_tiles = _reader.legal_deploy_tiles(entity.entity_id, unit_type)
+	_paint_preview_tiles()
+	_snap_cursor_to_preview()
+	_flash_msg("Deploy %s: pick a highlighted tile. Esc to go back." % unit_type.display_name)
+
+
+## Opens the player-level Build type picker — the HUD Build control's entry point
+## (CR-5). Lists every buildable with its live dual cost and disables the ones the
+## player cannot place right now, naming which pool or condition fell short.
+##
+## Anchored to the HUD's Build control rather than to the board: Build has no
+## selected entity to float beside, so it opens where the player clicked.
+func open_build_picker() -> void:
+	if _action_menu == null or not _cmd.is_input_live(_state) or _buildables.is_empty():
+		return
+	_action_menu.open_build_options(
+		CommandFSM.build_options(_state, LOCAL_PLAYER, _buildables),
+		_build_control_anchor(),
+		_screen_tile_width()
+	)
+
+
+## Screen-space anchor for the Build picker: the TOP-RIGHT corner of the HUD's
+## ACTIONS panel. [method ActionMenu._reposition_picker] grows the list up and to
+## the left out of that point, so it rises out of the Build button it belongs to
+## instead of spilling off the bottom edge or over the status legend.
+##
+## Derived from [GameHud]'s own bottom-right panel geometry (200 wide at x-216,
+## 66 tall at y-82), one corner of which is exactly what this needs.
+func _build_control_anchor() -> Vector2:
+	var view: Vector2 = get_viewport().get_visible_rect().size
+	return Vector2(view.x - 16.0, view.y - 90.0)
+
+
+## Enters the player-level Build placement preview for [param type] (CR-5 — Build
+## belongs to the player, not to a selected entity, so it is reached from the HUD's
+## persistent control rather than from a menu row).
+func begin_build_preview(type: StructureTypeDef) -> void:
+	if type == null or not _cmd.is_input_live(_state):
+		return
+	_pending_produce = null
+	_pending_build = type
+	_preview_tiles = _reader.legal_build_tiles(LOCAL_PLAYER, type)
+	_action_menu.close()
+	_paint_preview_tiles()
+	_snap_cursor_to_preview()
+	var cost: int = BaseProduction.effective_build_cost(_state, type, LOCAL_PLAYER)
+	_flash_msg("Build %s (%d CR + %d AP): pick a highlighted tile. Esc to go back." % [
+		type.display_name, cost, Balance.economy.build_ap_cost
+	])
+
+
+## Paints [member _preview_tiles] as the shared build/deploy "go-tile" overlay.
+## Routed through [method BoardRenderer.set_overlays] — the sanctioned write path —
+## never by touching the overlay layer directly (ADR-0013 §3).
+func _paint_preview_tiles() -> void:
+	if _board == null:
+		return
+	_board.set_overlays({BoardRenderer.OverlayClass.BUILD_DEPLOY_GO_TILE: _preview_tiles})
+
+
+## Moves the cursor onto the nearest legal tile of the open placement preview.
+##
+## Without this, opening a Build or Produce preview leaves the cursor wherever it
+## happened to be — usually not a legal tile — so the very next confirm press does
+## nothing and the player has to hunt for a highlighted tile by hand. Snapping is
+## the placement equivalent of what cursor-jump does for move and attack.
+func _snap_cursor_to_preview() -> void:
+	if _cursor == null or _preview_tiles.is_empty():
+		return
+	if _preview_tiles.has(_cursor.grid_pos):
+		return # already somewhere legal — leave the player's own aim alone.
+	var from: Vector2i = _cursor.grid_pos
+	var best: Vector2i = _preview_tiles[0]
+	var best_d: int = absi(best.x - from.x) + absi(best.y - from.y)
+	for tile: Vector2i in _preview_tiles:
+		var d: int = absi(tile.x - from.x) + absi(tile.y - from.y)
+		if d < best_d:
+			best = tile
+			best_d = d
+	_cursor.grid_pos = best
+	_cmd.inspect(_state, best)
+	_keep_cursor_in_view()
+	_sync_cursor_highlight()
+
+
+## Clears any open placement preview's held type and painted tiles. Leaves the
+## [CommandInterface]'s own Move/Attack overlays alone — those are its to clear.
+func _clear_placement_preview() -> void:
+	_pending_produce = null
+	_pending_build = null
+	if not _preview_tiles.is_empty():
+		_preview_tiles = []
+		if _board != null:
+			_board.clear_overlay()
+
+
+## Clears the selection and everything hanging off it: the menu, any placement
+## preview, and the interface's own preview overlays. The single deselect path —
+## Wait, dismissal, clicking empty ground and backing out of the menu all land here
+## so none of them can leave a fragment of the previous selection on screen.
+func deselect() -> void:
+	_clear_placement_preview()
+	if _action_menu != null:
+		_action_menu.close()
+	if _cmd != null:
+		_cmd.deselect(_state)
+	_refresh_status()
+
+
+## Steps back one level: submenu -> menu -> selection -> nothing. Returns whether
+## anything was backed out of.
+##
+## [b]This return value is what lets Esc mean two things without ambiguity[/b]
+## (`design/ux/action-menu.md`, decision 1). The GDD binds back-out to Esc; the
+## pause spec binds pause to Esc; both are right about their own surface. Esc
+## consults this first, and only opens pause when it returns false — i.e. when
+## there was genuinely nothing to cancel. A player mid-preview can never
+## accidentally pause, and a player doing nothing can always pause.
+func back_out() -> bool:
+	if _action_menu != null and _action_menu.is_submenu_open():
+		return _action_menu.back_out()
+	# A placement preview and a Move/Attack preview both back out to the menu.
+	var had_placement: bool = not _preview_tiles.is_empty()
+	_clear_placement_preview()
+	if _cmd != null and _cmd.back_out_preview(_state):
+		_open_action_menu()
+		_flash = ""
+		_refresh_status()
+		return true
+	if had_placement:
+		_open_action_menu()
+		_flash = ""
+		_refresh_status()
+		return true
+	if _action_menu != null and _action_menu.is_open():
+		return _action_menu.back_out() # emits dismissed -> deselect()
+	if _cmd != null and _cmd.deselect(_state):
+		_refresh_status()
+		return true
+	return false
+
+
+## Commits whatever the OPEN PREVIEW means at the cursor tile.
+##
+## ★ 2026-08-24 — replaces [method act_at_cursor]'s guess. That method inspected
+## the cursor tile and chose Attack if a target was there, else Move: one input
+## meaning two verbs, with the interface deciding which. It worked, but it could
+## never explain itself, and it made "attack the thing you are standing next to"
+## and "move onto that tile" the same gesture. With the menu, the player has
+## already said which verb they are in, so this only has to honour it.
+##
+## Returns whether an action was dispatched.
+func commit_at_cursor() -> bool:
+	if _cursor == null or _cmd == null or not _cmd.is_input_live(_state):
+		return false
+	_flash = ""
+	var tile: Vector2i = _cursor.grid_pos
+	match _cmd.fsm_state():
+		CommandFSM.State.PREVIEW_MOVE:
+			return _commit_move(tile)
+		CommandFSM.State.PREVIEW_ATTACK:
+			return _commit_attack(tile)
+		CommandFSM.State.PREVIEW_PRODUCE:
+			return _commit_produce(tile)
+		CommandFSM.State.PREVIEW_BUILD:
+			return _commit_build(tile)
+		_:
+			# No preview open: confirm means "select what is under the cursor".
+			return select_at_cursor()
+
+
+## Commits a [MoveAction] onto [param tile] when it is in the open move preview.
+func _commit_move(tile: Vector2i) -> bool:
+	var entity: EntityState = _state.entities_by_id.get(_cmd.selected_id())
+	if not (entity is UnitState):
+		return false
+	var unit: UnitState = entity as UnitState
+	var reach: Movement.ReachableTile = _cmd.get_reachable_tile(tile)
+	if reach == null:
+		_flash_msg("Not a reachable tile — pick a highlighted one, or Esc to go back.")
+		return false
+	var mv := MoveAction.new()
+	mv.from = unit.position
+	mv.to = tile
+	# tiles_entered is the TILE COUNT (input to move_path_cost), NOT the AP cost —
+	# reach.min_cost is the AP cost. They coincide only for move_cost-1 units; for
+	# the rest the raw min_cost overstates the count and validate_move rejects it.
+	mv.tiles_entered = _tiles_for_cost(unit, reach.min_cost)
+	return _cmd.dispatch_commit(mv, _state)
+
+
+## Commits an [AttackAction] onto [param tile] when it holds a legal target.
+func _commit_attack(tile: Vector2i) -> bool:
+	var entity: EntityState = _state.entities_by_id.get(_cmd.selected_id())
+	if entity == null:
+		return false
+	if _cmd.get_target(tile) == null:
+		_flash_msg("Not a legal target — pick a highlighted one, or Esc to go back.")
+		return false
+	var atk := AttackAction.new()
+	atk.attacker_tile = entity.position
+	atk.target_tile = tile
+	return _cmd.dispatch_commit(atk, _state)
+
+
+## Commits a [ProduceAction] of [member _pending_produce] onto [param tile].
+func _commit_produce(tile: Vector2i) -> bool:
+	var entity: EntityState = _state.entities_by_id.get(_cmd.selected_id())
+	if not (entity is StructureState) or _pending_produce == null:
+		return false
+	if not _preview_tiles.has(tile):
+		_flash_msg("Not a legal deploy tile — pick a highlighted one, or Esc to go back.")
+		return false
+	var action := ProduceAction.new()
+	action.producer_id = entity.entity_id
+	action.unit_type = _pending_produce
+	action.tile = tile # action.player is set by CommandInterface.commit.
+	return _cmd.dispatch_commit(action, _state)
+
+
+## Commits a [BuildAction] of [member _pending_build] onto [param tile].
+func _commit_build(tile: Vector2i) -> bool:
+	if _pending_build == null:
+		return false
+	if not _preview_tiles.has(tile):
+		_flash_msg("Not a legal build tile — pick a highlighted one, or Esc to go back.")
+		return false
+	var action := BuildAction.new()
+	action.structure_type = _pending_build
+	action.tile = tile # action.player is set by CommandInterface.commit.
+	return _cmd.dispatch_commit(action, _state)
 
 
 ## Mouse click-select (scope §8 seam b): resolves the click through the Command &
@@ -814,11 +1346,14 @@ func select_at_board_point(board_pos: Vector2) -> bool:
 			_flash = ""
 			_refresh_status()
 		_keep_cursor_in_view()
-	# Mouse select opens the same preview the keyboard path does, so the two input
-	# routes never disagree about what is on screen after a selection.
+	# Mouse select opens the same action menu the keyboard path does, so the two
+	# input routes never disagree about what is on screen after a selection.
 	var picked: EntityState = _state.entities_by_id.get(_cmd.selected_id())
-	if picked is UnitState and picked.owner == LOCAL_PLAYER:
-		_cmd.enter_preview(_state, picked as UnitState, CommandFSM.State.PREVIEW_MOVE)
+	if picked != null and picked.owner == LOCAL_PLAYER:
+		_open_action_menu()
+	else:
+		# Clicking empty terrain or something not yours clears the selection (CR-3).
+		deselect()
 	return pick.occupant_entity_id != -1 and _cmd.selected_id() == pick.occupant_entity_id
 
 
@@ -993,47 +1528,37 @@ func request_produce_at_cursor() -> bool:
 	return false
 
 
-## Moves or attacks with the currently-SELECTED own unit onto the cursor tile: an
-## [AttackAction] when the cursor holds a legal target, otherwise a [MoveAction]
-## when the cursor is a reachable tile. A no-op returning false when nothing is
-## selected, the selection is not an own unit, it is not the human's live turn, or
-## the cursor is neither a legal target nor reachable. Uses the [Movement]/[Combat]
-## legality queries directly (the same the validators enforce), pre-checked so it
-## only dispatches an action that will commit.
+## Move-or-attack at the cursor in ONE call: enters whichever preview the cursor
+## tile supports and commits there, Attack taking priority when the tile holds a
+## legal target.
+##
+## ★ 2026-08-24 — this used to be a keyboard verb ([M]) and its own commit path.
+## The action menu retired it as a verb: "move or attack, whichever fits" is a
+## guess the interface makes on the player's behalf and cannot explain, which is
+## exactly what CR-4's separate Move and Attack rows exist to replace. It survives
+## as a THIN WRAPPER over [method open_verb_preview] + [method commit_at_cursor],
+## with no legality logic of its own, because the whole-turn tests and the capture
+## harness drive a move or an attack in one step and rewriting them to open a
+## preview by hand would test the harness rather than the game.
+##
+## Returns whether an action was dispatched.
 func act_at_cursor() -> bool:
-	if _cursor == null or not _cmd.is_input_live(_state):
+	if _cursor == null or _cmd == null or not _cmd.is_input_live(_state):
 		return false
-	_flash = "" # a successful commit refreshes the overlay via _on_action_applied.
 	var entity: EntityState = _state.entities_by_id.get(_cmd.selected_id())
 	if not (entity is UnitState) or entity.owner != LOCAL_PLAYER:
-		_flash_msg("Select your unit first (Enter), then M to move/attack.")
+		_flash_msg("Select your unit first, then pick Move or Attack.")
 		return false
 	var unit: UnitState = entity as UnitState
 	var tile: Vector2i = _cursor.grid_pos
-
-	# Attack takes priority when the cursor holds a legal target.
+	var verb: int = CommandFSM.Verb.MOVE
 	for target: Combat.TargetResult in Combat.legal_targets(_state, unit):
 		if target.tile == tile:
-			var atk := AttackAction.new()
-			atk.attacker_tile = unit.position
-			atk.target_tile = tile
-			return _cmd.dispatch_commit(atk, _state)
-
-	# Otherwise move when the cursor is a reachable tile.
-	for reach: Movement.ReachableTile in Movement.reachable(_state, unit):
-		if reach.tile == tile:
-			var mv := MoveAction.new()
-			mv.from = unit.position
-			mv.to = tile
-			# tiles_entered is the TILE COUNT (input to move_path_cost), NOT the AP
-			# cost — reach.min_cost is the AP cost. They coincide only for move_cost-1
-			# units (Scout); for Trooper/Heavy/Sniper the raw min_cost overstates the
-			# tile count and validate_move rejects the move. Convert back, as the AI does.
-			mv.tiles_entered = _tiles_for_cost(unit, reach.min_cost)
-			return _cmd.dispatch_commit(mv, _state)
-
-	_flash_msg(_act_hint(unit))
-	return false
+			verb = CommandFSM.Verb.ATTACK
+			break
+	if not open_verb_preview(verb):
+		return false
+	return commit_at_cursor()
 
 
 ## Recovers the tile count whose [method Movement.move_path_cost] equals

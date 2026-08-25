@@ -122,7 +122,12 @@ board_cursor_cycle={
 ; A confirms (ui_accept), B is the other common verb, X/Y are the situational
 ; ones, shoulders cycle, Start ends the turn.
 
-; M / X(Square) — move-or-attack at the cursor
+; ★ 2026-08-24 (action menu) — M / X(Square) is now MOVE ONLY.
+; It used to mean "move or attack, whichever the cursor tile supports" — a guess
+; the interface made on the player's behalf and could not explain. The contextual
+; action menu lists Move and Attack as two separate verbs, so the accelerators
+; split to match: this action keeps its NAME (a rename would silently discard
+; every player's saved override for it) and gains board_attack as its sibling.
 board_act={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":77,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
@@ -130,34 +135,42 @@ board_act={
 ]
 }
 
-; B / Y(Triangle) — place the selected structure
+; B / LB — place the selected structure (player-level, CR-5)
+; ★ 2026-08-24: pad binding moved Y(3) -> LB(9). Y went to board_attack, because
+; the two verbs a player uses every single turn belong on face buttons and Build
+; is a once-in-a-while command. LB was freed by retiring board_build_cycle.
 board_build={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":66,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
-, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":3,"pressure":0.0,"pressed":false,"script":null)
-]
-}
-
-; C / LB — cycle which structure Build places
-board_build_cycle={
-"deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":67,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
 , Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":9,"pressure":0.0,"pressed":false,"script":null)
 ]
 }
 
-; P / B(Circle) — produce the selected unit type
-board_produce={
+; ★ 2026-08-24 — A / Y(Triangle). NEW, the other half of board_act's split.
+; Attack is one of the two verbs a unit uses every turn, so it earns a face
+; button; Y was freed by moving Build to a shoulder.
+board_attack={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":80,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
-, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":1,"pressure":0.0,"pressed":false,"script":null)
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":65,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":3,"pressure":0.0,"pressed":false,"script":null)
 ]
 }
 
-; V / RB — cycle which unit Produce deploys
-board_produce_cycle={
+; ★ 2026-08-24 — board_build_cycle ([C]/LB) and board_produce_cycle ([V]/RB) were
+; REMOVED here, not rebound. They existed only because there was no way to SHOW a
+; list of types, so the player cycled a hidden selection blind. The action menu's
+; Produce submenu shows every type with its live cost, and the Build flow does the
+; same — keeping the cycles would leave two bindings mutating a choice the menu now
+; displays, i.e. two sources of truth for one decision.
+; Their pad buttons went to board_build (LB) and board_produce (RB).
+
+; P / RB — open the Produce submenu
+; ★ 2026-08-24: pad binding moved B(1) -> RB(10). Godot's built-in ui_cancel
+; already carries pad B, so Produce was sharing a button with Cancel — harmless
+; while nothing backed out, and a real conflict now that B backs out of the menu.
+board_produce={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":86,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":80,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
 , Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":10,"pressure":0.0,"pressed":false,"script":null)
 ]
 }
