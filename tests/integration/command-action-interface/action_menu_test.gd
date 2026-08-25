@@ -646,11 +646,20 @@ func test_choosing_a_different_verb_abandons_an_armed_cancel() -> void:
 # Disband — the second destructive verb (action-menu.md OQ-3)
 # ==============================================================================
 
+## Puts [param state]'s local player into deficit — the only situation in which the
+## menu offers Disband at all (user decision, 2026-08-25). Set directly rather than
+## engineered through upkeep: these tests are about the ROW, not about how a player
+## ends up insolvent.
+func _in_deficit(state: GameState) -> GameState:
+	state.per_player[0].in_deficit = true
+	return state
+
+
 func test_a_unit_offers_disband_with_its_price_and_its_payout() -> void:
 	# ★ Disband is the only verb that both SPENDS and PAYS OUT, and a player
 	# weighing it against simply holding the unit needs both halves of that trade
 	# in front of them before committing to anything.
-	var state := _make_state()
+	var state := _in_deficit(_make_state())
 	var unit := _place_unit(state, 1, 0, Vector2i(5, 5))
 	var menu := _make_menu()
 
@@ -673,7 +682,7 @@ func test_a_structure_is_never_offered_disband() -> void:
 	# UR-7: structures are not disbanded. The row is DROPPED rather than shown
 	# greyed out, because "Disband — not a unit" on every structure teaches nothing
 	# and costs a row on every base menu in the game.
-	var state := _make_state()
+	var state := _in_deficit(_make_state())
 	var producer := _place_producer(
 		state, 2, 0, Vector2i(4, 4), [_make_unit_type("Scout")] as Array[UnitTypeDef]
 	)
@@ -681,7 +690,9 @@ func test_a_structure_is_never_offered_disband() -> void:
 
 	menu.open(state, producer, Vector2(400, 400), 128.0)
 
-	assert_object(_row_named(menu, "Disband")).is_null()
+	assert_object(_row_named(menu, "Disband")).override_failure_message(
+		"a structure is never disbandable, deficit or not"
+	).is_null()
 
 
 func test_disband_takes_two_presses_like_every_destructive_verb() -> void:
@@ -690,7 +701,7 @@ func test_disband_takes_two_presses_like_every_destructive_verb() -> void:
 	# library's Hold-to-Confirm Refund — and unlike Cancel Build it is available on
 	# EVERY unit, every turn. A single-press Disband would put an irreversible
 	# action one careless click away on almost every menu in the game.
-	var state := _make_state()
+	var state := _in_deficit(_make_state())
 	var unit := _place_unit(state, 1, 0, Vector2i(5, 5))
 	var menu := _make_menu()
 	var chosen: Array[int] = []
@@ -710,7 +721,7 @@ func test_disband_takes_two_presses_like_every_destructive_verb() -> void:
 func test_an_armed_disband_names_disbanding_not_cancelling() -> void:
 	# Per-verb confirm labels: "Confirm cancel" on a Disband row would name the
 	# wrong act at the exact moment the player is being asked to be sure about it.
-	var state := _make_state()
+	var state := _in_deficit(_make_state())
 	var unit := _place_unit(state, 1, 0, Vector2i(5, 5))
 	var menu := _make_menu()
 
@@ -735,6 +746,44 @@ func test_every_destructive_verb_is_registered_as_one() -> void:
 			% verb + "look completely unchanged"
 		).is_true()
 		assert_bool(ActionMenu.VERB_LABELS.has(verb)).is_true()
+
+
+func test_a_solvent_player_is_never_offered_disband() -> void:
+	# ★ User decision, 2026-08-25: the row appears ONLY while in deficit — the
+	# situation UR-7 built it for. On every other turn it would be a permanently
+	# visible, irreversible row on every unit the player owns, for an action most
+	# players use rarely.
+	#
+	# ⚠ This is a deliberate EXCEPTION to this spec's own rule that situational
+	# disablement earns a visible row. The cost is discoverability: a solvent player
+	# is never shown that Disband exists. Recorded in action-menu.md OQ-3.
+	var state := _make_state() # solvent
+	var unit := _place_unit(state, 1, 0, Vector2i(5, 5))
+	var menu := _make_menu()
+
+	menu.open(state, unit, Vector2(400, 400), 128.0)
+
+	assert_object(_row_named(menu, "Disband")).is_null()
+
+
+func test_hiding_disband_hides_an_affordance_never_the_action() -> void:
+	# ★★ THE test for this decision. The menu not offering a verb must never mean
+	# the rules refuse it — apply_action stays the single authority on legality, and
+	# a UI-level gate that hardened into a rule would be exactly the boundary
+	# violation the control manifest forbids. A solvent player's disband still
+	# commits if something dispatches one.
+	var state := _make_state() # solvent: no row
+	var unit := _place_unit(state, 1, 0, Vector2i(5, 5))
+	state.per_player[0].current_ap = 10
+
+	var action := DisbandAction.new()
+	action.player = 0
+	action.entity_id = unit.entity_id
+	var result: ActionResult = state.apply_action(action)
+
+	assert_bool(result.ok).override_failure_message(
+		"hiding the row must not forbid the action — the rules did not change"
+	).is_true()
 
 
 # ==============================================================================

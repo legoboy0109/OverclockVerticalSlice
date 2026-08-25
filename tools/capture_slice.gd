@@ -201,19 +201,32 @@ func _run() -> void:
 				for i: int in 22:
 					await get_tree().process_frame
 				await RenderingServer.frame_post_draw
+				# Solvent player: the Attack row is priced and there is NO Disband row.
 				_shot("03j-attack-priced")
 
-				# ...and the ARMED state of a destructive row. Disband is available on
-				# every unit every turn, so its two-press gate is the safety property
-				# most worth having a picture of.
+				# --- Disband, which only exists while in deficit --------------------
+				# Forced rather than played into: reaching a real deficit needs several
+				# turns of over-extension, and this shot is about the ROW, not about
+				# how a player ends up insolvent.
+				st0.per_player[0].in_deficit = true
+				slice.back_out()
+				slice.select_at_cursor()
+				for i: int in 22:
+					await get_tree().process_frame
+				await RenderingServer.frame_post_draw
+				_shot("03k-disband-in-deficit")
+
+				# ...and its ARMED state. Disband destroys a unit outright, so the
+				# two-press gate is the safety property most worth a picture.
 				var armed: Button = _find_verb_row(slice, CommandFSM.Verb.DISBAND)
 				if armed != null:
 					armed.emit_signal("pressed")
 					for i: int in 12:
 						await get_tree().process_frame
 					await RenderingServer.frame_post_draw
-					_shot("03k-disband-armed")
+					_shot("03l-disband-armed")
 				slice.back_out() # disarms; nothing is destroyed
+				st0.per_player[0].in_deficit = false
 				slice.back_out()
 				await get_tree().process_frame
 

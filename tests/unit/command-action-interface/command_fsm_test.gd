@@ -239,6 +239,52 @@ func test_menu_model_owned_unit_with_affordable_reachable_tile_move_enabled() ->
 	assert_int(move_entry.reason).is_equal(CommandFSM.Reason.NONE)
 
 
+func test_disband_is_offered_only_while_the_player_is_in_deficit() -> void:
+	# ★ User decision, 2026-08-25. Disband is the escape valve UR-7 builds the
+	# deficit lock around, and that is the situation it exists for. A solvent player
+	# gets NOT_IN_DEFICIT, which the menu DROPS rather than renders — see
+	# ActionMenu._is_inapplicable for why that is a deliberate exception to the
+	# "situational disablement earns a visible row" rule, and what it costs.
+	var state := _make_state(0)
+	var unit := _place_unit(state, 1, 0, Vector2i(3, 3), _make_unit_type())
+	state.per_player[0].current_ap = 10
+
+	var solvent: CommandFSM.VerbEntry = _find_entry(
+		CommandFSM.menu_model(state, unit), CommandFSM.Verb.DISBAND
+	)
+	assert_bool(solvent.enabled).is_false()
+	assert_int(solvent.reason).is_equal(CommandFSM.Reason.NOT_IN_DEFICIT)
+
+	state.per_player[0].in_deficit = true
+	var broke: CommandFSM.VerbEntry = _find_entry(
+		CommandFSM.menu_model(state, unit), CommandFSM.Verb.DISBAND
+	)
+	assert_bool(broke.enabled).override_failure_message(
+		"a player in deficit must be offered the one action that reduces upkeep"
+	).is_true()
+	assert_int(broke.ap_cost).is_greater(0)
+
+
+func test_disband_in_deficit_is_still_gated_on_ap_and_nothing_else() -> void:
+	# ★ Never gated on the deficit LOCK that blocks produce/build/research: disband
+	# is the one action that REDUCES upkeep, so refusing it while in deficit would
+	# make a deficit unrecoverable by the player's own choice (UR-7). The deficit is
+	# what SHOWS this verb; it must never be what blocks it.
+	var state := _make_state(0)
+	var unit := _place_unit(state, 1, 0, Vector2i(3, 3), _make_unit_type())
+	state.per_player[0].in_deficit = true
+	state.per_player[0].current_ap = 0
+
+	var entry: CommandFSM.VerbEntry = _find_entry(
+		CommandFSM.menu_model(state, unit), CommandFSM.Verb.DISBAND
+	)
+
+	assert_bool(entry.enabled).is_false()
+	assert_int(entry.reason).override_failure_message(
+		"the only thing that may disable an offered Disband is AP"
+	).is_equal(CommandFSM.Reason.INSUFFICIENT_AP)
+
+
 func test_attack_entry_carries_its_ap_price_when_enabled() -> void:
 	# ★ 2026-08-25 (action-menu.md OQ-2). Attack is the one verb whose price is a
 	# single number known before any preview opens, so the model carries it and the

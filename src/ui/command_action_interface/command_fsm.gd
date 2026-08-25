@@ -138,6 +138,7 @@ enum Reason {
 	NO_DEPLOY_SPACE = 128,      ## BaseProduction.legal_deploy_tiles() is empty.
 	NOT_UNDER_CONSTRUCTION = 256, ## Cancel Build: entity is not an owned, UNDER_CONSTRUCTION StructureState.
 	INSUFFICIENT_CREDITS = 512,   ## Credits.can_afford() returned false — the Credit main cost of a dual-cost economic action (Build/Produce) is unaffordable (ADR-0006 pivot). INSUFFICIENT_AP covers the AP-surcharge leg.
+	NOT_IN_DEFICIT = 4096,        ## Disband: the player is solvent, so the row is not offered at all (user decision 2026-08-25 — see [method _disband_entry]).
 	NOT_A_UNIT = 2048,            ## Disband: entity is not an own [UnitState] — the verb does not apply to this KIND of thing (structures are never disbanded; UR-7).
 	POPULATION_CAP_REACHED = 1024, ## Population.can_field() returned false — the army is at (or over) its population cap. Mirrors [constant Action.Reason.POPULATION_CAP_REACHED].
 }
@@ -659,14 +660,31 @@ static func _cancel_build_entry(state: GameState, entity: EntityState) -> VerbEn
 ## thing" answer that the menu drops rather than renders (see
 ## [method _cancel_build_entry] for the same treatment and why).
 ##
-## Otherwise gated on AP alone. [b]Deliberately not gated on the deficit lock[/b]
-## that blocks produce/build/research: disband is the one action that REDUCES
-## upkeep, so locking it while in deficit would make a deficit unrecoverable by the
-## player's own choice (UR-7). Greying it out here would be the interface
-## reintroducing a trap the rules were written to avoid.
+## [b]Offered ONLY while the player is in deficit[/b] (user decision, 2026-08-25).
+## Disband is the escape valve `unit-upkeep.md` UR-7 builds the deficit lock
+## around, and that is the situation it exists for; on every other turn it would be
+## a permanently-visible, irreversible row on every unit the player owns, for an
+## action most players use rarely. A solvent player gets
+## [constant Reason.NOT_IN_DEFICIT], which the menu drops rather than renders.
+##
+## [b]The rules are unchanged.[/b] [method Upkeep.validate_disband] still accepts a
+## disband from a solvent player — this hides an affordance, it does not forbid an
+## action, and nothing here may become a rule. That distinction is what keeps
+## `apply_action` the single authority on legality.
+##
+## ⚠ [b]Consequence worth knowing[/b]: freeing population cap is a legitimate
+## non-deficit reason to disband, and while the row is hidden a player at cap and
+## solvent has no route to it. See `design/ux/action-menu.md` OQ-3.
+##
+## When the row IS offered it is gated on AP alone — never on the deficit lock that
+## blocks produce/build/research, since disband is the one action that REDUCES
+## upkeep and locking it would make a deficit unrecoverable by the player's own
+## choice (UR-7).
 static func _disband_entry(state: GameState, entity: EntityState) -> VerbEntry:
 	if not (entity is UnitState) or entity.owner != state.active_player:
 		return VerbEntry.new(Verb.DISBAND, false, Reason.NOT_A_UNIT)
+	if not state.per_player[entity.owner].in_deficit:
+		return VerbEntry.new(Verb.DISBAND, false, Reason.NOT_IN_DEFICIT)
 	var cost: int = Balance.economy.disband_ap_cost
 	if not AP.can_afford(state, entity.owner, cost):
 		return VerbEntry.new(Verb.DISBAND, false, Reason.INSUFFICIENT_AP, cost)

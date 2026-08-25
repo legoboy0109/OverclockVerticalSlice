@@ -475,8 +475,8 @@ depends on game rules, the *set-up* is stated so the expected result follows fro
 | AC-2 | Select a unit that has already moved and attacked this turn. The menu still opens; Wait is the only bright row and every other row is dimmed with a short phrase beside it saying why | Integration |
 | AC-3 | Click an enemy unit, then empty ground. No menu appears in either case; the SELECTED panel still shows what was clicked | Integration |
 | AC-4 | Select a unit with no enemy in range and zero AP. The Attack row names **both** problems, not just the first | Logic |
-| AC-28 | Select any of your units. A Disband row is present, stating both what it costs and what it returns. Activate it once: the unit survives and the row reads "Confirm disband". Activate again: the unit is gone and the Credits arrive | Integration |
-| AC-29 | Select a structure. There is no Disband row at all | Integration |
+| AC-28 | While solvent, select any of your units: there is **no** Disband row. Go into deficit and select the same unit: the row appears, stating both what it costs and what it returns. Activate it once: the unit survives and the row reads "Confirm disband". Activate again: the unit is gone and the Credits arrive | Integration |
+| AC-29 | Select a structure while in deficit. There is still no Disband row — structures are never disbandable | Integration |
 | AC-30 | Arm Disband, then press Esc. The row reads "Disband" again, the unit is alive, and nothing was deselected | Integration |
 | AC-27 | Select a unit with an enemy adjacent and AP to spare. The Attack row states what attacking costs, alongside its shortcut, before any preview is opened. Drain the AP and re-select: the row still states the cost, now beside the reason | Integration |
 | AC-5 | With the menu open, press ↓ repeatedly. Focus visits only bright rows and never lands on a dimmed one. Clicking a dimmed row does nothing | Integration |
@@ -537,29 +537,39 @@ accessibility item. It is now arm-then-confirm — see decision 5. *Kept visible
 "the two-step selection is already a confirmation" is a tempting argument and it was wrong, which is
 worth remembering.*
 
-**~~OQ-3~~ — RESOLVED 2026-08-25.** Disband now has a row on every own unit's menu, showing both
-halves of its trade up front (`1 AP · +100 CR back`) — it is the only verb that spends *and* pays
-out, and a player weighing it against simply holding the unit needs both figures before committing
-to anything. Structures never get the row at all (UR-7: structures are not disbanded), dropped
-rather than greyed, on the same rule that drops Cancel Build from a scout.
+**~~OQ-3~~ — RESOLVED 2026-08-25.** Disband has a row, and it appears **only while the player is in
+deficit** (user decision, revised the same day from an always-visible first cut).
 
-**It takes two presses**, like every destructive verb — the *Hold-to-Confirm Refund* class. That
-matters more here than for Cancel Build: Cancel Build only appears on an under-construction
-structure, which is rare, whereas Disband is on **every unit, every turn**. Without the gate, an
-irreversible action would sit one careless click away on almost every menu in the game.
-`ActionMenu.DESTRUCTIVE_VERBS` is the list that decides this, and a test asserts every verb on it
-has an armed-state label — a destructive verb missing from the list would commit on one press with
-nothing else to catch it.
+Deficit is the situation `unit-upkeep.md` UR-7 built the verb for — it is the escape valve the whole
+deficit lock depends on, and before this the action was reachable from nothing at all. On every
+other turn the row would be a permanently visible, irreversible entry on every unit the player owns,
+for something most players use rarely.
 
-**Not gated on the deficit lock**, deliberately: disband is the one action that *reduces* upkeep, so
-greying it out while in deficit would have the interface reintroduce the trap the rules were written
-to avoid (UR-7).
+When shown it states both halves of its trade up front (`1 AP · +100 CR back`) — the only verb that
+spends *and* pays out, so one figure alone would not let a player weigh it against holding the unit.
+It takes **two presses** like every destructive verb, and structures never get it at all (UR-7),
+dropped rather than greyed on the same rule that drops Cancel Build from a scout.
 
-⚠ **Open, and worth a playtest**: whether a permanently-visible Disband row is the right amount of
-prominence for an action most players will use rarely. The alternative is showing it only while in
-deficit — safer and tidier, but it hides a legitimate action (freeing population cap is a real
-non-deficit reason to disband). Shipped always-visible because a verb a player cannot find is worse
-than one they must confirm.
+**Not gated on the deficit lock**: the deficit is what *shows* this verb and must never be what
+*blocks* it — disband is the one action that reduces upkeep, so refusing it while in deficit would
+make a deficit unrecoverable by the player's own choice.
+
+> ### ⚠ Two things this decision costs, recorded rather than argued away
+>
+> **1 — It is a deliberate exception to this spec's own rule.** Everywhere else, a verb disabled by
+> the *situation* keeps a visible row with its reason, because that is what teaches the rules; only
+> verbs that do not apply to an entity's *kind* are dropped. `NOT_IN_DEFICIT` is situational and is
+> dropped anyway. The consequence is **discoverability**: a solvent player is never shown that
+> Disband exists, and first meets it in the turn they are already in trouble.
+>
+> **2 — Population cap has no other release valve.** Freeing population is a legitimate non-deficit
+> reason to disband, and while the row is hidden a solvent player at cap cannot reach it — they must
+> wait for a unit to die. If that turns out to bite in playtesting, the smallest fix is to show the
+> row when in deficit **or** at population cap, i.e. whenever disbanding would unblock something.
+>
+> **The rules did not change.** `Upkeep.validate_disband` still accepts a solvent player's disband —
+> this hides an affordance, it does not forbid an action, and a test pins that distinction so a
+> UI-level gate can never harden into a rule.
 
 **~~OQ-5~~ — RESOLVED 2026-08-24.** The menu said "no route" to a unit standing in open ground
 that had simply run out of AP. `Movement.reachable()` applies its affordability cut *inside* the
