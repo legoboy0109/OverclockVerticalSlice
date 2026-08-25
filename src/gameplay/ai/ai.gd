@@ -198,13 +198,17 @@ static func _axis_is_horizontal(own: StructureState, enemy: StructureState) -> b
 ## direction which merely tests well on an east-west map and would bias the other way on a
 ## north-south one. The order there is Movement's own determinism contract and is not the bug;
 ## treating enumeration order as a decision rule was.
+## [param prefer_forward] chooses which end of the board the first criterion favours. Movement
+## wants forward (a unit is useful nearer the fight); a BUILD wants the opposite (a structure
+## is safer further from the enemy). Both directions are equally mirror-invariant — what
+## matters is that each seat applies the same rule in its own frame.
 static func _tile_wins_tie(state: GameState, tile: Vector2i, best_tile: Vector2i, \
-		enemy_hq: StructureState, axis_horizontal: bool) -> bool:
+		enemy_hq: StructureState, axis_horizontal: bool, prefer_forward: bool = true) -> bool:
 	if enemy_hq != null:
 		var d_new: int = state.grid.manhattan_distance(tile, enemy_hq.position)
 		var d_old: int = state.grid.manhattan_distance(best_tile, enemy_hq.position)
 		if d_new != d_old:
-			return d_new < d_old
+			return d_new < d_old if prefer_forward else d_new > d_old
 		var axis_at: int = enemy_hq.position.y if axis_horizontal else enemy_hq.position.x
 		var lat_new: int = absi((tile.y if axis_horizontal else tile.x) - axis_at)
 		var lat_old: int = absi((best_tile.y if axis_horizontal else best_tile.x) - axis_at)
@@ -935,6 +939,16 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 	if deploy_tiles.is_empty():
 		return best
 
+	# ★ S7-15: deploy tiles arrive sorted by grid index (row-major), i.e. north-first then
+	# WEST-TO-EAST. Every tile for a given unit type shares the same AP cost and producer id,
+	# so tiles in the same reachability band tie on score and `_is_better` — meaning the
+	# first enumerated won, which is the north-west-most tile. That is not symmetric: for a
+	# west-based player it deploys safely BEHIND the front, and for an east-based player it
+	# deploys TOWARD the enemy. Same defect class as S7-13, one layer down.
+	var enemy_hq: StructureState = _enemy_hq(lookahead, producer.owner)
+	var axis_horizontal: bool = _axis_is_horizontal(_own_hq(lookahead, producer.owner), enemy_hq)
+	var local := _Candidate.new()
+
 	for unit_type: UnitTypeDef in producer.type.producible_types:
 		var cost: int = Unit.effective_produce_cost(lookahead, unit_type, producer.owner)
 		# Dual-cost affordability (ADR-0006 pivot): produce needs BOTH the Credit
@@ -965,13 +979,23 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 			var denom: float = float(Balance.economy.produce_ap_cost) \
 				+ credits_to_ap(lifetime_credit_cost(unit_type))
 			var score: float = _action_score(value / denom, false)
-			if _is_better(score, cost, producer.entity_id, best.score, best.ap_cost, best.entity_id):
+			var take: bool = _is_better(score, cost, producer.entity_id, \
+				local.score, local.ap_cost, local.entity_id)
+			if not take and local.action != null \
+					and not _is_better(local.score, local.ap_cost, local.entity_id, \
+						score, cost, producer.entity_id):
+				take = _tile_wins_tie(lookahead, tile, local.dest_tile, enemy_hq, axis_horizontal)
+			if take:
 				var action := ProduceAction.new()
 				action.player = producer.owner
 				action.producer_id = producer.entity_id
 				action.unit_type = unit_type
 				action.tile = tile
-				best = _Candidate.new(action, score, cost, producer.entity_id)
+				local = _Candidate.new(action, score, cost, producer.entity_id, tile)
+
+	if local.action != null and _is_better(local.score, local.ap_cost, local.entity_id, \
+			best.score, best.ap_cost, best.entity_id):
+		best = local
 
 	return best
 
@@ -1150,7 +1174,7 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 			var action := BuildAction.new()
 			action.player = player
 			action.structure_type = structure_type
-			action.tile = tiles[0]
+			action.tile = _best_build_tile(lookahead, player, tiles)
 			best = _Candidate.new(action, score, cost, candidate_entity_id)
 
 	return best
@@ -1427,3 +1451,29 @@ static func _score_cancel_build_candidates(lookahead: GameState, entity: EntityS
 ## than a `value / ap_cost` ratio the way every other verb does.
 static func _cancel_build_value(build_cost: int) -> float:
 	return float(BaseProduction.cancel_refund(build_cost))
+
+
+## ★ S7-15 — picks a build tile by a mirror-invariant preference instead of taking
+## [code]tiles[0][/code].
+##
+## [method BaseProduction.legal_build_tiles] returns its candidates sorted by grid index —
+## row-major, so north-first then WEST-TO-EAST. Taking element 0 therefore always built on the
+## north-west-most legal tile, which is not symmetric between the seats: for a west-based
+## player that is safely BEHIND their line, and for an east-based player it is TOWARD the
+## enemy. Structures are stationary and cannot retreat, so the difference compounds.
+##
+## ⚠ Note [param prefer_forward] is [code]false[/code] here, the opposite of the movement
+## tie-break: a unit wants to be near the fight, a structure wants to be away from it. Both
+## directions are equally mirror-invariant — the property that matters is that each seat
+## applies the same rule in its own frame, not which way the rule points.
+##
+## The sort in [BaseProduction] is left alone deliberately: it is that class's determinism
+## contract and was never the bug. Treating its order as a DECISION was.
+static func _best_build_tile(state: GameState, player: int, tiles: Array[Vector2i]) -> Vector2i:
+	var enemy_hq: StructureState = _enemy_hq(state, player)
+	var axis_horizontal: bool = _axis_is_horizontal(_own_hq(state, player), enemy_hq)
+	var chosen: Vector2i = tiles[0]
+	for i: int in range(1, tiles.size()):
+		if _tile_wins_tie(state, tiles[i], chosen, enemy_hq, axis_horizontal, false):
+			chosen = tiles[i]
+	return chosen

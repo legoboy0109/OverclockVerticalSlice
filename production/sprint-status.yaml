@@ -547,6 +547,62 @@ stories:
     # Suite 1260/1260 (+7). Slice boots clean. New suite pins the violated property: whatever a
     # west-based unit prefers, an east-based unit must prefer the MIRROR IMAGE of it.
 
+  - id: "s7-15"
+    name: "★★ The residual was placement — deploy and build tile selection"
+    file: "production/playtests/s7-15-placement-bias-2026-08-25.md"
+    priority: must-have
+    status: done
+    owner: "ai-programmer + qa-lead"
+    estimate_days: 0.5
+    blocker: ""
+    completed: "2026-08-25"
+    # ✅ RESIDUAL ELIMINATED. The AI is now seat-fair.
+    # ★ THE SAME BUG ONE LAYER DOWN. legal_deploy_tiles and legal_build_tiles both end with
+    #   out.sort_custom(... grid.index(a) < grid.index(b)) -- row-major, i.e. NORTH FIRST then
+    #   WEST-TO-EAST. The AI consumed that order as a DECISION:
+    #     - PRODUCE: every deploy tile for a unit type shares AP cost and producer id, so tiles
+    #       in the same reachability band tie and _is_better refuses to replace -> first
+    #       enumerated wins -> the north-west-most tile.
+    #     - BUILD: worse. It took tiles[0] outright. Placement was PURELY list order.
+    #   Not symmetric: for a WEST player that tile is safely BEHIND the line; for an EAST
+    #   player the identical rule places TOWARD the enemy. Structures cannot retreat, so it
+    #   compounds for the rest of the match.
+    # FIX: reuse s7-14's _tile_wins_tie, plus a `prefer_forward` flag —
+    #   movement prefers FORWARD (a unit is useful near the fight);
+    #   BUILD prefers AWAY (a structure is safer further from the enemy).
+    #   ⚠ Both directions are equally mirror-invariant. What matters is that each seat applies
+    #     the same rule IN ITS OWN FRAME, not which way the rule points.
+    #   Produce folds into a per-producer local best first (same reason as s7-14).
+    #   BaseProduction's sorts are untouched — that class's determinism contract, never the bug.
+    # RESULT — seat matrix (+1 cell):
+    #   s7-14: P0 9:P1 5 and P0 8:P1 6, converted 12/14
+    #   s7-15: P0 7:P1 7 and P0 7:P1 7, converted 14/14   <-- exactly even, both seats
+    # RESULT — S6-06 gate:
+    #                      original    s7-14        s7-15
+    #   seat split       P0 6/P1 16  P0 12/P1 10  P0 11/P1 11
+    #   material converts     15/18        16/18        18/18
+    #   resolve on play       20/22        18/22        18/22  (the 4 are the mirror cell
+    #                                                           reaching the cap — correct)
+    #   mean turns             38.7         30.7         28.9
+    #
+    # ⛔⛔ THIS REVERSES THE FIRST-TURN AP RECOMMENDATION, AGAIN, NOW ON CLEAN DATA.
+    #   Mirror cell with every known bias removed:
+    #     P0 starts -> P0 0 : P1 4       P1 starts -> P0 4 : P1 0
+    #   WHOEVER MOVES SECOND WINS ALL FOUR, FROM EITHER SEAT. Perfectly symmetric, and far
+    #   cleaner than s7-14's 3/1 -- which was measured WITH the placement bias still present.
+    #   ⇒ My s7-14 report of a FIRST-mover advantage was WRONG. With placement fixed the effect
+    #     runs the other way and much more strongly: THE FIRST PLAYER IS DISADVANTAGED, so a
+    #     first-turn AP REDUCTION WOULD MAKE IT WORSE. The remedy pointing the right way is to
+    #     COMPENSATE the first player (extra AP / an extra action on turn 1), or equivalently
+    #     to trim the SECOND player's opening turn.
+    #   ★ Mechanism is exactly what S5-04 guessed at the very start: "on a symmetric board the
+    #     first player must commit into the open, and the second answers with full information."
+    #     With no fog and deterministic combat, moving second is genuinely better. Every
+    #     measurement that pointed elsewhere was pointing at a bug.
+    #   ⚠ n=4 per mirror condition, but 4/0 BOTH WAYS is far stronger than 3/1. MIRROR_OPENINGS
+    #     caps that cell at 4 — widen it before choosing a compensation value.
+    # Suite 1260/1260, 0 orphans.
+
   # --- Carried, human-gated, NOT on this sprint's critical path ---
   - id: "s5-03-observer"
     name: "★ S5-03 naive-observer session (~20 min) — the last unscripted half"
