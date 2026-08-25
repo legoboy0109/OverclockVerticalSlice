@@ -116,6 +116,24 @@ var _plain_map: bool = false
 ## and S7-11 (cover) both lengthened matches — it was calibrated before either.
 var _max_rounds_override: int = 0
 
+## ★ S7-13 — force which seat moves first, for every game in the batch. -1 = the default
+## (mirror cell alternates by variant; handicap cells always start P0).
+##
+## [b]This exists to separate two hypotheses that the default batch cannot tell apart.[/b]
+## "P1 wins every close game" and "whoever moves SECOND wins every close game" fit the same
+## data, because the handicap cells always start P0 — so P1 is always the second mover there.
+## They need opposite fixes, so guessing is not an option.
+var _start_player_override: int = -1
+
+## ★ S7-13 — swap which HQ each seat owns, so the bias can be attributed.
+##
+## The map is mirror-symmetric and the seats are mechanically identical, yet P1 wins the
+## mirror cell 3/4 no matter who moves first. Two candidates remain: something intrinsic to
+## the player INDEX (entity-id ordering, tie-breaks) or something about the POSITION each
+## seat starts from. Swapping the HQs separates them: if P1 keeps winning, it is the index;
+## if the winner follows the west HQ, it is the position.
+var _swap_hqs: bool = false
+
 ## Variants per handicap cell (default 3 = the shipped batch). ★ Raised only for experiments:
 ## the +1 cell at 3 variants is n=6, which is too thin to read a gradient from — the S7-09
 ## sweep's first pass showed a non-monotone dip that was purely sample noise.
@@ -137,6 +155,10 @@ func _parse_args() -> void:
 			_plain_map = true
 		elif arg.begins_with("--max-rounds="):
 			_max_rounds_override = maxi(0, int(arg.split("=")[1]))
+		elif arg.begins_with("--start-player="):
+			_start_player_override = clampi(int(arg.split("=")[1]), 0, 1)
+		elif arg == "--swap-hqs":
+			_swap_hqs = true
 		elif arg.begins_with("--variants="):
 			_variants = clampi(int(arg.split("=")[1]), 1, _VARIANT_Y_OFFSETS.size())
 	if _degrade_favoured_pct != 0 or _only_handicap != -1 or _variants != 3 or _plain_map:
@@ -146,6 +168,8 @@ func _parse_args() -> void:
 	# ★ Always announce the terrain actually in play. The S7-10 cover experiment silently
 	# no-opped (PackedByteArray is a value type) and produced a sweep byte-identical to its
 	# own baseline; the numbers were clean, confident and meaningless. Report, do not assume.
+	if _start_player_override >= 0:
+		print("SIM_START_OVERRIDE,forced_starting_player=%d" % _start_player_override)
 	print("SIM_TERRAIN,cover_tiles=%d,of=%d,plain=%s,max_rounds=%d" % [
 		0 if _plain_map else VSMap.COVER_TILES.size(), VSMap.WIDTH * VSMap.HEIGHT, str(_plain_map),
 		_max_rounds_override if _max_rounds_override > 0 else VerticalSliceRoot.VS_MAX_ROUNDS
@@ -294,11 +318,23 @@ func _build_match(favoured: int, handicap: int, variant: int) -> GameState:
 	# only ever safe while every tile was Plain. `--plain` forces the pre-cover board so a
 	# batch can be compared against everything recorded before S7-11.
 	var map: MapDefinition = VSMap.build(_plain_map)
+	# ★ Which tile each SEAT owns. With --swap-hqs this is reversed, and every placement
+	# below must follow it. The first version of the swap read the VSMap.HQ_A/HQ_B constants
+	# directly, so a swapped player's bonus Troopers spawned next to the ENEMY base — a
+	# confound that produced a confident, completely wrong attribution before it was caught.
+	# ⚠ Built with a typed literal and an if, not a ternary: `[a,b] if c else [d,e]` infers a
+	# plain Array in GDScript and will not assign to an Array[Vector2i].
+	var hq_of: Array[Vector2i] = [VSMap.HQ_A, VSMap.HQ_B]
+	if _swap_hqs:
+		hq_of = [VSMap.HQ_B, VSMap.HQ_A]
+	map.hq_tiles = hq_of
 
 	# ★ S5-04: alternate the starting player across mirror openings. On a symmetric
 	# board with a deterministic AI, who moves first is the only asymmetry there is,
 	# and it is a real one -- so it belongs in the sample rather than being fixed.
 	var starting_player: int = (variant % 2) if handicap == 0 else 0
+	if _start_player_override >= 0:
+		starting_player = _start_player_override
 	var state: GameState = GameState.start_match(map, starting_player)
 	# Mirror the slice: the round cap is armed there, so simulating without it would
 	# measure a configuration that no longer ships.
@@ -325,9 +361,11 @@ func _build_match(favoured: int, handicap: int, variant: int) -> GameState:
 		var off: Vector2i = MIRROR_OPENINGS[variant]
 		if off != Vector2i.ZERO:
 			for player: int in 2:
-				var dir: int = 1 if player == 0 else -1
-				var tile := Vector2i(HQ_A.x + off.x * dir if player == 0 \
-						else HQ_B.x + off.x * dir, HQ_A.y + off.y)
+				# Push each seed unit AWAY from its own HQ, toward the middle — derived
+				# from the HQ the seat actually owns, so --swap-hqs stays honest.
+				var own_hq: Vector2i = hq_of[player]
+				var dir: int = 1 if own_hq.x < VSMap.WIDTH / 2 else -1
+				var tile := Vector2i(own_hq.x + off.x * dir, own_hq.y + off.y)
 				if not state.grid.in_bounds(tile.x, tile.y):
 					continue
 				if state.grid.occupant_at(tile.x, tile.y) != GridState.EMPTY_OCCUPANT:
@@ -342,7 +380,7 @@ func _build_match(favoured: int, handicap: int, variant: int) -> GameState:
 				state.entities_by_id[seed_unit.entity_id] = seed_unit
 
 	for i: int in handicap:
-		var tile: Vector2i = _bonus_tile(favoured, i, variant)
+		var tile: Vector2i = _bonus_tile(hq_of[favoured], i, variant)
 		if not state.grid.in_bounds(tile.x, tile.y):
 			continue
 		if state.grid.occupant_at(tile.x, tile.y) != GridState.EMPTY_OCCUPANT:
@@ -368,9 +406,12 @@ func _build_match(favoured: int, handicap: int, variant: int) -> GameState:
 const _VARIANT_Y_OFFSETS: Array[int] = [-1, 0, 1, -2, 2, -3, 3]
 
 
-func _bonus_tile(favoured: int, index: int, variant: int) -> Vector2i:
-	var hq: Vector2i = HQ_A if favoured == 0 else HQ_B
-	var dir: int = 1 if favoured == 0 else -1
+## ⚠ Takes the favoured seat's OWN HQ tile rather than deriving it from the seat index.
+## Deriving it was a real defect: under --swap-hqs the favoured player's bonus Troopers were
+## placed beside the enemy base, which silently invalidated the whole attribution experiment.
+func _bonus_tile(own_hq: Vector2i, index: int, variant: int) -> Vector2i:
+	# Forward = toward the middle of the map, whichever side this HQ sits on.
+	var dir: int = 1 if own_hq.x < VSMap.WIDTH / 2 else -1
 	var dy: int = _VARIANT_Y_OFFSETS[variant % _VARIANT_Y_OFFSETS.size()]
-	return Vector2i(hq.x + dir * (1 + index), hq.y + dy)
+	return Vector2i(own_hq.x + dir * (1 + index), own_hq.y + dy)
 
