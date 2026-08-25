@@ -151,11 +151,47 @@ stories:
     name: "Controller glyphs — the legend names keyboard keys regardless of device"
     file: ".claude/docs/technical-preferences.md"
     priority: should-have
-    status: ready-for-dev
+    status: done
     owner: "ui-programmer"
     estimate_days: 1.0
     blocker: ""
-    completed: ""
+    completed: "2026-08-25"
+    # ✅ DONE (a8ad82d). NEW src/ui/input/input_glyphs.gd autoload — tracks the active device from
+    # the most recent real input event and answers "what is this action called RIGHT NOW":
+    # "[B]" on a keyboard, "[LB]" on a pad. Both display sites now ask it (the slice legend, which
+    # was a HARDCODED keyboard string, and ActionMenu._shortcut_for, which matched InputEventKey
+    # ONLY and returned an EMPTY hint on a pad). Legend redraws on device_changed, which fires
+    # only on an actual CHANGE, never per event.
+    # ★ Mouse counts as KEYBOARD deliberately — the Deck's trackpads present as a mouse, so a
+    #   player using them is in pointer mode and should see pointer labels.
+    #
+    # ⛔⛔ AND IT EXPOSED A LIVE FUNCTIONAL DEFECT, not a display one:
+    #   REDOT 26.2 SHIPS ui_accept AND ui_cancel WITH NO GAMEPAD EVENTS AT ALL.
+    #   Verified by dumping InputMap.action_get_events() on a clean project: ui_accept had
+    #   Enter / Kp Enter / Space, ui_cancel had Escape, and NEITHER had a single joypad button.
+    #   (ui_up and the other directions DO carry D-pad + stick — specific to these two.)
+    #   ⇒ CONFIRM and BACK OUT — the two most fundamental controls in the game — were
+    #     UNREACHABLE ON A CONTROLLER, on a project whose hardware floor is the Steam Deck.
+    #   Both now declared in project.godot with JOY_BUTTON_A / JOY_BUTTON_B. ⚠ Keyboard events
+    #   restored alongside: declaring a built-in action REPLACES its defaults wholesale, so
+    #   omitting them would have traded a gamepad bug for a keyboard one.
+    #
+    # ⛔ IT ALSO FALSIFIED AN APPROVED SPEC. settings.md stated: "ui_cancel is left at its engine
+    #   default here, which is what makes gamepad B work without a project binding — worth
+    #   stating because an implementer who did not know that could remove it as dead
+    #   configuration." EXACTLY BACKWARDS — the note told a future implementer NOT TO TOUCH the
+    #   thing that was broken. Corrected in place with the reason.
+    #   ★★ THE LESSON: a claim about ENGINE DEFAULTS is a claim about a specific ENGINE VERSION.
+    #     This project runs a Godot FORK, which is exactly where a default is most likely to
+    #     differ — and the fork's divergence sat undetected behind a spec that asserted the
+    #     opposite.
+    # ★ Found by asking what each action is called on a pad, and discovering the answer was
+    #   "nothing". The glyph work was the instrument; the binding gap was the finding.
+    # TESTS: tests/unit/input/input_glyphs_test.gd (8) — keyboard vs pad labels for the SAME
+    #   action, every board_* action resolves on BOTH devices, the ui_* defaults resolve on both
+    #   (the assertion that caught this), unknown action is empty not an error, fallback when a
+    #   device has no binding, device_changed fires only on change, and the pad map pinned
+    #   against project.godot's actual [input] block. Suite 1266 -> 1274.
     # Deck Verified gap 1. ★ The bindings ALL EXIST (s6-17/20/23/25) — only the DISPLAY is wrong.
 
   - id: "s8-07"
