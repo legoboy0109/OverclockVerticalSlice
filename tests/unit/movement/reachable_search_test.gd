@@ -297,7 +297,7 @@ func test_heavy_at_cap_with_four_ap_returns_empty_set_despite_affordable_base_co
 func test_scout_at_cap_with_penalty_one_point_five_charges_ceil_two_not_float() -> void:
 	# Arrange — Scout move_cost 1, at/past cap, SOFT_MOVE_PENALTY 1.5 (x10=15,
 	# not the VS default 2.0). Injected via UnitBalance.units (the live Autoload
-	# UnitConfig.surcharge_for() reads), restored after the test.
+	# UnitBalance.surcharge_for() reads), restored after the test.
 	var original_penalty: int = UnitBalance.units.soft_move_penalty_x10
 	UnitBalance.units.soft_move_penalty_x10 = 15
 	var type := _make_type(1, 0) # cap 0 -> immediately at/past cap

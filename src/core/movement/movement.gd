@@ -217,7 +217,7 @@ static func _neighbors_in_fixed_order(grid: GridState, pos: Vector2i) -> Array[V
 ## [member UnitState.tiles_moved_this_turn]. The first
 ## [code]unit.type.soft_move_cap - unit.tiles_moved_this_turn[/code] tiles
 ## (floored at 0) cost [code]unit.type.move_cost[/code] each; every tile beyond
-## costs the flat [method UnitConfig.surcharge_for] surcharge. Monotonically
+## costs the flat [method UnitBalance.surcharge_for] surcharge. Monotonically
 ## non-decreasing in [param tiles_entered] — the property [method reachable]'s
 ## early-break relies on. This exact function is reused verbatim by Story
 ## 002's [code]move_path_cost()[/code] billing — the reachable-vs-billed
@@ -226,7 +226,7 @@ static func _cost_for_depth(unit: UnitState, tiles_entered: int) -> int:
 	var c: int = unit.type.soft_move_cap
 	var m: int = unit.tiles_moved_this_turn
 	var t: int = tiles_entered
-	var surcharge: int = UnitConfig.surcharge_for(unit.type.move_cost)
+	var surcharge: int = UnitBalance.surcharge_for(unit.type.move_cost)
 	var base_tiles: int = max(0, min(t, c - m))
 	var overcap_tiles: int = t - base_tiles
 	return base_tiles * unit.type.move_cost + overcap_tiles * surcharge
