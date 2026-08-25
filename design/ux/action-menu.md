@@ -6,7 +6,9 @@
 > performance/resolution criteria) and all **8 advisory** issues resolved (measured contrast, the
 > refused-commit state, the states-that-do-not-exist note, null/trigger columns on Data
 > Requirements, localisation budgets, tester-evaluable acceptance criteria, the `hud.md`
-> reconciliation, and decision 1's overclaim).
+> reconciliation, and decision 1's overclaim). **OQ-5, the one model-level defect the review
+> surfaced, is also fixed** — Move no longer reports "no route" to a unit that has merely run out
+> of AP.
 > ⚠ The review was a **self-audit by the spec's own author** — an independent pass would carry more
 > weight, and the four spec-accuracy findings are the kind an author reliably misses.
 > **Author**: main session, from `design/gdd/command-action-interface.md` + four user decisions (2026-08-24)
@@ -515,14 +517,18 @@ worth remembering.*
 **OQ-3 — Does the menu need a Disband row?** `DisbandAction` exists and is reachable from nothing.
 Out of scope here; named so it is not lost.
 
-**OQ-5 — "no route" is shown where "needs AP" is the truth.** `Movement.reachable()` is itself
-AP-bounded, so a unit with 0 AP gets an *empty* reachable set and `CommandFSM._move_entry` reports
-`OUT_OF_RANGE` ("no route"). Its `INSUFFICIENT_AP` branch only fires when the set is non-empty but
-every tile is too dear — which zero AP can never produce. The player is told *something* true (there
-is indeed no tile they can move to) but not the *useful* thing (they are out of AP and should end
-the turn). Fixing it means either an AP-unbounded `reachable()` variant for the menu or a check in
-`_move_entry` ahead of the query. **Model-level, not a rendering fix** — named here because this is
-the surface where it shows.
+**~~OQ-5~~ — RESOLVED 2026-08-24.** The menu said "no route" to a unit standing in open ground
+that had simply run out of AP. `Movement.reachable()` applies its affordability cut *inside* the
+BFS, so "walled in" and "broke" both came back as an empty set — and `_move_entry`'s
+`INSUFFICIENT_AP` branch was unreachable, because it re-tested affordability on tiles the query had
+already filtered for it. The reason existed in the enum and could never be produced.
+
+Fixed with `Movement.reachable_ignoring_ap()`, asked **only** when the budgeted query comes back
+empty — the cold path, so a unit that can move pays nothing for it. Empty there too means genuinely
+boxed in (`OUT_OF_RANGE`, no amount of AP helps); non-empty means the tiles exist but are not yet
+payable (`INSUFFICIENT_AP`). The two are mutually exclusive and each names the fix that would
+actually work: clear a path, versus end the turn. *This mattered more than a wording nit — the two
+messages send the player to opposite places.*
 
 **OQ-4 — Pad accelerators may be redundant.** With a fully navigable menu, X/Y/LB/RB duplicate what
 A-on-a-row already does. Kept for parity with the keyboard, but a controller playtest may show they

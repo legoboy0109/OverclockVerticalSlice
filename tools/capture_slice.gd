@@ -186,6 +186,37 @@ func _run() -> void:
 		await RenderingServer.frame_post_draw
 		_shot("06-pause-quit-confirm")
 		get_tree().paused = false
+	# --- A spent unit's menu: the OQ-5 wording, on screen ----------------------
+	# Runs LAST because it zeroes the player's AP, which would poison every earlier
+	# shot. Pins the fix visually: a unit in open ground with nothing left to spend
+	# is told it "needs AP", not that it has "no route" — the two point at opposite
+	# fixes (end the turn vs. clear a path).
+	if slice.has_method("select_at_cursor"):
+		var st: GameState = slice.state()
+		var spent := UnitState.new()
+		spent.entity_id = 900
+		spent.owner = 0
+		spent.position = Vector2i(6, 5)
+		spent.type = UnitTypes.TROOPER
+		spent.current_hp = spent.type.hp
+		st.entities_by_id[900] = spent
+		st.grid.occupancy[st.grid.index(6, 5)] = 900
+		st.per_player[0].current_ap = 0
+		for i: int in 60:
+			var c: Vector2i = slice.cursor_tile()
+			if c == Vector2i(6, 5):
+				break
+			var step := Vector2i(signi(6 - c.x), 0) if c.x != 6 else Vector2i(0, signi(5 - c.y))
+			if step == Vector2i.ZERO:
+				break
+			slice.move_cursor(step)
+			await get_tree().process_frame
+		slice.select_at_cursor()
+		for i: int in 22:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		_shot("03h-spent-unit-needs-ap")
+
 	print("done")
 	get_tree().quit()
 

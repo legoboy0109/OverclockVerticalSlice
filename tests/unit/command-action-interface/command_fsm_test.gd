@@ -240,16 +240,53 @@ func test_menu_model_owned_unit_with_affordable_reachable_tile_move_enabled() ->
 
 
 func test_menu_model_unit_with_zero_ap_move_disabled_insufficient_ap() -> void:
+	# ★ 2026-08-24 — this test's NAME was right all along and its ASSERTION was
+	# wrong. It expected OUT_OF_RANGE for a unit standing in open ground with 0 AP,
+	# because that is what the code did: Movement.reachable() applies its
+	# affordability cut INSIDE the BFS, so "no AP" and "walled in" both came back
+	# as an empty set and the menu reported both as "no route".
+	#
+	# The two point a player at opposite fixes — clear a path, versus end the turn —
+	# so the conflation was a real defect (action-menu.md OQ-5), not a wording nit.
+	# Left as a cautionary note: a test whose name contradicts its assertion is
+	# worth reading twice, because one of the two is describing intent and the other
+	# is describing a bug.
 	var state := _make_state(0)
 	var type := _make_unit_type(1, 8)
 	var unit := _place_unit(state, 1, 0, Vector2i(2, 2), type)
-	state.per_player[0].current_ap = 0 # reachable() returns nothing affordable.
+	state.per_player[0].current_ap = 0 # open ground all around; only AP is missing.
 
 	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, unit)
 	var move_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.MOVE)
 
 	assert_bool(move_entry.enabled).is_false()
-	assert_int(move_entry.reason).is_equal(CommandFSM.Reason.OUT_OF_RANGE)
+	assert_int(move_entry.reason).override_failure_message(
+		"a unit in open ground with no AP needs AP — it is not out of range"
+	).is_equal(CommandFSM.Reason.INSUFFICIENT_AP)
+
+
+func test_a_unit_both_boxed_in_and_broke_reports_out_of_range_not_ap() -> void:
+	# ★ When both are true, OUT_OF_RANGE is the more useful thing to say: no amount
+	# of AP would help this unit, so pointing the player at their AP pool would send
+	# them to end their turn and find the unit still stuck. The two reasons are
+	# mutually exclusive here on purpose — each one names the fix that would
+	# actually work.
+	var state := _make_state(0)
+	var type := _make_unit_type(1, 8)
+	var unit := _place_unit(state, 1, 0, Vector2i(5, 5), type)
+	state.per_player[0].current_ap = 0
+	_place_unit(state, 2, 1, Vector2i(5, 4), type)
+	_place_unit(state, 3, 1, Vector2i(5, 6), type)
+	_place_unit(state, 4, 1, Vector2i(4, 5), type)
+	_place_unit(state, 5, 1, Vector2i(6, 5), type)
+
+	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, unit)
+	var move_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.MOVE)
+
+	assert_bool(move_entry.enabled).is_false()
+	assert_int(move_entry.reason).override_failure_message(
+		"no amount of AP frees a boxed-in unit — saying 'needs AP' sends the player nowhere"
+	).is_equal(CommandFSM.Reason.OUT_OF_RANGE)
 
 
 func test_menu_model_unit_fully_boxed_in_move_disabled_out_of_range() -> void:

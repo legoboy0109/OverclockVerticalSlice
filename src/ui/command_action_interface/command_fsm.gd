@@ -240,14 +240,18 @@ static func next_state(current: State, trigger: Trigger, _state: GameState) -> S
 ##
 ## - [b]Move[/b] ([constant Verb.MOVE]): only meaningful for a [UnitState]
 ##   [param entity] (structures never move). Enabled iff
-##   [code]Movement.reachable(state, entity)[/code] is non-empty AND at least
-##   one returned tile is affordable via [code]AP.can_afford[/code] at its
-##   [code]min_cost[/code]. Disabled reasons: [constant Reason.OUT_OF_RANGE]
-##   if the reachable set is empty (AC-9's "no open tiles" case — the entity
-##   is boxed in or has 0 AP to spend on any tile); [constant Reason.INSUFFICIENT_AP]
-##   if the set is non-empty but every tile's cost exceeds current AP
-##   (AC-9's "no affordable moves" case). A [StructureState] [param entity]
-##   always yields Move disabled with [constant Reason.OUT_OF_RANGE]
+##   [code]Movement.reachable(state, entity)[/code] is non-empty — every tile it
+##   returns is already affordable, since its BFS stops at the first depth the
+##   mover cannot pay for. Disabled reasons, distinguished by a second AP-free
+##   query (★ 2026-08-24, action-menu.md OQ-5): [constant Reason.OUT_OF_RANGE]
+##   when [code]Movement.reachable_ignoring_ap[/code] is ALSO empty — the entity
+##   is genuinely boxed in and no amount of AP would help (AC-9's "no open tiles"
+##   case); [constant Reason.INSUFFICIENT_AP] when tiles exist but none is
+##   currently payable (AC-9's "no affordable moves" case). The two are mutually
+##   exclusive and each is precisely true, which matters because they point at
+##   different fixes — clear a path, versus end the turn.
+##   A [StructureState] [param entity] always yields Move disabled with
+##   [constant Reason.OUT_OF_RANGE]
 ##   (structures have no [code]reachable()[/code] concept).
 ## - [b]Attack[/b] ([constant Verb.ATTACK]): enabled iff the attacker can still
 ##   attack this turn ([code]Unit.can_attack[/code] for a [UnitState], or
@@ -309,15 +313,29 @@ static func _move_entry(state: GameState, entity: EntityState) -> VerbEntry:
 		return VerbEntry.new(Verb.MOVE, false, Reason.OUT_OF_RANGE)
 	var unit: UnitState = entity
 
-	var reachable: Array[Movement.ReachableTile] = Movement.reachable(state, unit)
-	if reachable.is_empty():
-		return VerbEntry.new(Verb.MOVE, false, Reason.OUT_OF_RANGE)
+	# Every tile [method Movement.reachable] returns is affordable BY CONSTRUCTION —
+	# its BFS stops at the first depth costing more than the mover's AP. A non-empty
+	# result therefore means "there is a move you can make", with nothing further to
+	# check.
+	if not Movement.reachable(state, unit).is_empty():
+		return VerbEntry.new(Verb.MOVE, true, Reason.NONE)
 
-	for tile: Movement.ReachableTile in reachable:
-		if AP.can_afford(state, unit.owner, tile.min_cost):
-			return VerbEntry.new(Verb.MOVE, true, Reason.NONE)
-
-	return VerbEntry.new(Verb.MOVE, false, Reason.INSUFFICIENT_AP)
+	# ★ 2026-08-24 — the fix for `design/ux/action-menu.md` OQ-5.
+	#
+	# An empty result is AMBIGUOUS, and the old code read it as one thing. Because
+	# the affordability cut happens inside the BFS, a unit with 0 AP and a unit
+	# walled in by terrain both come back empty — so a player who had simply spent
+	# their turn was told "no route", which points at the wrong fix entirely (move
+	# something out of the way, rather than end the turn). Worse, the branch that
+	# would have said "needs AP" was unreachable: it re-tested affordability on
+	# tiles the query had already filtered for affordability, so it could never
+	# fire. The reason existed in the enum and could not be produced.
+	#
+	# Asking the AP-free question separately is the only way to separate them, and
+	# it runs only on this cold path — a unit that can move never reaches here.
+	if Movement.reachable_ignoring_ap(state, unit).is_empty():
+		return VerbEntry.new(Verb.MOVE, false, Reason.OUT_OF_RANGE) # nowhere at ANY price.
+	return VerbEntry.new(Verb.MOVE, false, Reason.INSUFFICIENT_AP)  # somewhere, but not yet.
 
 
 ## Builds the Attack [VerbEntry] — see [method menu_model]'s doc comment for

@@ -467,23 +467,22 @@ func test_act_with_no_ap_flashes_an_ap_reason_instead_of_silently_doing_nothing(
 	assert_bool(root.select_at_cursor()).is_true()
 	_move_cursor_to(root, Vector2i(5, 6)) # a cursor move clears any prior flash first.
 	assert_bool(root.act_at_cursor()).is_false() # can't move or attack with 0 AP
-	# ★ 2026-08-24: the reason now comes from CommandFSM's own Reason bitmask via
-	# ActionMenu.reason_text ("needs AP") rather than from a bespoke hint string, so
-	# the keyboard accelerator and the greyed-out menu row give the same explanation
-	# instead of two hand-written ones that could drift apart.
-	# ★ 2026-08-24: the reason now comes from CommandFSM's own Reason bitmask via
+	# ★ 2026-08-24: the reason comes from CommandFSM's own Reason bitmask via
 	# ActionMenu.reason_text rather than from a bespoke hint string, so the keyboard
 	# accelerator and the greyed-out menu row give the SAME explanation instead of
 	# two hand-written ones that could drift apart.
 	#
-	# ⚠ The wording here is "no route", not "needs AP", and that is the model's
-	# answer rather than a rendering slip: Movement.reachable() is itself AP-bounded,
-	# so at 0 AP it returns an EMPTY set and CommandFSM._move_entry reports
-	# OUT_OF_RANGE — its INSUFFICIENT_AP branch only fires when the set is non-empty
-	# but every tile is too expensive, which 0 AP can never produce. Recorded as
-	# action-menu.md OQ-5; this test pins the invariant that MATTERS (the player is
-	# told why, never silently ignored) rather than one of the two phrasings.
+	# ★★ And the wording is now the RIGHT one. This test used to accept "no route"
+	# and carried a note explaining why that was the model's honest answer:
+	# Movement.reachable() is AP-bounded, so at 0 AP it returned an empty set and
+	# _move_entry could not tell "broke" from "walled in". That was recorded as
+	# action-menu.md OQ-5 and has since been FIXED — a second, AP-free query
+	# separates the two, so a unit standing in open ground with no AP is told it
+	# needs AP, which points at ending the turn rather than at clearing a path.
 	assert_str(root.status_text()).contains("Move unavailable")
+	assert_str(root.status_text()).override_failure_message(
+		"a unit in open ground with no AP must be told it needs AP, not that it has no route"
+	).contains("needs AP")
 
 
 func test_selecting_a_unit_renders_its_range_overlay_without_error() -> void:
