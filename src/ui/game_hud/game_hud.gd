@@ -24,13 +24,16 @@
 ## board. Interaction (the Build/End-Turn buttons) routes through the injected
 ## [CommandInterface], never through the HUD.
 ##
-## [b]Deferred seam (documented)[/b]: the AP-counter preview echo
-## ([method ApCounterWidget.open_preview]/[method ApCounterWidget.close_preview])
-## is driven by scene glue when #9 opens/closes a preview — [CommandInterface]
-## exposes no preview-open signal today, so [method assemble] cannot auto-connect
-## it. [method open_ap_preview]/[method close_ap_preview] are exposed as the
-## passthrough the future wiring calls (a small CAI addendum, like
-## `selection_changed` was, will let this auto-connect).
+## [b]The preview-echo seam, now driven[/b] (2026-08-24): the AP and Credits
+## counters' `current -> projected` echoes are opened and closed by scene glue when
+## #9 enters and leaves a preview. [CommandInterface] still exposes no
+## preview-open signal, so [method assemble] cannot auto-connect it and the slice
+## calls [method open_ap_preview]/[method open_credits_preview] itself; a small CAI
+## addendum, like `selection_changed` was, would let this auto-connect later.
+## [b]Until the action menu landed these four methods had no production caller at
+## all[/b] — the seam command-action-interface.md records as "resolved" was
+## resolved on paper only, and the projected-cost readout the GDD promises was
+## never once shown to a player.
 ##
 ## [b]Layout is provisional[/b]: widget positions here are a functional,
 ## non-overlapping starting arrangement so the surface is legible; the final
@@ -230,6 +233,25 @@ func open_ap_preview(projected_ap: int, affordable: bool) -> void:
 func close_ap_preview() -> void:
 	if _ap_counter != null:
 		_ap_counter.close_preview()
+
+
+## Opens the Credits-counter preview echo — the second half of the same seam.
+##
+## [b]Added 2026-08-24 alongside the action menu.[/b] command-action-interface.md's
+## D-1b requires an economic preview to show `projected_remaining_credits`
+## [i]alongside[/i] `projected_remaining_ap` for the SAME preview, because Build and
+## Produce spend from both pools (ADR-0006) and a player shown only one of them
+## cannot tell which pool a purchase will exhaust. Only the AP half had a
+## passthrough, so the Credit half could not be driven even once a caller existed.
+func open_credits_preview(projected_credits: int, affordable: bool) -> void:
+	if _credits_counter != null:
+		_credits_counter.open_preview(projected_credits, affordable)
+
+
+## Closes the Credits-counter preview echo.
+func close_credits_preview() -> void:
+	if _credits_counter != null:
+		_credits_counter.close_preview()
 
 
 ## Guarded cleanup: the on-board glyph layer is parented to the board (not this

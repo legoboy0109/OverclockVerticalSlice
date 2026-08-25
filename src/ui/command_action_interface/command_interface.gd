@@ -585,6 +585,39 @@ static func _trigger_for_preview(target_state: CommandFSM.State) -> CommandFSM.T
 			return CommandFSM.Trigger.PICK_MOVE
 
 
+## Enters the PLAYER-LEVEL build placement preview
+## ([constant CommandFSM.State.PREVIEW_BUILD]) — the one preview with no acting
+## entity (CR-5: Build belongs to the player, not to a selection), which is why it
+## cannot go through [method enter_preview] and needs its own entry point.
+##
+## [b]This was missing entirely until 2026-08-24.[/b] The action menu's Build flow
+## painted its own legal-tile overlay and held its own pending type, but never drove
+## the FSM, so [code]fsm_state()[/code] stayed [constant CommandFSM.State.IDLE]
+## throughout — and every consumer that switches on it (the commit router, the
+## cost-preview echo) silently took its default branch. Clicking a highlighted build
+## tile tried to SELECT rather than to build. The GDD's States table has always
+## listed [code]IDLE + Player-level Build command -> PREVIEW_BUILD[/code]; nothing
+## fired the trigger.
+##
+## Clears the Move/Attack tier sets and repaints: a build preview owns the overlay
+## while it is open, and a leftover reachable set would draw underneath it. Callers
+## paint their own legal-tile overlay AFTER this returns, never before.
+##
+## Returns whether the interface is now in [constant CommandFSM.State.PREVIEW_BUILD]
+## — false from [constant CommandFSM.State.GAME_OVER], which is absorbing.
+func enter_build_preview(state: GameState) -> bool:
+	if _fsm_state == CommandFSM.State.GAME_OVER:
+		return false
+	_fsm_state = CommandFSM.next_state(
+		_fsm_state, CommandFSM.Trigger.PICK_BUILD_CMD, state
+	)
+	_reachable.clear()
+	_targets.clear()
+	_after_move_attackable.clear()
+	_render_overlays()
+	return _fsm_state == CommandFSM.State.PREVIEW_BUILD
+
+
 ## Backs the interface out of an open preview to
 ## [constant CommandFSM.State.ENTITY_SELECTED], keeping the selection and clearing
 ## the preview's overlay. Returns whether anything was backed out of — false when

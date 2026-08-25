@@ -127,6 +127,15 @@ const FADE_IN_SEC: float = 0.15
 const FADE_OUT_SEC: float = 0.10
 const SUBMENU_FADE_SEC: float = 0.12
 
+## What [constant CommandFSM.Verb.CANCEL_BUILD]'s row says once it is ARMED and one
+## more activation will destroy the structure. See [method _on_verb_row_pressed]
+## for why that verb alone takes two presses.
+const CONFIRM_LABEL: String = "Confirm cancel"
+
+## The armed row's right-hand column — it replaces the shortcut hint, because the
+## only thing worth saying at that moment is what the next press does.
+const CONFIRM_HINT: String = "destroys it"
+
 ## Verb labels. Held here rather than on [CommandFSM] because they are
 ## player-facing copy owned by the UX spec, and [CommandFSM] is pure logic that no
 ## localisation pass should ever have to open.
@@ -220,6 +229,13 @@ var _entity_id: int = -1
 ## [method open] then fades in from a half-finished alpha.
 var _fade: Tween = null
 
+## The [enum CommandFSM.Verb] currently ARMED — one further activation commits it.
+## -1 when nothing is armed, which is almost always.
+##
+## Only [constant CommandFSM.Verb.CANCEL_BUILD] ever arms. See
+## [method _on_verb_row_pressed].
+var _armed_verb: int = -1
+
 
 func _init() -> void:
 	# The menu is a positioned overlay, not a laid-out child: it sets its own
@@ -267,12 +283,17 @@ func is_submenu_open() -> bool:
 func open(state: GameState, entity: EntityState, anchor_screen: Vector2, \
 		tile_width_px: float) -> void:
 	_entity_id = entity.entity_id if entity != null else -1
+	_armed_verb = -1 # a re-filtered menu is a fresh decision, never a half-made one.
 	_picker_only = false
 	_anchor = anchor_screen
 	_tile_width_px = tile_width_px
 	_close_submenu()
 	_build_plate()
-	_fill_rows(CommandFSM.menu_model(state, entity), CommandFSM.produce_options(state, entity))
+	_fill_rows(
+		CommandFSM.menu_model(state, entity),
+		CommandFSM.produce_options(state, entity),
+		_refund_text(state, entity)
+	)
 	_reposition()
 	_show_with_fade()
 	_focus_first_enabled()
@@ -296,6 +317,7 @@ func close() -> void:
 		return
 	_close_submenu()
 	_picker_only = false
+	_armed_verb = -1
 	_entity_id = -1
 	if _plate != null:
 		_plate.visible = true
@@ -318,6 +340,13 @@ func close() -> void:
 ## and the caller is free to treat the same key as Pause
 ## (`design/ux/action-menu.md`, decision 1).
 func back_out() -> bool:
+	# ★ An armed destructive verb disarms FIRST, and consumes the press doing it.
+	# Backing out of "are you sure" must mean "no" — not "yes, and also close the
+	# menu", and not "ignore that and deselect", which would leave the player
+	# unsure whether they had just destroyed something.
+	if _armed_verb != -1:
+		_disarm()
+		return true
 	if is_submenu_open():
 		_close_submenu()
 		_focus_first_enabled()
@@ -374,7 +403,7 @@ func _plate_style() -> StyleBoxFlat:
 ## because of the SITUATION is informative; a verb that is disabled because it
 ## does not apply to this KIND of entity is noise.
 func _fill_rows(model: Array[CommandFSM.VerbEntry], \
-		produce_options: Array[CommandFSM.ProduceOption]) -> void:
+		produce_options: Array[CommandFSM.ProduceOption], refund: String = "") -> void:
 	var items: Array[Dictionary] = []
 	for entry: CommandFSM.VerbEntry in model:
 		if entry.verb == CommandFSM.Verb.CANCEL_BUILD and not entry.enabled:
@@ -386,6 +415,11 @@ func _fill_rows(model: Array[CommandFSM.VerbEntry], \
 			# ASCII ">" rather than a triangle: the fallback font has no glyph for
 			# one and would draw a tofu box.
 			right = "> " + _shortcut_for(entry.verb)
+		elif entry.verb == CommandFSM.Verb.CANCEL_BUILD:
+			# The refund shows BEFORE either press, not after — the
+			# Hold-to-Confirm Refund pattern's "see the cost before you commit"
+			# promise, applied to a negative-outcome action.
+			right = refund
 		else:
 			right = _shortcut_for(entry.verb)
 		items.append({
@@ -394,6 +428,7 @@ func _fill_rows(model: Array[CommandFSM.VerbEntry], \
 			"enabled": entry.enabled,
 			"is_reason": not entry.enabled,
 			"on_press": _on_verb_row_pressed.bind(entry.verb, produce_options),
+			"verb": entry.verb,
 		})
 	_fill(_rows_box, items)
 
@@ -414,6 +449,10 @@ func _fill(box: VBoxContainer, items: Array[Dictionary]) -> void:
 			item["label"], item["right"], item["enabled"], item["is_reason"]
 		)
 		row.pressed.connect(item["on_press"])
+		# Tagged so _row_for can find a row whose LABEL has changed (an armed
+		# destructive verb no longer reads as its own name).
+		row.set_meta(&"verb", item.get("verb", -1))
+		row.set_meta(&"right", item["right"]) # what _disarm restores.
 		box.add_child(row)
 		rows.append(row)
 		widest = maxf(widest, _row_width(row, item["label"], item["right"]))
@@ -432,6 +471,21 @@ static func _cost_text(credit_cost: int, ap_cost: int, enabled: bool, reason: in
 	if not enabled:
 		text += "  " + reason_text(reason)
 	return text
+
+
+## The Cancel Build row's right-hand column: what the player gets back. Empty for
+## anything that is not an owned under-construction structure, which is every
+## entity whose row would have been dropped anyway.
+##
+## Read through [method CommandFSM.cancel_build_preview] — the same Pass-Through
+## query the FSM uses — never off the structure type's own cost field.
+static func _refund_text(state: GameState, entity: EntityState) -> String:
+	if not (entity is StructureState):
+		return ""
+	var structure: StructureState = entity
+	if structure.build_status != StructureState.BuildStatus.UNDER_CONSTRUCTION:
+		return ""
+	return "+%d AP back" % CommandFSM.cancel_build_preview(state, structure)
 
 
 ## Builds one row. [param is_reason] switches the right-hand column's colour from
@@ -758,16 +812,102 @@ func _on_verb_row_pressed(verb: int, produce_options: Array[CommandFSM.ProduceOp
 			# Produce chooses nothing by itself — a produce order without a type is
 			# not an order. The row opens the submenu and the SUBMENU commits.
 			_open_submenu(produce_options)
+		CommandFSM.Verb.CANCEL_BUILD:
+			# ★ Two presses, not one (`design/ux/action-menu.md` decision 5).
+			#
+			# `interaction-patterns.md`'s [i]Hold-to-Confirm Refund[/i] governs this
+			# verb: destroying an in-progress build for a partial refund has no undo,
+			# and the pattern's own "when NOT to use Standard Cancel" clause names it
+			# explicitly. A single-activation menu row is exactly the mis-click the
+			# pattern exists to prevent.
+			#
+			# The gate here is ARM-THEN-CONFIRM rather than press-and-hold, and that
+			# is deliberate: `accessibility-requirements.md` carries an open
+			# Standard-tier commitment for a toggle alternative to that hold ("first
+			# press arms, second confirms"), because a sustained press is a motor
+			# requirement some players cannot meet. A menu row is the natural home for
+			# it — so this satisfies the pattern and closes the accessibility item
+			# with one mechanism instead of two.
+			#
+			# Double-click-proof in the same way the hold is: the row RELABELS on the
+			# first press, so a double-click's second press lands on a button that now
+			# reads "Confirm cancel" — the player sees what they are about to do even
+			# if they do not stop in time. The refund is already visible on the row
+			# before either press.
+			if _armed_verb == verb:
+				close()
+				verb_chosen.emit(verb)
+			else:
+				_arm(verb)
 		CommandFSM.Verb.WAIT:
 			close()
 			waited.emit()
 		_:
-			# Move / Attack / Cancel Build hand off to the caller, which enters the
-			# matching preview. The menu hides itself first: the preview it is about
-			# to open paints the board, and a plate floating over that overlay would
-			# compete with the very thing the player now has to read.
+			# Move / Attack hand off to the caller, which enters the matching preview.
+			# The menu hides itself first: the preview it is about to open paints the
+			# board, and a plate floating over that overlay would compete with the
+			# very thing the player now has to read.
+			_disarm() # picking a different verb abandons any armed one.
 			close()
 			verb_chosen.emit(verb)
+
+
+## Arms [param verb]: relabels its row so the next activation reads as the
+## destructive act it is, and keeps focus on it so a keyboard player confirms
+## without having to re-find the row.
+func _arm(verb: int) -> void:
+	_armed_verb = verb
+	var row: Button = _row_for(verb)
+	if row == null:
+		return
+	row.text = CONFIRM_LABEL
+	for child: Node in row.get_children():
+		if child is Label:
+			(child as Label).text = CONFIRM_HINT
+			(child as Label).add_theme_color_override("font_color", REASON)
+	row.grab_focus()
+	# Arrowing away from an armed row abandons the confirmation. A destructive verb
+	# left armed while the player is looking at something else is a trap: the next
+	# Enter would fire it from a row they are no longer thinking about.
+	if not row.focus_exited.is_connected(_disarm):
+		row.focus_exited.connect(_disarm, CONNECT_ONE_SHOT)
+
+
+## Cancels any armed verb and puts its row back the way it was. Safe to call when
+## nothing is armed.
+func _disarm() -> void:
+	if _armed_verb == -1:
+		return
+	var row: Button = _row_for(_armed_verb)
+	var verb: int = _armed_verb
+	_armed_verb = -1
+	if row == null:
+		return
+	row.text = VERB_LABELS.get(verb, "?")
+	for child: Node in row.get_children():
+		if child is Label:
+			# Restores the REFUND for Cancel Build (its right column is the refund,
+			# never a shortcut) and the shortcut for anything else that could arm.
+			(child as Label).text = row.get_meta(&"right", "")
+			(child as Label).add_theme_color_override("font_color", HINT)
+
+
+## Whether [param verb]'s row is armed and one press from committing. Public so a
+## test can assert the two-press gate without reaching into the node tree.
+func is_armed(verb: int) -> bool:
+	return _armed_verb == verb
+
+
+## The top-level row carrying [param verb], or null. Matched on the verb its
+## [signal Button.pressed] handler was bound to rather than on its label, because
+## an armed row's label is deliberately not its verb's name any more.
+func _row_for(verb: int) -> Button:
+	if _rows_box == null:
+		return null
+	for child: Node in _rows_box.get_children():
+		if child is Button and (child as Button).get_meta(&"verb", -1) == verb:
+			return child
+	return null
 
 
 ## A submenu type row was activated.

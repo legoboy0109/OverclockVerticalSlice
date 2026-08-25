@@ -342,8 +342,15 @@ This library catalogs the reusable interaction patterns for OVERCLOCK's in-match
 | AP counter fill-flourish | turn start, AP unspent | Slow, low-amplitude breathe loop | TBD (art bible) | Snap, Never Tween |
 | Hold-to-Confirm Refund threshold | press-and-hold begins | Fixed hold duration; release before threshold aborts with no partial effect | TBD (config value) | Hold-to-Confirm Refund |
 | hp-pip drain | damage taken (pip mode) | One pip removed per point of damage, no partial-pip animation | **Locked** (discrete, by design) | Pip-vs-Numeric Display Branch |
+| Contextual action menu open | selection opens the menu | Fade in 150ms, no translation ("fades in and doesn't move", command-action-interface.md) | **Locked** | Standard Button / action-menu.md |
+| Contextual action menu close | verb picked, back-out, or deselect | Fade out 100ms | TBD (feel value) | action-menu.md |
+| Produce/Build option submenu open | a picker row or verb opens the list | Fade in 120ms | TBD (feel value) | action-menu.md |
+| Parent plate dim behind a submenu | submenu opens | 120ms to 55% opacity | TBD (feel value) | action-menu.md |
+| Menu keyboard-focus move | directional input inside a menu | Zero-duration — focus must never lag input | **Locked** (zero, by design) | Three-State Focus Indicator |
 
 All non-locked rows are intentionally left as "TBD" — this table exists so every unlocked timing value lives in one place instead of scattered across pattern entries; it does not invent numbers this session has no authority to set.
+
+★ **2026-08-24**: the five action-menu rows were added here after `/ux-review` found them specified only inside `design/ux/action-menu.md` — exactly the scattering this table exists to prevent. The 150ms open is **Locked** because `command-action-interface.md`'s Visual/Audio section already fixed it ("action menu fades in (150ms) and doesn't move"); the other three durations are the implementation's working values and are marked TBD until a feel pass says otherwise. **Every duration here collapses to zero under `GameSettings.reduced_motion`** — none of them carries information, so switching them off loses polish and nothing else.
 
 ---
 

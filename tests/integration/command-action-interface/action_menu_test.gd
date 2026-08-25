@@ -442,6 +442,139 @@ func test_wait_and_dismissal_stay_distinct_signals() -> void:
 
 
 # ==============================================================================
+# Cancel Build's two-press gate — interaction-patterns.md Hold-to-Confirm Refund,
+# and accessibility-requirements.md's Standard-tier hold-alternative commitment
+# ==============================================================================
+
+func _place_under_construction(state: GameState, id: int, owner: int, pos: Vector2i) -> StructureState:
+	var type := StructureTypeDef.new()
+	type.display_name = "Site"
+	type.hp = 20
+	type.build_cost = 6
+	type.build_time = 3
+	var structure := StructureState.new()
+	structure.entity_id = id
+	structure.owner = owner
+	structure.position = pos
+	structure.type = type
+	structure.current_hp = type.hp
+	structure.build_status = StructureState.BuildStatus.UNDER_CONSTRUCTION
+	structure.build_turns_remaining = 2
+	state.entities_by_id[id] = structure
+	state.grid.occupancy[state.grid.index(pos.x, pos.y)] = id
+	return structure
+
+
+func test_cancel_build_arms_on_the_first_press_and_commits_on_the_second() -> void:
+	# ★ The pattern library reserves destructive refund actions for a stronger gate
+	# than Standard Cancel — a single-activation row is precisely the mis-click
+	# Hold-to-Confirm Refund exists to prevent. The gate here is arm-then-confirm
+	# rather than press-and-hold because accessibility-requirements.md commits, at
+	# Standard tier, to a toggle alternative to that hold for players who cannot
+	# sustain a press.
+	var state := _make_state()
+	var site := _place_under_construction(state, 5, 0, Vector2i(4, 4))
+	var menu := _make_menu()
+	var chosen: Array[int] = []
+	menu.verb_chosen.connect(func(v: int) -> void: chosen.append(v))
+
+	menu.open(state, site, Vector2(400, 400), 128.0)
+	var row: Button = _row_named(menu, "Cancel Build")
+	assert_object(row).override_failure_message(
+		"an owned under-construction structure must offer Cancel Build"
+	).is_not_null()
+
+	# First press ARMS. Nothing is destroyed.
+	row.emit_signal("pressed")
+	assert_bool(menu.is_armed(CommandFSM.Verb.CANCEL_BUILD)).is_true()
+	assert_int(chosen.size()).override_failure_message(
+		"the first press must not commit — that is the whole gate"
+	).is_equal(0)
+	assert_bool(menu.is_open()).is_true()
+
+	# Second press COMMITS.
+	_row_named(menu, ActionMenu.CONFIRM_LABEL).emit_signal("pressed")
+	assert_int(chosen.size()).is_equal(1)
+	assert_int(chosen[0]).is_equal(CommandFSM.Verb.CANCEL_BUILD)
+
+
+func test_the_armed_row_relabels_so_a_double_click_lands_on_a_changed_button() -> void:
+	# How this stays double-click-proof without a hold: the second click of a
+	# double-click arrives at a button that no longer says "Cancel Build". The
+	# player sees what they are about to do even if they cannot stop in time.
+	var state := _make_state()
+	var site := _place_under_construction(state, 5, 0, Vector2i(4, 4))
+	var menu := _make_menu()
+
+	menu.open(state, site, Vector2(400, 400), 128.0)
+	_row_named(menu, "Cancel Build").emit_signal("pressed")
+
+	assert_object(_row_named(menu, "Cancel Build")).override_failure_message(
+		"the armed row must stop reading as its own verb name"
+	).is_null()
+	assert_object(_row_named(menu, ActionMenu.CONFIRM_LABEL)).is_not_null()
+
+
+func test_backing_out_of_an_armed_row_means_no_and_consumes_the_press() -> void:
+	# ★ Backing out of "are you sure" must mean "no" — not "no, and also close the
+	# menu", which would leave the player unsure whether they had just destroyed
+	# something.
+	var state := _make_state()
+	var site := _place_under_construction(state, 5, 0, Vector2i(4, 4))
+	var menu := _make_menu()
+	var chosen: Array[int] = []
+	var dismissals: Array[int] = []
+	menu.verb_chosen.connect(func(v: int) -> void: chosen.append(v))
+	menu.dismissed.connect(func() -> void: dismissals.append(1))
+
+	menu.open(state, site, Vector2(400, 400), 128.0)
+	_row_named(menu, "Cancel Build").emit_signal("pressed")
+
+	assert_bool(menu.back_out()).is_true()
+	assert_bool(menu.is_armed(CommandFSM.Verb.CANCEL_BUILD)).is_false()
+	assert_int(chosen.size()).is_equal(0)
+	assert_int(dismissals.size()).override_failure_message(
+		"disarming must not also dismiss the menu — that is two undos for one press"
+	).is_equal(0)
+	assert_bool(menu.is_open()).is_true()
+	assert_object(_row_named(menu, "Cancel Build")).override_failure_message(
+		"the row must go back to reading as itself once disarmed"
+	).is_not_null()
+
+
+func test_the_refund_is_shown_before_either_press_not_after() -> void:
+	# The pattern's "see the cost before you commit" promise, applied to a
+	# negative-outcome action: the player must know what they get back while
+	# deciding, not once the structure is already gone.
+	var state := _make_state()
+	var site := _place_under_construction(state, 5, 0, Vector2i(4, 4))
+	var menu := _make_menu()
+
+	menu.open(state, site, Vector2(400, 400), 128.0)
+
+	var refund: int = CommandFSM.cancel_build_preview(state, site)
+	assert_str(_hint_of(_row_named(menu, "Cancel Build"))).override_failure_message(
+		"the Cancel Build row must state the refund up front"
+	).contains(str(refund))
+
+
+func test_choosing_a_different_verb_abandons_an_armed_cancel() -> void:
+	# A half-made destructive decision must not survive the player moving on.
+	var state := _make_state()
+	var site := _place_under_construction(state, 5, 0, Vector2i(4, 4))
+	var menu := _make_menu()
+	var chosen: Array[int] = []
+	menu.verb_chosen.connect(func(v: int) -> void: chosen.append(v))
+
+	menu.open(state, site, Vector2(400, 400), 128.0)
+	_row_named(menu, "Cancel Build").emit_signal("pressed")
+	_row_named(menu, "Wait").emit_signal("pressed")
+
+	assert_bool(menu.is_armed(CommandFSM.Verb.CANCEL_BUILD)).is_false()
+	assert_bool(chosen.has(CommandFSM.Verb.CANCEL_BUILD)).is_false()
+
+
+# ==============================================================================
 # The player-level Build picker (CR-5)
 # ==============================================================================
 

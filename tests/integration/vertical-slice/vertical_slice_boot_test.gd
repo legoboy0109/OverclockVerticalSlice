@@ -546,6 +546,131 @@ func test_status_legend_no_longer_names_the_retired_cycle_bindings() -> void:
 	assert_bool(InputMap.has_action(&"board_attack")).is_true()
 
 
+func test_opening_a_move_preview_shows_the_projected_ap_on_the_counter() -> void:
+	# ★ 2026-08-24 (/ux-review blocking finding 4). command-action-interface.md D-1
+	# requires `projected_remaining_ap` to render inline on the HUD's AP counter as
+	# `current -> projected`, and game-hud.md records that seam as RESOLVED. It was
+	# resolved on paper only: GameHud.open_ap_preview() had no production caller in
+	# the entire codebase — just its own unit test — so the projected-cost readout
+	# the GDD promises had never once been shown to a player. Entering a preview
+	# from the action menu is exactly when it should fire.
+	var root := _make_root()
+	var state := root.state()
+	state.per_player[0].current_ap = 20
+	_place_unit(state, 10, 0, Vector2i(5, 5), UnitTypes.TROOPER)
+
+	_move_cursor_to(root, Vector2i(5, 5))
+	assert_bool(root.select_at_cursor()).is_true()
+	assert_bool(root.open_verb_preview(CommandFSM.Verb.MOVE)).is_true()
+	# Step onto a neighbouring reachable tile — a move's price is per-tile, so the
+	# echo only means anything once the cursor is somewhere it could actually go.
+	_move_cursor_to(root, Vector2i(5, 6))
+
+	var counter: ApCounterWidget = root.hud().ap_counter()
+	assert_bool(counter.showing_echo()).override_failure_message(
+		"entering a move preview must open the AP counter's current -> projected echo"
+	).is_true()
+	var reach: Movement.ReachableTile = root.command_interface().get_reachable_tile(Vector2i(5, 6))
+	assert_object(reach).is_not_null()
+	assert_int(counter.projected_value()).override_failure_message(
+		"the projection must be CommandFSM's, not a local subtraction"
+	).is_equal(CommandFSM.projected_remaining_ap(state, 0, reach.min_cost))
+
+
+func test_backing_out_of_a_preview_clears_the_projection() -> void:
+	# ★ A stale projection is worse than none: it sits on the counter claiming AP
+	# the player still has. Backing out is one of six paths that must clear it,
+	# which is why the slice recomputes from state rather than pairing open/close
+	# calls at each verb.
+	var root := _make_root()
+	var state := root.state()
+	state.per_player[0].current_ap = 20
+	_place_unit(state, 10, 0, Vector2i(5, 5), UnitTypes.TROOPER)
+
+	_move_cursor_to(root, Vector2i(5, 5))
+	root.select_at_cursor()
+	root.open_verb_preview(CommandFSM.Verb.MOVE)
+	_move_cursor_to(root, Vector2i(5, 6))
+	assert_bool(root.hud().ap_counter().showing_echo()).is_true()
+
+	root.back_out()
+
+	assert_bool(root.hud().ap_counter().showing_echo()).override_failure_message(
+		"the echo outlived the preview it was pricing"
+	).is_false()
+
+
+func test_an_economic_preview_prices_BOTH_pools_at_once() -> void:
+	# ★ D-1b: Build and Produce spend Credits AND AP, and a player shown only one
+	# of them cannot tell which pool the purchase will exhaust. The Credits half of
+	# this seam had no passthrough on GameHud at all until this was wired.
+	var root := _make_root()
+	var state := root.state()
+	state.per_player[0].current_ap = 20
+	state.per_player[0].current_credits = 5000
+	var type: StructureTypeDef = root.selected_buildable()
+
+	root.begin_build_preview(type)
+
+	var ap: ApCounterWidget = root.hud().ap_counter()
+	var credits: CreditsCounterWidget = root.hud().credits_counter()
+	assert_bool(ap.showing_echo()).is_true()
+	assert_bool(credits.showing_echo()).override_failure_message(
+		"an economic preview must price the Credit pool alongside the AP pool"
+	).is_true()
+	assert_int(credits.projected_value()).is_equal(
+		5000 - BaseProduction.effective_build_cost(state, type, 0)
+	)
+
+
+func test_a_move_preview_leaves_the_credit_counter_alone() -> void:
+	# The complement: Move and Attack are AP-only, so an echo reading
+	# "1000 -> 1000" on the Credit counter would be noise pretending to be
+	# information.
+	var root := _make_root()
+	var state := root.state()
+	state.per_player[0].current_ap = 20
+	_place_unit(state, 10, 0, Vector2i(5, 5), UnitTypes.TROOPER)
+
+	_move_cursor_to(root, Vector2i(5, 5))
+	root.select_at_cursor()
+	root.open_verb_preview(CommandFSM.Verb.MOVE)
+	_move_cursor_to(root, Vector2i(5, 6))
+
+	assert_bool(root.hud().credits_counter().showing_echo()).is_false()
+
+
+func test_the_menu_driven_build_flow_actually_commits_at_the_cursor() -> void:
+	# ★ REGRESSION, found 2026-08-24 by the /ux-review cost-echo work. The
+	# menu-driven Build flow painted its legal-tile overlay and held its pending
+	# type, but never drove the FSM into PREVIEW_BUILD — so fsm_state stayed IDLE,
+	# commit_at_cursor's match fell through to its "nothing previewed, so select
+	# what is under the cursor" default, and confirming on a highlighted build tile
+	# silently did nothing. The old direct request_build_at_cursor() path still
+	# worked, which is why every existing build test passed over the defect.
+	var root := _make_root()
+	var state := root.state()
+	state.per_player[0].current_ap = 20
+	state.per_player[0].current_credits = 5000
+	var type: StructureTypeDef = root.selected_buildable()
+
+	root.begin_build_preview(type)
+	assert_int(root.command_interface().fsm_state()).override_failure_message(
+		"begin_build_preview must put the interface INTO the build preview state"
+	).is_equal(CommandFSM.State.PREVIEW_BUILD)
+
+	var legal: Array[Vector2i] = GameStateReader.new(state).legal_build_tiles(0, type)
+	assert_bool(legal.is_empty()).is_false()
+	_move_cursor_to(root, legal[0])
+	var before: int = state.entities().size()
+
+	assert_bool(root.commit_at_cursor()).override_failure_message(
+		"confirming on a highlighted build tile must place the structure"
+	).is_true()
+	assert_int(state.entities().size()).is_equal(before + 1)
+	assert_bool(state.entity_at(legal[0]) is StructureState).is_true()
+
+
 func test_camera_frames_the_whole_board_within_the_view() -> void:
 	# The fit-to-board camera must show every board tile at boot (regression for the
 	# "board off-screen / window too small" report — old fixed zoom 2.0 clipped it).

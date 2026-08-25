@@ -1,6 +1,10 @@
 # UX Spec: Contextual Action Menu
 
-> **Status**: Draft — awaiting `/ux-review`
+> **Status**: Reviewed — **revised 2026-08-24** after `/ux-review` found 6 blocking issues; all 6
+> resolved (pattern-library conformance, Cancel Build's confirmation gate, registered animation
+> timings, the AP/Credit projected-cost echo, the phantom lock glyph, and the missing
+> performance/resolution criteria). ⚠ The review was a **self-audit by the spec's own author** —
+> an independent pass would carry more weight.
 > **Author**: main session, from `design/gdd/command-action-interface.md` + four user decisions (2026-08-24)
 > **Last Updated**: 2026-08-24
 > **Journey Phase(s)**: Core in-match loop — every AP-costed action passes through this surface
@@ -130,13 +134,37 @@ only placement that reads as belonging to its button.
 
 ### Component inventory
 
-| Component | Purpose |
-|---|---|
-| Menu plate | `HudPanel` palette (`BACKING` / `BORDER`) so it reads as the same HUD, not as OS chrome |
-| Verb row | Label + shortcut hint; enabled rows are focusable buttons |
-| Disabled verb row | Same row, greyscale label + lock glyph + reason text (interaction-patterns.md item 8) |
-| Submenu plate | Second plate, same palette, listing produce options with dual costs |
-| Focus indicator | Distinct from mouse-hover — see Accessibility, this is the Godot 4.6 dual-focus case |
+| Component | Purpose | Pattern |
+|---|---|---|
+| Menu plate | `HudPanel` palette (`BACKING` / `BORDER`) so it reads as the same HUD, not as OS chrome | — (chrome, not interaction) |
+| Verb row | Label + shortcut hint; enabled rows are focusable buttons | **Standard Button** |
+| Disabled verb row | Same row, dimmed label + reason text; visible, never hidden, never recoloured | **Affordability Dimming** |
+| Cancel Build row | Shows the refund up front; arms on first activation, commits on second | **Hold-to-Confirm Refund** (toggle variant — see decision 5) |
+| Submenu plate | Second plate, same palette, listing produce/build options with dual costs | **Standard Button** + **Affordability Dimming** |
+| Focus indicator | Engine-native focus ring, a distinct `StyleBox` from hover | **Three-State Focus Indicator** |
+| Back-out | Right-click / ESC / pad B, one level per press | **Standard Cancel** |
+
+### Pattern library conformance
+
+This surface **invents no new interaction patterns**. Every component above composes existing
+entries in `design/ux/interaction-patterns.md`, which is where their behaviour is specified — this
+spec states only what is *particular to the action menu* and does not restate them.
+
+Three consequences worth being explicit about, because each is a place this spec could have drifted:
+
+- **`Standard Button` says inert controls must not be dropped from keyboard traversal
+  "silently"** — it defers the skip-or-not choice to the consuming pattern. This spec makes that
+  choice explicitly: **disabled rows are visible but not focusable** (AC-5). Traversal stops only
+  where something can happen; the reason is rendered inline so it is readable without focusing it.
+- **`Affordability Dimming` forbids a hue-based unavailability signal.** Disabled rows are dimmed
+  and carry words. Nothing is recoloured red, and there is no lock glyph — see the Accessibility
+  note on why.
+- **`Snap, Never Tween` is not violated by the menu's fade.** That pattern governs *numeric and
+  discrete-state displays* (a value that changed must jump, not count). A panel appearing is not a
+  value changing, and `command-action-interface.md` independently specifies the 150ms fade.
+
+All four of this surface's durations are registered in the pattern library's **Animation Standards**
+table rather than living only here.
 
 ### ASCII wireframe — unit selected, all verbs live
 
@@ -182,7 +210,7 @@ A disabled produce row names **the binding pool** — "needs Credits" or "needs 
 |---|---|
 | **Opening** | 150ms fade-in, no movement (CR: "fades in and doesn't move") |
 | **Open, verb focused** | Focused row carries the keyboard-focus treatment; mouse-hover carries its own, separately |
-| **Row disabled** | Greyscale + lock glyph + reason; visible, **not focusable** |
+| **Row disabled** | Dimmed label + reason text; visible, **not focusable** (*Affordability Dimming*) |
 | **Submenu open** | Parent plate dims to 55%; submenu takes focus |
 | **Preview active** | Menu hidden entirely — the board is the surface now, and the menu would compete with the overlay it just opened |
 | **Input locked** (post-commit debounce, `input_lock_ms`) | Menu visible, rows inert; no visual change — the window is 120ms and a flicker would read as a fault |
@@ -209,12 +237,17 @@ the whole point of CR-4, and it is what lets a player learn the rules from the i
 
 ### Four decisions this spec makes, because the GDD did not
 
-**1 — Esc backs out first, and only pauses when there is nothing to back out of.**
-The GDD's input table says "Cancel / back-out: Right-click **or** ESC". `pause.md` later claimed Esc
-for the pause overlay. Both are right about their own screen, and the collision is real. Resolution:
-Esc backs out one level (preview → menu → deselect); when the interface is already IDLE with nothing
-selected, Esc opens pause. This is the near-universal convention and it makes the destructive
-reading — pausing when the player meant to cancel — impossible.
+**1 — Esc opens pause only when there is nothing to back out of.**
+*Only the pause fallback is new here.* The step-one-level-at-a-time behaviour is already locked by
+the **Standard Cancel** pattern ("exits exactly one level — a live preview backs out to the
+contextual menu; the menu backs out to no-selection… it never skips levels"), and this spec follows
+it unchanged.
+
+What no document resolved is the key collision: the GDD's input table binds back-out to
+right-click **or ESC**, and `pause.md` later bound pause to ESC. Both are right about their own
+surface. Resolution: back-out is attempted first and *reports whether it consumed the press*; pause
+opens only when it did not. That makes the destructive reading — pausing when the player meant to
+cancel — impossible, and it needs no new binding.
 
 **2 — The two type-cycle bindings are retired, not rebound.**
 `board_build_cycle` ([C]/LB) and `board_produce_cycle` ([V]/RB) exist only because there was no way
@@ -228,6 +261,24 @@ Today one binding means "move or attack, whichever the cursor tile supports", wh
 interface makes on the player's behalf and cannot explain. Two verbs on the menu need two
 accelerators. `board_act` keeps its identity as **Move** (relabelled), and a new `board_attack`
 joins the rebindable set.
+
+**5 — Cancel Build takes two presses: arm, then confirm.**
+`interaction-patterns.md`'s **Hold-to-Confirm Refund** governs this verb by name — destroying an
+in-progress build for a partial refund has no undo, and `Standard Cancel`'s own *when NOT to use*
+clause points at it. A single-activation menu row is precisely the mis-click that pattern exists to
+prevent, so the row does not commit on first press.
+
+The gate is **arm-then-confirm** rather than press-and-hold, and that substitution is the point:
+`design/accessibility-requirements.md` carries an open Standard-tier commitment for a toggle
+alternative to that hold ("first press arms, second confirms"), because a sustained press is a motor
+requirement some players cannot meet. A menu row is the natural home for it — so one mechanism
+satisfies the pattern *and* closes the accessibility item, instead of shipping a hold and then
+retrofitting an alternative to it.
+
+It stays double-click-proof the same way the hold does: the row **relabels** on the first press, so
+a double-click's second press lands on a button that now reads "Confirm cancel". The refund is shown
+on the row before either press, per the pattern's "see the cost before you commit" promise. Arrowing
+away, backing out, or picking any other verb all disarm it.
 
 **4 — Wait deselects; it does not mark the entity done.**
 The GDD says Wait "ends this entity's involvement without spending". There is no `WaitAction` and no
@@ -277,6 +328,9 @@ information through motion alone, so that costs no meaning.
 | Verb labels and reason wording | This spec's tables, held in the widget | Localisation-ready strings, no concatenated fragments |
 | The entity's screen anchor | `BoardRenderer.grid_to_screen` via the camera transform | Same anchor the sprite uses |
 | Shortcut glyph per verb | `InputMap` / `GameSettings` bindings | Must reflect a **rebound** key, never a hardcoded letter |
+| Projected AP after the previewed action | `CommandFSM.projected_remaining_ap(state, player, cost)` | Never a local subtraction — the counter and the FSM must not be able to disagree |
+| Projected Credits after an economic action | `Credits.current_credits` − the action's Credit cost | Shown **only** for Build/Produce; an unchanged `1000 → 1000` on Move would be noise |
+| The refund a Cancel Build would return | `CommandFSM.cancel_build_preview(state, structure)` | Rendered on the row **before** either press |
 
 ---
 
@@ -292,8 +346,14 @@ information through motion alone, so that costs no meaning.
 - **Disabled rows are visible but not focusable.** Focus stops only on rows that do something —
   the same treatment the Settings screen's reset buttons use. The reason text is rendered inline on
   the row, so it is readable without focusing it.
-- **Colour is never the only signal.** A disabled row carries greyscale *and* a lock glyph *and*
-  words. Affordability in the submenu is text, not a red tint.
+- **Colour is never the only signal.** A disabled row carries dimming *and words* — the reason is
+  spelled out in text on the row. Affordability in the submenu is text, not a red tint.
+  ⚠ **No lock glyph, deliberately.** An earlier draft of this spec (and
+  `command-action-interface.md`'s Visual/Audio item 8) called for a padlock beside disabled rows.
+  The engine's fallback font has no glyph for one and renders it as a "tofu" box, so the
+  implementation does not draw it and this spec no longer claims it. The non-hue requirement is
+  still met without it: dimming and text are both independent of colour. If a padlock is wanted, it
+  needs a font that has one — an art/font decision, not a UI one.
 - **Shortcut hints render the live binding**, so a player who has remapped Move sees their key.
 - **UI scale** (`GameSettings.ui_scale`) applies — the menu is a `Control` under the same scale
   factor as the rest of the HUD.
@@ -307,7 +367,8 @@ information through motion alone, so that costs no meaning.
   reorder currency and number.
 - The plate sizes to its content, so a longer translation widens the menu rather than clipping —
   which makes the placement flip (rule 2) load-bearing in verbose languages, not decorative.
-- The lock glyph is a glyph, not a letter, and needs no translation.
+- The submenu affordance (`>`) and the disabled marker are ASCII, not letters, and need no
+  translation. There is no lock glyph to translate — see Accessibility.
 
 ---
 
@@ -323,6 +384,9 @@ information through motion alone, so that costs no meaning.
 | CR-8 / D-2 binding-pool reason | Submenu rows name Credits or AP, never "unaffordable" |
 | AC-25 move→attack fluidity | Menu re-opens re-filtered after every commit |
 | `MENU_KEYBOARD_NAV` | Full keyboard/gamepad traversal is the shipping default, not a fallback |
+| D-1 `projected_remaining_ap` inline on the HUD's AP counter, live on hover | Opened when a preview is entered and refreshed per cursor tile for Move (AC-21). ⚠ **Was unaddressed until 2026-08-24** — `GameHud.open_ap_preview()` had no production caller at all, so this "resolved" seam had never once run |
+| D-1b `projected_remaining_credits` shown **alongside** it for economic actions | Both echoes open together for Build and Produce, each reporting its own pool's affordability (AC-21) |
+| CR-6a Cancel Build's distinct destructive gesture | Arm-then-confirm on the row (decision 5), composing *Hold-to-Confirm Refund* |
 
 ---
 
@@ -347,6 +411,12 @@ information through motion alone, so that costs no meaning.
 | AC-15 | Shortcut hints render the player's current binding, not a hardcoded default | Integration |
 | AC-16 | `reduced_motion` makes every open/close/dim transition instant | Integration |
 | AC-17 | The on-screen control legend no longer names the retired cycle bindings | UI |
+| AC-18 | Cancel Build does not commit on its first activation: the row relabels and the structure survives. A second activation commits it | Integration |
+| AC-19 | Backing out of an armed Cancel Build disarms it and leaves the menu open — it does not also dismiss the menu or commit | Integration |
+| AC-20 | The Cancel Build row states the refund before either press | Integration |
+| AC-21 | Entering any preview opens the AP counter's `current → projected` echo; a Move preview updates it per cursor tile; Build and Produce open the Credit echo alongside it; leaving the preview by any route clears both | Integration |
+| AC-22 | The menu is fully on screen, overlaps no HUD panel, and clips no row at **1920×1080 and 2560×1440** — the two resolutions `technical-preferences.md` names — for the verb menu, the Produce submenu and the Build picker | UI |
+| AC-23 | The menu appears within **one frame** of the selection that opens it: no asynchronous load, no deferred build. Its 150ms fade is opacity only and never delays a row from being clickable | Integration |
 
 ---
 
@@ -363,12 +433,12 @@ the row; Attack's is a single number and could be. This spec shows costs only in
 submenu, where the number is fixed and is the deciding factor. Attack's row is left bare for
 consistency. Worth a playtest.
 
-**OQ-6 — Cancel Build skips its timed hold when reached from the menu.** Story 004 gave Cancel
-Build a bounded press-and-hold, because a bare keypress could otherwise destroy a structure by
-accident. Reaching the menu row already costs a deliberate two-step — select the structure, then
-activate a row that says "Cancel Build" — so the row commits immediately. The hold remains intact
-for any direct-input path. If playtesting shows the row is still too easy to hit, the fix is a
-confirm step on the row, not a hold on a mouse click.
+**~~OQ-6~~ — RESOLVED 2026-08-24 by `/ux-review`.** The first draft let the menu's Cancel Build row
+commit on one press, arguing that select-then-pick was gate enough. The review found that this
+contradicts **Hold-to-Confirm Refund** outright and, worse, quietly dropped a committed Standard-tier
+accessibility item. It is now arm-then-confirm — see decision 5. *Kept visible rather than deleted:
+"the two-step selection is already a confirmation" is a tempting argument and it was wrong, which is
+worth remembering.*
 
 **OQ-3 — Does the menu need a Disband row?** `DisbandAction` exists and is reachable from nothing.
 Out of scope here; named so it is not lost.

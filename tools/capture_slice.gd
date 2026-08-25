@@ -10,9 +10,27 @@ extends Node
 const OUT: String = "res://production/qa/evidence/slice-ui"
 const VIEW: Vector2i = Vector2i(1600, 900)
 
+## Override the capture resolution with `--view WxH` so the same script can
+## evidence the two resolutions technical-preferences.md names ("keep the board
+## readable at 1080p and 1440p") and .claude/rules/ui-code.md requires testing at.
+## Shots are suffixed with the size when it is not the default.
+func _view_size() -> Vector2i:
+	var args: PackedStringArray = OS.get_cmdline_user_args()
+	for i: int in args.size():
+		if args[i] == "--view" and i + 1 < args.size():
+			var parts: PackedStringArray = args[i + 1].split("x")
+			if parts.size() == 2:
+				return Vector2i(int(parts[0]), int(parts[1]))
+	return VIEW
+
+
+func _suffix() -> String:
+	var v: Vector2i = _view_size()
+	return "" if v == VIEW else "-%dx%d" % [v.x, v.y]
+
 
 func _ready() -> void:
-	get_window().size = VIEW
+	get_window().size = _view_size()
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
 	_run()
 
@@ -125,6 +143,18 @@ func _run() -> void:
 		slice.back_out()
 		await get_tree().process_frame
 
+	# --- Cancel Build's arm-then-confirm gate, and the cost echo ---------------
+	# Both are /ux-review blocking fixes: the gate the Hold-to-Confirm Refund pattern
+	# requires, and the projected-cost echo the GDD promised and nothing ever drove.
+	if slice.has_method("begin_build_preview"):
+		slice.begin_build_preview(slice.selected_buildable())
+		for i: int in 20:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		_shot("03g-build-preview-cost-echo")
+		slice.back_out()
+		await get_tree().process_frame
+
 	# --- The player-level Build picker (CR-5: it belongs to no entity) ---------
 	if slice.has_method("open_build_picker"):
 		slice.open_build_picker()
@@ -162,5 +192,6 @@ func _run() -> void:
 
 func _shot(name: String) -> void:
 	var img: Image = get_viewport().get_texture().get_image()
-	img.save_png(ProjectSettings.globalize_path("%s/%s.png" % [OUT, name]))
-	print("  wrote ", name)
+	var full: String = name + _suffix()
+	img.save_png(ProjectSettings.globalize_path("%s/%s.png" % [OUT, full]))
+	print("  wrote ", full)

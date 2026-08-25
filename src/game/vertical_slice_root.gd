@@ -687,6 +687,7 @@ func _on_action_applied(result: ActionResult) -> void:
 	# move->attack chain is one sequence and a unit that dies to a counterattack
 	# leaves no menu hanging over an empty tile.
 	_clear_placement_preview()
+	_close_cost_preview() # the projection just became the real number.
 	_open_action_menu()
 	_refresh_status() # AP/affordability/selection may have changed.
 
@@ -950,6 +951,7 @@ func move_cursor(direction: Vector2i) -> bool:
 		_refresh_status()
 	_keep_cursor_in_view() # pan the camera if the cursor nears the view edge (zoomed in).
 	_sync_cursor_highlight()
+	_refresh_cost_preview() # a move's price is per-tile — the echo follows the cursor.
 	return true
 
 
@@ -1043,11 +1045,13 @@ func _on_menu_verb_chosen(verb: int) -> void:
 			_pending_produce = null
 			_pending_build = null
 			_cmd.enter_preview(_state, entity, CommandFSM.State.PREVIEW_MOVE)
+			_refresh_cost_preview()
 			_flash_msg("Move: pick a highlighted tile. Esc to go back.")
 		CommandFSM.Verb.ATTACK:
 			_pending_produce = null
 			_pending_build = null
 			_cmd.enter_preview(_state, entity, CommandFSM.State.PREVIEW_ATTACK)
+			_refresh_cost_preview()
 			_flash_msg("Attack: pick a highlighted target. Esc to go back.")
 		CommandFSM.Verb.CANCEL_BUILD:
 			# ★ Committed directly rather than through Story 004's timed hold.
@@ -1074,6 +1078,7 @@ func _on_menu_produce_chosen(unit_type: UnitTypeDef) -> void:
 	_preview_tiles = _reader.legal_deploy_tiles(entity.entity_id, unit_type)
 	_paint_preview_tiles()
 	_snap_cursor_to_preview()
+	_refresh_cost_preview()
 	_flash_msg("Deploy %s: pick a highlighted tile. Esc to go back." % unit_type.display_name)
 
 
@@ -1115,8 +1120,15 @@ func begin_build_preview(type: StructureTypeDef) -> void:
 	_pending_build = type
 	_preview_tiles = _reader.legal_build_tiles(LOCAL_PLAYER, type)
 	_action_menu.close()
+	# ★ Drive the FSM before painting. Without this the interface stayed in IDLE for
+	# the whole build flow, so commit_at_cursor's match fell through to "select what
+	# is under the cursor" and a click on a highlighted build tile did nothing but
+	# re-select. enter_build_preview clears the overlay, so the go-tiles are painted
+	# after it, never before.
+	_cmd.enter_build_preview(_state)
 	_paint_preview_tiles()
 	_snap_cursor_to_preview()
+	_refresh_cost_preview()
 	var cost: int = BaseProduction.effective_build_cost(_state, type, LOCAL_PLAYER)
 	_flash_msg("Build %s (%d CR + %d AP): pick a highlighted tile. Esc to go back." % [
 		type.display_name, cost, Balance.economy.build_ap_cost
@@ -1157,6 +1169,98 @@ func _snap_cursor_to_preview() -> void:
 	_sync_cursor_highlight()
 
 
+## Drives the HUD counters' `current -> projected` echoes off whatever preview is
+## open and wherever the cursor is (`command-action-interface.md` D-1/D-1b, the
+## GDD's "renders on the HUD's AP counter as inline current -> projected, updating
+## live on hover").
+##
+## [b]One function rather than open/close calls scattered through every verb
+## path.[/b] The echo has to be correct after a verb is picked, after every cursor
+## step inside a preview, after a commit, after a back-out and after a deselect —
+## six callers, and any one of them forgetting to close would leave a stale
+## projection sitting on the counter claiming AP the player still has. Recomputing
+## from current state at each of those points cannot go stale.
+##
+## [b]Both pools, together, for economic verbs[/b] (D-1b): Build and Produce spend
+## Credits AND AP, and showing one without the other cannot tell the player which
+## pool a purchase will exhaust. Move and Attack are AP-only, so the Credit echo is
+## closed for them rather than shown at an unchanged value — an echo that says
+## "1000 -> 1000" is noise pretending to be information.
+func _refresh_cost_preview() -> void:
+	if _hud == null or _cmd == null or _state == null:
+		return
+	if not _cmd.is_input_live(_state):
+		_close_cost_preview()
+		return
+	var entity: EntityState = _state.entities_by_id.get(_cmd.selected_id())
+	match _cmd.fsm_state():
+		CommandFSM.State.PREVIEW_MOVE:
+			# Per-TILE, not per-verb: a move's price is whatever the cursor is
+			# currently resting on, which is exactly the number the player is
+			# deciding against. Off the reachable set there is no move to price.
+			var reach: Movement.ReachableTile = _cmd.get_reachable_tile(_cursor.grid_pos) \
+				if _cursor != null else null
+			if reach == null:
+				_close_cost_preview()
+				return
+			_show_ap_preview(reach.min_cost)
+			_hud.close_credits_preview()
+		CommandFSM.State.PREVIEW_ATTACK:
+			if entity == null or _cursor == null or _cmd.get_target(_cursor.grid_pos) == null:
+				_close_cost_preview()
+				return
+			_show_ap_preview(Combat.attack_cost_for(entity))
+			_hud.close_credits_preview()
+		CommandFSM.State.PREVIEW_PRODUCE:
+			if _pending_produce == null:
+				_close_cost_preview()
+				return
+			_show_dual_preview(
+				Balance.economy.produce_ap_cost,
+				Unit.effective_produce_cost(_state, _pending_produce, LOCAL_PLAYER)
+			)
+		CommandFSM.State.PREVIEW_BUILD:
+			if _pending_build == null:
+				_close_cost_preview()
+				return
+			_show_dual_preview(
+				Balance.economy.build_ap_cost,
+				BaseProduction.effective_build_cost(_state, _pending_build, LOCAL_PLAYER)
+			)
+		_:
+			_close_cost_preview()
+
+
+## Opens the AP echo for [param ap_cost]. The projection itself comes from
+## [method CommandFSM.projected_remaining_ap] — never a local subtraction, so the
+## number on the counter and the number the FSM would report cannot diverge.
+func _show_ap_preview(ap_cost: int) -> void:
+	_hud.open_ap_preview(
+		CommandFSM.projected_remaining_ap(_state, LOCAL_PLAYER, ap_cost),
+		AP.can_afford(_state, LOCAL_PLAYER, ap_cost)
+	)
+
+
+## Opens BOTH echoes for a dual-cost economic action (ADR-0006). Each pool reports
+## its OWN affordability, so a purchase blocked on Credits shows an unaffordable
+## Credit echo next to an affordable AP one — which is precisely CR-8's
+## "name the binding pool" rendered on the counters instead of in words.
+func _show_dual_preview(ap_cost: int, credit_cost: int) -> void:
+	_show_ap_preview(ap_cost)
+	_hud.open_credits_preview(
+		Credits.current_credits(_state, LOCAL_PLAYER) - credit_cost,
+		Credits.can_afford(_state, LOCAL_PLAYER, credit_cost)
+	)
+
+
+## Closes both echoes. Idempotent.
+func _close_cost_preview() -> void:
+	if _hud == null:
+		return
+	_hud.close_ap_preview()
+	_hud.close_credits_preview()
+
+
 ## Clears any open placement preview's held type and painted tiles. Leaves the
 ## [CommandInterface]'s own Move/Attack overlays alone — those are its to clear.
 func _clear_placement_preview() -> void:
@@ -1173,6 +1277,7 @@ func _clear_placement_preview() -> void:
 ## Wait, dismissal, clicking empty ground and backing out of the menu all land here
 ## so none of them can leave a fragment of the previous selection on screen.
 func deselect() -> void:
+	_close_cost_preview()
 	_clear_placement_preview()
 	if _action_menu != null:
 		_action_menu.close()
@@ -1197,11 +1302,13 @@ func back_out() -> bool:
 	var had_placement: bool = not _preview_tiles.is_empty()
 	_clear_placement_preview()
 	if _cmd != null and _cmd.back_out_preview(_state):
+		_close_cost_preview() # nothing is being priced any more.
 		_open_action_menu()
 		_flash = ""
 		_refresh_status()
 		return true
 	if had_placement:
+		_close_cost_preview()
 		_open_action_menu()
 		_flash = ""
 		_refresh_status()
