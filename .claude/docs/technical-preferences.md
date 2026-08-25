@@ -41,10 +41,17 @@
 > 1. **Controller glyphs.** The on-screen legend names keyboard keys (`[Arrows]`, `[Enter]`,
 >    `[Esc]`) regardless of the active device. Verified requires controller glyphs when a
 >    controller is in use. The bindings all exist (S6-17/20/23/25); only the *display* is wrong.
-> 2. **Text legibility at 1280×800.** The project's design viewport is **1600×900** and
->    `window/stretch/mode` is unset (i.e. `disabled`), so UI renders at fixed pixel sizes and
->    simply gets less room at 1280×800 — on a 7″ panel. `GameSettings.ui_scale` exists
->    (0.75–1.50, default 1.0) but nothing selects a sensible default *for the device*.
+> 2. ◐ **Text legibility at 1280×800 — partly addressed 2026-08-25 (S8-07).**
+>    `GameSettings.recommended_ui_scale()` now returns **1.15** for a floor-class display
+>    (≤1366 wide) when the player has not chosen a scale, lifting the menu's 22 px body text to
+>    ~25 px against the Standard tier's 20 px floor. It writes no override, so a player still
+>    inherits future default changes, and an explicit choice always wins.
+>    ★ **Layout is not the constraint** — the HUD was measured at 1280×800 across the full
+>    1.00–1.50 settings range with **zero plate collisions**, and
+>    `tests/integration/settings/ui_scale_floor_layout_test.gd` keeps it that way.
+>    ⛔ **Still open:** the value is reasoned, not observed. **No Deck has run this build**, so
+>    whether 1.15 is actually comfortable on a 7″ panel is unverified. Layout tolerates far more,
+>    so it can be raised on evidence without touching anything else.
 > 3. **Idle power draw.** `low_processor_usage_mode` is not set. A turn-based game renders a
 >    static board at full rate while the player thinks — on a handheld that is battery and heat
 >    spent on nothing. ⚠ **But it is not the one-line fix it looks like**: the board is never

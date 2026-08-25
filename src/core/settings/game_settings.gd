@@ -31,6 +31,41 @@ const UI_SCALE_MIN: float = 0.75
 const UI_SCALE_MAX: float = 1.50
 const UI_SCALE_DEFAULT: float = 1.0
 
+## ★ S8-07 — the UI scale applied on a floor-resolution screen when the player has not chosen one.
+##
+## The HUD was laid out against a 1600×900 design viewport and `window/stretch/mode` is unset, so
+## at 1280×800 — the Steam Deck floor (S7-08) — every element keeps its pixel size and simply has
+## less room. Nothing clips or overlaps; what a physically smaller *panel* needs is larger text.
+##
+## [b]Layout is not the constraint.[/b] Probing the real slice at 1280×800 and counting HUD-plate
+## intersections found **zero overlaps at every scale from 1.00 to 1.50** — the settings maximum.
+## The plates are edge-anchored and the status strip is centred, so they stay clear even at a
+## logical 853×533.
+##
+## ⚠ [b]An earlier draft of this constant claimed 1.10 was a measured ceiling, with 1.15 colliding.
+## That was wrong.[/b] The probe behind it filtered candidate Controls against the *physical*
+## viewport width rather than the *logical* one, so full-screen scrims and overlays — which are
+## supposed to cover everything — were counted as collisions. The number was real and the
+## conclusion was nonsense. ★ Recorded because the threshold nearly shipped with that reasoning
+## attached to it, and the reasoning is what a future reader would have trusted.
+##
+## [b]So the value is chosen for legibility, and it is PROVISIONAL.[/b] 1.15 lifts the menu's 22 px
+## body text to ~25 px against the Standard tier's 20 px floor, on a panel with roughly twice a
+## desktop monitor's pixel density. It is deliberately modest rather than maximal:
+## ⛔ **no Steam Deck has run this build**, so the physical result is reasoned, not observed.
+## Layout tolerates far more, so this can be raised on evidence without touching anything else.
+const UI_SCALE_SMALL_SCREEN: float = 1.15
+
+## At or below this width a display is treated as floor-class. The Deck is 1280 wide; 1366 is the
+## next common small-laptop step and behaves the same way, so the band covers both without
+## catching a 1440p window that has merely been made narrow.
+const SMALL_SCREEN_MAX_WIDTH: int = 1366
+
+## Minimum width for a viewport to be considered a real display at all. Headless runs and test
+## harnesses report a few dozen pixels, and they must not be handed a small-screen default —
+## that would silently change what every other suite renders.
+const _MIN_REAL_WIDTH: int = 640
+
 ## The actions a player may rebind, in the order the settings screen lists them.
 ## `ui_*` actions are deliberately absent: they carry engine defaults for menu
 ## traversal as well as board movement, and letting a player unbind "confirm" from
@@ -204,11 +239,35 @@ func apply_bindings() -> void:
 				InputMap.action_add_event(action, make_event(device, code))
 
 
+## The UI scale to apply on a display of [param viewport], for a player who has not chosen one.
+##
+## Pure and static so the band can be tested without a window. Returns [constant UI_SCALE_DEFAULT]
+## for anything that is not a real, floor-class display.
+static func recommended_ui_scale(viewport: Vector2i) -> float:
+	if viewport.x < _MIN_REAL_WIDTH:
+		return UI_SCALE_DEFAULT # headless / test harness — never auto-scale these
+	if viewport.x <= SMALL_SCREEN_MAX_WIDTH:
+		return UI_SCALE_SMALL_SCREEN
+	return UI_SCALE_DEFAULT
+
+
 ## Applies display preferences to the engine.
+##
+## ★ S8-07: when the player has NOT chosen a scale, a floor-class display gets
+## [constant UI_SCALE_SMALL_SCREEN] instead of 1.0 — the Deck's 1280×800 sits on a 7″ panel and
+## the HUD was laid out for 1600×900.
+##
+## ⚠ This does NOT write an override. `GameSettings` stores overrides only (S6-24), precisely so a
+## player inherits future default changes; auto-scaling by *writing* 1.10 would pin them to today's
+## answer forever. An explicit choice still wins — including an explicit 1.0.
 func apply_display() -> void:
 	var win: Window = Engine.get_main_loop().root if Engine.get_main_loop() != null else null
-	if win != null:
-		win.content_scale_factor = ui_scale
+	if win == null:
+		return
+	var effective: float = ui_scale
+	if is_equal_approx(ui_scale, UI_SCALE_DEFAULT):
+		effective = recommended_ui_scale(win.size)
+	win.content_scale_factor = effective
 
 
 func apply_all() -> void:
