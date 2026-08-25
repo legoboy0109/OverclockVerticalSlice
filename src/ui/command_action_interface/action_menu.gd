@@ -459,7 +459,15 @@ func _fill_rows(model: Array[CommandFSM.VerbEntry], \
 			continue
 		var right: String = ""
 		if not entry.enabled:
-			right = reason_text(entry.reason)
+			right = _priced(entry.ap_cost, reason_text(entry.reason))
+		elif entry.verb == CommandFSM.Verb.ATTACK:
+			# ★ 2026-08-25 (OQ-2). Attack is the one verb whose price is a single
+			# number known before any preview opens, and it is the number the player
+			# is weighing when they choose between hitting something and moving.
+			# Move's is per-tile and Produce's is per-type, so neither can be named
+			# here without inventing a figure — those stay bare, and their prices
+			# appear where they become knowable (the tile readout, the submenu).
+			right = _priced(entry.ap_cost, _shortcut_for(entry.verb))
 		elif entry.verb == CommandFSM.Verb.PRODUCE:
 			# ASCII ">" rather than a triangle: the fallback font has no glyph for
 			# one and would draw a tofu box.
@@ -515,6 +523,21 @@ func _fill(box: VBoxContainer, items: Array[Dictionary]) -> void:
 	# list of buttons reads as a rendering fault rather than as a menu.
 	for row: Button in rows:
 		row.custom_minimum_size.x = widest
+
+
+## Joins a verb's AP price to whatever else its right-hand column says, dropping
+## the price entirely when the verb has none ([constant CommandFSM.NO_SINGLE_COST]).
+##
+## The separator is a middle dot rather than a comma because the two halves are
+## different kinds of thing — a price and a reason, or a price and a shortcut —
+## whereas the commas inside [method reason_text] join like with like. Keeping
+## them visually distinct stops "2 AP, no targets, needs AP" reading as a list of
+## three problems.
+static func _priced(ap_cost: int, rest: String) -> String:
+	if ap_cost < 0:
+		return rest
+	var price: String = "%d AP" % ap_cost
+	return price if rest.is_empty() else "%s · %s" % [price, rest]
 
 
 ## One row's cost/reason column, shared by the Produce and Build pickers.

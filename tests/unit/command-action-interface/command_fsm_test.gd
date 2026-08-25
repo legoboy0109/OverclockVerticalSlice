@@ -239,6 +239,58 @@ func test_menu_model_owned_unit_with_affordable_reachable_tile_move_enabled() ->
 	assert_int(move_entry.reason).is_equal(CommandFSM.Reason.NONE)
 
 
+func test_attack_entry_carries_its_ap_price_when_enabled() -> void:
+	# ★ 2026-08-25 (action-menu.md OQ-2). Attack is the one verb whose price is a
+	# single number known before any preview opens, so the model carries it and the
+	# menu shows it on the row. The widget renders this figure; it never computes
+	# one (Pass-Through Invariant).
+	var state := _make_state(0)
+	var type := _make_unit_type(1, 8, 1)
+	var attacker := _place_unit(state, 1, 0, Vector2i(3, 3), type)
+	_place_unit(state, 2, 1, Vector2i(3, 4), type) # adjacent enemy = a legal target
+	state.per_player[0].current_ap = 10
+
+	var entry: CommandFSM.VerbEntry = _find_entry(
+		CommandFSM.menu_model(state, attacker), CommandFSM.Verb.ATTACK
+	)
+
+	assert_bool(entry.enabled).is_true()
+	assert_int(entry.ap_cost).is_equal(Combat.attack_cost_for(attacker))
+	assert_int(entry.ap_cost).is_greater(0)
+
+
+func test_attack_entry_still_carries_its_price_when_disabled() -> void:
+	# ★ The price is MORE useful on the disabled row, not less: "needs AP" alone
+	# says you are short, "2 AP · needs AP" says by how much.
+	var state := _make_state(0)
+	var type := _make_unit_type(1, 8, 1)
+	var attacker := _place_unit(state, 1, 0, Vector2i(3, 3), type)
+	_place_unit(state, 2, 1, Vector2i(3, 4), type)
+	state.per_player[0].current_ap = 0
+
+	var entry: CommandFSM.VerbEntry = _find_entry(
+		CommandFSM.menu_model(state, attacker), CommandFSM.Verb.ATTACK
+	)
+
+	assert_bool(entry.enabled).is_false()
+	assert_int(entry.ap_cost).is_equal(Combat.attack_cost_for(attacker))
+
+
+func test_verbs_without_a_single_price_say_so_rather_than_reporting_zero() -> void:
+	# ★★ The sentinel earns its keep here. Move's price is per-TILE, Produce's is
+	# per-TYPE, and Wait is genuinely free — reporting 0 for any of them would put
+	# "0 AP" on a row and tell the player something false about two of the three.
+	var state := _make_state(0)
+	var unit := _place_unit(state, 1, 0, Vector2i(3, 3), _make_unit_type(1, 8))
+	state.per_player[0].current_ap = 10
+
+	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, unit)
+	for verb: int in [CommandFSM.Verb.MOVE, CommandFSM.Verb.PRODUCE, CommandFSM.Verb.WAIT]:
+		assert_int(_find_entry(menu, verb).ap_cost).override_failure_message(
+			"verb %d has no single price and must report NO_SINGLE_COST, not a number" % verb
+		).is_equal(CommandFSM.NO_SINGLE_COST)
+
+
 func test_menu_model_unit_with_zero_ap_move_disabled_insufficient_ap() -> void:
 	# ★ 2026-08-24 — this test's NAME was right all along and its ASSERTION was
 	# wrong. It expected OUT_OF_RANGE for a unit standing in open ground with 0 AP,

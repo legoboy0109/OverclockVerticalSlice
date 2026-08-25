@@ -272,6 +272,74 @@ func test_cancel_build_is_dropped_when_it_does_not_apply_to_this_kind_of_entity(
 	assert_object(_row_named(menu, "Cancel Build")).is_null()
 
 
+func test_the_attack_row_shows_what_attacking_costs() -> void:
+	# ★ 2026-08-25 (action-menu.md OQ-2). Attack's price is a single number known
+	# the moment the menu opens, and it is what the player weighs when choosing
+	# between hitting something and moving. Showing it on the row means that choice
+	# no longer requires entering a preview to price it.
+	var state := _make_state()
+	var attacker := _place_unit(state, 1, 0, Vector2i(5, 5))
+	_place_unit(state, 2, 1, Vector2i(5, 6)) # adjacent enemy = a legal target
+	var menu := _make_menu()
+
+	menu.open(state, attacker, Vector2(400, 400), 128.0)
+
+	var row: Button = _row_named(menu, "Attack")
+	assert_bool(row.disabled).is_false()
+	assert_str(_hint_of(row)).override_failure_message(
+		"an enabled Attack row must name its AP price"
+	).contains("%d AP" % Combat.attack_cost_for(attacker))
+
+
+func test_a_priced_row_keeps_its_shortcut_alongside_the_price() -> void:
+	# The price is added to the right-hand column, not swapped in for what was
+	# there — a player learning the keyboard must not lose the hint by gaining a
+	# number.
+	var state := _make_state()
+	var attacker := _place_unit(state, 1, 0, Vector2i(5, 5))
+	_place_unit(state, 2, 1, Vector2i(5, 6))
+	var menu := _make_menu()
+
+	menu.open(state, attacker, Vector2(400, 400), 128.0)
+
+	var hint: String = _hint_of(_row_named(menu, "Attack"))
+	assert_str(hint).contains("AP")
+	assert_str(hint).override_failure_message(
+		"the shortcut hint was displaced by the price instead of joining it"
+	).contains("[")
+
+
+func test_a_disabled_attack_row_shows_price_AND_reason() -> void:
+	# ★ "needs AP" says you are short; "2 AP · needs AP" says by how much. The
+	# separator is a middle dot, not a comma, so the price does not read as one more
+	# item in the reason list.
+	var state := _make_state()
+	var attacker := _place_unit(state, 1, 0, Vector2i(5, 5))
+	_place_unit(state, 2, 1, Vector2i(5, 6))
+	state.per_player[0].current_ap = 0
+	var menu := _make_menu()
+
+	menu.open(state, attacker, Vector2(400, 400), 128.0)
+
+	var hint: String = _hint_of(_row_named(menu, "Attack"))
+	assert_str(hint).contains("%d AP" % Combat.attack_cost_for(attacker))
+	assert_str(hint).contains("needs AP")
+	assert_str(hint).contains("·")
+
+
+func test_unpriced_verbs_show_no_ap_figure_at_all() -> void:
+	# Move is per-tile and Wait is free; a "0 AP" or an invented figure on either
+	# would be worse than the blank they get.
+	var state := _make_state()
+	var unit := _place_unit(state, 1, 0, Vector2i(5, 5))
+	var menu := _make_menu()
+
+	menu.open(state, unit, Vector2(400, 400), 128.0)
+
+	assert_str(_hint_of(_row_named(menu, "Move"))).not_contains("AP")
+	assert_str(_hint_of(_row_named(menu, "Wait"))).not_contains("AP")
+
+
 # ==============================================================================
 # Placement — AC-6 / AC-7 / AC-8
 # ==============================================================================

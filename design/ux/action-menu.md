@@ -150,7 +150,7 @@ only placement that reads as belonging to its button.
 | Component | Purpose | Pattern |
 |---|---|---|
 | Menu plate | `HudPanel` palette (`BACKING` / `BORDER`) so it reads as the same HUD, not as OS chrome | — (chrome, not interaction) |
-| Verb row | Label + shortcut hint; enabled rows are focusable buttons | **Standard Button** |
+| Verb row | Label + right-hand column: the verb's AP price where it has a single one, then its shortcut or its disablement reason | **Standard Button** |
 | Disabled verb row | Same row, dimmed label + reason text; visible, never hidden, never recoloured | **Affordability Dimming** |
 | Cancel Build row | Shows the refund up front; arms on first activation, commits on second | **Hold-to-Confirm Refund** (toggle variant — see decision 5) |
 | Submenu plate | Second plate, same palette, listing produce/build options with dual costs | **Standard Button** + **Affordability Dimming** |
@@ -430,6 +430,7 @@ those words describe is queried, never stored here.
   | Verb label | "Cancel Build" (12) | **18** | Widens the plate; at ~28 it starts covering tiles the flip cannot save it from |
   | Reason phrase | "already attacked" (16) | **22** | Widens the plate; multi-reason rows concatenate, so this is the one to watch |
   | Multi-reason row (2 joined) | "no targets, needs AP" (20) | **46** | Two budgeted phrases plus ", " |
+  | Priced verb column (worst case) | "2 AP · no targets, needs AP" (27) | **54** | A price, a middle dot, then the multi-reason budget above. The widest right-hand column the verb menu can produce |
   | Unit / structure name | "Defensive Structure" (19) | **24** | Widens the picker only |
   | Cost line | "600 CR + 2 AP" (13) | **20** | Currency abbreviations are themselves translatable |
   | Armed-confirm label | "Confirm cancel" (14) | **20** | Must stay visibly different from "Cancel Build", or the arm state reads as no change |
@@ -474,6 +475,7 @@ depends on game rules, the *set-up* is stated so the expected result follows fro
 | AC-2 | Select a unit that has already moved and attacked this turn. The menu still opens; Wait is the only bright row and every other row is dimmed with a short phrase beside it saying why | Integration |
 | AC-3 | Click an enemy unit, then empty ground. No menu appears in either case; the SELECTED panel still shows what was clicked | Integration |
 | AC-4 | Select a unit with no enemy in range and zero AP. The Attack row names **both** problems, not just the first | Logic |
+| AC-27 | Select a unit with an enemy adjacent and AP to spare. The Attack row states what attacking costs, alongside its shortcut, before any preview is opened. Drain the AP and re-select: the row still states the cost, now beside the reason | Integration |
 | AC-5 | With the menu open, press ↓ repeatedly. Focus visits only bright rows and never lands on a dimmed one. Clicking a dimmed row does nothing | Integration |
 | AC-6 | The menu never touches the sprite it belongs to: there is at least one tile of clear board between the entity and the menu's near edge | Logic |
 | AC-7 | Select a unit against the right edge of the board. The menu opens on its **left** instead, fully on screen | Logic |
@@ -513,11 +515,17 @@ its turn from one click is the same trap decision 5's confirmation gate exists t
 The `waited` signal being kept separate from `dismissed` — which looked redundant when both did the
 same thing — is what made this a one-line rewire rather than an untangling.
 
-**OQ-2 — Should the menu show a verb's cost before its preview?** CR-1 puts cost discovery in the
-*preview* (hover a tile, see the cost). Move's cost is per-tile so it genuinely cannot be shown on
-the row; Attack's is a single number and could be. This spec shows costs only in the Produce
-submenu, where the number is fixed and is the deciding factor. Attack's row is left bare for
-consistency. Worth a playtest.
+**~~OQ-2~~ — RESOLVED 2026-08-25 for Attack; unchanged for the rest.** The Attack row now names its
+AP price, both when live (`2 AP · [A]`) and when greyed out (`2 AP · needs AP`) — on a disabled row
+the price is the more useful half, because "needs AP" alone says you are short and the figure says
+by how much.
+
+**Only Attack.** Move's price is per-TILE and is not knowable until the player is looking at a
+destination; Produce's is per-TYPE and belongs on the submenu rows that already carry it; Wait is
+free and Cancel Build pays out. `VerbEntry.ap_cost` reports `NO_SINGLE_COST` for all of them rather
+than a zero, so no row can ever claim a price the verb does not have. CR-1 still puts *per-target*
+cost discovery in the preview — this adds the one figure that is fixed before the preview opens,
+it does not move cost discovery out of it.
 
 **~~OQ-6~~ — RESOLVED 2026-08-24 by `/ux-review`.** The first draft let the menu's Cancel Build row
 commit on one press, arguing that select-then-pick was gate enough. The review found that this

@@ -165,6 +165,46 @@ func _run() -> void:
 		slice.back_out()
 		await get_tree().process_frame
 
+	# --- Attack LIVE, so its priced row is on screen ---------------------------
+	# The match never opens with an enemy in range, so the one shot that shows an
+	# ENABLED Attack row has to stage its target. Everything else about the board is
+	# the real match.
+	if slice.has_method("select_at_cursor"):
+		var st0: GameState = slice.state()
+		var mine := Vector2i(-1, -1)
+		for e: EntityState in st0.entities():
+			if e is UnitState and e.owner == 0:
+				mine = e.position
+				break
+		if mine.x >= 0:
+			var foe := Vector2i(mine.x + 1, mine.y)
+			if st0.entity_at(foe) == null:
+				var enemy := UnitState.new()
+				enemy.entity_id = 901
+				enemy.owner = 1
+				enemy.position = foe
+				enemy.type = UnitTypes.SCOUT
+				enemy.current_hp = enemy.type.hp
+				st0.entities_by_id[901] = enemy
+				st0.grid.occupancy[st0.grid.index(foe.x, foe.y)] = 901
+				for i: int in 60:
+					var c: Vector2i = slice.cursor_tile()
+					if c == mine:
+						break
+					var step := Vector2i(signi(mine.x - c.x), 0) if c.x != mine.x \
+						else Vector2i(0, signi(mine.y - c.y))
+					if step == Vector2i.ZERO:
+						break
+					slice.move_cursor(step)
+					await get_tree().process_frame
+				slice.select_at_cursor()
+				for i: int in 22:
+					await get_tree().process_frame
+				await RenderingServer.frame_post_draw
+				_shot("03j-attack-priced")
+				slice.back_out()
+				await get_tree().process_frame
+
 	# --- A spent unit's menu: the OQ-5 wording, on screen ----------------------
 	# Runs after every board/menu shot because it zeroes the player's AP, which
 	# would poison those — but BEFORE the pause sequence, whose full-screen dim

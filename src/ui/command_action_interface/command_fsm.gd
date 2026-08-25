@@ -86,11 +86,33 @@ class VerbEntry extends RefCounted:
 
 	var reason: int
 
-	func _init(v: int, e: bool, r: int) -> void:
+	## The AP this verb would cost, or [constant NO_SINGLE_COST] when the verb has
+	## no single price to name.
+	##
+	## [b]Most verbs genuinely do not have one[/b], and the sentinel says so rather
+	## than lying with a zero: Move's price is per-TILE (it is not knowable until
+	## the player is looking at a destination), Produce's is per-TYPE (the submenu
+	## carries it), Wait is free, and Cancel Build pays OUT rather than costing.
+	## Attack is the one verb whose price is a single number known the moment the
+	## menu opens, which is why it is the one verb that shows it
+	## (`design/ux/action-menu.md` OQ-2).
+	##
+	## Reached through [method Combat.attack_cost_for] like every other answer here
+	## — the widget renders this number, it never computes one (Pass-Through
+	## Invariant, ADR-0015 §4).
+	var ap_cost: int
+
+	func _init(v: int, e: bool, r: int, cost: int = NO_SINGLE_COST) -> void:
 		verb = v
 		enabled = e
 		reason = r
+		ap_cost = cost
 
+
+## [member VerbEntry.ap_cost] when a verb has no single price to name — see that
+## member. Negative because a real AP cost never is, so it can never collide with
+## a genuine "this is free" zero.
+const NO_SINGLE_COST: int = -1
 
 ## The verbs [method menu_model] can emit an entry for. [constant Verb.CANCEL_BUILD]
 ## (Story 004) is the destructive-gesture verb for an under-construction owned
@@ -360,15 +382,19 @@ static func _attack_entry(state: GameState, entity: EntityState) -> VerbEntry:
 	var cost: int = Combat.attack_cost_for(entity)
 	var affordable: bool = AP.can_afford(state, entity.owner, cost)
 
+	# ★ 2026-08-25 (OQ-2): the cost rides along on BOTH outcomes. On the enabled
+	# row it is what the player is deciding against; on a row disabled for AP it is
+	# the explanation — "needs AP" alone says you are short, "2 AP · needs AP" says
+	# by how much.
 	if has_targets and affordable:
-		return VerbEntry.new(Verb.ATTACK, true, Reason.NONE)
+		return VerbEntry.new(Verb.ATTACK, true, Reason.NONE, cost)
 
 	var reason: int = Reason.NONE
 	if not has_targets:
 		reason |= Reason.NO_TARGETS
 	if not affordable:
 		reason |= Reason.INSUFFICIENT_AP
-	return VerbEntry.new(Verb.ATTACK, false, reason)
+	return VerbEntry.new(Verb.ATTACK, false, reason, cost)
 
 
 ## Builds the Produce [VerbEntry] — see [method menu_model]'s doc comment for
