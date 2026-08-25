@@ -198,11 +198,37 @@ stories:
     name: "Text legibility at 1280x800 — a sensible ui_scale default for the floor"
     file: "design/ux/action-menu.md"
     priority: should-have
-    status: ready-for-dev
+    status: done
     owner: "ux-designer"
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-08-25"
+    # ✅ DONE. GameSettings.recommended_ui_scale(viewport) -> 1.15 for a floor-class display
+    # (<=1366 wide), 1.0 otherwise; applied by apply_display() ONLY when the player has not chosen
+    # a scale. ⚠ Writes NO override — GameSettings stores overrides only (s6-24) precisely so a
+    # player inherits future default changes; auto-scaling by WRITING would pin them to today's
+    # answer forever. An explicit choice always wins, including an explicit 1.0.
+    # ⚠ Headless/test viewports (<640 wide) are never auto-scaled — otherwise this would silently
+    #   re-scale what every other suite renders.
+    # ★ LAYOUT IS NOT THE CONSTRAINT. Measured at 1280x800 across the FULL settings range
+    #   (1.00/1.10/1.15/1.25/1.35/1.50): ZERO plate collisions at every step. Plates are
+    #   edge-anchored and the status strip is centred, so they stay clear even at a logical
+    #   853x533.
+    # ⚠⚠ AND THE FIRST MEASUREMENT OF THIS WAS WRONG — recorded because the value NEARLY SHIPPED
+    #   WITH THAT REASONING ATTACHED. The first probe reported "1.10 is the ceiling, 1.15 collides
+    #   with 13 overlaps". Its collector filtered candidate Controls against the PHYSICAL viewport
+    #   width instead of the LOGICAL one, so full-screen scrims and overlays — which are SUPPOSED
+    #   to cover everything — were counted as collisions. The number was real; the conclusion was
+    #   nonsense. Caught only by the Sprint 7 retro rule: the guard was verified by re-introducing
+    #   the "failing" value, it did NOT fail, and that contradiction exposed the bad probe.
+    #   ⇒ A wrong measurement that AGREES with your expectation is the hardest kind to catch.
+    # ⛔ THE VALUE IS PROVISIONAL: 1.15 is reasoned (22px -> ~25px against the Standard tier's 20px
+    #   floor, on a panel with ~2x desktop pixel density), NOT observed. NO DECK HAS RUN THIS
+    #   BUILD. Layout tolerates far more, so it can be raised on evidence alone.
+    # TESTS: tests/integration/settings/ui_scale_floor_layout_test.gd (5) — HUD fits at the floor
+    #   at the shipped scale AND unscaled; the recommended band's edges (1280/1366 -> 1.15,
+    #   1920/2560 -> 1.0); headless viewports never auto-scaled; an explicit choice is never
+    #   overridden. Suite 1274 -> 1279.
     # Deck Verified gap 2, and action-menu.md's remaining open advisory. Design viewport is
     # 1600x900 and window/stretch/mode is UNSET, so UI renders at fixed pixel size and simply
     # gets less room at the floor — on a 7-inch panel. ★ Testable now against the real binary.
