@@ -219,9 +219,27 @@ make the pause menu unreachable).
 
 This is the **Standard Cancel** pattern, not a local rule — the library defines the universal
 back-out as "right-click or ESC or the equivalent gamepad Cancel/B button", and that is what this
-screen uses at both levels (cancel a rebind; leave the screen). `ui_cancel` is left at its engine
-default here, which is what makes **gamepad B** work without a project binding — worth stating
-because an implementer who did not know that could remove it as dead configuration.
+screen uses at both levels (cancel a rebind; leave the screen).
+
+> ⛔ **CORRECTED 2026-08-25 (S8-06).** This paragraph previously read: *"`ui_cancel` is left at its
+> engine default here, which is what makes gamepad B work without a project binding — worth stating
+> because an implementer who did not know that could remove it as dead configuration."*
+>
+> **That was exactly backwards.** Redot 26.2 ships `ui_accept` and `ui_cancel` with **no gamepad
+> events at all** — verified by dumping `InputMap.action_get_events()` on a clean project:
+> `ui_accept` had Enter / Kp Enter / Space, `ui_cancel` had Escape, and neither had a single joypad
+> button. (`ui_up` and the other directions *do* carry D-pad and stick, so it is specific to these
+> two.) Gamepad **B** therefore did **not** work, and neither did **A**: confirm and back-out, the
+> two most fundamental controls in the game, were unreachable on a controller.
+>
+> Both are now declared explicitly in `project.godot` with their keyboard events restored
+> alongside — declaring a built-in action replaces its defaults wholesale, so omitting the keys
+> would have traded a gamepad bug for a keyboard one.
+>
+> ★ **The lesson, and it is why the wording mattered:** the note did not merely record a wrong
+> fact, it told a future implementer *not to touch* the thing that was broken. **A claim about
+> engine defaults is a claim about a specific engine version** — this project runs a Godot *fork*,
+> and that is precisely where a default is most likely to differ.
 
 Focus treatment throughout is the **Three-State Focus Indicator** (default / hover /
 keyboard-focus, distinguished by colour *and* border weight), inherited from `MenuStyle` rather

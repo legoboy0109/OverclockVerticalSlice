@@ -732,23 +732,17 @@ static func reason_text(mask: int) -> String:
 
 
 ## The player's CURRENT binding for [param verb]'s shortcut, bracketed, or an
-## empty string when the verb has no shortcut or the action is unbound. Read from
-## the live [InputMap] every time so a rebind is reflected without this widget
-## knowing the Settings screen exists.
+## empty string when the verb has no shortcut or the action is unbound. Read live every time so a
+## rebind is reflected without this widget knowing the Settings screen exists — and so is a
+## device switch, since [InputGlyphs] answers for whichever device the player last touched.
 func _shortcut_for(verb: int) -> String:
 	if not VERB_SHORTCUTS.has(verb):
 		return ""
-	var action: StringName = VERB_SHORTCUTS[verb]
-	if not InputMap.has_action(action):
-		return ""
-	for event: InputEvent in InputMap.action_get_events(action):
-		if event is InputEventKey:
-			var key: InputEventKey = event
-			var code: int = key.physical_keycode if key.physical_keycode != 0 else key.keycode
-			var name: String = OS.get_keycode_string(code)
-			if name != "":
-				return "[%s]" % name
-	return ""
+	# ★ S8-06: delegated to InputGlyphs, which answers for the device the player is CURRENTLY
+	# using. This function previously matched InputEventKey only, so on a gamepad it returned an
+	# empty string and the row showed no shortcut at all — every binding already had a pad event,
+	# and none of them were ever displayed.
+	return InputGlyphs.label_for(VERB_SHORTCUTS[verb])
 
 
 # --- Submenu ----------------------------------------------------------------
