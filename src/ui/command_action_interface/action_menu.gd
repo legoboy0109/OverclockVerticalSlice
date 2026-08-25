@@ -339,7 +339,8 @@ func open(state: GameState, entity: EntityState, anchor_screen: Vector2, \
 	_fill_rows(
 		CommandFSM.menu_model(state, entity),
 		CommandFSM.produce_options(state, entity),
-		_refund_text(state, entity)
+		_refund_text(state, entity),
+		_is_stood_down(entity)
 	)
 	_reposition()
 	_show_with_fade()
@@ -450,7 +451,8 @@ func _plate_style() -> StyleBoxFlat:
 ## because of the SITUATION is informative; a verb that is disabled because it
 ## does not apply to this KIND of entity is noise.
 func _fill_rows(model: Array[CommandFSM.VerbEntry], \
-		produce_options: Array[CommandFSM.ProduceOption], refund: String = "") -> void:
+		produce_options: Array[CommandFSM.ProduceOption], refund: String = "", \
+		stood_down: bool = false) -> void:
 	var items: Array[Dictionary] = []
 	for entry: CommandFSM.VerbEntry in model:
 		if entry.verb == CommandFSM.Verb.CANCEL_BUILD and not entry.enabled:
@@ -462,6 +464,12 @@ func _fill_rows(model: Array[CommandFSM.VerbEntry], \
 			# ASCII ">" rather than a triangle: the fallback font has no glyph for
 			# one and would draw a tofu box.
 			right = "> " + _shortcut_for(entry.verb)
+		elif entry.verb == CommandFSM.Verb.WAIT and stood_down:
+			# Wait stays ENABLED when already stood down (CR-4: "Wait — always"), and
+			# pressing it again is idempotent. The row says so rather than looking
+			# identical to an un-waited one, because the mark is otherwise only
+			# visible out on the board.
+			right = "stood down"
 		elif entry.verb == CommandFSM.Verb.CANCEL_BUILD:
 			# The refund shows BEFORE either press, not after — the
 			# Hold-to-Confirm Refund pattern's "see the cost before you commit"
@@ -518,6 +526,18 @@ static func _cost_text(credit_cost: int, ap_cost: int, enabled: bool, reason: in
 	if not enabled:
 		text += "  " + reason_text(reason)
 	return text
+
+
+## Whether [param entity] carries the per-turn stand-down mark. Duplicated from
+## [method GameStateReader.is_stood_down] rather than routed through it because
+## this widget is built with a [GameState] and no reader — and the answer is a
+## bare field read, not a rule.
+static func _is_stood_down(entity: EntityState) -> bool:
+	if entity is UnitState:
+		return (entity as UnitState).stood_down
+	if entity is StructureState:
+		return (entity as StructureState).stood_down
+	return false
 
 
 ## The Cancel Build row's right-hand column: what the player gets back. Empty for

@@ -165,30 +165,10 @@ func _run() -> void:
 		slice.back_out()
 		await get_tree().process_frame
 
-	# --- Focus the menu, as a gamepad would with Back/Select -------------------
-	if slice.has_method("toggle_menu_focus"):
-		slice.toggle_menu_focus()
-		for i: int in 4:
-			await get_tree().process_frame
-		await RenderingServer.frame_post_draw
-		_shot("04-menu-focused")
-	# --- Pause over the live board --------------------------------------------
-	if slice.has_method("open_pause"):
-		slice.open_pause()
-		for i: int in 6:
-			await get_tree().process_frame
-		await RenderingServer.frame_post_draw
-		_shot("05-paused")
-		# ...and the destructive confirm, which is the gate that matters.
-		slice._pause._open_confirm(PauseMenu.Confirm.QUIT)
-		for i: int in 4:
-			await get_tree().process_frame
-		await RenderingServer.frame_post_draw
-		_shot("06-pause-quit-confirm")
-		get_tree().paused = false
 	# --- A spent unit's menu: the OQ-5 wording, on screen ----------------------
-	# Runs LAST because it zeroes the player's AP, which would poison every earlier
-	# shot. Pins the fix visually: a unit in open ground with nothing left to spend
+	# Runs after every board/menu shot because it zeroes the player's AP, which
+	# would poison those — but BEFORE the pause sequence, whose full-screen dim
+	# would otherwise sit over this shot and the stand-down one after it. Pins the fix visually: a unit in open ground with nothing left to spend
 	# is told it "needs AP", not that it has "no route" — the two point at opposite
 	# fixes (end the turn vs. clear a path).
 	if slice.has_method("select_at_cursor"):
@@ -217,6 +197,43 @@ func _run() -> void:
 		await RenderingServer.frame_post_draw
 		_shot("03h-spent-unit-needs-ap")
 
+	# --- Wait's stand-down mark: dim actor, idle notice, "stood down" row -------
+	if slice.has_method("_on_menu_waited"):
+		# Re-select the spent unit from the shot above and stand it down.
+		slice.select_at_cursor()
+		for i: int in 6:
+			await get_tree().process_frame
+		slice._on_menu_waited()
+		for i: int in 10:
+			await get_tree().process_frame
+		# Re-open its menu so the Wait row's "stood down" state is on screen.
+		slice.select_at_cursor()
+		for i: int in 22:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		_shot("03i-stood-down")
+
+	# --- Focus the menu, as a gamepad would with Back/Select -------------------
+	if slice.has_method("toggle_menu_focus"):
+		slice.toggle_menu_focus()
+		for i: int in 4:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		_shot("04-menu-focused")
+	# --- Pause over the live board --------------------------------------------
+	if slice.has_method("open_pause"):
+		slice.open_pause()
+		for i: int in 6:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		_shot("05-paused")
+		# ...and the destructive confirm, which is the gate that matters.
+		slice._pause._open_confirm(PauseMenu.Confirm.QUIT)
+		for i: int in 4:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		_shot("06-pause-quit-confirm")
+		get_tree().paused = false
 	print("done")
 	get_tree().quit()
 

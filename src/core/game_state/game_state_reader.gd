@@ -114,6 +114,56 @@ func unit_info(entity_id: int) -> Dictionary:
 ## O(query) — identical cost to the owning call (control-manifest Performance
 ## Guardrail note: this is a read accessor, not a simulation-hot-path call; the
 ## Presentation layer is responsible for how often it polls this per frame).
+
+## How many of [param player]'s entities still have something to do — a legal,
+## affordable verb remaining AND no stand-down mark ([WaitAction]).
+##
+## [b]The single definition of "idle".[/b] The End-Turn notice, and anything else
+## that wants to nudge a player about unfinished business, reads it from here
+## rather than counting entities itself: idleness is a rules question (does this
+## thing have an enabled verb left?), and a second walk of the entity list in a HUD
+## widget would be a second answer free to drift from the menu's.
+##
+## Reached through [method CommandFSM.menu_model] — the same model the contextual
+## menu renders — so "idle" means exactly "the menu would show this entity at least
+## one bright row other than Wait". An entity the player has stood down is never
+## counted, whatever it could still legally do: the mark IS the player saying they
+## are finished with it.
+##
+## O(entities x menu_model), evaluated only when the count is asked for (on commit,
+## not per frame).
+func idle_entity_count(player: int) -> int:
+	var count: int = 0
+	for entity: EntityState in entities():
+		if entity.owner != player:
+			continue
+		if _is_stood_down(entity):
+			continue
+		for entry: CommandFSM.VerbEntry in CommandFSM.menu_model(_state, entity):
+			if entry.verb != CommandFSM.Verb.WAIT and entry.enabled:
+				count += 1
+				break
+	return count
+
+
+## Whether [param entity] carries the per-turn stand-down mark. Both concrete
+## state classes have the field independently (mirroring [code]has_attacked[/code]),
+## so this is the one place that has to know which kinds carry it.
+static func _is_stood_down(entity: EntityState) -> bool:
+	if entity is UnitState:
+		return (entity as UnitState).stood_down
+	if entity is StructureState:
+		return (entity as StructureState).stood_down
+	return false
+
+
+## Whether [param entity] is one [param player] has stood down this turn. Public
+## sibling of [method idle_entity_count] for consumers that need the per-entity
+## answer — the board's actionable-glow predicate and the idle-entity cursor cycle.
+func is_stood_down(entity: EntityState) -> bool:
+	return _is_stood_down(entity)
+
+
 func legal_build_tiles(player: int, structure_type: StructureTypeDef) -> Array[Vector2i]:
 	return BaseProduction.legal_build_tiles(_state, player, structure_type)
 

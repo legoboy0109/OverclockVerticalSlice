@@ -513,6 +513,10 @@ static func apply(state: GameState, action: AttackAction) -> Array[Event]:
 	var cost: int = attack_cost_for(attacker)
 	AP.spend(state, attacker.owner, cost)
 	attacker.has_attacked = true
+	# ★ 2026-08-25: acting clears the stand-down mark. It records "I am finished
+	# with this one", and the player has visibly changed their mind — leaving it
+	# set would keep the entity dim and skipped while it still had a turn left.
+	attacker.stood_down = false
 	var events: Array[Event] = []
 	var dmg: int = damage(state, attacker, target)
 	_apply_damage_to(target, dmg)   # polymorphic: unit OR structure defender

@@ -49,6 +49,7 @@ static func can_attack(unit: UnitState) -> bool:
 static func reset_turn_flags(unit: UnitState) -> void:
 	unit.has_attacked = false
 	unit.tiles_moved_this_turn = 0
+	unit.stood_down = false # a stand-down lasts one turn, never longer.
 
 
 ## Returns an independent deep copy of [param unit] via

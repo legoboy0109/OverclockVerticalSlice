@@ -136,6 +136,14 @@ func test_game_state_reader_exposes_only_unit_info_as_script_method() -> void:
 		"win_reason", "tiebreak_metric", "tiebreak_scores",
 		"entities", "entity_at",
 		"subscribe_action_applied", "unsubscribe_action_applied",
+		# ★ 2026-08-25 (WaitAction / the stand-down mark). idle_entity_count and
+		# is_stood_down are reads with the same shape as tiebreak_scores above:
+		# idle_entity_count COMPUTES rather than reading a field — it walks the
+		# entity list evaluating CommandFSM.menu_model — but menu_model is pure and
+		# writes nothing, so the computation cannot mutate. Admitted deliberately.
+		# _is_stood_down is its static helper; a private name is not a private
+		# METHOD in GDScript, so it has to be listed like any other.
+		"idle_entity_count", "is_stood_down", "_is_stood_down",
 	])
 
 	# Belt-and-suspenders, human-readable: the specific mutation shapes must be

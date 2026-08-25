@@ -229,6 +229,7 @@ A disabled produce row names **the binding pool** — "needs Credits" or "needs 
 | **Input locked** (post-commit debounce, `input_lock_ms`) | Menu visible, rows inert; no visual change — the window is 120ms and a flicker would read as a fault |
 | **Opponent's turn / game over** | Closed |
 
+| **Stood down** | The Wait row's right column reads "stood down"; on the board the entity stops breathing and the idle cursor ring skips it. Every other row is unchanged — the mark forbids nothing |
 | **Commit refused** | The status line reads `Refused: <reason>` and the menu re-opens re-filtered, so the verb that failed is now visibly greyed out with the same wording |
 
 **Every row is visible in every variant.** A verb is never hidden for being unavailable — that is
@@ -309,12 +310,12 @@ a double-click's second press lands on a button that now reads "Confirm cancel".
 on the row before either press, per the pattern's "see the cost before you commit" promise. Arrowing
 away, backing out, or picking any other verb all disarm it.
 
-**4 — Wait deselects; it does not mark the entity done.**
-The GDD says Wait "ends this entity's involvement without spending". There is no `WaitAction` and no
-persistent per-entity done flag in the simulation, so the only honest implementation is: close the
-menu, deselect, spend nothing. The entity remains selectable and cursor-cycle will still stop on it.
-See Open Questions OQ-1 — this is a genuine gap between the GDD's wording and the data model, not an
-implementation shortcut.
+**4 — Wait marks the entity stood down for the turn.** *(Revised 2026-08-25 — it originally
+deselected and nothing more, because the simulation had nowhere to record the mark. See OQ-1.)*
+`WaitAction` sets a per-turn flag that the interface reads and the rules ignore: the entity dims,
+drops out of the idle cursor ring, and stops counting toward the End-Turn notice, while remaining
+fully commandable. Acting with it clears the mark, because the player has visibly changed their
+mind.
 
 ---
 
@@ -483,6 +484,8 @@ depends on game rules, the *set-up* is stated so the expected result follows fro
 | AC-12 | Move a unit that still has AP left. The menu re-opens on that same unit with Attack now evaluated afresh. Move a unit into a counterattack that kills it: the menu closes and nothing is left selected | Integration |
 | AC-13 | Select a producer while holding enough Credits for the cheapest unit but not the dearest. The list shows both, the cheap one bright, the dear one dimmed and saying it needs Credits — not a generic "unavailable" | Logic |
 | AC-14 | Note your AP and Credits, press Wait. Both are unchanged and nothing is selected | Integration |
+| AC-25 | After Wait, the unit stops glowing on the board, the ACTIONS panel's idle count drops by one, and pressing the jump-cursor key no longer stops on it. Re-select it: every verb it had is still available, and using one makes it glow and count again | Integration |
+| AC-26 | Stand a unit down, then end the turn and come back. It is glowing and counted again — a stand-down lasts exactly one turn | Integration |
 | AC-15 | Rebind Move to a different key in Settings, then open a menu. The Move row shows the new key | Integration |
 | AC-16 | Turn on Reduced Motion. The menu, submenu and picker appear and disappear instantly, with no fade | Integration |
 | AC-17 | Nothing on screen mentions `[C]` or `[V]`, and pressing either key does nothing | UI |
@@ -496,10 +499,19 @@ depends on game rules, the *set-up* is stated so the expected result follows fro
 
 ## Open Questions
 
-**OQ-1 — Wait has no simulation meaning.** The GDD says Wait "ends this entity's involvement";
-nothing in `GameState` records that. Until an entity carries a per-turn *done* flag, Wait is a
-deselect and the entity keeps appearing in cursor-cycle. Either the data model gains the flag or the
-GDD's wording should be softened to "dismisses the menu". **Design call, not implementation.**
+**~~OQ-1~~ — RESOLVED 2026-08-25.** Wait now commits a [`WaitAction`] that sets a per-turn
+**stand-down mark** on the entity, cleared at the owner's next turn start and cleared again the
+moment the entity acts.
+
+The mark is **advisory, never binding** (user decision): it changes what the interface offers, not
+what the rules allow. A stood-down entity stops breathing on the board, is skipped by the
+idle-entity cursor cycle, stops counting toward the End-Turn idle notice, and says "stood down" on
+its own Wait row — but every verb it had is still legal and still commits. A hard lockout was the
+alternative and was rejected: Wait is a single unconfirmed menu row, and locking an entity out of
+its turn from one click is the same trap decision 5's confirmation gate exists to prevent.
+
+The `waited` signal being kept separate from `dismissed` — which looked redundant when both did the
+same thing — is what made this a one-line rewire rather than an untangling.
 
 **OQ-2 — Should the menu show a verb's cost before its preview?** CR-1 puts cost discovery in the
 *preview* (hover a tile, see the cost). Move's cost is per-tile so it genuinely cannot be shown on

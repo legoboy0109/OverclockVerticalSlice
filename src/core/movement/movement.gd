@@ -308,5 +308,9 @@ static func apply(state: GameState, action: Action) -> Array[Event]:
 	state.grid.move(move.from, move.to)
 	unit.position = move.to
 	unit.tiles_moved_this_turn += move.tiles_entered
+	# ★ 2026-08-25: acting clears the stand-down mark. It records "I am finished
+	# with this one", and the player has visibly changed their mind — leaving it
+	# set would keep the entity dim and skipped while it still had a turn left.
+	unit.stood_down = false
 
 	return [UnitMovedEvent.new(unit.entity_id, move.from, move.to, cost)] as Array[Event]

@@ -100,6 +100,7 @@ const ENTRY_LABELS: Dictionary = {
 	&"StructureDestroyedEvent": "Structure destroyed",
 	&"StructureCancelledEvent": "Construction cancelled",
 	&"TechCompletedEvent": "Research complete",
+	&"EntityStoodDownEvent": "Stood down",
 	&"GameOverEvent": "Match over",
 }
 

@@ -51,6 +51,26 @@ signal end_turn_requested
 var _build_button: Button = null
 var _end_turn_button: Button = null
 
+## The non-blocking "you still have things to do" notice above End Turn
+## (`design/ux/action-menu.md`; the GDD's long-planned unspent-AP reminder, made
+## workable for ENTITIES by the Wait verb's stand-down mark).
+##
+## [b]A notice, never a gate.[/b] It never disables End Turn and never opens a
+## dialog — a player who wants to end a turn with idle units may always do so, and
+## in a tactics game that is often correct play (holding position, baiting). It
+## exists because forgetting a unit is a different thing from choosing to hold it,
+## and before the stand-down mark the interface could not tell them apart either.
+var _idle_notice: Label = null
+
+## Width the idle notice is right-aligned within — the ACTIONS panel's content
+## width ([constant HudPanel.PAD_X] either side of its 200px plate).
+const IDLE_NOTICE_WIDTH_PX: float = 200.0 - HudPanel.PAD_X * 2.0
+
+## How many of the local player's entities still have something to do, as of the
+## last refresh. Recomputed on every [signal GameState.action_applied]; -1 before
+## the first bind.
+var _idle_count: int = -1
+
 var _config: HUDConfig = null
 var _local_player: int = 0
 
@@ -100,6 +120,27 @@ func _ensure_buttons() -> void:
 	_end_turn_button.focus_neighbor_left = NodePath("../BuildButton")
 	_build_button.focus_next = NodePath("../EndTurnButton")
 	_end_turn_button.focus_previous = NodePath("../BuildButton")
+
+	# The idle notice sits ABOVE the two buttons, inside the same panel. Not
+	# focusable and not clickable: it is information about the turn, not a control,
+	# and putting it in the traversal order would make a gamepad player tab through
+	# a label to reach End Turn.
+	_idle_notice = Label.new()
+	_idle_notice.name = "IdleNotice"
+	# Sits on the panel's TITLE line, right-aligned — "ACTIONS" on the left, the
+	# count opposite it. Placed there rather than above the buttons because that
+	# space belongs to HudPanel's title (CONTENT_TOP = 26) and the two overlapped:
+	# the notice printed straight through the word ACTIONS. Right-aligning costs the
+	# panel no extra height, which matters because it is corner-anchored and growing
+	# it would push it into the board.
+	_idle_notice.position = Vector2(0, -19)
+	_idle_notice.size = Vector2(IDLE_NOTICE_WIDTH_PX, 14)
+	_idle_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_idle_notice.add_theme_font_size_override("font_size", 11)
+	_idle_notice.add_theme_color_override("font_color", Color(0.72, 0.68, 0.52))
+	_idle_notice.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_idle_notice.focus_mode = Control.FOCUS_NONE
+	add_child(_idle_notice)
 
 
 func _make_button(text: String, node_name: String, at: Vector2) -> Button:
@@ -241,3 +282,27 @@ func _draw() -> void:
 	# theme renders them along with their hover and focus StyleBoxes (ADR-0014 §6:
 	# "distinct StyleBoxes on the default Theme — no custom focus-ring wiring").
 	_sync_button_state()
+	_sync_idle_notice()
+
+
+## Recomputes and renders the idle notice.
+##
+## Counts through [method GameStateReader.idle_entity_count] rather than walking
+## entities here: which entities "still have something to do" is a rules question
+## (does this thing have a legal, affordable verb left, and has the player said
+## they are finished with it?), and a HUD widget that answered it itself would be
+## a second, drifting definition of idleness alongside the menu's own.
+func _sync_idle_notice() -> void:
+	if _idle_notice == null or _reader == null:
+		return
+	_idle_count = _reader.idle_entity_count(_local_player) if controls_live() else 0
+	if _idle_count <= 0:
+		_idle_notice.text = ""
+		return
+	_idle_notice.text = "%d idle" % _idle_count if _idle_count > 1 else "1 idle"
+
+
+## How many of the local player's entities the notice currently reports, or -1
+## before the first refresh. Exposed for the assembly test.
+func idle_count() -> int:
+	return _idle_count

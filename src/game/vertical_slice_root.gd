@@ -499,11 +499,11 @@ func _build_action_menu() -> void:
 	_action_menu.verb_chosen.connect(_on_menu_verb_chosen)
 	_action_menu.produce_type_chosen.connect(_on_menu_produce_chosen)
 	_action_menu.dismissed.connect(deselect)
-	# Wait and dismissal do the same thing TODAY and are still wired separately —
-	# see ActionMenu.waited's doc comment and action-menu.md OQ-1: the simulation
-	# has no stood-down flag yet, and collapsing the two signals here would erase
-	# the distinction the open question needs in order to be answerable.
-	_action_menu.waited.connect(deselect)
+	# ★ 2026-08-25 — OQ-1 answered. Wait is no longer a deselect: it commits a
+	# WaitAction that marks the entity stood down for the turn, and dismissal still
+	# just closes the menu. The two signals were kept separate specifically so this
+	# day's change would be a one-line rewire rather than an untangling.
+	_action_menu.waited.connect(_on_menu_waited)
 
 
 ## Clamps the status plate to the horizontal band the bottom corner panels leave
@@ -1306,6 +1306,42 @@ func deselect() -> void:
 	_refresh_status()
 
 
+## Stands the selected entity down for the turn, then deselects.
+##
+## The mark is ADVISORY (user decision, 2026-08-25): it changes what the interface
+## offers, never what the rules allow. See [member UnitState.stood_down].
+func _on_menu_waited() -> void:
+	var entity: EntityState = _state.entities_by_id.get(_cmd.selected_id())
+	if entity != null and entity.owner == LOCAL_PLAYER and _cmd.is_input_live(_state):
+		var action := WaitAction.new()
+		action.entity_id = entity.entity_id # action.player set by CommandInterface.commit.
+		_cmd.dispatch_commit(action, _state)
+	deselect()
+
+
+## Every tile holding one of the local player's entities that still has something
+## to do — the cycle set for [method jump_cursor] when no preview is open.
+##
+## Sorted by entity id so repeated presses walk a stable ring rather than
+## reshuffling as the board changes.
+func _idle_entity_tiles() -> Array[Vector2i]:
+	var tiles: Array[Vector2i] = []
+	if _reader == null:
+		return tiles
+	var ids: Array[int] = []
+	for entity: EntityState in _reader.entities():
+		if entity.owner != LOCAL_PLAYER or _reader.is_stood_down(entity):
+			continue
+		if _is_entity_actionable(entity):
+			ids.append(entity.entity_id)
+	ids.sort()
+	for id: int in ids:
+		var e: EntityState = _state.entities_by_id.get(id)
+		if e != null:
+			tiles.append(e.position)
+	return tiles
+
+
 ## Steps back one level: submenu -> menu -> selection -> nothing. Returns whether
 ## anything was backed out of.
 ##
@@ -1519,6 +1555,13 @@ func _hq_destroyed() -> bool:
 func _is_entity_actionable(entity: EntityState) -> bool:
 	if _reader == null:
 		return true # unwired: breathe rather than sit inert (feed's own default).
+	# ★ 2026-08-25 — a stood-down entity stops breathing whatever it could still
+	# legally do. This is the mark's most visible payoff: at a glance the board
+	# shows what the player has dealt with and what is still waiting on them, which
+	# is the read the glow existed to give and could not while "actionable" meant
+	# only "has AP and a legal target".
+	if _reader.is_stood_down(entity):
+		return false
 	# ★ Structures are resolved BEFORE the empty-pool check, deliberately. A
 	# non-combat structure is a fixture with no turn allowance, so it must stay lit
 	# even at 0 AP — dimming it says nothing true, and both HQs are a large share of
@@ -1832,6 +1875,15 @@ func jump_cursor() -> bool:
 	if _cursor == null or _cmd == null or _state.grid == null:
 		return false
 	var candidates: Array[Vector2i] = _cmd.salient_tiles()
+	if candidates.is_empty():
+		# ★ 2026-08-25. Outside a preview the salient set is empty, so this key did
+		# nothing at all — it only ever worked mid-Move or mid-Attack. It now walks
+		# the player's own entities that still have something to do, which is the
+		# question a player actually asks between commands ("what have I not moved
+		# yet?"). Entities stood down with Wait are skipped: that is the mark's
+		# whole purpose, and without a skip the ring would keep offering back the
+		# very units the player just said they were finished with.
+		candidates = _idle_entity_tiles()
 	if candidates.is_empty():
 		return false
 	var before: Vector2i = _cursor.grid_pos

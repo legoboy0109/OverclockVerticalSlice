@@ -693,6 +693,10 @@ static func apply_produce(state: GameState, action: ProduceAction) -> Array[Even
 	assert(placed, "BaseProduction.apply_produce: Grid.place failed on a tile validate_produce accepted — legal_deploy_tiles/Grid desync.")
 
 	producer.units_produced_this_turn += 1
+	# ★ 2026-08-25: acting clears the stand-down mark. It records "I am finished
+	# with this one", and the player has visibly changed their mind — leaving it
+	# set would keep the entity dim and skipped while it still had a turn left.
+	producer.stood_down = false
 	# ★ S6-07: arm the reinforcement cooldown. Set from the type so it stays data-driven
 	# and a value of 0 keeps the pre-S6-07 behaviour exactly.
 	producer.production_cooldown_remaining = producer.type.production_cooldown_turns

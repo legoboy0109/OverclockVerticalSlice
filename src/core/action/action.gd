@@ -39,7 +39,9 @@ extends RefCounted
 ## forward-declared dispatch slots, registered by their own Core epics
 ## (Movement/Combat/Base & Production/Research) when those land
 ## (out of scope here, per ADR-0002/Story 002).
-enum Verb { MOVE, ATTACK, BUILD, PRODUCE, RESEARCH, CANCEL_BUILD, END_TURN, DISBAND }
+## [constant Verb.WAIT] appended 2026-08-25 (see [WaitAction]) — appended, never
+## inserted, so every existing ordinal is preserved.
+enum Verb { MOVE, ATTACK, BUILD, PRODUCE, RESEARCH, CANCEL_BUILD, END_TURN, DISBAND, WAIT }
 
 ## Every rejection cause [method GameState.apply_action] can return, plus
 ## [constant Reason.OK] for a passing [code]validate()[/code]. Deliberately an

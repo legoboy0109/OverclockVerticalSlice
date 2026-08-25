@@ -469,7 +469,47 @@ static func _ensure_dispatch_registered() -> void:
 	register_verb(Action.Verb.PRODUCE, BaseProduction.validate_produce, BaseProduction.apply_produce)
 	register_verb(Action.Verb.CANCEL_BUILD, BaseProduction.validate_cancel, BaseProduction.apply_cancel)
 	register_verb(Action.Verb.DISBAND, Upkeep.validate_disband, Upkeep.apply_disband)
+	register_verb(Action.Verb.WAIT, _validate_wait, _apply_wait)
 	_dispatch_registered = true
+
+
+## [WaitAction]'s [code]validate()[/code] handler.
+##
+## [b]Owning system: this class[/b], for the same reason [EndTurnAction]'s handlers
+## live here — standing an entity down is turn bookkeeping, and there is no
+## TurnManager class (the control manifest forbids one). It is also the only verb
+## that applies to units and structures alike, so neither [Unit] nor [Structure]
+## is a more natural home than the other.
+##
+## Rejects an entity that does not exist ([constant Action.Reason.NO_SUCH_ENTITY])
+## or that the acting player does not own ([constant Action.Reason.ILLEGAL_TARGET]).
+## [method apply_action]'s step 2 already enforces "active player only", so this
+## adds no turn check of its own.
+##
+## [b]Standing down an already-stood-down entity is deliberately OK, not an
+## error[/b] — it is idempotent, and rejecting it would make a double-press of a
+## harmless tidying verb produce a "Refused" line for no reason.
+static func _validate_wait(state: GameState, action: Action) -> int:
+	var entity: EntityState = state.entities_by_id.get(action.entity_id)
+	if entity == null:
+		return Action.Reason.NO_SUCH_ENTITY
+	if entity.owner != action.player:
+		return Action.Reason.ILLEGAL_TARGET
+	return Action.Reason.OK
+
+
+## [WaitAction]'s [code]apply()[/code] handler: sets the per-turn stand-down mark.
+##
+## Spends nothing — no AP, no Credits — and emits [EntityStoodDownEvent] so the
+## action log can show it and any listener can react. See [WaitAction] for why a
+## rules-free verb still routes through the mutation pipeline.
+static func _apply_wait(state: GameState, action: Action) -> Array:
+	var entity: EntityState = state.entities_by_id.get(action.entity_id)
+	if entity is UnitState:
+		(entity as UnitState).stood_down = true
+	elif entity is StructureState:
+		(entity as StructureState).stood_down = true
+	return [EntityStoodDownEvent.new(action.entity_id)] as Array[Event]
 
 
 ## [EndTurnAction]'s [code]validate()[/code] handler (owning system: this
