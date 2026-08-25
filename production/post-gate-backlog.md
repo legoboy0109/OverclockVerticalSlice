@@ -257,3 +257,69 @@ belong under it; writing the rebinding UI first would mean inventing its host.
   then must be a named action, or it silently becomes unrebindable *and* keyboard-only.
 - `accessibility-requirements.md`'s committed tier: remapping is a common Standard-tier
   expectation, so the settings spec should state whether this is required or optional there.
+
+---
+
+## 7. First-move disadvantage — ACCEPTED, deferred 2026-08-25 (S7-18)
+
+**Decision: accept for now. User's call, 2026-08-25.** Not a defect, not a gap to fill in —
+a measured property the design is choosing to live with.
+
+### What was measured
+
+On the 12-opening symmetric mirror cell, with every enumeration-order bias removed
+(S7-13/14/15) and the tiebreak metric verified correct (S7-17):
+
+```
+the SECOND mover wins 10 of 12
+the 2 games the FIRST mover wins are the only 2 that RESOLVE ON PLAY (43 turns)
+the other 10 all reach the 40-round cap and are decided on HQ damage dealt
+```
+
+★ **The second mover genuinely deals more HQ damage.** This was confirmed to be real play, not
+a measurement artifact, after three separate candidate explanations were eliminated:
+
+| Candidate | Verdict |
+|---|---|
+| Seat / player index | ⛔ Ruled out — seats are 7/7 with material converting 14/14 (S7-15) |
+| The tiebreak metric | ⛔ Ruled out — it was already HQ-damage-equivalent (S7-17) |
+| First-turn AP shortfall | ⛔ Ruled out — AP is not scarce; compensation was **inert at every value 0–30** (S7-16) |
+
+**The mechanism** is the one `S5-04` guessed at before any of it was measured: on a symmetric
+board with no fog and deterministic combat, the first player must commit into the open and the
+second answers with full information about that commitment.
+
+### Why accepting is defensible
+
+- **It only appears in games that time out.** Both mirror games that resolve on play go to the
+  *first* mover. The effect is confined to the dead-even case that cannot break through.
+- **It vanishes under any asymmetry.** With even one unit of material difference the seats are
+  **exactly 7/7** and material converts **14/14**. A perfectly mirrored start is a laboratory
+  condition, not a real match.
+- **A symmetric deterministic mirror arguably *should* favour the responder.** That is a
+  property of perfect information, not a bug in this game.
+
+### ⛔ What would have to be true to reopen it
+
+1. **A human playtest reports it.** ★ Everything above is AI-vs-AI, and both sides run the same
+   greedy one-ply scorer. A human differs *in kind*, and may not experience this at all — or may
+   feel it much more sharply. **S5-04's Analyses A/C/D are the natural place for it to surface.**
+2. **Competitive or ranked play is ever considered.** A structural first-move disadvantage is
+   tolerable in single-player and unacceptable in a ladder.
+3. **Maps stop being symmetric.** The whole effect is measured on a mirrored board; an
+   asymmetric map changes the question entirely.
+
+### The lever to reach for, if it is reopened
+
+**Compensate in a currency that is actually binding.** `production_cooldown_turns` is the
+measured constraint (S7-10) — starting the first player one tick ahead is denominated in
+something that genuinely limits them.
+
+⚠ **Do not reach for AP.** It was tried and measured: the first player spends **11 of 30** AP on
+turn 1 and is pinned at the `ap_carryover_cap` by turn 3. They already discard AP every turn, so
+more of it changes nothing — 0/5/10/15/20/30 all produced byte-identical outcomes.
+
+> ★ **The general rule this produced, worth applying before any future compensation:**
+> *before compensating with a resource, check that the resource is actually binding.* The same
+> trap appeared three times in Sprint 7 — money was not the constraint (S7-10), cover could not
+> register because the AI cannot use it (S7-11), and AP is not scarce (S7-16).

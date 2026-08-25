@@ -1,5 +1,21 @@
 # Game State & Turn Manager
 
+> ### ★ Turn order is known to favour the second player — ACCEPTED 2026-08-25 (S7-18)
+>
+> On a perfectly symmetric board the player who moves **second** wins 10 of 12 measured games.
+> The mechanism: with no fog and deterministic combat, the first player must commit into the
+> open and the second answers with full information about that commitment.
+>
+> **This is a measured property the design accepts, not an open defect.** It appears only in
+> games that reach the round cap — both mirror games that resolve on play go to the *first*
+> mover — and it vanishes under any material asymmetry (seats are exactly 7/7 with one unit of
+> difference). Seat bias, the tiebreak metric and first-turn AP were each investigated and
+> eliminated as causes.
+>
+> Full context, the revisit triggers, and the lever to use if it is reopened:
+> `production/post-gate-backlog.md` §7. ⚠ **Not AP** — that was measured as inert.
+
+
 > **Status**: Designed — **In Revision (PIVOT 2026-08-05)** for the AP↔Credits split (see ap-economy.md).
 > **Author**: user + main session
 > **Last Updated**: 2026-08-05 (AP↔Credits pivot: start-of-turn step 4 splits into **reset AP to a flat
