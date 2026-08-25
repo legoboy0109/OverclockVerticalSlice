@@ -33,6 +33,22 @@
 # [system]_[feature]_test.gd + test_[scenario]_[expected].
 extends GdUnitTestSuite
 
+# ★ S7-06: local stand-in for the retired BaseProduction.completed_outpost_count(). The
+# accessor was dead product code — nothing in src/ called it once S6-01 re-based income on
+# research tiers — but the BEHAVIOUR these tests observe through it (a structure only counts
+# once its build_status reaches COMPLETED) is real and still worth pinning. So the accessor
+# goes and the observable stays, defined here rather than shipped.
+func _completed_factory_count(state: GameState, player: int) -> int:
+	var count: int = 0
+	for e: EntityState in state.entities():
+		if e.owner != player or not (e is StructureState):
+			continue
+		var s: StructureState = e
+		if s.type == StructureTypes.FACTORY and s.build_status == StructureState.BuildStatus.COMPLETED:
+			count += 1
+	return count
+
+
 const GRID_SIZE: int = 12
 
 
@@ -213,7 +229,7 @@ func test_fresh_under_construction_structure_is_inert_for_completed_outpost_coun
 	var action := _make_build_action(Vector2i(6, 5), StructureTypes.FACTORY, 0)
 	BaseProduction.apply_build(state, action)
 	# Act / Assert -- zero contribution until Completed.
-	assert_int(BaseProduction.completed_outpost_count(state, 0)).is_equal(0)
+	assert_int(_completed_factory_count(state, 0)).is_equal(0)
 
 
 func test_unaffordable_build_credits_short_rejected_credits_and_grid_unchanged() -> void:

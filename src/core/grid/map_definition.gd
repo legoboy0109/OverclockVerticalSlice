@@ -85,9 +85,26 @@ const MAX_DIM: int = 24
 ## reachable, or [method build_grid] rejects the map.
 @export var hq_tiles: Array[Vector2i]
 
-## Starting deploy tile coordinates for non-HQ starting entities. Not yet
-## consumed by [method build_grid]'s entity-placement step beyond HQs
-## themselves; reserved for a future story that seeds full starting rosters.
+## Starting deploy tile coordinates for non-HQ starting entities.
+##
+## ⚠ [b]Read this before assuming what it controls — S7-06 checked, and the name misleads.[/b]
+##
+## [b]What it DOES do today:[/b] [method generate_procedural] excludes these tiles from its
+## feature-scatter candidate set, so a listed tile is guaranteed to stay Plain. That is a real,
+## live effect and the reason this field is not simply deleted.
+##
+## ⛔ [b]What it does NOT do:[/b] it has [b]no connection to where units actually deploy[/b].
+## [method BaseProduction.legal_deploy_tiles] computes a Manhattan radius around the
+## [b]producer[/b] ([member BaseProductionConfig.deploy_radius], 2 since S6-16) and never
+## consults this field. Renaming it would be an improvement; it is left alone here because the
+## `.tres` map format is serialised against these names.
+##
+## ⚠ [b]It is empty in every shipping map[/b] — [VSMap] sets `[]`, and so did all four
+## hand-built copies before it. So the proc-gen exclusion above currently excludes nothing, and
+## every measurement taken to date is unaffected by it either way.
+##
+## Still reserved for a future story that seeds full starting rosters, which is the use the name
+## was chosen for.
 @export var deploy_tiles: Array[Vector2i]
 
 

@@ -211,7 +211,12 @@ interfaces:
     added: 2026-07-23
     revised: 2026-07-24
 
-  - contract: completed_outpost_count
+  # ⚠ RETIRED 2026-08-25 (S7-06). S6-01 re-based AP income on research tiers, after which
+  # nothing in src/ called this for two sprints. Entry kept so the ADR-0006 forward-declaration
+  # pattern it documents stays readable — the CONTRACT is history, the pattern is not.
+  # Nearest replacement is BaseProduction.structure_count(), which is NOT a drop-in: it ignores
+  # build_status, so "completed only" must be filtered by the caller.
+  - contract: completed_outpost_count [RETIRED S7-06]
     status: active
     pattern: direct_call
     producer: base-production   # forward-declared — concrete implementation owed by ADR-0007

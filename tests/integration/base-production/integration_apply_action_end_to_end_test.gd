@@ -99,6 +99,22 @@
 # [system]_[feature]_test.gd + test_[scenario]_[expected].
 extends GdUnitTestSuite
 
+# ★ S7-06: local stand-in for the retired BaseProduction.completed_outpost_count(). The
+# accessor was dead product code — nothing in src/ called it once S6-01 re-based income on
+# research tiers — but the BEHAVIOUR these tests observe through it (a structure only counts
+# once its build_status reaches COMPLETED) is real and still worth pinning. So the accessor
+# goes and the observable stays, defined here rather than shipped.
+func _completed_factory_count(state: GameState, player: int) -> int:
+	var count: int = 0
+	for e: EntityState in state.entities():
+		if e.owner != player or not (e is StructureState):
+			continue
+		var s: StructureState = e
+		if s.type == StructureTypes.FACTORY and s.build_status == StructureState.BuildStatus.COMPLETED:
+			count += 1
+	return count
+
+
 const GRID_SIZE: int = 8
 
 
@@ -308,7 +324,7 @@ func test_outpost_completing_at_real_start_turn_counts_same_turn_income() -> voi
 
 	# Non-vacuous precondition: exactly 2 completed outposts count BEFORE
 	# start_turn runs -- proves the pre-turn baseline is real, not zero.
-	assert_int(BaseProduction.completed_outpost_count(state, 0)).is_equal(2)
+	assert_int(_completed_factory_count(state, 0)).is_equal(2)
 	var cfg: EconomyConfig = Balance.economy
 	# ★ S6-01 (2026-08-24): income no longer depends on outpost count at all.
 	# The AC this test was written for ("a completing outpost counts toward THIS
@@ -325,7 +341,7 @@ func test_outpost_completing_at_real_start_turn_counts_same_turn_income() -> voi
 
 	# Assert -- the 3rd outpost is now COMPLETED (step 3 ran) ...
 	assert_int(completing.build_status).is_equal(StructureState.BuildStatus.COMPLETED)
-	assert_int(BaseProduction.completed_outpost_count(state, 0)).is_equal(3)
+	assert_int(_completed_factory_count(state, 0)).is_equal(3)
 	# ... and step 3 emitted a StructureCompletedEvent for the just-finished
 	# outpost (event-stream symmetry; proves the completion is observable on the
 	# turn's event array, not only via the derived count).
@@ -369,7 +385,7 @@ func test_two_outposts_completing_same_start_turn_both_count() -> void:
 	state.active_player = 1
 
 	# Non-vacuous precondition: zero completed before start_turn.
-	assert_int(BaseProduction.completed_outpost_count(state, 0)).is_equal(0)
+	assert_int(_completed_factory_count(state, 0)).is_equal(0)
 
 	# Act -- the real start-of-turn sequence, one call.
 	state.start_turn(0)
@@ -378,7 +394,7 @@ func test_two_outposts_completing_same_start_turn_both_count() -> void:
 	# income snapshot (batch-complete, ADR-0017 D1/ADR-0008).
 	assert_int(completing_a.build_status).is_equal(StructureState.BuildStatus.COMPLETED)
 	assert_int(completing_b.build_status).is_equal(StructureState.BuildStatus.COMPLETED)
-	assert_int(BaseProduction.completed_outpost_count(state, 0)).is_equal(2)
+	assert_int(_completed_factory_count(state, 0)).is_equal(2)
 	var cfg: EconomyConfig = Balance.economy
 	# ★ S6-01: both completed in the same batch (the surviving ADR-0017 D1 /
 	# ADR-0008 ordering AC), and neither raised income -- structures no longer feed
