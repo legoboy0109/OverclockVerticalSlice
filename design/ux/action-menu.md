@@ -11,10 +11,25 @@
 > of AP.
 > ⚠ The review was a **self-audit by the spec's own author** — an independent pass would carry more
 > weight, and the four spec-accuracy findings are the kind an author reliably misses.
+>
+> **Re-reviewed 2026-08-25 (S7-07)** — `production/qa/ux-review-action-menu-2026-08-25.md`.
+> Verdict was **NEEDS REVISION** on 2 blocking issues, **both now fixed here**: the stale Platform
+> Target line and AC-22's resolution set, which tested only sizes *larger* than the shipping floor.
+> ★ **Neither was an authoring defect** — the platform moved under a spec written before it (S7-08),
+> and the acceptance criteria had not caught up. ✅ Every behavioural claim in this document was
+> re-verified against the shipped code and all passed, including the two that were genuine defects
+> at the first review (`open_ap_preview` now has a production caller; `commit_rejected` is
+> connected). ⚠ **Independence was still not achieved** — that pass was also by this author.
 > **Author**: main session, from `design/gdd/command-action-interface.md` + four user decisions (2026-08-24)
-> **Last Updated**: 2026-08-24
+> **Last Updated**: 2026-08-25
 > **Journey Phase(s)**: Core in-match loop — every AP-costed action passes through this surface
-> **Platform Target**: PC (Steam / Epic) — Keyboard/Mouse primary, Gamepad secondary (partial)
+> **Platform Target**: PC (Steam / Epic) **+ Steam Deck**. Keyboard/Mouse primary on desktop;
+> **gamepad is REQUIRED, not secondary**. Hardware floor **1280×800**; quality target 1080p/1440p.
+> ⚠ **Updated 2026-08-25 (S7-07).** This line previously read *"Gamepad secondary (partial)"*,
+> which was true when written and was overtaken by S7-08's Steam Deck decision. The spec's
+> *content* never assumed otherwise — the Interaction Map has always given the gamepad full parity
+> (D-pad, A, B, X/Y, LB/RB, L3, Back) — but this is the line a reader trusts to judge how much
+> gamepad work is optional, and it said the wrong thing for a day.
 > **Template**: UX Spec
 > **Scope**: Vertical Slice. Move / Attack / Produce / Wait / Cancel Build. Build stays a
 > player-level HUD control (CR-5) and is specified here only where it hands off.
@@ -456,7 +471,7 @@ those words describe is queried, never stored here.
 | CR-5 Build is player-level | Build never appears in the menu; the HUD button keeps it |
 | CR-6 single-click commit, illegal clicks inert | Only enabled rows are focusable/clickable |
 | CR-8 / D-2 binding-pool reason | Submenu rows name Credits or AP, never "unaffordable" |
-| AC-25 move→attack fluidity | Menu re-opens re-filtered after every commit |
+| `command-action-interface.md` AC-25 — move→attack fluidity | Menu re-opens re-filtered after every commit |
 | `MENU_KEYBOARD_NAV` | Full keyboard/gamepad traversal is the shipping default, not a fallback |
 | D-1 `projected_remaining_ap` inline on the HUD's AP counter, live on hover | Opened when a preview is entered and refreshed per cursor tile for Move (AC-21). ⚠ **Was unaddressed until 2026-08-24** — `GameHud.open_ap_preview()` had no production caller at all, so this "resolved" seam had never once run |
 | D-1b `projected_remaining_credits` shown **alongside** it for economic actions | Both echoes open together for Build and Produce, each reporting its own pool's affordability (AC-21) |
@@ -498,7 +513,8 @@ depends on game rules, the *set-up* is stated so the expected result follows fro
 | AC-19 | Arm Cancel Build, then press Esc. The row goes back to reading "Cancel Build", the menu stays open, the structure survives, and nothing is deselected | Integration |
 | AC-20 | The Cancel Build row states how much AP comes back **before** it is pressed at all | Integration |
 | AC-21 | Enter a Move preview: the AP counter reads `current → projected`, and the projected figure changes as the cursor moves between tiles of different cost. Open a Build preview: the Credits counter shows its own `current → projected` alongside it. Leave either preview by any route — commit, Esc, right-click — and both counters go back to a single number | Integration |
-| AC-22 | Repeat AC-1, AC-13 and the Build picker at **1920×1080 and 2560×1440**. Nothing is clipped, nothing overlaps a HUD panel, and no row is cut off | UI |
+| AC-22 | Repeat AC-1, AC-13 and the Build picker at **1280×800, 1920×1080 and 2560×1440**. Nothing is clipped, nothing overlaps a HUD panel, and no row is cut off | UI |
+| AC-31 | **At 1280×800 specifically** — the hardware floor, where there is least room — re-run AC-6, AC-7 and AC-8: the one-tile clearance still holds, a unit against the right edge still flips the menu to its left with the whole plate on screen, and a unit at the top and bottom edges still clamps vertically **without** sliding sideways over the entity | UI |
 | AC-23 | The menu is on screen in the same frame as the selection that opened it; its fade changes opacity only and a row can be clicked before the fade finishes | Integration |
 | AC-24 | Force a commit to be refused (e.g. act on the opponent's turn). The status line says `Refused:` followed by a plain-language reason — never silence | Integration |
 
