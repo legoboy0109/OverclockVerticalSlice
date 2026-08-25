@@ -111,11 +111,36 @@ stories:
     name: "Accent-coverage check in the asset pipeline"
     file: "production/playtests/s5-03-iso-legibility-2026-08-24.md"
     priority: should-have
-    status: ready-for-dev
+    status: done
     owner: "technical-artist"
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-08-25"
+    # ✅ DONE. tests/unit/art/accent_coverage_test.gd — 4 assertions, +4 tests (1262 -> 1266).
+    # ★ PUT IN THE SUITE, NOT THE PIPELINE, deliberately: a pipeline check runs when someone
+    #   remembers, and this defect got through precisely because NOTHING RAN AUTOMATICALLY.
+    # ASSERTIONS:
+    #   1. owned-faction coverage floor 30% / ceiling 75%. Floor sits ~12 points below the lowest
+    #      shipping archetype (trooper 42.5%, the art bible's baseline control) and ~17 above the
+    #      Sniper defect (13.3%). Ceiling: past ~75% the dark-chassis/neon-accent identity inverts.
+    #   2. ★★ NEUTRAL MUST STAY ACHROMATIC (<=10%) — and this runs the OPPOSITE way to #1.
+    #      art-bible section 4.2: "Neutral / unaligned — Achromatic, S 0-10% — hue-less BY DESIGN".
+    #      ⚠ A FIRST DRAFT ASSERTED A COVERAGE FLOOR FOR EVERY FACTION AND WOULD HAVE FAILED
+    #        CORRECT ART. Neutral measures 0.0-0.5% roster-wide, which is right — neutral means
+    #        UNOWNED, so hue on it would claim an ownership the entity does not have.
+    #      ⚠ The existing analyse_legibility.py EXCLUDES neutral entirely (FACTIONS = rush, boom),
+    #        so the diagnostic would never have caught a neutral regression. The gate covers it.
+    #   3. rush vs boom agree within 3 points per archetype (recolours of one master; measured
+    #      deltas all <= 0.5). A real gap means one derive chain went wrong for one archetype —
+    #      invisible on the board because each sprite looks fine alone.
+    #   4. roster spread <= 2.5x (1.5x today; it was 4.7x with the defect live).
+    # ✅ VERIFIED BOTH WAYS, per the Sprint 7 retro rule "distrust clean results":
+    #   - numbers cross-checked against analyse_legibility.py — the two implementations agree to
+    #     +/-0.1 points (scout 45.6/45.3, trooper 42.5/42.6, sniper 43.2/43.7 vs Python's
+    #     45.6/45.2, 42.5/42.5, 43.2/43.7)
+    #   - proved able to FAIL by raising the floor to 50% and watching it name each offender
+    # ★ No third copy of the formula: the test mirrors analyse_legibility.py TEST 3 exactly
+    #   (Godot's Color.s/.v ARE (max-min)/max and max), and the Python stays the diagnostic.
     # ★ S5-03's own recommendation #2, still open. The Sniper defect (hue coverage 13.3% vs a
     # roster mean of 50.1%) SHIPPED AND SURVIVED A FULL ART SPRINT because nothing measured it,
     # and every wave-2 unit has the same failure mode available.
