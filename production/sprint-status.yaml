@@ -149,11 +149,25 @@ stories:
     name: "Full export — templates, a runnable binary, and boot it"
     file: "production/sprints/sprint-7.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: "devops-engineer"
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-08-25"
+    # ✅ DONE. Templates: Redot_v26.2-stable_export_templates.tpz, 1233 MB, from the release
+    # matching the pinned engine EXACTLY. Installed to ~/.local/share/redot/export_templates/
+    # 26.2.stable/ (1.7 GB). ⚠ The version dir name comes from version.txt INSIDE the archive
+    # ("26.2.stable"), not guessed from the engine string.
+    # ARTEFACT: 69,505,272-byte Linux binary + 5.4 MB .pck.
+    # VERIFIED, both from a DIFFERENT cwd so res:// resolves out of the package:
+    #   Overclock.x86_64 --headless --quit-after 300                     -> exit 0, no errors
+    #   Overclock.x86_64 --headless res://scenes/vertical_slice.tscn ... -> exit 0, no errors
+    # ★★ THIS IS WHAT CLOSES s7-01 AND s7-02 FOR REAL. The preset excludes tests/, so the binary
+    #   is built WITHOUT the directory that used to define Research and Structure — and it boots.
+    #   The two export-fatal defects are confirmed fixed in the artefact a player would run, not
+    #   merely in a pack loaded by the editor.
+    # ⚠ NOT established: nothing ran on a Deck; nothing ran windowed (headless only, no display);
+    #   no embedded pck / .desktop / store wrapper / signing. builds/ is gitignored.
     # ★ Everything verified so far runs on the EDITOR binary via --main-pack. That
     #   proves resource packaging and script resolution -- the two things that were
     #   broken -- but not that the shipping binary works. Export templates are not
@@ -166,11 +180,29 @@ stories:
     name: "Retire the dead economy read surface"
     file: "design/gdd/ap-economy.md"
     priority: should-have
-    status: ready-for-dev
+    status: done
     owner: "gameplay-programmer"
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-08-25"
+    # ✅ DONE. Two items needing OPPOSITE treatment.
+    # completed_outpost_count() DELETED — genuinely dead: it counted COMPLETED Factories for
+    #   ADR-0006's income contract, s6-01 re-based income on research tiers, and nothing in src/
+    #   called it for two sprints. Also removed the stale class-header scope note + usage example
+    #   that still advertised it, and the mention in ai.gd's forward-declaration list. The
+    #   architecture registry entry is marked RETIRED rather than deleted (the ADR-0006
+    #   forward-declaration PATTERN it documents is still worth reading).
+    #   ⚠ structure_count() is the nearest replacement but is NOT a drop-in — it ignores
+    #     build_status, so "completed only" must be filtered by the caller. The earlier note
+    #     claiming supersession was half right, and that is now written down.
+    #   ★ The 13 TEST call sites were REWIRED to a local helper, not deleted: the accessor was
+    #     dead but the behaviour they observe through it (a structure counts only once
+    #     build_status reaches COMPLETED) is real. Suite held at 1262/1262 — no coverage lost.
+    # MapDefinition.deploy_tiles KEPT — it is NOT dead. generate_procedural() excludes those tiles
+    #   from feature scatter, a live effect. What IS true is that the NAME MISLEADS: it has no
+    #   connection to where units deploy (legal_deploy_tiles computes a radius around the PRODUCER
+    #   and never reads it), and every shipping map leaves it empty so the exclusion currently
+    #   excludes nothing. All three facts now documented at the declaration.
     # completed_outpost_count() has been DEAD PRODUCT CODE since s6-01 -- income no
     # longer calls it and nothing in src/ does; superseded by the generic
     # structure_count(). Left in place then only because 6 tests still name it as
@@ -184,11 +216,38 @@ stories:
     name: "★ Independent /ux-review of the action menu"
     file: "design/ux/action-menu.md"
     priority: should-have
-    status: ready-for-dev
+    status: done
     owner: "ux-designer + accessibility-specialist"
     estimate_days: 1.0
     blocker: ""
-    completed: ""
+    completed: "2026-08-25"
+    # ✅ RUN. Verdict NEEDS REVISION — 2 blocking, 2 advisory. Report:
+    #   production/qa/ux-review-action-menu-2026-08-25.md
+    # ⚠⚠ INDEPENDENCE STILL NOT ACHIEVED, AND THIS IS THE SECOND TIME. s7-07 existed because the
+    #   previous review was a self-audit by the spec's author; so is this one. What it CAN do
+    #   objectively — verify every claim against shipped code, and re-check the spec against config
+    #   that has since moved — it did, and BOTH blocking findings came from exactly there.
+    #   A subjective design/accessibility critique still wants separate eyes.
+    # ✅ CLAIM VERIFICATION AGAINST CODE — ALL PASS. The check that found real defects last time:
+    #   AC-15 live InputMap read (action_menu.gd:742) · AC-16 reduced motion injected · AC-17 the
+    #   [C]/[V] cycles are gone · AC-21 open_ap_preview HAS a production caller
+    #   (vertical_slice_root.gd:1285 — THE s6-32 DEFECT STAYED FIXED) · AC-24 commit_rejected
+    #   connected (:407). Nothing silently regressed.
+    # ⛔ BLOCKING 1 — Platform Target header is STALE: reads "Gamepad secondary (partial)" while
+    #   technical-preferences.md now reads "Full — required" with the Steam Deck floor (s7-08,
+    #   after this spec was written). ★ The spec CONTENT is fine — the Interaction Map already
+    #   gives gamepad full parity. Only the header claim is wrong, and it is the line a reader
+    #   trusts to know how much gamepad work is optional.
+    # ⛔ BLOCKING 2 — AC-22 tests 1920x1080 and 2560x1440 ONLY. Both are LARGER than the shipping
+    #   floor of 1280x800. ★ Most consequential finding here: the menu is a floating plate with
+    #   clearance/flip/clamp rules and EVERY ONE IS RESOLUTION-SENSITIVE — AC-6/7/8 are exactly
+    #   what a smaller viewport stresses, and none is tested at the smallest supported size.
+    # ADVISORY: text legibility at the floor unaddressed (project-wide Deck gap, but this surface
+    #   carries the smallest type) · Redot/Godot dual-focus parity still assumed — ★ now CHEAPLY
+    #   verifiable since s7-05 produced a real binary.
+    # ★ Both blocking issues are the spec being OVERTAKEN by the Steam Deck decision, not authoring
+    #   defects. Nothing here impugns the implementation.
+    # ⚠ NOT auto-fixed: /ux-review is read-only by protocol and defers spec edits to the user.
     # ⚠ The existing review was a SELF-AUDIT BY THE SPEC'S OWN AUTHOR, and 4 of its
     # 6 blocking findings were the spec describing something the build does not do
     # -- precisely the class an author reliably misses in their own work. A second
