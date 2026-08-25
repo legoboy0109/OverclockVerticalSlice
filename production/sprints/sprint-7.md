@@ -73,6 +73,38 @@ exception, so the fix was to make it match its siblings, not to invent a pattern
 | **S7-02** ✅ | Break the `UnitBalance`/`UnitConfig` parse cycle | 0.5 | `surcharge_for` moves onto the autoload; the pure injectable `surcharge_with_penalty` stays on the config, unchanged. One production caller updated |
 | **S7-03** ✅ | `export_presets.cfg` + `tests/unit/export_safety_test.gd` | 1.0 | Two structural guards, both verified by re-introducing the defect. ★ Doing so caught a **false negative in my own guard** — see below |
 | **S7-04** ✅ | Delete the pre-rename structure art duplicates; fix the pipeline that regenerates them | 0.5 | 14 PNGs + 14 sidecars, byte-identical twins verified by checksum. Pack **6.46 MB → 5.37 MB (−17%)** |
+| **S7-08** ✅ | **Steam Deck set as the target hardware floor**; budgets given a measured basis | 0.5 | User's call. Unblocks the two smoke checks that could only ever return "not measured". Four Deck Verified gaps recorded, none fixed blind |
+| **S7-09** ✅ | ★★ **The one-unit cliff — answered by measurement** | 0.5 | **A skill route back exists.** The cliff was an artifact of a harness with no skill differential. See below |
+
+### ★★ S7-09 — the project's biggest design question dissolved into a measurement bug
+
+The cliff sat as the top open question on the strength of S5-04 measuring **zero lead changes**
+in the +1 cell. **That zero could only ever have been zero.** `simulate_matches.gd` drives *both
+seats* with the same `AI.choose_action` and the same weights, deterministically — there is no
+skill differential anywhere in it, and a comeback is by definition the trailing player outplaying
+the leader.
+
+> ⇒ **Equal play from a worse position losing every time is arithmetic, not a design property.**
+> The harness was being asked a question it structurally could not answer, and returned a
+> confident number.
+
+Adding the missing variable — degrade the *leading* side's play by `p`, deterministically —
+gives a clean gradient at n=14:
+
+| Leader degraded | Games with a lead change | Mean window of doubt | Underdog wins |
+|---:|---:|---:|---:|
+| **0 %** | **0 / 14** | 3 % | 0 / 14 |
+| 15 % | 4 / 14 | 22 % | 1 / 14 |
+| 35 % | 8 / 14 | 40 % | 4 / 14 |
+| **50 %** | **12 / 14** | **66 %** | **6 / 14** |
+
+★ **No comeback mechanic is needed**, and adding one would contradict `game-concept.md` for
+nothing. What remains is a **tuning** question and it is the user's: one Trooper is worth roughly
+**30–35 % of decision quality**. Should a one-unit lead be that strong?
+
+⚠ **And the caveat travels.** S6-06's *"material advantage converts 18/18"* is measured on the
+same symmetric-policy harness. That figure is what such a harness **must** produce — it is not
+evidence the advantage is correctly sized.
 
 > ### ★★ The most instructive moment: a guard that could not fail
 > S7-03's guard 1 first flagged `"Research complete"` — a **display string** in the action log,
@@ -107,6 +139,8 @@ exception, so the fix was to make it match its siblings, not to invent a pattern
 - [x] ✅ The packaged build boots — main menu **and** the full match scene, exit 0, zero errors
 - [x] ✅ Both export-only defect classes have a structural guard, each verified by re-introducing the defect
 - [x] ✅ Full suite green — **1236/1236, 107 suites, 0 orphans**
+- [x] ✅ Target hardware named, with budgets that have a measured basis — S7-08
+- [x] ✅ The S6-06 gate re-verified after the harness change and **unchanged** — 18/22 resolve by HQ destruction (mean 29 turns on the resolved games), 4 mirror games at the 60-turn round cap, 18/18 conversion, seats P0 10 / P1 12, lowest HQ 1/40
 - [ ] A runnable exported **binary** (not just a `.pck`) boots — S7-05
 - [ ] No unplanned work absorbed without a recorded trade — ★ the rule Sprint 6 broke; this file existing at all is the fix
 
