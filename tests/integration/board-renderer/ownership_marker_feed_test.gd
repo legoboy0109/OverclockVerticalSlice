@@ -100,6 +100,51 @@ func test_decal_carries_the_owning_factions_texture() -> void:
 	assert_object(rush_marker.texture).is_not_same(boom_marker.texture)
 
 
+func test_a_structure_wears_the_base_ring_and_a_unit_the_tile_band() -> void:
+	# ★ 2026-08-24. Structures were correctly grounded on their own tile that day,
+	# and their base plate — as wide as the tile and taller than the tile diamond —
+	# swallowed the decal whole. The non-hue ownership tell the whole S5-08 pass
+	# exists to provide disappeared under every building on the board.
+	#
+	# The fix is a second decal STYLE, not a second decal: same faction shapes, moved
+	# outside the base plate. This pins that a structure gets the ring and a unit
+	# does not, which is the pairing that would silently invert if the style
+	# selection were ever keyed on the wrong thing.
+	var renderer := _make_renderer()
+	var feed := _make_feed_all(renderer)
+	feed.sync([
+		_make_unit(1, 0, Vector2i(2, 2), UnitTypes.SCOUT),
+		_make_structure(2, 0, Vector2i(4, 4), StructureTypes.HQ),
+	] as Array[EntityState])
+
+	var unit_marker: Sprite2D = renderer.marker_layer.get_node("Marker1") as Sprite2D
+	var structure_marker: Sprite2D = renderer.marker_layer.get_node("Marker2") as Sprite2D
+
+	assert_object(unit_marker.texture).is_same(
+		OwnershipMarker.texture_for(Factions.RUSH, OwnershipMarker.Style.TILE)
+	)
+	assert_object(structure_marker.texture).is_same(
+		OwnershipMarker.texture_for(Factions.RUSH, OwnershipMarker.Style.BASE_RING)
+	)
+	assert_int(structure_marker.texture.get_width()).override_failure_message(
+		"the structure's ring must be the wider of the two, or it is still under the building"
+	).is_greater(unit_marker.texture.get_width())
+
+
+func test_the_ring_stays_centred_on_the_tile_despite_being_wider_than_one() -> void:
+	# The ring is bigger than a tile, and it still BELONGS to that tile: it is
+	# centred on grid_to_screen exactly as the tile band is, so it reads as a label
+	# on one tile rather than as a footprint spanning several.
+	var renderer := _make_renderer()
+	var feed := _make_feed_all(renderer)
+	var tile := Vector2i(3, 5)
+	feed.sync([_make_structure(1, 0, tile, StructureTypes.HQ)] as Array[EntityState])
+
+	var marker: Sprite2D = renderer.marker_layer.get_node("Marker1") as Sprite2D
+	var centre: Vector2 = marker.position + (marker.offset + marker.texture.get_size() * 0.5) * marker.scale
+	assert_vector(centre).is_equal_approx(renderer.grid_to_screen(tile), Vector2(0.01, 0.01))
+
+
 # --- It belongs to the tile ------------------------------------------------------
 
 func test_decal_sits_at_the_tile_centre_and_follows_a_move() -> void:

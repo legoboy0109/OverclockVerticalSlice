@@ -47,7 +47,7 @@
 ## var info := reader.unit_info(unit.entity_id)
 ## print(info["type"].display_name, " ", info["current_hp"], "/", info["hp"])
 ##
-## var tiles: Array[Vector2i] = reader.legal_build_tiles(0, StructureTypes.ECONOMY_OUTPOST)
+## var tiles: Array[Vector2i] = reader.legal_build_tiles(0, StructureTypes.FACTORY)
 ## var s_info := reader.structure_info(structure.entity_id)
 ## print(s_info["build_turns_remaining"], " turns left, refund ", s_info["cancel_refund"])
 ## [/codeblock]
@@ -114,6 +114,56 @@ func unit_info(entity_id: int) -> Dictionary:
 ## O(query) — identical cost to the owning call (control-manifest Performance
 ## Guardrail note: this is a read accessor, not a simulation-hot-path call; the
 ## Presentation layer is responsible for how often it polls this per frame).
+
+## How many of [param player]'s entities still have something to do — a legal,
+## affordable verb remaining AND no stand-down mark ([WaitAction]).
+##
+## [b]The single definition of "idle".[/b] The End-Turn notice, and anything else
+## that wants to nudge a player about unfinished business, reads it from here
+## rather than counting entities itself: idleness is a rules question (does this
+## thing have an enabled verb left?), and a second walk of the entity list in a HUD
+## widget would be a second answer free to drift from the menu's.
+##
+## Reached through [method CommandFSM.menu_model] — the same model the contextual
+## menu renders — so "idle" means exactly "the menu would show this entity at least
+## one bright row other than Wait". An entity the player has stood down is never
+## counted, whatever it could still legally do: the mark IS the player saying they
+## are finished with it.
+##
+## O(entities x menu_model), evaluated only when the count is asked for (on commit,
+## not per frame).
+func idle_entity_count(player: int) -> int:
+	var count: int = 0
+	for entity: EntityState in entities():
+		if entity.owner != player:
+			continue
+		if _is_stood_down(entity):
+			continue
+		for entry: CommandFSM.VerbEntry in CommandFSM.menu_model(_state, entity):
+			if entry.verb != CommandFSM.Verb.WAIT and entry.enabled:
+				count += 1
+				break
+	return count
+
+
+## Whether [param entity] carries the per-turn stand-down mark. Both concrete
+## state classes have the field independently (mirroring [code]has_attacked[/code]),
+## so this is the one place that has to know which kinds carry it.
+static func _is_stood_down(entity: EntityState) -> bool:
+	if entity is UnitState:
+		return (entity as UnitState).stood_down
+	if entity is StructureState:
+		return (entity as StructureState).stood_down
+	return false
+
+
+## Whether [param entity] is one [param player] has stood down this turn. Public
+## sibling of [method idle_entity_count] for consumers that need the per-entity
+## answer — the board's actionable-glow predicate and the idle-entity cursor cycle.
+func is_stood_down(entity: EntityState) -> bool:
+	return _is_stood_down(entity)
+
+
 func legal_build_tiles(player: int, structure_type: StructureTypeDef) -> Array[Vector2i]:
 	return BaseProduction.legal_build_tiles(_state, player, structure_type)
 
@@ -267,13 +317,17 @@ func current_ap(player: int) -> int:
 	return AP.current_ap(_state, player)
 
 
-## [param player]'s Credit income decomposed into its three additive terms
-## ([code]{base, outpost, econ_tech}[/code], TR-hud-019, ADR-0016 §1) — a direct
+## [param player]'s [b]gross[/b] Credit income decomposed into its additive terms
+## ([code]{base, tiers}[/code], TR-hud-019, ADR-0016 §1) — a direct
 ## pass-through to [method Credits.credit_income_breakdown] (repointed from
 ## [code]AP.ap_income_breakdown[/code] by the ADR-0006 pivot; income now funds the
 ## Credits pool). Read live, never locally re-split from raw inputs (Pass-Through
-## Invariant — ADR-0016 §1 forbids the HUD receiving raw outpost count/tech flag
-## and splitting locally). O(1) plus the owning query's own O(1) reads.
+## Invariant — ADR-0016 §1 forbids the HUD receiving the raw tier count and
+## splitting locally). O(1) plus the owning query's own O(1) reads.
+## [br]★ S6-01 deleted the Economy Outpost: the terms are now [code]base[/code] and
+## [code]tiers[/code] (research-driven). This is [b]gross[/b] — see
+## [method total_upkeep] and [method net_income] for the other two thirds of the
+## UR-8 triple.
 func income_breakdown(player: int) -> Dictionary:
 	return Credits.credit_income_breakdown(_state, player)
 
@@ -292,6 +346,60 @@ func can_afford(player: int, amount: int) -> bool:
 ## Invariant). O(1).
 func current_credits(player: int) -> int:
 	return Credits.current_credits(_state, player)
+
+
+## Why the match ended (see [enum GameState.WinReason]), or [constant
+## GameState.WinReason.NONE] while it is still in progress — a verbatim read.
+## Lets the victory presentation distinguish an HQ kill from a round-limit
+## tiebreak (`game-hud.md` CR-9/AC-22). O(1).
+func win_reason() -> int:
+	return _state.win_reason
+
+
+## Which [enum GameState.TiebreakMetric] would decide (or did decide) a
+## round-limit result. O(1).
+func tiebreak_metric() -> int:
+	return _state.tiebreak_metric
+
+
+## Each player's current tiebreak-metric score, indexed by player — what a capped
+## game would be decided on right now. A verbatim read through
+## [method GameState.tiebreak_scores]; the HUD never recomputes the metric.
+## O(entity count); called on commit, never per-frame.
+func tiebreak_scores() -> Array[int]:
+	return _state.tiebreak_scores()
+
+
+## [param player]'s total per-turn Credit upkeep — a direct pass-through to
+## [method Upkeep.total_upkeep] (Pass-Through Invariant: the HUD never sums unit
+## upkeep itself). The middle term of the UR-8 gross/upkeep/net triple.
+## O(entity count), read once per commit and never per-frame.
+func total_upkeep(player: int) -> int:
+	return Upkeep.total_upkeep(_state, player)
+
+
+## [param player]'s [b]net[/b] Credit income — gross minus upkeep, a direct
+## pass-through to [method Upkeep.net_credit_income]. ★ This is the figure UR-8
+## says carries the visual weight: it is the one that goes negative, and a player
+## must be able to see the equilibrium coming before it arrives. Never locally
+## computed as [method income_breakdown] minus [method total_upkeep] — that would
+## re-derive a value the economy already owns (Pass-Through Invariant).
+func net_income(player: int) -> int:
+	return Upkeep.net_credit_income(_state, player)
+
+
+## [param player]'s current population — a direct pass-through to
+## [method Population.current_population]. Pairs with [method population_cap] for
+## the AC-12 current/max readout.
+func population(player: int) -> int:
+	return Population.current_population(_state, player)
+
+
+## [param player]'s effective population cap including Barracks bonuses — a direct
+## pass-through to [method Population.effective_cap]. The HUD never adds
+## [code]cap_bonus[/code] itself.
+func population_cap(player: int) -> int:
+	return Population.effective_cap(_state, player)
 
 
 ## True iff [param player] can currently afford [param amount] Credits (ADR-0016 §1,

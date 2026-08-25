@@ -117,3 +117,41 @@ Recorded here so they are not re-inherited by the next slice:
 and S5-04 against the repaired build → update `REPORT.md` → re-run `/gate-check pre-production`.
 
 **Stage stays Pre-Production until that sequence completes.**
+
+---
+
+## 6. Outcome — the gate passed, 2026-08-24
+
+**Step 2 of the route is done.** `18/21` matches now end by HQ destruction in a mean 25 turns,
+from a baseline where an HQ had never taken a single point of damage in 4,182 turn-rows. Both
+seats win equally (9/9); banked Credits peak at 9,550 and stay flat. Full table and caveats in
+`production/sprints/sprint-6.md`.
+
+**★ §3.2's prediction was wrong, and the correction matters.** This note predicted that once the
+economy was bounded, *"the existing siege term should surface on its own"* — and said that if it
+did not, **the diagnosis is wrong and that is the first thing to revisit.** It did not surface.
+Bounding the economy was necessary and fixed real defects, but it moved resolution *not at all*.
+
+The actual cause was one line of scoring: `_combat_value` scaled an HQ hit by `hp_removed /
+max_hp`, which is right for a unit and wrong for a win condition. An HQ at 1 hp is nearly a
+victory, not 1/40th of a structure. A 5-damage chip scored 0.75 against 3.00 for killing a
+Trooper, so units correctly broke off a reachable objective to trade — forever. Matches stalled
+at precisely the point where winning became possible.
+
+So the honest version of §1 is: the slice did not stall because the economy was unbounded. It
+stalled because **the AI was never paid to win**, and an unbounded economy meant it never had to
+care. Both were real; only the second was load-bearing.
+
+### What still stands between here and a verdict
+
+The gate was always the *machine* half. Unchanged and still owed by a human (§3, "Still owed"):
+
+| | |
+|---|---|
+| **S5-03 iso-legibility playtest** | ⛔ Pillar 3 hard gate, never run, now carried 4 sprints — and the corpus has since added unit classes, damage types, area telegraphs, ranks and crew states to a board that already took a sprint to make readable (cross-review **B-4**, still open) |
+| **S5-04 swing-back playtest** | Deferred on purpose until the gate passed. **It is now unblocked** — this is the first build where a match actually ends, so the tempo question can finally be asked of a real game |
+| **Core-loop fun** | No amount of AI-vs-AI resolution says the game is enjoyable. A resolving match is a precondition, not evidence |
+
+`REPORT.md`'s **PIVOT** verdict therefore stands. It is not flipped by this batch and should not
+be flipped without the human sessions above — replacing one unvalidated verdict with another is
+the exact failure this note exists to prevent.

@@ -46,7 +46,7 @@ func _make_type() -> UnitTypeDef:
 	type.attack_range = 1
 	type.move_cost = 1
 	type.soft_move_cap = 8
-	type.produce_cost = 1
+	type.produce_cost = 100  # ★ S6-05: ×100 Credit rescale (synthetic fixture)
 	return type
 
 

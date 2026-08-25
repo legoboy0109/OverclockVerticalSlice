@@ -4,10 +4,10 @@
 
 [resource]
 script = ExtResource("1")
-hp_pip = Vector2(0, 0)
+hp_pip = Vector2(0, 26)
 has_acted = Vector2(24, -56)
 tech_marker = Vector2(-24, -56)
-structure_hp = Vector2(0, -72)
+structure_hp = Vector2(0, -118)
 build_timer_badge = Vector2(0, -88)
 research_marker = Vector2(32, -72)
 ap_cost_badge = Vector2(-32, -20)

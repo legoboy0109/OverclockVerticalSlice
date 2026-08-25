@@ -3,6 +3,10 @@
 > **Status**: Reviewed — APPROVED (`/ux-review` 2026-07-27, 0 blocking)
 > **Author**: user + ux-designer
 > **Last Updated**: 2026-07-27
+>
+> ✅ **Resolved 2026-08-24 (S6-24).** The Settings screen exists (`src/ui/settings/settings_screen.gd`)
+> and carries the control-binding UI this note deferred, plus UI scale and reduced motion. Its spec
+> was written retroactively the same week — `design/ux/settings.md` — and still owes a `/ux-review`.
 > **Journey Phase(s)**: Entry / cold boot (no player-journey.md yet — see Open Questions)
 > **Template**: UX Spec
 > **Scope**: Vertical Slice (S2-05). VS-minimal entry set; persistence/campaign deferred (Alpha+).
@@ -46,7 +50,7 @@ target from pause → Quit to Main Menu. Alternate entry: none (it is the root).
 | Exit Destination | Trigger | Notes |
 |---|---|---|
 | VS skirmish (in-match) | "New Skirmish" | Starts a fresh match; loads the VS map + HUD |
-| Settings | "Settings" | Opens the settings screen (separate spec — see Data Requirements / Open Questions) |
+| Settings | "Settings" | Opens the settings screen (separate spec — see Data Requirements / Open Questions). ⛔ **Control bindings live here** — deferred to this screen by user decision 2026-08-24; the actions are already named and rebindable in `project.godot`, see `production/post-gate-backlog.md` item 6 |
 | App exit | "Quit" (confirm) | Closes the process |
 
 ---
@@ -200,14 +204,27 @@ Tier: **Standard** (WCAG 2.1 AA + CVAA).
 
 ## Acceptance Criteria
 
-- [ ] Main menu appears within [X]ms of app launch (target set at build time).
-- [ ] "New Skirmish" starts a fresh VS match and loads the board + HUD.
-- [ ] "Settings" opens the settings screen and returns to the menu on back.
-- [ ] "Quit" shows a confirm prompt; confirming exits, cancelling returns to the menu.
-- [ ] Keyboard/gamepad navigation reaches New Skirmish → Settings → Quit in order, each with a
-      focus indicator distinct from mouse-hover.
-- [ ] No Campaign/Continue entry appears in the VS build.
-- [ ] With reduced-motion enabled, the menu presents instantly with no lost information.
+> ✅ **Implemented 2026-08-24 (S6-22).** `scenes/main_menu.tscn` +
+> `src/ui/main_menu/main_menu.gd`; it is now the project's `run/main_scene`. Covered by
+> `tests/integration/main-menu/main_menu_test.gd` (10 tests). Screenshots in
+> `production/qa/evidence/main-menu/`.
+
+- [x] Main menu appears within [X]ms of app launch — it is the boot scene; no measured target set.
+- [x] "New Skirmish" starts a fresh VS match and loads the board + HUD.
+- [x] ✅ **"Settings" opens the settings screen and returns to the menu on back** — `SettingsScreen`
+      landed 2026-08-24 (S6-24); back restores focus to the Settings entry. The entry was inert for
+      exactly one day.
+- [x] "Quit" shows a confirm prompt; confirming exits, cancelling returns to the menu — and returns
+      focus to the Quit entry it came from, not the top of the menu.
+- [x] Keyboard/gamepad navigation reaches New Skirmish → Settings → Quit in order, each with a
+      focus indicator distinct from mouse-hover. *(Settings is skipped by traversal while inert —
+      `FOCUS_NONE` — which is the Standard Button pattern's stated treatment.)*
+- [x] No Campaign/Continue entry appears in the VS build.
+- [ ] ⚠ **With reduced-motion enabled, the menu presents instantly with no lost information** —
+      trivially true today because **no enter/exit flourish was built**: the spec calls the
+      title/menu fade decorative and Snap-Never-Tween makes the menu interactive instantly, so the
+      simplest correct implementation has nothing to strip. Re-open this AC if a flourish is ever
+      added, and pair it with a real reduced-motion setting (there is no settings store yet).
 
 ---
 
@@ -219,5 +236,8 @@ Tier: **Standard** (WCAG 2.1 AA + CVAA).
 2. **New Skirmish → side/faction pick?** The VS is symmetric (scope.md §5), so New Skirmish can
    launch straight into the match with no pre-match pick. If the VS build wants a side choice or
    a map confirm, that's a tiny intermediate screen (flag, not authored here).
-3. **Settings screen is a separate spec** — not required by S2-05 (HUD/menu/pause only). This
-   menu links to it as a named dependency; author it when settings implementation is scheduled.
+3. ~~**Settings screen is a separate spec**~~ — ✅ **Resolved 2026-08-24 (S6-26):**
+   `design/ux/settings.md` — **APPROVED** (`/ux-review` 2026-08-24, after 4 blocking issues were
+   fixed). ⚠ Still written **retroactively**: the review found three issues that had never been
+   *decided*, only never *noticed*, one of which was a silent data-loss bug in the code. Approval
+   closes the gap; it does not undo the ordering.

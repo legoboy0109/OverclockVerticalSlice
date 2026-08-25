@@ -86,18 +86,40 @@ class VerbEntry extends RefCounted:
 
 	var reason: int
 
-	func _init(v: int, e: bool, r: int) -> void:
+	## The AP this verb would cost, or [constant NO_SINGLE_COST] when the verb has
+	## no single price to name.
+	##
+	## [b]Most verbs genuinely do not have one[/b], and the sentinel says so rather
+	## than lying with a zero: Move's price is per-TILE (it is not knowable until
+	## the player is looking at a destination), Produce's is per-TYPE (the submenu
+	## carries it), Wait is free, and Cancel Build pays OUT rather than costing.
+	## Attack is the one verb whose price is a single number known the moment the
+	## menu opens, which is why it is the one verb that shows it
+	## (`design/ux/action-menu.md` OQ-2).
+	##
+	## Reached through [method Combat.attack_cost_for] like every other answer here
+	## — the widget renders this number, it never computes one (Pass-Through
+	## Invariant, ADR-0015 §4).
+	var ap_cost: int
+
+	func _init(v: int, e: bool, r: int, cost: int = NO_SINGLE_COST) -> void:
 		verb = v
 		enabled = e
 		reason = r
+		ap_cost = cost
 
+
+## [member VerbEntry.ap_cost] when a verb has no single price to name — see that
+## member. Negative because a real AP cost never is, so it can never collide with
+## a genuine "this is free" zero.
+const NO_SINGLE_COST: int = -1
 
 ## The verbs [method menu_model] can emit an entry for. [constant Verb.CANCEL_BUILD]
 ## (Story 004) is the destructive-gesture verb for an under-construction owned
 ## structure — see [method _cancel_build_entry]. Deliberately excludes Build
 ## (CR-5: Build is a player-level command, never part of a selected entity's
 ## own menu).
-enum Verb { MOVE, ATTACK, PRODUCE, WAIT, CANCEL_BUILD }
+enum Verb { MOVE, ATTACK, PRODUCE, WAIT, CANCEL_BUILD, DISBAND }
 
 ## Disablement reason flags (powers of two — see [member VerbEntry.reason]'s
 ## doc comment for why this is a bitmask, not a single code). Each flag names
@@ -116,6 +138,9 @@ enum Reason {
 	NO_DEPLOY_SPACE = 128,      ## BaseProduction.legal_deploy_tiles() is empty.
 	NOT_UNDER_CONSTRUCTION = 256, ## Cancel Build: entity is not an owned, UNDER_CONSTRUCTION StructureState.
 	INSUFFICIENT_CREDITS = 512,   ## Credits.can_afford() returned false — the Credit main cost of a dual-cost economic action (Build/Produce) is unaffordable (ADR-0006 pivot). INSUFFICIENT_AP covers the AP-surcharge leg.
+	NOTHING_BLOCKED = 4096,       ## Disband: nothing is currently blocked that disbanding would relieve — not in deficit and not at population cap — so the row is not offered at all (user decision 2026-08-25; see [method _disband_entry]).
+	NOT_A_UNIT = 2048,            ## Disband: entity is not an own [UnitState] — the verb does not apply to this KIND of thing (structures are never disbanded; UR-7).
+	POPULATION_CAP_REACHED = 1024, ## Population.can_field() returned false — the army is at (or over) its population cap. Mirrors [constant Action.Reason.POPULATION_CAP_REACHED].
 }
 
 
@@ -229,7 +254,8 @@ static func next_state(current: State, trigger: Trigger, _state: GameState) -> S
 ##
 ## Returns exactly one [VerbEntry] per [enum Verb] value, always in
 ## [code]Verb[/code] declaration order (Move, Attack, Produce, Wait, Cancel
-## Build) — [b]Wait is always present and always enabled[/b] (CR-4: "Wait
+## Build, Disband — the two DESTRUCTIVE verbs last, so a menu never puts an
+## irreversible row where a routine one was a moment ago) — [b]Wait is always present and always enabled[/b] (CR-4: "Wait
 ## (always — ends this entity's involvement without spending)"), satisfying
 ## AC-10's "Wait clickable" even for a fully-spent entity. [b]Cancel Build[/b]
 ## ([constant Verb.CANCEL_BUILD], Story 004) is enabled only for an owned,
@@ -239,14 +265,18 @@ static func next_state(current: State, trigger: Trigger, _state: GameState) -> S
 ##
 ## - [b]Move[/b] ([constant Verb.MOVE]): only meaningful for a [UnitState]
 ##   [param entity] (structures never move). Enabled iff
-##   [code]Movement.reachable(state, entity)[/code] is non-empty AND at least
-##   one returned tile is affordable via [code]AP.can_afford[/code] at its
-##   [code]min_cost[/code]. Disabled reasons: [constant Reason.OUT_OF_RANGE]
-##   if the reachable set is empty (AC-9's "no open tiles" case — the entity
-##   is boxed in or has 0 AP to spend on any tile); [constant Reason.INSUFFICIENT_AP]
-##   if the set is non-empty but every tile's cost exceeds current AP
-##   (AC-9's "no affordable moves" case). A [StructureState] [param entity]
-##   always yields Move disabled with [constant Reason.OUT_OF_RANGE]
+##   [code]Movement.reachable(state, entity)[/code] is non-empty — every tile it
+##   returns is already affordable, since its BFS stops at the first depth the
+##   mover cannot pay for. Disabled reasons, distinguished by a second AP-free
+##   query (★ 2026-08-24, action-menu.md OQ-5): [constant Reason.OUT_OF_RANGE]
+##   when [code]Movement.reachable_ignoring_ap[/code] is ALSO empty — the entity
+##   is genuinely boxed in and no amount of AP would help (AC-9's "no open tiles"
+##   case); [constant Reason.INSUFFICIENT_AP] when tiles exist but none is
+##   currently payable (AC-9's "no affordable moves" case). The two are mutually
+##   exclusive and each is precisely true, which matters because they point at
+##   different fixes — clear a path, versus end the turn.
+##   A [StructureState] [param entity] always yields Move disabled with
+##   [constant Reason.OUT_OF_RANGE]
 ##   (structures have no [code]reachable()[/code] concept).
 ## - [b]Attack[/b] ([constant Verb.ATTACK]): enabled iff the attacker can still
 ##   attack this turn ([code]Unit.can_attack[/code] for a [UnitState], or
@@ -297,6 +327,7 @@ static func menu_model(state: GameState, entity: EntityState) -> Array[VerbEntry
 	menu.append(_produce_entry(state, entity))
 	menu.append(VerbEntry.new(Verb.WAIT, true, Reason.NONE))
 	menu.append(_cancel_build_entry(state, entity))
+	menu.append(_disband_entry(state, entity))
 	return menu
 
 
@@ -308,15 +339,29 @@ static func _move_entry(state: GameState, entity: EntityState) -> VerbEntry:
 		return VerbEntry.new(Verb.MOVE, false, Reason.OUT_OF_RANGE)
 	var unit: UnitState = entity
 
-	var reachable: Array[Movement.ReachableTile] = Movement.reachable(state, unit)
-	if reachable.is_empty():
-		return VerbEntry.new(Verb.MOVE, false, Reason.OUT_OF_RANGE)
+	# Every tile [method Movement.reachable] returns is affordable BY CONSTRUCTION —
+	# its BFS stops at the first depth costing more than the mover's AP. A non-empty
+	# result therefore means "there is a move you can make", with nothing further to
+	# check.
+	if not Movement.reachable(state, unit).is_empty():
+		return VerbEntry.new(Verb.MOVE, true, Reason.NONE)
 
-	for tile: Movement.ReachableTile in reachable:
-		if AP.can_afford(state, unit.owner, tile.min_cost):
-			return VerbEntry.new(Verb.MOVE, true, Reason.NONE)
-
-	return VerbEntry.new(Verb.MOVE, false, Reason.INSUFFICIENT_AP)
+	# ★ 2026-08-24 — the fix for `design/ux/action-menu.md` OQ-5.
+	#
+	# An empty result is AMBIGUOUS, and the old code read it as one thing. Because
+	# the affordability cut happens inside the BFS, a unit with 0 AP and a unit
+	# walled in by terrain both come back empty — so a player who had simply spent
+	# their turn was told "no route", which points at the wrong fix entirely (move
+	# something out of the way, rather than end the turn). Worse, the branch that
+	# would have said "needs AP" was unreachable: it re-tested affordability on
+	# tiles the query had already filtered for affordability, so it could never
+	# fire. The reason existed in the enum and could not be produced.
+	#
+	# Asking the AP-free question separately is the only way to separate them, and
+	# it runs only on this cold path — a unit that can move never reaches here.
+	if Movement.reachable_ignoring_ap(state, unit).is_empty():
+		return VerbEntry.new(Verb.MOVE, false, Reason.OUT_OF_RANGE) # nowhere at ANY price.
+	return VerbEntry.new(Verb.MOVE, false, Reason.INSUFFICIENT_AP)  # somewhere, but not yet.
 
 
 ## Builds the Attack [VerbEntry] — see [method menu_model]'s doc comment for
@@ -341,15 +386,19 @@ static func _attack_entry(state: GameState, entity: EntityState) -> VerbEntry:
 	var cost: int = Combat.attack_cost_for(entity)
 	var affordable: bool = AP.can_afford(state, entity.owner, cost)
 
+	# ★ 2026-08-25 (OQ-2): the cost rides along on BOTH outcomes. On the enabled
+	# row it is what the player is deciding against; on a row disabled for AP it is
+	# the explanation — "needs AP" alone says you are short, "2 AP · needs AP" says
+	# by how much.
 	if has_targets and affordable:
-		return VerbEntry.new(Verb.ATTACK, true, Reason.NONE)
+		return VerbEntry.new(Verb.ATTACK, true, Reason.NONE, cost)
 
 	var reason: int = Reason.NONE
 	if not has_targets:
 		reason |= Reason.NO_TARGETS
 	if not affordable:
 		reason |= Reason.INSUFFICIENT_AP
-	return VerbEntry.new(Verb.ATTACK, false, reason)
+	return VerbEntry.new(Verb.ATTACK, false, reason, cost)
 
 
 ## Builds the Produce [VerbEntry] — see [method menu_model]'s doc comment for
@@ -372,6 +421,24 @@ static func _produce_entry(state: GameState, entity: EntityState) -> VerbEntry:
 	var deploy_tiles: Array[Vector2i] = BaseProduction.legal_deploy_tiles(state, producer, null)
 	if deploy_tiles.is_empty():
 		reason |= Reason.NO_DEPLOY_SPACE
+
+	# ★ Population cap (S6-07, `population-cap.md` AC-12). The RULES already
+	# enforced this -- BaseProduction.validate returns
+	# Action.Reason.POPULATION_CAP_REACHED -- and the AI already respected it, but
+	# this menu did not consult it, so a player at cap saw Produce ENABLED, chose a
+	# unit, and had the commit rejected with no forewarning. The menu is the
+	# affordance AC-12 is about; a rule enforced only at validation is a rule the
+	# player discovers by failing.
+	#
+	# Checked against every producible type, not one: a cap that blocks Heavies may
+	# still admit a Scout, and the menu must stay enabled while ANY unit is legal.
+	var any_fieldable: bool = false
+	for unit_type: UnitTypeDef in producer.type.producible_types:
+		if Population.can_field(state, producer.owner, unit_type):
+			any_fieldable = true
+			break
+	if not any_fieldable:
+		reason |= Reason.POPULATION_CAP_REACHED
 
 	# Dual-cost (ADR-0006 pivot): a unit is affordable iff BOTH its Credit main cost
 	# AND the shared AP surcharge (produce_ap_cost) are payable.
@@ -396,6 +463,174 @@ static func _produce_entry(state: GameState, entity: EntityState) -> VerbEntry:
 	return VerbEntry.new(Verb.PRODUCE, false, reason)
 
 
+## ProduceOption — one row of [method produce_options]' submenu: a single unit
+## type a producer could deploy, with the dual cost of deploying it and whether
+## it is available right now.
+##
+## Inner class of [CommandFSM] for the same reason [VerbEntry] is — external
+## references use the [code]CommandFSM.ProduceOption[/code] prefix.
+##
+## [member reason] is the same [enum Reason] bitmask [VerbEntry] carries, and
+## carries the same guarantee: [constant Reason.NONE] iff [member enabled].
+## Costs are reported even on a DISABLED row — the price is exactly what the
+## player needs in order to understand why the row is disabled, so hiding it
+## would defeat the purpose (`design/ux/action-menu.md`, submenu wireframe).
+class ProduceOption extends RefCounted:
+	## The unit type this row deploys.
+	var unit_type: UnitTypeDef
+	## Credits the deployment would cost, from [method Unit.effective_produce_cost].
+	var credit_cost: int
+	## AP the deployment would cost — the flat per-action surcharge, identical for
+	## every row (ADR-0006 dual-cost).
+	var ap_cost: int
+	## True iff this type is deployable right now: affordable in BOTH pools, under
+	## the population cap, and with production cap and deploy space remaining.
+	var enabled: bool
+	## Bitmask (OR) of every [enum Reason] flag that made this row unavailable.
+	var reason: int
+
+	func _init(t: UnitTypeDef, cc: int, ac: int, e: bool, r: int) -> void:
+		unit_type = t
+		credit_cost = cc
+		ap_cost = ac
+		enabled = e
+		reason = r
+
+
+## PURE: the per-type submenu behind [constant Verb.PRODUCE] — one
+## [ProduceOption] for every type [param entity] can produce, in the producer's
+## own [member StructureTypeDef.producible_types] order.
+##
+## [b]Why this exists as a sibling of [method menu_model] rather than inside it.[/b]
+## [method menu_model]'s Produce entry answers one question — "is producing
+## anything possible right now" — by short-circuiting on the FIRST affordable,
+## fieldable type. That is the right answer for a menu ROW, and the wrong answer
+## for a menu the player is choosing FROM: it cannot say which types are the
+## affordable ones. This walks every type instead and reports each independently,
+## so the submenu can show a Scout enabled and a Heavy disabled-with-reason in the
+## same list (`design/ux/action-menu.md` AC-13).
+##
+## [b]Returns an EMPTY array, never a null or an error[/b], for any [param entity]
+## that is not a completed producer — the caller has already been told that by
+## [method menu_model]'s Produce entry (NOT_A_PRODUCER / NOT_COMPLETED), and a
+## submenu is never opened off a disabled row. Empty is the honest answer to "what
+## can this thing make", not a failure.
+##
+## [b]Pass-Through Invariant (TR-cmdui-010)[/b] holds here exactly as it does in
+## [method menu_model]: every cost and legality answer comes from an owning
+## system's side-effect-free query ([method Unit.effective_produce_cost],
+## [method Credits.can_afford], [method AP.can_afford],
+## [method Population.can_field],
+## [method BaseProduction.effective_production_cap],
+## [method BaseProduction.legal_deploy_tiles]) — this function names no balance
+## constant of its own.
+##
+## O(producible types), each with that type's own query cost.
+static func produce_options(state: GameState, entity: EntityState) -> Array[ProduceOption]:
+	var options: Array[ProduceOption] = []
+	if not (entity is StructureState):
+		return options
+	var producer: StructureState = entity
+	if producer.build_status != StructureState.BuildStatus.COMPLETED:
+		return options
+
+	# Producer-wide gates: these fail identically for every type, so they are
+	# computed ONCE and OR-ed into every row rather than re-derived per type. A
+	# player at production cap sees every row disabled for that reason, which is
+	# true and is the explanation they need.
+	var shared: int = Reason.NONE
+	if producer.units_produced_this_turn >= BaseProduction.effective_production_cap(
+			state, producer, producer.owner):
+		shared |= Reason.PRODUCTION_CAP_REACHED
+	if BaseProduction.legal_deploy_tiles(state, producer, null).is_empty():
+		shared |= Reason.NO_DEPLOY_SPACE
+
+	# The AP surcharge is per-ACTION, not per-type (ADR-0006), so it is also a
+	# shared gate — but it is folded in per row below so each row's reason mask is
+	# self-contained and readable on its own.
+	var ap_cost: int = Balance.economy.produce_ap_cost
+	var ap_affordable: bool = AP.can_afford(state, producer.owner, ap_cost)
+
+	for unit_type: UnitTypeDef in producer.type.producible_types:
+		var credit_cost: int = Unit.effective_produce_cost(state, unit_type, producer.owner)
+		var reason: int = shared
+		if not ap_affordable:
+			reason |= Reason.INSUFFICIENT_AP
+		if not Credits.can_afford(state, producer.owner, credit_cost):
+			reason |= Reason.INSUFFICIENT_CREDITS
+		if not Population.can_field(state, producer.owner, unit_type):
+			reason |= Reason.POPULATION_CAP_REACHED
+		options.append(ProduceOption.new(
+			unit_type, credit_cost, ap_cost, reason == Reason.NONE, reason
+		))
+	return options
+
+
+## BuildOption — one row of [method build_options]' player-level Build picker.
+##
+## The Build sibling of [ProduceOption], and deliberately a separate class rather
+## than a shared "type option": Build belongs to the PLAYER (CR-5) and Produce
+## belongs to a producer, they are gated by different queries, and collapsing them
+## would mean one class whose fields are half-meaningless in each of its two uses.
+class BuildOption extends RefCounted:
+	## The structure type this row would place.
+	var structure_type: StructureTypeDef
+	## Credits the build would cost, from [method BaseProduction.effective_build_cost].
+	var credit_cost: int
+	## AP the build would cost — the flat per-action surcharge (ADR-0006 dual-cost).
+	var ap_cost: int
+	## True iff this type is placeable right now: affordable in BOTH pools with at
+	## least one legal tile to put it on.
+	var enabled: bool
+	## Bitmask (OR) of every [enum Reason] flag that made this row unavailable.
+	var reason: int
+
+	func _init(t: StructureTypeDef, cc: int, ac: int, e: bool, r: int) -> void:
+		structure_type = t
+		credit_cost = cc
+		ap_cost = ac
+		enabled = e
+		reason = r
+
+
+## PURE: one [BuildOption] per type in [param types], for [param player], in the
+## order given.
+##
+## [b]Player-level, not entity-level[/b] (CR-5): Build takes no selected entity,
+## which is why it has no [VerbEntry] in [method menu_model] at all and why this
+## takes a player index where [method produce_options] takes a producer. The HUD's
+## persistent Build control is its entry point; this is the model behind that
+## control's type picker.
+##
+## Reuses [constant Reason.NO_DEPLOY_SPACE] for "nowhere legal to put it" rather
+## than adding a build-specific flag — the two mean the same thing to a player
+## (there is no tile for this), and one flag with one phrase is one fewer thing for
+## a translator and a reader to hold.
+##
+## Same Pass-Through discipline as its siblings: every answer comes from
+## [method BaseProduction.effective_build_cost],
+## [method BaseProduction.legal_build_tiles], [method Credits.can_afford] and
+## [method AP.can_afford]. No balance constant is named here.
+static func build_options(state: GameState, player: int, \
+		types: Array[StructureTypeDef]) -> Array[BuildOption]:
+	var options: Array[BuildOption] = []
+	var ap_cost: int = Balance.economy.build_ap_cost
+	var ap_affordable: bool = AP.can_afford(state, player, ap_cost)
+	for type: StructureTypeDef in types:
+		var credit_cost: int = BaseProduction.effective_build_cost(state, type, player)
+		var reason: int = Reason.NONE
+		if not ap_affordable:
+			reason |= Reason.INSUFFICIENT_AP
+		if not Credits.can_afford(state, player, credit_cost):
+			reason |= Reason.INSUFFICIENT_CREDITS
+		if BaseProduction.legal_build_tiles(state, player, type).is_empty():
+			reason |= Reason.NO_DEPLOY_SPACE
+		options.append(BuildOption.new(
+			type, credit_cost, ap_cost, reason == Reason.NONE, reason
+		))
+	return options
+
+
 ## Builds the Cancel Build [VerbEntry] (Story 004, ADR-0015 §2) — see
 ## [method menu_model]'s doc comment for the full rule. Enabled iff
 ## [param entity] is a [StructureState] AND
@@ -415,6 +650,83 @@ static func _cancel_build_entry(state: GameState, entity: EntityState) -> VerbEn
 	if structure.owner != state.active_player:
 		return VerbEntry.new(Verb.CANCEL_BUILD, false, Reason.NOT_UNDER_CONSTRUCTION)
 	return VerbEntry.new(Verb.CANCEL_BUILD, true, Reason.NONE)
+
+
+## Builds the Disband [VerbEntry] (`design/ux/action-menu.md` OQ-3).
+##
+## [b]Units only[/b] (`unit-upkeep.md` UR-7): a structure is never disbanded, so a
+## structure — or anything the active player does not own — yields
+## [constant Reason.NOT_A_UNIT], the "this verb does not apply to this KIND of
+## thing" answer that the menu drops rather than renders (see
+## [method _cancel_build_entry] for the same treatment and why).
+##
+## [b]Offered only when disbanding would UNBLOCK something[/b] (user decision,
+## 2026-08-25): the player is in deficit, or at/over their population cap.
+##
+## Those are the two states disbanding relieves, and they are the reason the verb
+## exists — `unit-upkeep.md` UR-7 makes it the escape valve the deficit lock
+## depends on, and `population-cap.md` makes it the only voluntary way back under a
+## ceiling that otherwise waits on attrition. Outside them the row would be a
+## permanently visible, irreversible entry on every unit the player owns, for
+## something most players use rarely; a player with nothing blocked gets
+## [constant Reason.NOTHING_BLOCKED], which the menu drops rather than renders.
+##
+## [b]"At cap" is [code]>=[/code], not [code]==[/code], and that matters.[/b] The
+## cap FALLS when a Barracks dies (`population-cap.md` PC-6) and units above the
+## new ceiling are deliberately not destroyed — so a player can sit strictly OVER
+## cap, production-locked, which is precisely when a voluntary way back under is
+## most wanted.
+##
+## [b]The rules are unchanged.[/b] [method Upkeep.validate_disband] still accepts a
+## disband from a player with nothing blocked — this hides an affordance, it does
+## not forbid an action, and nothing here may become a rule. That distinction is
+## what keeps `apply_action` the single authority on legality.
+##
+## When the row IS offered it is gated on AP alone — never on the deficit lock that
+## blocks produce/build/research, since disband is the one action that REDUCES
+## upkeep and locking it would make a deficit unrecoverable by the player's own
+## choice (UR-7). The blocked state is what SHOWS this verb; it must never be what
+## blocks it.
+static func _disband_entry(state: GameState, entity: EntityState) -> VerbEntry:
+	if not (entity is UnitState) or entity.owner != state.active_player:
+		return VerbEntry.new(Verb.DISBAND, false, Reason.NOT_A_UNIT)
+	if not _disbanding_would_unblock(state, entity.owner):
+		return VerbEntry.new(Verb.DISBAND, false, Reason.NOTHING_BLOCKED)
+	var cost: int = Balance.economy.disband_ap_cost
+	if not AP.can_afford(state, entity.owner, cost):
+		return VerbEntry.new(Verb.DISBAND, false, Reason.INSUFFICIENT_AP, cost)
+	return VerbEntry.new(Verb.DISBAND, true, Reason.NONE, cost)
+
+
+## Whether [param player] is currently in a state that disbanding a unit would
+## relieve — the gate on whether the Disband row is offered at all.
+##
+## Two triggers, both read through their owning system rather than re-derived here:
+## the Credit deficit ([member PlayerState.in_deficit], set by
+## [method Upkeep.apply_turn_economy]) and the population ceiling
+## ([method Population.current_population] vs [method Population.effective_cap]).
+##
+## Isolated as its own function because it answers a question — "would disbanding
+## help right now?" — that is likely to grow a third trigger later, and because it
+## is the one place a future reader will look to learn why the row appeared.
+static func _disbanding_would_unblock(state: GameState, player: int) -> bool:
+	if state.per_player[player].in_deficit:
+		return true
+	return Population.current_population(state, player) \
+		>= Population.effective_cap(state, player)
+
+
+## PURE: the Credit refund preview for disbanding [param unit] — what the player
+## gets back, shown on the row BEFORE either press of the confirmation gate
+## (the *Hold-to-Confirm Refund* pattern's "see the cost before you commit"
+## promise, applied to a negative-outcome action).
+##
+## Reaches the value only through [method Upkeep.disband_refund], never a local
+## rate (Pass-Through Invariant, ADR-0015 §4) — the sibling of
+## [method cancel_build_preview], which does the same for the other destructive
+## verb. O(1).
+static func disband_preview(unit: UnitState) -> int:
+	return Upkeep.disband_refund(unit.type)
 
 
 ## PURE: the AP refund preview for cancelling [param structure] under

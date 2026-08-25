@@ -106,6 +106,34 @@
 > | RTOQ-NEW-2 | **Should Attack/Defense Tech also tier?** Economy now has three tiers; a single flat Attack Tech alongside looks inconsistent, and a tiered combat line would give the Empire's "power increasing based on the linear tech tree" somewhere to live | systems-designer |
 > | RTOQ-NEW-3 | ★ **Is a 2,500 ceiling right?** At the pre-rescale scale it was 25, close to the old ~26 practical ceiling, so existing balance intuition roughly carries over. But the old ceiling was reached by *building*, which cost map space and time, while this one is reached by *researching*, which costs only Credits and turns. The curve to reach it is quite different even though the endpoint is similar | economy-designer |
 
+---
+
+# ⛔ EVERYTHING BELOW THIS LINE PREDATES THE S6 ECONOMY REWORK
+
+The revision banner above is the **current** design. The body that follows is the original
+Research/Tech design, retained for the rationale, lifecycle, edge cases and acceptance criteria the
+rework did not replace — but it was written when Economy Tech was a *modifier on a
+structure-keyed economy*, and it has not been rewritten.
+
+**Read it through these corrections (S6-09, 2026-08-24, cross-review W-4/W-5):**
+
+| Below you will read | Status |
+|---|---|
+| **Economy Tech** as `+ECONOMY_TECH_INCOME_BONUS` per completed Economy Outpost, up to `ECONOMY_TECH_TIER_THRESHOLD` (6) | ⛔ **Superseded.** Research *is* the economy now: income is `base_income + econ_tier_bonus × tier`, with `tier` bought up to `max_economy_tier` (3) at `econ_tier_costs`. Nothing counts structures |
+| **Economy Outpost** | Deleted as an income source; the resource was renamed to **Factory**, a `GROUND_VEHICLE` producer that grants no income |
+| **Production Outpost** | **Barracks** (S6-03) |
+| Any **Credit** figure (`build_cost 8`, `research_cost 7`, payback comparisons) | **×100** (S6-02) |
+
+★ **The economy ceiling is the point.** The old design had no ceiling — Economy Tech multiplied an
+unbounded outpost count, which is the compounding loop that produced the **PIVOT** verdict. The
+replacement is finite by construction: three tiers, bought once each, and then income stops
+growing. Read the tiered structure below as the *ancestor* of that shape, not as the live rule.
+
+Everything else (the Research Lab's lifecycle, the both-or-neither dual-cost contract, the
+one-at-a-time research rule, Attack and Defense Tech) is **unaffected** and remains current.
+
+---
+
 ## Overview
 
 Research / Tech is OVERCLOCK's progression lever: a small, flat set of three permanent unlocks —
@@ -595,6 +623,20 @@ reciprocal edges are logged as handoffs below and should be wired when those GDD
 
 **Provisional (undesigned dependents):** Command & Action Interface (#9), Game HUD (#10), AI Opponent
 (#11), Faction Identity (#12) — each lists Research / Tech under its Dependencies when authored.
+
+### ★ Reciprocal downstream — the wave-2 systems (added 2026-08-24, S6-09)
+
+Cross-review **W-1**: All 3 systems below declare a dependency on this document, and this
+document listed none of them. Reciprocity was **0/11 across the corpus** — every new GDD pointed
+up, no old GDD pointed back, so reading only this file gave no hint that changing it would break
+them. Restored mechanically; the relationship nature is copied from each new GDD's own
+Dependencies table, which remains the authority.
+
+| Downstream system | Nature |
+|---|---|
+| **Promotion & Veterancy (#21)** | Hard |
+| **Population Cap (#16)** | Soft |
+| **Unit Upkeep (#15)** | Soft |
 
 ## Tuning Knobs
 

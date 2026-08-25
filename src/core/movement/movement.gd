@@ -73,6 +73,12 @@ class ReachableTile extends RefCounted:
 ## O(frontier size) per call, bounded by the tiles within [param unit]'s
 ## current AP reach, not the full board (ADR-0009 Performance Implications).
 ##
+## [b]Returns empty for BOTH "boxed in" and "cannot afford a single step"[/b] — the
+## affordability cut below stops expansion before depth 1 when the mover has too
+## little AP. Callers that need to tell those apart must ask
+## [method reachable_ignoring_ap] as well; see its doc comment for why that
+## distinction matters to a player.
+##
 ## Usage:
 ## [codeblock]
 ## var results: Array[Movement.ReachableTile] = Movement.reachable(state, unit)
@@ -80,6 +86,53 @@ class ReachableTile extends RefCounted:
 ##     print(r.tile, r.min_cost, r.is_surcharged)
 ## [/codeblock]
 static func reachable(state: GameState, unit: UnitState) -> Array[ReachableTile]:
+	return _reachable_within(state, unit, state.current_ap(unit.owner))
+
+
+## Every tile [param unit] could legally reach [b]if AP were no object[/b] — the
+## same BFS as [method reachable] with the affordability cut removed.
+##
+## [b]Why this exists (2026-08-24).[/b] [method reachable] stops expanding the
+## moment a depth costs more than the mover's current AP, so at 0 AP it returns an
+## EMPTY array — indistinguishable from a unit that is genuinely boxed in by
+## terrain, friendly bodies or the board edge. Every consumer that reads "empty
+## means nowhere to go" was therefore telling a player with no AP that they had no
+## route, which is a different problem with a different solution (end the turn vs.
+## move something out of the way). Asking this question separately is the only way
+## to tell the two apart.
+##
+## [b]Not a movement legality API.[/b] Nothing may commit a move off this result —
+## it deliberately reports tiles the mover cannot pay for. It exists to answer
+## "would this unit have anywhere to go with more AP?", and
+## [method CommandFSM._move_entry] is its only intended caller. [method validate]
+## remains the sole authority on whether a move is legal.
+##
+## O(board) worst case rather than O(AP reach), because there is no budget to stop
+## it early. Call it only when [method reachable] has already come back empty —
+## which is exactly when the distinction matters and when the common path has
+## nothing to walk anyway.
+static func reachable_ignoring_ap(state: GameState, unit: UnitState) -> Array[ReachableTile]:
+	return _reachable_within(state, unit, _NO_AP_LIMIT)
+
+
+## Sentinel budget meaning "do not stop for cost" — see
+## [method reachable_ignoring_ap]. Negative because a real AP budget is never
+## negative ([method AP.can_afford] rejects negative amounts outright).
+const _NO_AP_LIMIT: int = -1
+
+
+## The shared BFS behind [method reachable] and [method reachable_ignoring_ap].
+##
+## [param ap_budget] is the affordability ceiling: expansion stops at the first
+## depth costing more than it. [constant _NO_AP_LIMIT] disables that stop entirely,
+## leaving the visited set (and therefore the board) as the only bound.
+##
+## Extracted rather than duplicated so the two queries can never disagree about
+## traversal, destination validity, neighbour order or surcharge depth — the four
+## things a hand-copied second BFS would drift on first. The budget is read ONCE
+## here instead of per-depth inside the loop, which is equivalent (nothing mutates
+## [param state] mid-query) and marginally cheaper on the AI's hot path.
+static func _reachable_within(state: GameState, unit: UnitState, ap_budget: int) -> Array[ReachableTile]:
 	var grid: GridState = state.grid
 	var w: int = grid.width
 	var h: int = grid.height
@@ -97,7 +150,7 @@ static func reachable(state: GameState, unit: UnitState) -> Array[ReachableTile]
 	while not frontier.is_empty():
 		depth += 1
 		var cost_at_depth: int = _cost_for_depth(unit, depth)
-		if cost_at_depth > state.current_ap(unit.owner):
+		if ap_budget != _NO_AP_LIMIT and cost_at_depth > ap_budget:
 			break # Monotonic cost — nothing deeper is affordable.
 		var surcharged: bool = _is_surcharged_at_depth(unit, depth)
 		var next_frontier: Array[Vector2i] = []
@@ -255,5 +308,9 @@ static func apply(state: GameState, action: Action) -> Array[Event]:
 	state.grid.move(move.from, move.to)
 	unit.position = move.to
 	unit.tiles_moved_this_turn += move.tiles_entered
+	# ★ 2026-08-25: acting clears the stand-down mark. It records "I am finished
+	# with this one", and the player has visibly changed their mind — leaving it
+	# set would keep the entity dim and skipped while it still had a turn left.
+	unit.stood_down = false
 
 	return [UnitMovedEvent.new(unit.entity_id, move.from, move.to, cost)] as Array[Event]

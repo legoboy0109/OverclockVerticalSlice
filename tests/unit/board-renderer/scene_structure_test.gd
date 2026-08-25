@@ -32,10 +32,13 @@ func test_scene_tree_matches_floor_overlay_marker_occupant_structure() -> void:
 	var renderer: BoardRenderer = auto_free(BoardRenderer.new())
 	add_child(renderer)
 
-	# Assert — node count and types
-	assert_int(renderer.get_child_count()).is_equal(4)
+	# Assert — node count and types. ★ 2026-08-24: five, not four — CursorTileMapLayer
+	# joined the tree so the board cursor has a layer the overlay API cannot clear.
+	assert_int(renderer.get_child_count()).is_equal(5)
 	assert_object(renderer.floor_layer).is_not_null()
 	assert_object(renderer.overlay_layer).is_not_null()
+	assert_object(renderer.cursor_layer).is_not_null()
+	assert_bool(renderer.cursor_layer is TileMapLayer).is_true()
 	assert_object(renderer.marker_layer).is_not_null()
 	assert_object(renderer.occupant_layer).is_not_null()
 
@@ -52,14 +55,20 @@ func test_scene_tree_matches_floor_overlay_marker_occupant_structure() -> void:
 	# Assert — declared node names match the story's exact tree
 	assert_str(renderer.floor_layer.name).is_equal("FloorTileMapLayer")
 	assert_str(renderer.overlay_layer.name).is_equal("OverlayTileMapLayer")
+	assert_str(renderer.cursor_layer.name).is_equal("CursorTileMapLayer")
 	assert_str(renderer.marker_layer.name).is_equal("MarkerLayer")
 	assert_str(renderer.occupant_layer.name).is_equal("OccupantLayer")
 
-	# Assert — sibling order: Floor, Overlay, Marker, then Occupant
+	# Assert — sibling order: Floor, Overlay, Cursor, Marker, then Occupant.
+	# ★ The Cursor layer sits immediately AFTER Overlay and shares its z_index, so
+	# equal-z tree order is what draws the cursor above an open preview. That makes
+	# this index assertion load-bearing, not cosmetic: swap the two and the cursor
+	# vanishes under every move/attack highlight.
 	assert_int(renderer.floor_layer.get_index()).is_equal(0)
 	assert_int(renderer.overlay_layer.get_index()).is_equal(1)
-	assert_int(renderer.marker_layer.get_index()).is_equal(2)
-	assert_int(renderer.occupant_layer.get_index()).is_equal(3)
+	assert_int(renderer.cursor_layer.get_index()).is_equal(2)
+	assert_int(renderer.marker_layer.get_index()).is_equal(3)
+	assert_int(renderer.occupant_layer.get_index()).is_equal(4)
 
 
 # AC-1: coarse cross-tree z_index band,
@@ -72,6 +81,8 @@ func test_scene_tree_z_index_bands_are_floor_overlay_marker_occupant() -> void:
 	# Assert
 	assert_int(renderer.floor_layer.z_index).is_equal(0)
 	assert_int(renderer.overlay_layer.z_index).is_equal(1)
+	# Cursor shares the overlay band on purpose — see the sibling-order assertion.
+	assert_int(renderer.cursor_layer.z_index).is_equal(1)
 	assert_int(renderer.marker_layer.z_index).is_equal(2)
 	assert_int(renderer.occupant_layer.z_index).is_equal(3)
 	# The marker layer is deliberately NOT Y-sorted — flat decals at tile centres

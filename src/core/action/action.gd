@@ -39,7 +39,9 @@ extends RefCounted
 ## forward-declared dispatch slots, registered by their own Core epics
 ## (Movement/Combat/Base & Production/Research) when those land
 ## (out of scope here, per ADR-0002/Story 002).
-enum Verb { MOVE, ATTACK, BUILD, PRODUCE, RESEARCH, CANCEL_BUILD, END_TURN, DISBAND }
+## [constant Verb.WAIT] appended 2026-08-25 (see [WaitAction]) — appended, never
+## inserted, so every existing ordinal is preserved.
+enum Verb { MOVE, ATTACK, BUILD, PRODUCE, RESEARCH, CANCEL_BUILD, END_TURN, DISBAND, WAIT }
 
 ## Every rejection cause [method GameState.apply_action] can return, plus
 ## [constant Reason.OK] for a passing [code]validate()[/code]. Deliberately an
@@ -75,6 +77,18 @@ enum Reason {
 	IN_DEFICIT,
 	# Disband targeting something that is not an own, living unit (UR-7).
 	NOT_OWN_UNIT,
+	# The owner is at their infantry cap (S6-04, population-cap.md PC-2). Distinct from
+	# PRODUCTION_CAP_REACHED, which is a per-producer per-TURN throughput limit; this is
+	# a limit on how many units may exist at once.
+	POPULATION_CAP_REACHED,
+	# The producer is still on its post-production cooldown (S6-07). Distinct from
+	# PRODUCTION_CAP_REACHED (a per-TURN throughput limit) -- this spans turns and is the
+	# lever that makes losing a unit cost TIME rather than a turn's Credits.
+	PRODUCER_ON_COOLDOWN,
+	# This structure type is already at its per-player maximum, counting both completed
+	# and under-construction instances (S6-03). Distinct from PRODUCTION_CAP_REACHED,
+	# which is a per-producer per-turn unit limit, not a structure-count limit.
+	STRUCTURE_MAX_REACHED,
 }
 
 ## Which verb this is — the dispatch key [method GameState.apply_action] uses

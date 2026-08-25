@@ -145,6 +145,19 @@ const OVERLAY_Z_INDEX: int = 1
 ## out would break it in exactly the moment a player is deciding what to attack.
 ## Below, because it is a decal on the floor and an actor standing on the tile must
 ## occlude it.
+## The board cursor sits in the OVERLAY band, and its layer is added to the tree
+## immediately AFTER [member overlay_layer] so equal-z tree order draws it above
+## the move/attack previews and below every marker and occupant. That ordering is
+## the point: the cursor must remain visible while a preview is painted under it,
+## but a unit standing on the cursor tile must still read as standing ON the board
+## rather than under a lid.
+##
+## ★ It is a SEPARATE layer rather than another [enum OverlayClass] because
+## [CommandInterface] owns [method set_overlay]/[method clear_overlay] and clears
+## the whole overlay layer between previews — a cursor painted there would blink
+## out every time the player opened or closed a preview.
+const CURSOR_Z_INDEX: int = 1
+
 const MARKER_Z_INDEX: int = 2
 
 ## Coarse cross-tree z-index band for [member occupant_layer] (ADR-0013 §2).
@@ -184,16 +197,30 @@ enum OverlayClass {
 ## per class is sufficient for this story's mechanism proof — real
 ## hatch/pattern/outline/glyph authoring per command-action-interface.md §B
 ## is technical-art's later pass, not re-derived here.
+## ★ Alphas retuned 2026-08-24, and the retune is the point rather than a polish
+## pass. These were authored at 0.85-0.9 — effectively opaque — back when nothing
+## ever displayed them: the slice painted its range preview in an immediate-mode
+## `_draw()` that rendered underneath the board, so no one ever saw an overlay on
+## a real match. The first frame that did showed a Scout's surcharged move set
+## covering roughly two thirds of the board in near-solid tan, which buried the
+## terrain, the ownership decals and the neon actors all at once.
+##
+## Art bible Principle 3 is explicit that depth and affordance cues stay
+## SUBORDINATE to the actors; an overlay is information about the board, not a
+## replacement for it. These now tint rather than cover. The ordering is
+## deliberate too: sparse, decisive classes (attack target, refund) stay strong
+## because they mark a handful of tiles, while the classes that can cover half the
+## map (the two move tiers) are the quietest.
 const OVERLAY_TINTS: Dictionary = {
-	OverlayClass.MOVE_IN_CAP: Color(0.75, 0.9, 1.0, 0.85),
-	OverlayClass.MOVE_OVER_CAP: Color(0.85, 0.65, 0.35, 0.85),
-	OverlayClass.ATTACK_TARGET: Color(1.0, 0.25, 0.25, 0.9),
-	OverlayClass.BLOCKED_BY_FRIENDLY: Color(0.4, 0.4, 0.4, 0.85),
-	OverlayClass.OUT_OF_RANGE: Color(0.3, 0.3, 0.35, 0.4),
-	OverlayClass.AREA_DEAD_ZONE: Color(0.5, 0.2, 0.5, 0.6),
-	OverlayClass.BUILD_DEPLOY_GO_TILE: Color(0.75, 0.9, 1.0, 0.85),
-	OverlayClass.CANCEL_REFUND: Color(0.9, 0.3, 0.2, 0.75),
-	OverlayClass.AFTER_MOVE_ECHO: Color(1.0, 0.25, 0.25, 0.4),
+	OverlayClass.MOVE_IN_CAP: Color(0.62, 0.85, 1.0, 0.30),
+	OverlayClass.MOVE_OVER_CAP: Color(0.95, 0.72, 0.36, 0.20),
+	OverlayClass.ATTACK_TARGET: Color(1.0, 0.28, 0.24, 0.55),
+	OverlayClass.BLOCKED_BY_FRIENDLY: Color(0.45, 0.45, 0.50, 0.35),
+	OverlayClass.OUT_OF_RANGE: Color(0.3, 0.3, 0.35, 0.22),
+	OverlayClass.AREA_DEAD_ZONE: Color(0.55, 0.25, 0.55, 0.40),
+	OverlayClass.BUILD_DEPLOY_GO_TILE: Color(0.70, 0.92, 1.0, 0.42),
+	OverlayClass.CANCEL_REFUND: Color(0.9, 0.32, 0.22, 0.50),
+	OverlayClass.AFTER_MOVE_ECHO: Color(1.0, 0.30, 0.24, 0.26),
 }
 
 ## The 12 on-board glyph classes (ADR-0013 §5, Story 005; taxonomy source:
@@ -277,6 +304,10 @@ var floor_layer: TileMapLayer
 ## directly, so this class stays the single choke point for overlay writes.
 var overlay_layer: TileMapLayer
 
+## The single-tile cursor layer (see [constant CURSOR_Z_INDEX]). Painted through
+## [method set_cursor]/[method clear_cursor]; never touched by the overlay API.
+var cursor_layer: TileMapLayer
+
 ## Y-sorted occupant group (ADR-0013 §2). [member Node2D.y_sort_enabled] is
 ## the sole depth-sort mechanism for children of this node — never a custom
 ## sort. See the class doc comment's scene-tree section for the
@@ -338,6 +369,9 @@ func _ready() -> void:
 	floor_layer = _build_iso_tilemap_layer("FloorTileMapLayer", FLOOR_Z_INDEX)
 	overlay_layer = _build_iso_tilemap_layer("OverlayTileMapLayer", OVERLAY_Z_INDEX)
 	_build_overlay_tile_source()
+	# Added AFTER the overlay layer on purpose — see CURSOR_Z_INDEX.
+	cursor_layer = _build_iso_tilemap_layer("CursorTileMapLayer", CURSOR_Z_INDEX)
+	_build_cursor_tile_source()
 	marker_layer = _build_marker_layer()
 	occupant_layer = _build_occupant_layer()
 	_build_floor_tile_source()
@@ -398,6 +432,62 @@ func _build_overlay_tile_source() -> void:
 		source.texture_region_size = tile_size
 		source.create_tile(Vector2i.ZERO)
 		overlay_layer.tile_set.add_source(source, class_id)
+
+
+## The cursor ring's colour. Warm near-white, deliberately outside the overlay
+## palette: cool-white is the go-tile language and red is attack, so the cursor
+## must not be mistaken for either. It marks where the PLAYER is looking, which is
+## not game state at all.
+const CURSOR_TINT: Color = Color(1.0, 0.96, 0.82, 0.95)
+
+## Ring thickness as a fraction of the tile's half-height. Thick enough to survive
+## the isometric foreshortening that squashes the diamond's top and bottom corners.
+const CURSOR_THICKNESS: float = 0.16
+
+
+## Bakes the cursor's atlas entry — an OUTLINE diamond, not a filled one, so the
+## terrain, any overlay beneath it and any unit standing on the tile all stay
+## readable through it (Pillar 3: the cursor may not hide what it points at).
+func _build_cursor_tile_source() -> void:
+	var source := TileSetAtlasSource.new()
+	source.texture = _build_diamond_outline_texture(TILE_TEXTURE_SIZE, CURSOR_TINT)
+	source.texture_region_size = TILE_TEXTURE_SIZE
+	source.create_tile(Vector2i.ZERO)
+	cursor_layer.tile_set.add_source(source, 0)
+
+
+## Bakes a 2:1 iso diamond OUTLINE at [param tile_size] in [param tint] — filled
+## only in the band between the diamond edge and an inset copy of it.
+func _build_diamond_outline_texture(tile_size: Vector2i, tint: Color) -> ImageTexture:
+	var image := Image.create(tile_size.x, tile_size.y, false, Image.FORMAT_RGBA8)
+	var half_width: float = tile_size.x * 0.5
+	var half_height: float = tile_size.y * 0.5
+	var inner: float = 1.0 - CURSOR_THICKNESS
+	for y: int in tile_size.y:
+		for x: int in tile_size.x:
+			var dx: float = absf(x + 0.5 - half_width)
+			var dy: float = absf(y + 0.5 - half_height)
+			# Same point-in-diamond metric as the filled build; the ring is the
+			# band where the metric sits between `inner` and 1.
+			var d: float = dx / half_width + dy / half_height
+			if d <= 1.0 and d >= inner:
+				image.set_pixel(x, y, tint)
+			else:
+				image.set_pixel(x, y, Color(0, 0, 0, 0))
+	return ImageTexture.create_from_image(image)
+
+
+## Paints the board cursor on [param tile], replacing any previous position.
+## Independent of the overlay API — a preview being opened or cleared never
+## disturbs it.
+func set_cursor(tile: Vector2i) -> void:
+	cursor_layer.clear()
+	cursor_layer.set_cell(cell_for(tile), 0, Vector2i.ZERO)
+
+
+## Removes the board cursor (mouse-driven play, or a menu taking focus).
+func clear_cursor() -> void:
+	cursor_layer.clear()
 
 
 ## Bakes a flat-tinted 2:1 iso diamond [ImageTexture] at [param tile_size],

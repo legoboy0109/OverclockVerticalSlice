@@ -325,7 +325,7 @@ func test_default_tiebreak_cannot_be_won_by_building_or_producing() -> void:
 		var outpost := StructureState.new()
 		outpost.entity_id = state.next_entity_id
 		outpost.owner = 1
-		outpost.type = StructureTypes.PRODUCTION_OUTPOST
+		outpost.type = StructureTypes.BARRACKS
 		outpost.current_hp = 10
 		state.entities_by_id[outpost.entity_id] = outpost
 		state.next_entity_id += 1
@@ -347,7 +347,7 @@ func test_unit_count_metric_ignores_structures() -> void:
 		var outpost := StructureState.new()
 		outpost.entity_id = state.next_entity_id
 		outpost.owner = 1
-		outpost.type = StructureTypes.PRODUCTION_OUTPOST
+		outpost.type = StructureTypes.BARRACKS
 		outpost.current_hp = 10
 		state.entities_by_id[outpost.entity_id] = outpost
 		state.next_entity_id += 1

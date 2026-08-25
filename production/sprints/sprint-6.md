@@ -36,6 +36,37 @@ turn-rows, and zero again across 1,260 more after a siege drive was added and pr
 ★ **If this batch does not flip, nothing else in this sprint matters.** Run it early and often,
 not once at the end.
 
+### ✅ GATE PASSED — 2026-08-24, batch 5 (commit `2626f6d`, merged `ae120bc`)
+
+| Pass condition | Baseline | Batch 5 | |
+|---|---|---|---|
+| Resolve on **play**, not the round cap | 0/20 | **18/21** end by HQ destruction, mean 25 turns | ✅ |
+| **Non-zero HQ damage** at all | zero across 4,182 turn-rows | lowest HQ seen **1 of 40**; 608 rows carry damage | ✅ |
+| Not **seat-determined** | 95–100% one seat | kills split **P0 9 / P1 9** | ✅ |
+| Material advantage **converts** | +3 Troopers won 0 of 5 | **18/18** handicapped games | ✅ |
+| (economy bound) peak banked Credits | 5,724 and still climbing at turn 200 | **9,550**, flat — target was <15,000 | ✅ |
+
+**The 3 games that go the distance are the +0 mirror.** A deterministic AI on a symmetric
+board *should* tiebreak, so this is correct behaviour rather than residual stall — and the
+harness gives that cell **n=1, not n=3**: `variant` perturbs bonus-unit placement, and at +0
+handicap there are no bonus units. All three are byte-identical. Worth fixing in the harness
+before that cell is used to conclude anything.
+
+**What actually did it.** Four levers were tried. Three of them — bounding the economy,
+implementing `CREDIT_TO_AP_RATE`, and valuing production capacity — each found and fixed a
+genuine defect and each moved resolution **not at all**. The two that moved it were about
+incentives: production cooldowns (slower reinforcement) and, decisively, **making the objective
+outscore trading**. `_combat_value` scaled an HQ hit by `hp_removed / max_hp`, so a 5-damage
+chip scored 0.75 against 3.00 for killing a Trooper; units correctly broke off a reachable
+objective to fight. `hq_siege_value` 12 → 60 (break-even 48). See `.agent/notes.md` for the
+full post-mortem and the method lesson.
+
+> ⚠️ **One result to read sceptically:** 18/18 handicap conversion is a *total* correlation
+> between material advantage and victory. The gate asked for "more often than not" and got
+> determinism. That is the right direction, but it suggests the slice currently has no comeback
+> mechanism — worth a look during balance work, not now.
+
+
 ## ★★ Read before writing any code — two corrections that invalidate old measurements
 
 | # | What | Why it blocks measurement |
@@ -69,14 +100,14 @@ not once at the end.
 
 | ID | Task | Owner | Est. | Deps | Acceptance |
 |----|------|-------|-----:|------|------------|
-| **S6-07** | **HUD: gross / upkeep / net** — replace the dead `base + outpost + econ_tech` breakdown (cross-review B-3); population readout; purchase preview shows its effect on net | ui-programmer | 1.0 | S6-02, S6-04 | `unit-upkeep.md` AC-19/AC-20; `population-cap.md` AC-12. ★ `net` carries the visual weight — a player must see the equilibrium coming |
-| **S6-08** | **Victory/defeat presentation** — `game-hud.md` CR-9 / AC-17 / AC-22, unimplemented and carried since Sprint 5. A one-line status message is the current stopgap | ui-programmer | 1.0 | S6-06 | A real win/loss screen fires on HQ destruction and on the round cap. ★ Invisible while games never ended; player-facing the moment they do |
+| **S6-07** ✅ | **HUD: gross / upkeep / net** — replace the dead `base + outpost + econ_tech` breakdown (cross-review B-3); population readout; purchase preview shows its effect on net | ui-programmer | 1.0 | S6-02, S6-04 | `unit-upkeep.md` AC-19/AC-20; `population-cap.md` AC-12. ★ `net` carries the visual weight — a player must see the equilibrium coming |
+| **S6-08** ✅ | **Victory/defeat presentation** — `game-hud.md` CR-9 / AC-17 / AC-22, unimplemented and carried since Sprint 5. A one-line status message is the current stopgap | ui-programmer | 1.0 | S6-06 | A real win/loss screen fires on HQ destruction and on the round cap. ★ Invisible while games never ended; player-facing the moment they do |
 
 ### Nice to Have (rides the buffer)
 
 | ID | Task | Owner | Est. | Notes |
 |----|------|-------|-----:|-------|
-| **S6-09** | `/propagate-design-change` sweep — cross-review W-1/W-4/W-5: dependency reciprocity (0/11), pre-rescale arithmetic, "Production Outpost" naming across ~10 docs | producer | 0.5 | Mechanical; no conclusions change |
+| **S6-09** ✅ | `/propagate-design-change` sweep — cross-review W-1/W-4/W-5: dependency reciprocity (0/11), pre-rescale arithmetic, "Production Outpost" naming across ~10 docs | producer | 0.5 | Mechanical; no conclusions change |
 | **S6-10** | Factory art — re-point the retired Economy Outpost's 7 files to `struct_factory_*` + manifest | art-director | 0.5 | User-approved reuse; zero new generations |
 
 ## ★ Carried and explicitly NOT in this sprint
@@ -127,7 +158,71 @@ Note corrected. **A wrong note is worse than no note**, and this one had survive
 
 ## Definition of Done
 
-- [ ] ⛔ **S6-06 gate passed** — matches resolve on play, from both seats, with non-zero HQ damage
+### S6-07 / S6-08 complete — 2026-08-24 (`3ddcad7`, `9c65447`)
+
+**S6-07** — the income popover was still *rendering* `base + outpost + econ_tech` long
+after S6-01 deleted the Economy Outpost. Its data model had been repointed; its `_draw()`
+had not, so the player saw two permanently-zero terms for mechanics that no longer exist and
+could not see upkeep or net at all. Now shows `gross − upkeep = net`, with net larger and the
+only coloured figure (UR-8: the player must see the equilibrium *coming*). `open_preview()`
+projects net after a prospective purchase (AC-20). New `PopulationWidget` for AC-12's readout,
+kept separate from income on purpose — upkeep is a gradient you can watch approach, the cap is
+a hard stop.
+
+**★ A live defect surfaced while writing that up.** AC-12's other half — "the produce
+affordance is visibly disabled with a stated reason" — was not just unshipped. The population
+cap was enforced in the rules (`BaseProduction.validate`), respected by the AI, and displayed
+by the new widget, but **the verb menu never checked it**. A player at cap saw Produce
+*enabled*, chose a unit, and got a rejection with no forewarning. Fixed in `CommandFSM`.
+
+**S6-08** — both of CR-9's clauses, which needed genuinely different presentation rather than
+one path with a swapped noun. An HQ kill explains itself; a round-limit finish explains
+nothing (nothing died, and the board still looks playable), so that path also shows the
+deciding metric and both scores. Required recording *why* the match ended: the deciding HQ is
+already erased from `entities_by_id` by the time the HUD reads terminal state, so the cause is
+unrecoverable after the fact. Adds `GameState.WinReason` + `win_reason`, and
+`reason`/`metric`/`metric_by_player` on `GameOverEvent`.
+
+**★★ AC-22 had been silently live for a sprint.** It was marked *"deferred — not testable in
+VS scope, activate when `MAX_ROUNDS` ships"*. `MAX_ROUNDS` shipped in **S6-03**, and ~1 game in
+7 was ending on it, untested, with no presentation. Nothing connected arming the round cap to
+that AC's activation condition. **Lesson, recorded in `game-hud.md`: a deferral whose trigger
+is another story's side effect will not re-open itself — name the story that satisfies it.**
+
+Suite **1085/1085** (28 new). Slice boots clean. Regression batch unchanged at 18/21, mean 25
+turns — the state additions cost nothing.
+
+**Two presentation calls are yours to overrule** (both flagged in the GDDs, both reversible):
+`unit-upkeep.md` **UOQ-5** — net gets the visual weight rather than all three figures being
+equal. `game-hud.md` **OQ-2** — a capped game shows the metric and both scores.
+
+### S6-09 complete — 2026-08-24 (`f959146` + 3 doc commits)
+
+**Factory re-statted** to `base-production.md`'s roster table (1,000 / 3 / 200; it carried the
+renamed Economy Outpost's 400 / 1 / 100). ★ Which surfaced the bigger problem: the Factory
+*produces nothing* — ground vehicles are wave 2 — and grants no income, yet was offered in the
+build roster. Correcting the stats made the trap three times more expensive. Pulled from the roster
+until it can build something. The AI already skipped it unprompted; this only ever cost the human.
+
+Also fixed the same rename's second inheritance: the AI's economy-investment throttle still counted
+a Factory build as an economy action, in **both** the shipped driver and `simulate_matches.gd`'s
+hand-copied duplicate — the one whose own comment demands it "match EXACTLY ... a looser rule here
+would silently simulate a different AI than the one that ships". A new parity suite pins it.
+
+**W-1** reciprocity restored across 12 GDDs. **W-5** naming triaged by context, not find-replaced —
+three documents (`base-production`, `ap-economy`, `research-tech`) turned out to have the S6 rework
+bolted on top with the entire superseded body left underneath in the present tense, and now carry
+dividers. **W-4** handled with scale notes rather than rewritten numbers. **Plus** the entity
+registry, four sprints stale and the baseline `/consistency-check` trusts.
+
+Suite **1089/1089**. Slice boots clean. Batch unchanged: 18/21, mean 25 turns.
+
+⚠ **Flagged for a direction call, not changed:** Barracks (data 900 vs table 600) and Defensive
+Structure (600/1 vs 500/2) drift the same way the Factory did — but they are live balance values on
+a gate that has only just started passing, and Barracks throughput was one of the two levers that
+fixed it. Re-statting them is a balance decision.
+
+- [x] ✅ **S6-06 gate passed** (2026-08-24, batch 5) — matches resolve on play, from both seats, with non-zero HQ damage
 - [ ] `CREDIT_TO_AP_RATE` ships at 0.01 and the lethal-floor invariant is re-verified
 - [ ] Derived upkeep yields 100/200/200/300 on the shipped roster
 - [ ] All Must Have tasks complete and passing their acceptance criteria

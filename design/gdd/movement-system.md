@@ -300,6 +300,18 @@ summation, `ceil` rule, and depth-dependent reachability) is Movement-owned and 
 **`/design-review`-confirmed sound on 2026-07-21** (the numbers stay spike-gated; only the formula and
 spec are approved).
 
+### ★ Reciprocal downstream — the wave-2 systems (added 2026-08-24, S6-09)
+
+Cross-review **W-1**: the system below declares a dependency on this document, and this
+document did not list it back. Reciprocity was **0/11 across the corpus** — every new GDD pointed
+up, no old GDD pointed back, so reading only this file gave no hint that changing it would break
+them. Restored mechanically; the relationship nature is copied from each new GDD's own
+Dependencies table, which remains the authority.
+
+| Downstream system | Nature |
+|---|---|
+| **Unit Classes (#17)** | Hard |
+
 ## Tuning Knobs
 
 Movement owns few numeric knobs of its own — its main values (`move_cost` per unit) are owned by

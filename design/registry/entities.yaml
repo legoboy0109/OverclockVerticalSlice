@@ -15,6 +15,39 @@
 #   - When a new GDD references an existing entry, append its path to
 #     referenced_by. Do not create a duplicate entry.
 #
+# ==============================================================================
+# ★★ S6 ECONOMY REWORK — READ BEFORE TRUSTING ANY NUMBER BELOW (2026-08-24, S6-09)
+# ==============================================================================
+#
+# This registry had drifted from the shipped game across four sprints. It is the
+# grep-first baseline for /consistency-check and /review-all-gdds, so a stale entry
+# here does not merely sit wrong -- it becomes the "authoritative" value those
+# skills compare live documents against, and it will confidently flag a CORRECT
+# document as inconsistent. Reconciled against data/units/*.tres and
+# data/structures/*.tres, which are the real authority.
+#
+# WHAT CHANGED:
+#   S6-01  Income is RESEARCH-keyed (base_income + econ_tier_bonus x tier, capped
+#          at max_economy_tier). completed_outpost_count / the n term /
+#          OUTPOST_BONUS_TIER1/2 / ECONOMY_TECH_TIER_THRESHOLD are DELETED, not
+#          renamed. Entries below are marked deprecated per this file's own rules.
+#   S6-02  Credit scale x100, and unit `upkeep` introduced -- a recurring per-turn
+#          drain that did not previously exist. Any pre-2026-08-24 Credit figure in
+#          a comment is pre-rescale.
+#   S6-03  economy_outpost -> factory, production_outpost -> barracks (resource
+#          renames, NOT retitles -- the Factory's income role is gone), and
+#          per-structure max_count.
+#   S6-04  Barracks cap_bonus; population cap.
+#   S6-09  Factory re-statted to its design values and pulled from the build roster.
+#
+#   S6-10  Barracks 900 -> 600 and defensive_structure 600/1 -> 500/2, aligning the
+#          last two structures with base-production.md's roster table. Escalated as a
+#          balance decision in S6-09 and approved by the user; measured against the
+#          S6-06 regression batch rather than assumed safe, because Barracks
+#          throughput is one of the two levers that fixed that gate.
+#
+# ==============================================================================
+
 # WRITTEN BY: /design-system (Phase 5 — after GDD sections are approved)
 #             /consistency-check (when resolving conflicts)
 # READ BY:    /design-system (Phase 2 — before authoring begins, and after
@@ -63,13 +96,14 @@ entities:
     attack_range: 1   # = MAX range for both targeting profiles (combat-resolution.md); Scout is melee (1)
     move_cost: 1
     soft_move_cap: 4   # PROVISIONAL (2026-07-20) — tiles before move cost escalates ×SOFT_MOVE_PENALTY; escalation formula owned by movement-system.md
-    produce_cost: 2
+    produce_cost: 200       # ×100 rescale 2026-08-24 (S6-02, was 2) — Credits inflated so upkeep and larger armies tune granularly
+    upkeep: 100              # NEW 2026-08-24 (S6-02) — recurring per-turn Credit drain; derived via Upkeep.default_upkeep()
     defense: 0              # NEW 2026-07-21 (combat-resolution.md) — flat damage mitigation; Unit-owned; default 0, no VS unit overrides; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
     targeting_mode: DIRECT  # NEW 2026-07-21 (combat-resolution.md) — DIRECT (cardinal line) | AREA (indirect ring); Unit-owned; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
     min_range: 1            # NEW 2026-07-21 (combat-resolution.md) — min range for AREA dead zone; 1 for DIRECT units; attack_range = max range; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
     can_counterattack: false # NEW 2026-07-21 (combat-resolution.md) — per-unit-type retaliation flag; default false all VS units; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
     added: 2026-07-19
-    revised: 2026-07-21
+    revised: 2026-08-24   # ×100 Credit rescale + upkeep added (S6-02)
     # Cheap, fast, fragile melee harasser. Costs owned here; attack_cost (2 AP) owned by combat.
 
   - name: trooper
@@ -85,13 +119,14 @@ entities:
     attack_range: 2   # = MAX range for both targeting profiles (combat-resolution.md)
     move_cost: 2
     soft_move_cap: 3   # PROVISIONAL (2026-07-20) — see movement-system.md for escalation formula
-    produce_cost: 4
+    produce_cost: 400       # ×100 rescale 2026-08-24 (S6-02, was 4) — Credits inflated so upkeep and larger armies tune granularly
+    upkeep: 200              # NEW 2026-08-24 (S6-02) — recurring per-turn Credit drain; derived via Upkeep.default_upkeep()
     defense: 0              # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; default 0; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
     targeting_mode: DIRECT  # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
     min_range: 1            # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
     can_counterattack: false # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; default false; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
     added: 2026-07-19
-    revised: 2026-07-21
+    revised: 2026-08-24   # ×100 Credit rescale + upkeep added (S6-02)
     # Efficiency-band backbone; range 2 (cardinal, first blocker). Owns range-2 hp/AP after Heavy cost→7.
 
   - name: heavy
@@ -107,13 +142,14 @@ entities:
     attack_range: 2   # = MAX range for both targeting profiles (combat-resolution.md)
     move_cost: 3
     soft_move_cap: 2   # PROVISIONAL (2026-07-20) — slow anvil, lowest reach; see movement-system.md for escalation formula
-    produce_cost: 7   # was 6 — raised 2026-07-20 (unit-system design-review) so Trooper owns the range-2 efficiency band (Heavy 10/7=1.43 hp/AP < Trooper 1.5)
+    produce_cost: 700       # ×100 rescale 2026-08-24 (S6-02, was 7) — Credits inflated so upkeep and larger armies tune granularly
+    upkeep: 300              # NEW 2026-08-24 (S6-02) — recurring per-turn Credit drain; derived via Upkeep.default_upkeep()
     defense: 0              # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; default 0; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
     targeting_mode: DIRECT  # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
     min_range: 1            # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
     can_counterattack: false # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; default false; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
     added: 2026-07-19
-    revised: 2026-07-21
+    revised: 2026-08-24   # ×100 Credit rescale + upkeep added (S6-02)
     # Durable anvil; slow; range 2. produce_cost 6→7 per unit-system design-review (Trooper-dominance fix).
 
   - name: sniper
@@ -129,13 +165,14 @@ entities:
     attack_range: 3   # = MAX range for both targeting profiles (combat-resolution.md)
     move_cost: 2
     soft_move_cap: 3   # PROVISIONAL (2026-07-20) — see movement-system.md for escalation formula
-    produce_cost: 5
+    produce_cost: 500       # ×100 rescale 2026-08-24 (S6-02, was 5) — Credits inflated so upkeep and larger armies tune granularly
+    upkeep: 200              # NEW 2026-08-24 (S6-02) — recurring per-turn Credit drain; derived via Upkeep.default_upkeep()
     defense: 0              # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; default 0; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
     targeting_mode: DIRECT  # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; Sniper is DIRECT cardinal-line (NOT AREA) in VS; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
     min_range: 1            # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
     can_counterattack: false # NEW 2026-07-21 (combat-resolution.md) — Unit-owned; default false; Unit GDD revised 2026-07-23 (Rule 1 + Rule 3a) + formalized in ADR-0007
     added: 2026-07-19
-    revised: 2026-07-21
+    revised: 2026-08-24   # ×100 Credit rescale + upkeep added (S6-02)
     # Glass cannon; longest range (3); UNVALIDATED starting stats (ranged + kiting not in prototype). cost 5 kept (odd — strands 1 AP; spike decision).
 
   - name: hq
@@ -159,41 +196,55 @@ entities:
     # structures are COVER-IMMUNE (combat-resolution.md Rule 6), so the HQ mitigates only via def 2 on
     # ANY tile — the def+COVER_DR stacking trap can never apply to it (no "keep HQ off Cover" needed).
 
-  - name: economy_outpost
+  - name: factory
     status: active
     source: design/gdd/base-production.md
     referenced_by:
       - design/gdd/base-production.md
-      - design/gdd/ap-economy.md              # the ONLY structure counted by completed_outpost_count → ap_income
       - design/gdd/combat-resolution.md        # targetable/damageable structure
+      - design/gdd/unit-classes.md             # GROUND_VEHICLE producer (wave 2)
     hp: 8
-    build_cost: 4              # FLAT cost (4) — NO research discount. (Economy Tech retuned 2026-07-21 from a build-cost discount to an ap_income bonus per completed Economy Outpost; it no longer touches this cost.) was proposed 5; set to 4 to offset the 1 dead build_time turn (payback_turn 3, matches prototype)
-    build_time: 1             # owner-turns under construction before completing
+    build_cost: 1000          # 2026-08-24 (S6-09): re-statted to base-production.md's roster table. Was 400 (= ×100 of the old Economy Outpost's 4) — the S6-03 rename moved the resource, not the design intent behind its numbers
+    build_time: 3             # was 1 (Economy Outpost value)
+    upkeep: 200               # NEW (S6-02)
+    max_count: 2              # NEW (S6-03) — per-faction maximum; Alliance baseline
+    production_cap: 0         # produces nothing YET — GROUND_VEHICLE units are wave 2
+    producible_types: []
     defense: 0
     added: 2026-07-21
-    revised: ""
-    # The boom investment. The ONLY structure feeding completed_outpost_count (Production/Defensive
-    # excluded). Under-construction = destroyable, no AP refund if destroyed. Soft target (dies to 4
-    # Scout hits) — rewards raiding an unscreened boom.
+    revised: 2026-08-24   # RENAMED from economy_outpost (S6-03) + re-statted (S6-09)
+    # ★★ RENAMED, NOT MERELY RETITLED. This entry was `economy_outpost`, whose entire purpose was
+    # feeding completed_outpost_count -> credit_income. S6-01 DELETED that mechanic (income is
+    # research-keyed now), and S6-03 reused the resource + art as the Factory, a GROUND_VEHICLE
+    # producer. The Factory grants NO income. Anything below still describing an income-bearing
+    # outpost is describing a structure that no longer exists in that role.
+    # ⚠ S6-09 removed the Factory from the player's build roster: with no vehicles to produce it is
+    # a 1,000-Credit / 200-upkeep structure that does nothing. Restore it in the change that gives
+    # it something to build.
 
-  - name: production_outpost
+  - name: barracks
     status: active
     source: design/gdd/base-production.md
     referenced_by:
       - design/gdd/base-production.md
       - design/gdd/combat-resolution.md        # targetable/damageable structure
-      - design/gdd/game-hud.md                  # hp 14 cited as the PIP_MAX_HP upper-bound reference (keep PIP_MAX_HP ≤ 14) (2026-07-22)
+      - design/gdd/game-hud.md                 # hp 14 cited as the PIP_MAX_HP upper-bound reference (keep PIP_MAX_HP <= 14) (2026-07-22)
+      - design/gdd/population-cap.md           # grants cap_per_barracks infantry cap (S6-04)
     hp: 14
-    build_cost: 9             # power-unlock pricing (= 1 Heavy); the closeout-drag brake strength
+    build_cost: 600           # 2026-08-24 (S6-10): aligned to base-production.md's roster table. Was 900 (the ×100 rescale of the pre-rework 9), never re-derived against the new roster
     build_time: 2             # owner-turns; 2-turn exposed rebuild window is the brake
+    upkeep: 100               # NEW (S6-02)
+    max_count: 3              # NEW (S6-03) — per-faction maximum; Alliance baseline
+    cap_bonus: 2              # NEW (S6-04) — infantry cap granted per completed Barracks
+    production_cooldown_turns: 1  # NEW (S6-07b) — reinforcement rate; one of the two levers that fixed the S6-06 gate
     production_cap: 4          # units/turn
     producible_types: [trooper, heavy, sniper]  # required gate to the non-Scout roster
     defense: 0
     added: 2026-07-21
-    revised: ""
-    # Required investment to access Trooper/Heavy/Sniper (HQ makes only Scouts). Cheaper to destroy
-    # (3 Heavy hits / 6 AP) than to build (9 AP) — keeps "defend it or lose your roster" real. Does
-    # NOT boost income. Heart of the closeout-drag answer.
+    revised: 2026-08-24   # RENAMED from production_outpost (S6-03); +upkeep/max_count/cap_bonus/cooldown
+    # Required investment to access Trooper/Heavy/Sniper (HQ makes only Scouts). Heart of the
+    # closeout-drag answer. Since S6-04 it is ALSO the infantry-cap source, which makes destroying
+    # one lower the owner's cap beneath a standing army (population-cap.md AC-11).
 
   - name: defensive_structure
     status: active
@@ -202,8 +253,10 @@ entities:
       - design/gdd/base-production.md
       - design/gdd/combat-resolution.md        # attacks via Combat DIRECT; can_counterattack; targetable
     hp: 10
-    build_cost: 6
-    build_time: 1
+    build_cost: 500           # 2026-08-24 (S6-10): aligned to the roster table. Was 600 (×100 of the pre-rework 6)
+    build_time: 2             # 2026-08-24 (S6-10): was 1. A turret that completes the turn after you pay is a reaction; the table prices it as a commitment
+    upkeep: 100               # NEW (S6-02)
+    max_count: 3              # NEW (S6-03) — per-faction maximum; Alliance baseline
     attack: 4                 # effective_attack term when it fires (NOT research-buffed in VS)
     attack_range: 2           # matches Trooper reach; DIRECT profile
     defense: 1                # structure populates Combat's shared defense field
@@ -222,8 +275,10 @@ entities:
       - design/gdd/base-production.md   # 5th structure type — added to B&P roster 2026-07-21 (Core Rule 2b + stat table), built via B&P's generic mechanics
       - design/gdd/combat-resolution.md # targetable/damageable structure
     hp: 12
-    build_cost: 8
+    build_cost: 800           # ×100 rescale (S6-02, was 8) — matches base-production.md's roster table
     build_time: 2
+    upkeep: 200               # NEW (S6-02)
+    max_count: 1              # NEW (S6-03)
     production_cap: 0          # not a producer; does not feed completed_outpost_count
     defense: 0
     can_counterattack: false
@@ -317,7 +372,7 @@ formulas:
     revised: ""
 
   - name: ap_income
-    status: active
+    status: deprecated
     source: design/gdd/ap-economy.md
     referenced_by:
       - design/gdd/ap-economy.md
@@ -359,7 +414,13 @@ formulas:
       FROZEN as a start-of-turn snapshot (not recomputed mid-turn). BASE_INCOME=10, TIER_THRESHOLD=4.
       Consumed by Base & Production, Game HUD, Command & Action Interface when authored."
     added: 2026-07-19
-    revised: 2026-07-22
+    revised: 2026-08-24   # DEPRECATED (S6-01) — income is research-keyed now
+    # ⛔ DELETED MECHANIC, not a rename. This registered the outpost-keyed income function itself, which S6-01
+    # removed outright when the user re-based economy growth onto research. Income is
+    # `base_income + econ_tier_bonus × tier` with `tier` capped at `max_economy_tier`
+    # (src/core/economy/economy_config.gd). Kept per this file's never-delete rule, and
+    # because the unbounded compounding it describes is the mechanism that produced the
+    # PIVOT verdict — it is the record of a design that was tried and replaced.
 
   - name: effective_attack
     status: active
@@ -556,11 +617,15 @@ constants:
     value: 10
     unit: AP_per_turn
     added: 2026-07-19
-    revised: ""
+    revised: 2026-08-24   # ×100 rescale (S6-02) and re-keyed (S6-01)
+    # ★ SURVIVES, unlike the outpost terms around it — but it is now the WHOLE base of
+    # income rather than the first term of an outpost-keyed sum. Live value:
+    # `base_income = 1000` (was 10 pre-rescale), plus `econ_tier_bonus = 500` per
+    # researched tier, max 3 tiers. See src/core/economy/economy_config.gd.
     # Flat per-turn AP every player receives regardless of board state. Input to ap_income formula.
 
   - name: outpost_income_tiers
-    status: active
+    status: deprecated
     source: design/gdd/ap-economy.md
     referenced_by:
       - design/gdd/ap-economy.md
@@ -568,7 +633,13 @@ constants:
     value: "+2 AP per outpost for outposts 1-4; +1 AP per outpost for 5+ (TIER_THRESHOLD=4)"
     unit: rule
     added: 2026-07-19
-    revised: 2026-07-21
+    revised: 2026-08-24   # DEPRECATED (S6-01) — income is research-keyed now
+    # ⛔ DELETED MECHANIC, not a rename. This registered OUTPOST_BONUS_TIER1/TIER2 and their threshold, which S6-01
+    # removed outright when the user re-based economy growth onto research. Income is
+    # `base_income + econ_tier_bonus × tier` with `tier` capped at `max_economy_tier`
+    # (src/core/economy/economy_config.gd). Kept per this file's never-delete rule, and
+    # because the unbounded compounding it describes is the mechanism that produced the
+    # PIVOT verdict — it is the record of a design that was tried and replaced.
     # Tiered diminishing returns on outpost income (snowball brake). Only COMPLETED ECONOMY Outposts count
     # (Production/Defensive Structures do NOT earn income — base-production.md). Economy Outpost build COST
     # (now 4 AP, was illustratively 5) and build TIME (1 turn) are owned by Base & Production, not here.
@@ -665,14 +736,20 @@ constants:
     # DESTRUCTION refunds nothing (0). floor keeps AP integer + rounds owner-unfriendly. VS range 0.3-0.6.
 
   - name: MAX_OUTPOST_COUNT
-    status: active
+    status: deprecated
     source: design/gdd/base-production.md
     referenced_by:
       - design/gdd/base-production.md
     value: 10
     unit: count
     added: 2026-07-21
-    revised: ""
+    revised: 2026-08-24   # DEPRECATED (S6-01) — income is research-keyed now
+    # ⛔ DELETED MECHANIC, not a rename. This registered the board-level outpost ceiling, which S6-01
+    # removed outright when the user re-based economy growth onto research. Income is
+    # `base_income + econ_tier_bonus × tier` with `tier` capped at `max_economy_tier`
+    # (src/core/economy/economy_config.gd). Kept per this file's never-delete rule, and
+    # because the unbounded compounding it describes is the mechanism that produced the
+    # PIVOT verdict — it is the record of a design that was tried and replaced.
     # DISABLED in the Vertical Slice (documented lever, not enforced). Hard ceiling on total outposts if
     # ever enabled — the nameable cap AP Economy asked for so income has a ceiling. Closeout-drag is
     # instead braked by structure cost/time/quality (Core Rule 12). Enable as a Production-Outpost
@@ -726,7 +803,7 @@ constants:
     # Economy Outpost build_cost is now a flat 4 with no research discount (base-production.md Core Rule 2).
 
   - name: ECONOMY_TECH_INCOME_BONUS
-    status: active
+    status: deprecated
     source: design/gdd/research-tech.md
     referenced_by:
       - design/gdd/research-tech.md
@@ -735,7 +812,13 @@ constants:
     value: 1
     unit: AP_per_turn_per_outpost
     added: 2026-07-21
-    revised: 2026-07-22
+    revised: 2026-08-24   # DEPRECATED (S6-01) — income is research-keyed now
+    # ⛔ DELETED MECHANIC, not a rename. This registered Economy Tech's per-outpost income bonus, which S6-01
+    # removed outright when the user re-based economy growth onto research. Income is
+    # `base_income + econ_tier_bonus × tier` with `tier` capped at `max_economy_tier`
+    # (src/core/economy/economy_config.gd). Kept per this file's never-delete rule, and
+    # because the unbounded compounding it describes is the mechanism that produced the
+    # PIVOT verdict — it is the record of a design that was tried and replaced.
     # Extra income per completed Economy Outpost per turn while Economy Tech is held (permanent, per-player),
     # UP TO ECONOMY_TECH_TIER_THRESHOLD (6) outposts — see that constant.
     # RETUNE 2026-07-21 (research-tech.md design-review) replacing ECONOMY_TECH_DISCOUNT's build-cost rebate
@@ -746,7 +829,7 @@ constants:
     # VS range 1 (2 → hard snowball even with the cap). Economy Tech: research_cost 7 AP / research_time 3 turns.
 
   - name: ECONOMY_TECH_TIER_THRESHOLD
-    status: active
+    status: deprecated
     source: design/gdd/ap-economy.md
     referenced_by:
       - design/gdd/ap-economy.md
@@ -755,7 +838,13 @@ constants:
     value: 6
     unit: outpost_count
     added: 2026-07-22
-    revised: ""
+    revised: 2026-08-24   # DEPRECATED (S6-01) — income is research-keyed now
+    # ⛔ DELETED MECHANIC, not a rename. This registered the cap on how many outposts Economy Tech paid for, which S6-01
+    # removed outright when the user re-based economy growth onto research. Income is
+    # `base_income + econ_tier_bonus × tier` with `tier` capped at `max_economy_tier`
+    # (src/core/economy/economy_config.gd). Kept per this file's never-delete rule, and
+    # because the unbounded compounding it describes is the mechanism that produced the
+    # PIVOT verdict — it is the record of a design that was tried and replaced.
     # AP-Economy-owned brake on Research's ECONOMY_TECH_INCOME_BONUS term, added in AP Economy's
     # 2026-07-22 re-review (Research/Tech #8's retune of Economy Tech). Before this cap, the term was
     # unbounded (ECONOMY_TECH_INCOME_BONUS × n with no ceiling), which structurally cancelled

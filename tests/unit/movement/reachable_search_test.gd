@@ -388,3 +388,68 @@ func test_repeated_reachable_calls_identical_on_mid_turn_clone_with_tiles_moved(
 		assert_vector(first[i].tile).is_equal(second[i].tile)
 		assert_int(first[i].min_cost).is_equal(second[i].min_cost)
 		assert_bool(first[i].is_surcharged).is_equal(second[i].is_surcharged)
+
+
+# ==============================================================================
+# reachable_ignoring_ap — telling "boxed in" apart from "broke"
+# (added 2026-08-24 for design/ux/action-menu.md OQ-5)
+# ==============================================================================
+
+func test_reachable_is_empty_at_zero_ap_even_in_wide_open_ground() -> void:
+	# ★ The behaviour the whole fix turns on, pinned explicitly because it is
+	# surprising: the affordability cut lives INSIDE the BFS, so a unit standing in
+	# the middle of an empty board with no AP gets back exactly what a unit walled
+	# in on four sides gets — nothing. Every consumer reading "empty means nowhere
+	# to go" was therefore reporting the wrong problem.
+	var state := _make_state(0)
+	var unit := _place_unit(state, 1, 0, Vector2i(4, 4), _make_type(1, 8))
+
+	assert_array(Movement.reachable(state, unit)).is_empty()
+
+
+func test_reachable_ignoring_ap_finds_the_tiles_that_ap_was_hiding() -> void:
+	# ...and the AP-free question separates the two cases: the same open-ground unit
+	# has plenty of somewhere to go, it just cannot pay for any of it right now.
+	var state := _make_state(0)
+	var unit := _place_unit(state, 1, 0, Vector2i(4, 4), _make_type(1, 8))
+
+	assert_array(Movement.reachable_ignoring_ap(state, unit)).override_failure_message(
+		"a unit in open ground has somewhere to go at SOME price, whatever its AP"
+	).is_not_empty()
+
+
+func test_reachable_ignoring_ap_still_respects_traversal_rules() -> void:
+	# It drops the affordability cut and NOTHING else. A genuinely boxed-in unit is
+	# still boxed in no matter how much AP it is imagined to have — otherwise the
+	# query would report a route through an enemy body and the menu would say
+	# "needs AP" about a move that can never be made.
+	var state := _make_state_both(99)
+	var type := _make_type(1, 8)
+	var unit := _place_unit(state, 1, 0, Vector2i(5, 5), type)
+	# Enemy units are hard blockers (ADR-0009) — seal all four orthogonals.
+	_place_unit(state, 2, 1, Vector2i(5, 4), type)
+	_place_unit(state, 3, 1, Vector2i(5, 6), type)
+	_place_unit(state, 4, 1, Vector2i(4, 5), type)
+	_place_unit(state, 5, 1, Vector2i(6, 5), type)
+
+	assert_array(Movement.reachable_ignoring_ap(state, unit)).override_failure_message(
+		"the AP-free query must not walk through blockers"
+	).is_empty()
+
+
+func test_the_two_queries_agree_whenever_ap_is_not_the_constraint() -> void:
+	# With AP far above anything the board can cost, the affordability cut never
+	# fires and the two must return the identical set — which is what makes the
+	# extracted BFS worth having instead of a second hand-written copy that could
+	# drift on traversal, destination validity, neighbour order or surcharge depth.
+	var state := _make_state(999)
+	var unit := _place_unit(state, 1, 0, Vector2i(4, 4), _make_type(1, 8))
+
+	var budgeted: Array[Movement.ReachableTile] = Movement.reachable(state, unit)
+	var unbounded: Array[Movement.ReachableTile] = Movement.reachable_ignoring_ap(state, unit)
+
+	assert_int(budgeted.size()).is_equal(unbounded.size())
+	for i: int in budgeted.size():
+		assert_vector(budgeted[i].tile).is_equal(unbounded[i].tile)
+		assert_int(budgeted[i].min_cost).is_equal(unbounded[i].min_cost)
+		assert_bool(budgeted[i].is_surcharged).is_equal(unbounded[i].is_surcharged)

@@ -24,13 +24,16 @@
 ## board. Interaction (the Build/End-Turn buttons) routes through the injected
 ## [CommandInterface], never through the HUD.
 ##
-## [b]Deferred seam (documented)[/b]: the AP-counter preview echo
-## ([method ApCounterWidget.open_preview]/[method ApCounterWidget.close_preview])
-## is driven by scene glue when #9 opens/closes a preview — [CommandInterface]
-## exposes no preview-open signal today, so [method assemble] cannot auto-connect
-## it. [method open_ap_preview]/[method close_ap_preview] are exposed as the
-## passthrough the future wiring calls (a small CAI addendum, like
-## `selection_changed` was, will let this auto-connect).
+## [b]The preview-echo seam, now driven[/b] (2026-08-24): the AP and Credits
+## counters' `current -> projected` echoes are opened and closed by scene glue when
+## #9 enters and leaves a preview. [CommandInterface] still exposes no
+## preview-open signal, so [method assemble] cannot auto-connect it and the slice
+## calls [method open_ap_preview]/[method open_credits_preview] itself; a small CAI
+## addendum, like `selection_changed` was, would let this auto-connect later.
+## [b]Until the action menu landed these four methods had no production caller at
+## all[/b] — the seam command-action-interface.md records as "resolved" was
+## resolved on paper only, and the projected-cost readout the GDD promises was
+## never once shown to a player.
 ##
 ## [b]Layout is provisional[/b]: widget positions here are a functional,
 ## non-overlapping starting arrangement so the surface is legible; the final
@@ -41,7 +44,7 @@
 ## [codeblock]
 ## var hud := GameHud.new()
 ## hud.assemble(reader, HudBalance.hud, command_interface, board_renderer, 0,
-##         [StructureTypes.ECONOMY_OUTPOST])
+##         [StructureTypes.FACTORY])
 ## world_root.add_child(hud) # CanvasLayer renders its widgets over the board.
 ## [/codeblock]
 class_name GameHud
@@ -57,6 +60,15 @@ var _credits_counter: CreditsCounterWidget = null
 var _credits_counter_opponent: CreditsCounterWidget = null
 var _turn_banner: TurnBannerWidget = null
 var _income_breakdown: IncomeBreakdownWidget = null
+var _population: PopulationWidget = null
+
+## The three grouping panels (2026-08-24). They own no state and read nothing —
+## they are backing plates, so they are not [HudReactiveControl]s.
+var _player_panel: HudPanel = null
+var _opponent_panel: HudPanel = null
+var _actions_panel: HudPanel = null
+var _detail_panel_panel: HudPanel = null
+var _action_log_panel: HudPanel = null
 var _action_log: ActionLogWidget = null
 var _controls: HudControlsWidget = null
 var _detail_panel: DetailPanelWidget = null
@@ -85,36 +97,65 @@ func assemble(reader: GameStateReader, config: HUDConfig, cmd: CommandInterface,
 	# Draw order = child order; the victory/defeat overlay is added LAST so it
 	# preempts every other widget on a game-ending frame (Story 006).
 
+	# ★ 2026-08-24 — the readouts are GROUPED into titled panels instead of scattered
+	# across four screen corners. Before this, the top-left held a bare "30" with no
+	# unit on it, Credits sat under it unlabelled, population floated further down
+	# again, and the opponent's state was dimmed into the opposite corner. Nothing
+	# said which numbers belonged together, and every one of them drew straight onto
+	# the board, so text competed with terrain for the same pixels.
+	#
+	# The widgets themselves are UNCHANGED — same display models, same bindings,
+	# same tests. Only composition moved: each is now a child of a HudPanel that
+	# supplies a ground, a frame and a title. That keeps this a layout change rather
+	# than a rewrite of nine widgets.
+
+	# --- YOU: the three budgets that drive every decision, in one place ---------
+	_player_panel = HudPanel.new()
+	_player_panel.configure("YOU", Vector2(232, 118))
+	_player_panel.position = Vector2(16, 12)
+	add_child(_player_panel)
+
 	_ap_counter = ApCounterWidget.new()
 	_ap_counter.bind(reader)
 	_ap_counter.configure(config, local_player)
-	_ap_counter.position = Vector2(16, 12)
-	add_child(_ap_counter)
+	_player_panel.add_content(_ap_counter, Vector2(0, 0))
 
-	if config.show_opponent_ap:
-		_ap_counter_opponent = ApCounterWidget.new()
-		_ap_counter_opponent.bind(reader)
-		_ap_counter_opponent.configure(config, opponent, true) # muted opponent AP.
-		_ap_counter_opponent.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-		_ap_counter_opponent.position = Vector2(-160, 12)
-		add_child(_ap_counter_opponent)
-
-	# The Credits counter (CR-3d) — the AP counter's co-equal, in a distinct hue
-	# family, sitting just below it on the top spine (provisional layout). Both
-	# counters are gated as a pair by SHOW_OPPONENT_AP for the opponent (CR-3b).
 	_credits_counter = CreditsCounterWidget.new()
 	_credits_counter.bind(reader)
 	_credits_counter.configure(config, local_player)
-	_credits_counter.position = Vector2(16, 30)
-	add_child(_credits_counter)
+	_player_panel.add_content(_credits_counter, Vector2(0, 24))
 
+	_population = PopulationWidget.new()
+	_population.bind(reader)
+	_population.configure(local_player)
+	_player_panel.add_content(_population, Vector2(0, 52))
+
+	# The income breakdown stays parented to the Credits counter — it is that
+	# counter's on-demand detail, and anchoring it anywhere else would let the two
+	# drift apart. It expands downward inside the panel.
+	_income_breakdown = IncomeBreakdownWidget.new()
+	_income_breakdown.bind(reader)
+	_income_breakdown.configure(config, local_player)
+	_income_breakdown.position = Vector2(96, -14)
+	_credits_counter.add_child(_income_breakdown)
+
+	# --- OPPONENT: same figures, muted, so the comparison is direct ------------
 	if config.show_opponent_ap:
+		_opponent_panel = HudPanel.new()
+		_opponent_panel.configure("OPPONENT", Vector2(184, 88))
+		_opponent_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		_opponent_panel.position = Vector2(-200, 12)
+		add_child(_opponent_panel)
+
+		_ap_counter_opponent = ApCounterWidget.new()
+		_ap_counter_opponent.bind(reader)
+		_ap_counter_opponent.configure(config, opponent, true) # muted opponent AP.
+		_opponent_panel.add_content(_ap_counter_opponent, Vector2(0, 0))
+
 		_credits_counter_opponent = CreditsCounterWidget.new()
 		_credits_counter_opponent.bind(reader)
 		_credits_counter_opponent.configure(config, opponent, true) # muted opponent Credits.
-		_credits_counter_opponent.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-		_credits_counter_opponent.position = Vector2(-160, 30)
-		add_child(_credits_counter_opponent)
+		_opponent_panel.add_content(_credits_counter_opponent, Vector2(0, 24))
 
 	_turn_banner = TurnBannerWidget.new()
 	_turn_banner.bind(reader)
@@ -123,36 +164,42 @@ func assemble(reader: GameStateReader, config: HUDConfig, cmd: CommandInterface,
 	_turn_banner.position = Vector2(-80, 12)
 	add_child(_turn_banner)
 
-	# The Credit income breakdown is anchored to the Credits counter (CR-3d — the
-	# income now funds the Credits pool, so the on-demand breakdown belongs to it,
-	# not the AP counter). Parented under the counter, offset just below its number.
-	_income_breakdown = IncomeBreakdownWidget.new()
-	_income_breakdown.bind(reader)
-	_income_breakdown.configure(config, local_player)
-	_income_breakdown.position = Vector2(0, 20)
-	_credits_counter.add_child(_income_breakdown)
+	# --- LOG: what just happened, bottom-left, clear of the action strip --------
+	_action_log_panel = HudPanel.new()
+	_action_log_panel.configure("LOG", Vector2(210, 150))
+	_action_log_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_action_log_panel.position = Vector2(16, -166)
+	add_child(_action_log_panel)
 
 	_action_log = ActionLogWidget.new()
 	_action_log.bind(reader)
 	_action_log.configure(config)
-	_action_log.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	_action_log.position = Vector2(16, -160)
-	add_child(_action_log)
+	_action_log_panel.add_content(_action_log, Vector2(0, 0))
+
+	# --- ACTIONS: the two commit verbs, on a ground so they read as buttons -----
+	_actions_panel = HudPanel.new()
+	_actions_panel.configure("ACTIONS", Vector2(200, 66))
+	_actions_panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_actions_panel.position = Vector2(-216, -82)
+	add_child(_actions_panel)
 
 	_controls = HudControlsWidget.new()
 	_controls.bind(reader)
 	_controls.configure(config, local_player, buildable_types)
 	_controls.attach_interface(cmd)
-	_controls.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_controls.position = Vector2(-180, -48)
-	add_child(_controls)
+	_actions_panel.add_content(_controls, Vector2(0, 0))
+
+	# --- SELECTED: the inspected entity, on the same ground as everything else ---
+	_detail_panel_panel = HudPanel.new()
+	_detail_panel_panel.configure("SELECTED", Vector2(196, 104))
+	_detail_panel_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	_detail_panel_panel.position = Vector2(-212, -52)
+	add_child(_detail_panel_panel)
 
 	_detail_panel = DetailPanelWidget.new()
 	_detail_panel.bind(reader)
 	_detail_panel.attach_interface(cmd)
-	_detail_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	_detail_panel.position = Vector2(-200, -80)
-	add_child(_detail_panel)
+	_detail_panel_panel.add_content(_detail_panel, Vector2(0, 0))
 
 	_game_over_overlay = GameOverOverlay.new()
 	_game_over_overlay.bind(reader)
@@ -186,6 +233,25 @@ func open_ap_preview(projected_ap: int, affordable: bool) -> void:
 func close_ap_preview() -> void:
 	if _ap_counter != null:
 		_ap_counter.close_preview()
+
+
+## Opens the Credits-counter preview echo — the second half of the same seam.
+##
+## [b]Added 2026-08-24 alongside the action menu.[/b] command-action-interface.md's
+## D-1b requires an economic preview to show `projected_remaining_credits`
+## [i]alongside[/i] `projected_remaining_ap` for the SAME preview, because Build and
+## Produce spend from both pools (ADR-0006) and a player shown only one of them
+## cannot tell which pool a purchase will exhaust. Only the AP half had a
+## passthrough, so the Credit half could not be driven even once a caller existed.
+func open_credits_preview(projected_credits: int, affordable: bool) -> void:
+	if _credits_counter != null:
+		_credits_counter.open_preview(projected_credits, affordable)
+
+
+## Closes the Credits-counter preview echo.
+func close_credits_preview() -> void:
+	if _credits_counter != null:
+		_credits_counter.close_preview()
 
 
 ## Guarded cleanup: the on-board glyph layer is parented to the board (not this
@@ -233,6 +299,12 @@ func turn_banner() -> TurnBannerWidget:
 ## The AP income breakdown readout.
 func income_breakdown() -> IncomeBreakdownWidget:
 	return _income_breakdown
+
+
+## The population readout (`population-cap.md` AC-12), or [code]null[/code] before
+## [method assemble].
+func population_widget() -> PopulationWidget:
+	return _population
 
 ## The append-only action log.
 func action_log() -> ActionLogWidget:

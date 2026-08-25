@@ -50,3 +50,21 @@ extends EntityState
 ## at the start of the owning player's turn by [method Unit.reset_turn_flags]
 ## (ADR-0008 step 2).
 @export var tiles_moved_this_turn: int = 0
+## True once the player has explicitly stood this entity down for the turn
+## ([WaitAction]) — "I am finished with this one".
+##
+## [b]Advisory, never binding[/b] (user decision, 2026-08-25). It changes what the
+## INTERFACE offers, not what the rules allow: a stood-down entity stops breathing
+## on the board, is skipped by the idle-entity cursor cycle, and stops counting
+## toward the End-Turn idle notice — but it is still selectable and every verb it
+## had is still legal. Acting with it clears the flag, because the mark records an
+## intention the player has visibly changed their mind about.
+##
+## Chosen over a hard lockout deliberately: Wait is a single unconfirmed menu row,
+## and locking an entity out of its turn from one click is the same trap the
+## Cancel-Build confirmation gate exists to prevent.
+##
+## Cleared at the start of the owning player's turn by [method Unit.reset_turn_flags],
+## exactly like [member has_attacked].
+@export var stood_down: bool = false
+

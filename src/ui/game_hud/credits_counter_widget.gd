@@ -47,10 +47,11 @@ func _budget_color() -> Color:
 	return Color(0.5, 0.46, 0.35) if _is_opponent else Color(1.0, 0.82, 0.25)
 
 
-## The committed value with a `CR` resource label (accessibility distinctness,
-## CR-3d) and the persistent OPPONENT prefix on the opponent counter (CR-3b).
-func _committed_text() -> String:
-	return "OPPONENT CR %d" % _committed if _is_opponent else "CR %d" % _committed
+## The `CR` resource label (accessibility distinctness, CR-3d). The base class
+## composes it with the value; the OPPONENT prefix moved to the panel title
+## (2026-08-24).
+func _resource_label() -> String:
+	return "CR"
 
 
 ## "credits" for the "insufficient credits" unaffordable-preview text.

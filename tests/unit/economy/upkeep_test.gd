@@ -88,7 +88,7 @@ func test_every_entity_upkeep_is_non_negative() -> void:
 	for t: UnitTypeDef in [UnitTypes.SCOUT, UnitTypes.TROOPER, UnitTypes.SNIPER, UnitTypes.HEAVY]:
 		assert_int(t.upkeep).is_greater_equal(0)
 	for t: StructureTypeDef in [StructureTypes.HQ, StructureTypes.RESEARCH_LAB, \
-			StructureTypes.DEFENSIVE_STRUCTURE, StructureTypes.PRODUCTION_OUTPOST]:
+			StructureTypes.DEFENSIVE_STRUCTURE, StructureTypes.BARRACKS]:
 		assert_int(t.upkeep).is_greater_equal(0)
 
 

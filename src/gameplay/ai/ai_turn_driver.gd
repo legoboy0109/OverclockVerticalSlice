@@ -115,7 +115,14 @@ func run_ai_turn(state: GameState) -> void:
 		if state.match_status == GameState.MatchStatus.GAME_OVER:
 			return
 
-		await get_tree().create_timer(AIBalance.ai.commit_pacing_sec).timeout
+		# ★ `process_always = false` (2026-08-24). SceneTree timers default to
+		# process_always = TRUE, i.e. they keep firing while the tree is paused — so
+		# with the default the AI would go on taking its turn behind the pause
+		# overlay, quietly playing a game the player thinks is frozen. `pause.md`
+		# flagged freeze semantics as an open question for the architecture team;
+		# this is the answer for the one place the slice actually sleeps. The pacing
+		# delay is presentation, so it should honour engine pause.
+		await get_tree().create_timer(AIBalance.ai.commit_pacing_sec, false).timeout
 
 	var end_turn := EndTurnAction.new()
 	end_turn.player = state.active_player
@@ -124,7 +131,7 @@ func run_ai_turn(state: GameState) -> void:
 
 ## True iff [param action] counts toward the cadence cap
 ## [method AI.choose_action] gates on (ADR-0011 §1/§6, CR-5): a
-## [BuildAction] targeting [constant StructureTypes.ECONOMY_OUTPOST], or a
+## [BuildAction] targeting [constant StructureTypes.FACTORY], or a
 ## research-start action ([constant Action.Verb.RESEARCH] — forward-declared;
 ## the Research epic is not implemented in this corpus, so this branch is
 ## unreachable today but kept per ADR-0011 §3's literal loop shape, ready the
@@ -132,6 +139,10 @@ func run_ai_turn(state: GameState) -> void:
 static func _is_economy_or_research(action: Action) -> bool:
 	if action.verb == Action.Verb.RESEARCH:
 		return true
-	if action is BuildAction:
-		return (action as BuildAction).structure_type == StructureTypes.ECONOMY_OUTPOST
+	# ★ S6-09: no BUILD is an economy investment any more. This read
+	# `structure_type == ECONOMY_OUTPOST`, which was correct while that structure WAS
+	# the economy; S6-03's mechanical rename carried the test onto the FACTORY, which
+	# is a production building and grants no income at all. The throttle exists to
+	# stop the AI spending a whole turn on economy actions (the PIVOT failure), and
+	# since S6-01 the only such action is RESEARCH.
 	return false

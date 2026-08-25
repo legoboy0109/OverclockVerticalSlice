@@ -4,11 +4,12 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Economy Outpost"
+display_name = "Factory"
 hp = 8
-upkeep = 100
-build_cost = 400
-build_time = 1
+max_count = 2
+upkeep = 200
+build_cost = 1000
+build_time = 3
 production_cap = 0
 producible_types = []
 defense = 0

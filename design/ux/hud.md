@@ -108,14 +108,33 @@ and the center stays playable.
 | Zone | Location | Hosts | Movement rule |
 |------|----------|-------|---------------|
 | **A · Top-center spine** | top edge, horizontally centered | AP counter (dominant), turn/round indicator, opponent-AP display, YOUR/ENEMY-TURN banner (transient, self-clearing) | Fixed. Primary sightline. Never occluded. |
-| **B · Fixed control corner** | one bottom corner (default bottom-right) | **Produce** button, **End Turn** button, unspent-AP reminder (adjacent to End Turn) | Fixed. Mirrors the CAI's own fixed End-Turn corner so the two never fight for the slot. |
+| **B · Fixed control corner** | one bottom corner (default bottom-right) | **Produce** button, **End Turn** button, unspent-AP reminder (adjacent to End Turn) | Fixed. Mirrors the CAI's own fixed End-Turn corner so the two never fight for the slot. ★ **2026-08-24**: also the anchor for the CAI's transient **Build type picker**, which opens from the Build control and grows up-and-left out of this corner — see the note under this table. |
 | **C · Log edge** | opposite vertical edge (default left), collapsible | action log (newest-on-top, scrollable) | Docked; may collapse. Never floats over board. |
 | **D · Detail panel** | edge-docked (default bottom-left, opposite the control corner) | detail/inspection panel + production_cap readout | **Edge-docked, NOT board-floating** — deliberately distinct from the CAI's on-board floating contextual menu so the two never collide (one on-board, one off-board). |
 | **E · On-board per-tile** | inside board space, fixed sub-positions per tile | hp pips/numeric, has-acted glyph | Minimal only. **hp legibility wins any per-tile layout conflict.** |
 
-**Board interior:** clear. No panel, log, banner, or overlay chrome renders over the grid
-interior. The YOUR/ENEMY-TURN banner is the single deliberate transient exception — it flashes
-across the upper board and self-clears before input is expected.
+**Board interior:** clear of **HUD** chrome. No panel, log, banner, or overlay owned by this
+document renders over the grid interior. The YOUR/ENEMY-TURN banner is this document's single
+deliberate transient exception — it flashes across the upper board and self-clears before input is
+expected.
+
+★ **2026-08-24 — the rule needed one word ("HUD") and one cross-reference.** The Command & Action
+Interface's **contextual action menu** also draws over the board interior, by design and by GDD
+mandate (`command-action-interface.md`: "floats near the selected entity"). That is not a violation
+of the rule above, because the rule is about HUD-owned chrome — but as written it read as absolute,
+and Zone D's "one on-board, one off-board" phrasing reinforced that reading. Both are now qualified:
+
+- **Zone D's separation is about the detail panel specifically** — the inspection panel is
+  edge-docked so it cannot collide with the CAI's floating menu. It was never a blanket rule that
+  every CAI surface floats and every HUD surface docks.
+- **The CAI's Build type picker is anchored in Zone B**, not on the board, because Build is a
+  player-level command with no entity to float beside (CR-5). It is a transient popover belonging
+  to the Build control that summons it, present only while that choice is open — not persistent
+  chrome competing for the slot. See `design/ux/action-menu.md` → *Placement — the Build picker is
+  the exception*.
+
+Neither surface is HUD-owned; both are recorded here so this document's layout rules stay true of
+the screen a player actually sees.
 
 ### ASCII Wireframe (1080p landscape, fixed camera)
 

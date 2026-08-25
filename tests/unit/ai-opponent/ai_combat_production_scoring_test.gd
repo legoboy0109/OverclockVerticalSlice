@@ -77,7 +77,7 @@ func _make_trooper_type() -> UnitTypeDef:
 	type.attack_range = 1
 	type.move_cost = 2
 	type.soft_move_cap = 8
-	type.produce_cost = 4
+	type.produce_cost = 400  # ★ S6-05: ×100 Credit rescale (synthetic fixture)
 	type.defense = 0
 	return type
 
@@ -94,7 +94,7 @@ func _make_sniper_type() -> UnitTypeDef:
 	type.attack_range = 2
 	type.move_cost = 2
 	type.soft_move_cap = 8
-	type.produce_cost = 5
+	type.produce_cost = 500  # ★ S6-05: ×100 Credit rescale (synthetic fixture)
 	type.defense = 0
 	return type
 
@@ -230,7 +230,10 @@ func test_ap_cost_opponent_paid_for_hq_resolves_to_hq_siege_value_not_zero() -> 
 
 	# Assert — AIBalance.ai.hq_siege_value default is 12 (AC-29's regression guard).
 	assert_int(ap_cost).is_equal(AIBalance.ai.hq_siege_value)
-	assert_int(ap_cost).is_equal(12)
+	# ★ S6-07c: derived, not restated -- the HQ weight moved 12 -> 60 and this test is about
+	# the HQ resolving to that weight AT ALL rather than to zero (the AC-29 regression guard).
+	assert_int(ap_cost).is_equal(AIBalance.ai.hq_siege_value)
+	assert_int(ap_cost).is_greater(0)
 
 
 func test_combat_value_hq_siege_non_lethal_is_approx_1_5() -> void:
@@ -248,45 +251,50 @@ func test_combat_value_hq_siege_non_lethal_is_approx_1_5() -> void:
 	var is_kill: bool = hp_removed >= hq.current_hp
 	var value: float = AI._combat_value(hp_removed, is_kill, hq)
 
-	# Assert — dmg=5, hp_removed=5, target_max_hp=40, is_kill=false;
-	# combat_value = 12 × (5/40) + 0 = 1.5.
+	# ★ S6-07c: derived from the live weight, which moved 12 -> 60. combat_value =
+	# hq_siege_value × (hp_removed / max_hp), no kill bonus on a non-lethal hit.
 	assert_int(dmg).is_equal(5)
 	assert_bool(is_kill).is_false()
-	assert_float(value).is_equal_approx(1.5, 0.0001)
+	assert_float(value).is_equal_approx(float(AIBalance.ai.hq_siege_value) * (5.0 / 40.0), 0.0001)
 
 
-func test_action_score_hq_siege_is_approx_0_75_and_clears_pass_threshold() -> void:
-	# Arrange — combat_value 1.5 at cost 2 (CombatConfig.attack_cost).
-	var value := 1.5
-	var cost := 2
-	var base_score: float = value / float(cost)
+func test_action_score_hq_siege_now_outscores_killing_a_unit() -> void:
+	# ★★ S6-07c REPLACED test_..._is_approx_0_75_and_clears_pass_threshold. Clearing the
+	# pass threshold was never the problem -- an HQ chip always cleared it. The problem was
+	# that it lost to every available KILL, so a unit standing beside an enemy HQ broke off
+	# to fight instead of finishing. Four measured batches showed damage reaching 21 of 40
+	# and stalling for exactly that reason.
+	#
+	# This is now the assertion that matters: hitting the objective must BEAT trading.
+	var hq_hit: float = (float(AIBalance.ai.hq_siege_value) * (5.0 / 40.0)) / 2.0
+	var trooper_credits: float = AI.credits_to_ap(float(UnitTypes.TROOPER.produce_cost))
+	var kill: float = (trooper_credits + AIBalance.ai.kill_denial_rate * trooper_credits) / 2.0
 
-	# Act
-	var score: float = AI._action_score(base_score, false)
-
-	# Assert
-	assert_float(score).is_equal_approx(0.75, 0.0001)
-	assert_bool(score > AIBalance.ai.pass_threshold).is_true()
-
-
+	assert_float(hq_hit).is_greater(AIBalance.ai.pass_threshold)
+	assert_float(hq_hit).override_failure_message(
+		"an HQ hit (%.2f) must outscore killing a full-hp Trooper (%.2f), or the AI breaks off the objective" % [hq_hit, kill]
+	).is_greater(kill)
 # --- AC-14: production_value + 3-band REACHABILITY_MULTIPLIER --------------
 
 func test_production_value_isolated_band_is_produce_cost_times_0_9() -> void:
-	var unit_type := _make_trooper_type()  # produce_cost 4
+	# ★ S6-05: _production_value stays CREDIT-denominated (the conversion to AP-equivalent
+	# happens at the call site via AI.credits_to_ap), so it scales with produce_cost.
+	# Derived rather than restated so the next rescale cannot break it.
+	var unit_type := _make_trooper_type()
 	var value: float = AI._production_value(unit_type, 0.9)
-	assert_float(value).is_equal_approx(3.6, 0.0001)
+	assert_float(value).is_equal_approx(float(unit_type.produce_cost) * 0.9, 0.0001)
 
 
 func test_production_value_in_contact_band_is_produce_cost_times_1_0() -> void:
-	var unit_type := _make_trooper_type()  # produce_cost 4
+	var unit_type := _make_trooper_type()
 	var value: float = AI._production_value(unit_type, 1.0)
-	assert_float(value).is_equal_approx(4.0, 0.0001)
+	assert_float(value).is_equal_approx(float(unit_type.produce_cost) * 1.0, 0.0001)
 
 
 func test_production_value_reachable_band_is_produce_cost_times_1_1() -> void:
-	var unit_type := _make_trooper_type()  # produce_cost 4
+	var unit_type := _make_trooper_type()
 	var value: float = AI._production_value(unit_type, 1.1)
-	assert_float(value).is_equal_approx(4.4, 0.0001)
+	assert_float(value).is_equal_approx(float(unit_type.produce_cost) * 1.1, 0.0001)
 
 
 func test_reachability_multiplier_selects_reachable_band_when_enemy_in_range() -> void:
@@ -337,18 +345,32 @@ func test_reachability_multiplier_selects_isolated_band_when_no_contact() -> voi
 
 
 func test_production_action_score_trooper_reachable_this_turn_is_exactly_1_10() -> void:
-	# Arrange — the GDD's own worked example: Trooper produce_cost 4,
-	# reachable-this-turn -> production_value 4.4, cost 4 -> action_score 1.10.
+	# ★★ S6-05 CHANGED THIS AC'S NUMBER, and deliberately -- it is a real behaviour change,
+	# not a rescale artefact. The GDD's worked example was value/PURCHASE-PRICE = 4.4/4 =
+	# 1.10. Production is now divided by LIFETIME cost (purchase + upkeep × horizon,
+	# `unit-upkeep.md` UOQ-4), because valuing a unit at its sticker price is exactly what
+	# makes an AI over-build into the deficit lock -- it sees a Heavy as 700 Credits when it
+	# is really 700 plus 300/turn for as long as it lives.
+	#
+	# For a Trooper that is 400 + 200×6 = 1,600 Credits, so the denominator roughly
+	# quadruples and the score lands near 0.26 instead of 1.10. ★ Still comfortably clear of
+	# PASS_THRESHOLD (0.15), so the AI still produces when it has nothing better to do -- but
+	# producing now correctly loses to a good attack, which it previously did not.
+	#
+	# Derived from the real formula so it survives the next rescale.
 	var unit_type := _make_trooper_type()
-	var value: float = AI._production_value(unit_type, 1.1)
-	var cost := 4
+	var value: float = AI.credits_to_ap(AI._production_value(unit_type, 1.1))
+	var denom: float = float(Balance.economy.produce_ap_cost) \
+		+ AI.credits_to_ap(AI.lifetime_credit_cost(unit_type))
 
 	# Act
-	var score: float = AI._action_score(value / float(cost), false)
+	var score: float = AI._action_score(value / denom, false)
 
 	# Assert
 	assert_float(value).is_equal_approx(4.4, 0.0001)
-	assert_float(score).is_equal_approx(1.10, 0.0001)
+	assert_float(score).is_equal_approx(value / denom, 0.0001)
+	# ★ And the property that actually matters: it still clears the pass bar.
+	assert_bool(score > AIBalance.ai.pass_threshold).is_true()
 
 
 # --- AC-21: move+attack combo scored via legal_targets_from at combined cost -
@@ -449,7 +471,7 @@ func test_combat_value_min_damage_floor_on_full_hp_target_is_strictly_positive()
 	weak_attacker_type.attack_range = 1
 	weak_attacker_type.move_cost = 1
 	weak_attacker_type.soft_move_cap = 8
-	weak_attacker_type.produce_cost = 2
+	weak_attacker_type.produce_cost = 200  # ★ S6-05: ×100 Credit rescale (synthetic fixture)
 
 	var tough_target_type := _make_trooper_type()
 	tough_target_type.defense = 5  # attack(1) - defense(5) would be negative -> MIN_DAMAGE floor

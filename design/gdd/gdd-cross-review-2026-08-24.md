@@ -6,7 +6,12 @@
 **Trigger**: `faction-identity.md` reshaped to framework v2; 7 new Tier-1 systems (#15–21); 6 faction
 GDDs authored; the economy re-based onto research; AP and Credits rescaled.
 
-## Verdict: ⛔ **FAIL** — 5 blocking issues (B-1, B-2, B-3, B-5 fixed in this pass; **B-4 open**)
+## Verdict: ⛔ **FAIL** — 5 blocking issues
+
+> **✅ ALL FIVE NOW RESOLVED.** B-1/B-2/B-3/B-5 were fixed in the review pass itself; **B-4 was
+> answered 2026-08-24 (S6-11)** by `design/legibility-budget.md`. W-1/W-4/W-5 closed by the S6-09
+> sweep. ★ One item remains outstanding and it is not a document fix: **S5-03, the Pillar-3 gate
+> itself, has still never been run** — the budget calibrates against it.
 
 > **FAIL here is not a judgement on the design.** It is the expected outcome of adding 13 documents
 > and rebuilding the economy in one pass without a propagation sweep. Three of the four blockers are
@@ -99,6 +104,36 @@ constant producing them moved. Both coupled invariants were re-checked: the leth
 **widened** (1.65 vs the old 1.77, against a floor of 3.5), and the Defense-Tech pass margin is
 untouched.
 
+> ### ⚠⚠ CORRECTION 2026-08-24 (S6-05 implementation) — B-5's DIRECTION was partly wrong
+>
+> This review stated: *"the AI would value building and killing roughly one hundred times a
+> march."* **Reading the actual scoring code during S6-05 shows that is right about killing
+> and wrong about building.** The real picture, per verb:
+>
+> | Verb | Value term | Denominator | Net effect of the ×100 rescale |
+> |---|---|---|---|
+> | **Attack** | target's `produce_cost` — Credits, ×100 | `attack_cost` — **AP, unchanged** | ★ **score inflated ~100×** |
+> | **Produce** | `produce_cost` × multiplier — ×100 | raw Credit `produce_cost` — ×100 | ★ **cancels — unchanged** |
+> | **Build** | `_economy_value` — **0 since S6-01** | Credit `build_cost` | ★ **score 0** |
+> | **Move** | positional rate 0.16 — AP-native | AP | unchanged |
+>
+> So building was never inflated (it is zero), producing survived **by luck** — the ×100
+> cancelled top and bottom — and only **combat** was distorted. The conclusion that the batch
+> would have been unmeasurable stands, and the fix is the same; the mechanism is not what was
+> written.
+>
+> ★★ **And a hazard this review missed entirely:** `hq_siege_value` is **12**, an
+> AP-equivalent *weight* that did not rescale, while a unit's value became its ×100 Credit
+> cost. A Trooper kill would score **~30× an HQ strike** — precisely the "armies collide in
+> the middle and trade indefinitely, nobody sieges" behaviour the PIVOT verdict diagnosed,
+> now amplified. Corrected by converting only the **Credit** branches of the opponent-paid
+> lookup and leaving the HQ weight alone.
+>
+> ★ **The meta-lesson:** the direction of a unit-mismatch bug is not guessable from the fact
+> that a mismatch exists. It depends on which side of each ratio scaled — and here that
+> differed per verb inside one function family. **Read the arithmetic, do not reason about it
+> abstractly.**
+
 > ### ★ The general lesson, recorded because it has now happened twice
 >
 > **A "purely proportional" rescale is not safe for two classes of constant:**
@@ -110,6 +145,8 @@ untouched.
 >
 > Both were caught, but only by working through the arithmetic rather than by grepping for stale
 > names. **Any future rescale should audit conversion factors and rounding functions explicitly.**
+
+#### B-4 ✅ ANSWERED 2026-08-24 (S6-11) — see `design/legibility-budget.md`
 
 #### B-4 — Pillar 3 is a hard gate, and nothing owns whether the corpus still passes it
 
@@ -140,18 +177,47 @@ individually-reasonable channels can still be collectively unreadable.
 
 **Resolution — a design-direction call, not an edit.** Options: (a) run S5-03 on the current build
 before building any of it, establishing the baseline; (b) commission a legibility budget document
-that owns the total channel count; (c) accept and defer, with the gate re-run after wave 2. ★ **This
-is the user's call and is deliberately left open.**
+that owns the total channel count; (c) accept and defer, with the gate re-run after wave 2.
+
+> ### ✅ ANSWERED 2026-08-24 (S6-11) — **(b) then (a)**, in that order
+>
+> `design/legibility-budget.md` now owns the aggregate channel count. Summary:
+>
+> **★ The board is at seven always-on channels carrying five facts.** Read from the shipped
+> renderer, *act-state is triple-encoded* — `body_tint_for(destroyed, _is_actionable(e))`,
+> `mode_for(destroyed, _is_actionable(e))` and the has-acted glyph are three simultaneous
+> expressions of one boolean. That is deliberate accessibility redundancy and it is kept, but it
+> means the board's apparent crowding is **not all information**, and wave 2 has slack to spend
+> before it needs new visual language.
+>
+> **The budget:** cap **always-on facts at five**; route everything else to on-demand (selection /
+> pre-commit preview / command menu) or transient (targeting overlay, one at a time). The
+> allocation rule is *"a fact earns an always-on channel only if the player would mis-play
+> **before** interacting without it"* — which almost everything fails, correctly: Pillar 3 puts
+> complexity in the choices, and clicking a unit **is** the start of a choice.
+>
+> **Net effect on wave 2: +1 always-on fact (crew state), funded from the existing redundancy.**
+> Unit class merges into the silhouette family the art bible already mandates; rank rides the
+> ownership decal; damage type, resistances and abilities go on-demand; area shapes are transient.
+>
+> **The gate still has to run.** Five is defended by "this is what a full sprint achieved", which
+> is evidence about cost and none about readability. **S5-03 should run on the current build before
+> any wave-2 art**, and it is what sets the real number — three specific unknowns in §6 of the
+> budget each change the document. It is the cheapest measurement available and it gates the most
+> expensive work.
+>
+> ⚠ **Not cleared by this:** `unit-classes.md` UCOQ-1 (hovering aircraft vs. ADR-0013 Y-sort) is a
+> rendering-architecture question needing its own ADR, not a channel-budget question.
 
 ### ⚠ Warnings
 
 | # | Issue | Documents |
 |---|---|---|
-| **W-1** | **Dependency reciprocity is 0/11.** Not one existing GDD lists any of the 7 new systems as a downstream dependent, though all 7 declare hard upstream dependencies on them. Mechanical to fix via `/propagate-design-change` | all 11 pre-v2 GDDs |
+| **W-1** ✅ **RESOLVED 2026-08-24 (S6-09)** — reciprocal downstream blocks added to 12 GDDs, derived from each new GDD's own Dependencies table. | **Dependency reciprocity is 0/11.** Not one existing GDD lists any of the 7 new systems as a downstream dependent, though all 7 declare hard upstream dependencies on them. Mechanical to fix via `/propagate-design-change` | all 11 pre-v2 GDDs |
 | **W-2** | **`game-hud.md`'s pip-threshold derivation is invalidated.** It reasons from *"the highest-hp **unit** is Heavy at 10"* to justify `PIP_MAX_HP = 10`. A Union Siege Mech is a **unit** with **28 hp**; every vehicle is 12–28. The whole "units render pips, structures render numeric" intent collapses — vehicles are units that need numeric readouts. Its worked boundary analysis also cites the deleted Economy Outpost's hp 8 as the binding constraint | `game-hud.md`, `unit-classes.md` |
 | **W-3** | **Deficit does not block `CAPTURE_VEHICLE`.** `unit-upkeep.md` UR-6 blocks produce/build/research in deficit; capture costs 0 Credits, so a player in deficit may steal a 700-upkeep vehicle and deepen it, unguarded. `independents.md` IOQ-3 already notes inherited upkeep can be 44% of their income | `unit-upkeep.md`, `unit-abilities.md`, `independents.md` |
-| **W-4** | **Pre-rescale arithmetic in prose** across `combat-resolution.md`, `game-state-turn-manager.md`, `unit-system.md`, `base-production.md`, `transport-and-pilots.md`. Conclusions unaffected (the rescale is proportional); the arithmetic reads wrong. Tracked as APOQ-SCALE-2 | 5 docs |
-| **W-5** | **"Production Outpost" naming** persists in 10 documents; it is the **Barracks** | 10 docs |
+| **W-4** ✅ **RESOLVED 2026-08-24 (S6-09)** — scale notes rather than rewritten numbers; see the commit rationale. | **Pre-rescale arithmetic in prose** across `combat-resolution.md`, `game-state-turn-manager.md`, `unit-system.md`, `base-production.md`, `transport-and-pilots.md`. Conclusions unaffected (the rescale is proportional); the arithmetic reads wrong. Tracked as APOQ-SCALE-2 | 5 docs |
+| **W-5** ✅ **RESOLVED 2026-08-24 (S6-09)** — context-triaged, not find-replaced; historical records deliberately untouched. | **"Production Outpost" naming** persists in 10 documents; it is the **Barracks** | 10 docs |
 | **W-6** | **`defense` has never shipped a non-zero value on a unit.** `combat-resolution.md` introduced the field and its floor-lock analysis was written against *structures*. The Empire is its first real use on units, at values (2–5) that interact with `MIN_DAMAGE` in ways that analysis did not consider | `combat-resolution.md`, `holy-cosmic-empire.md` |
 
 ---
@@ -291,7 +357,7 @@ Recorded as a *pass* because it is the kind of boundary that usually is not.
    and `damage-types.md` DT-9 now cross-references the correction so it is discoverable from both sides.
 3. ✅ **B-3 — DONE.** Income breakdown rewritten as `gross − upkeep = net`, absorbing `unit-upkeep.md`
    UR-8's three-figure contract, which previously had no home in the HUD spec.
-4. ⛔ **B-4 — OPEN.** A user decision on the Pillar-3 legibility budget. ★ **Not an edit.**
+4. ✅ **B-4 — ANSWERED (S6-11).** `design/legibility-budget.md`. ★ Still owes the **S5-03 playtest**, which calibrates the cap.
 5. ✅ **B-5 — DONE.** `CREDIT_TO_AP_RATE` 1.0 → 0.01. ★ **This one would have invalidated the next
    AI-vs-AI regression batch, which is the evidence the entire PIVOT fix depends on.**
 
@@ -314,3 +380,63 @@ Then run `/propagate-design-change` for W-1, W-4 and W-5 as one sweep.
 > ★ **Sequencing recommendation.** B-1 and B-3 should land before the next AI-vs-AI regression batch,
 > because that batch is the evidence the PIVOT fix depends on and it cannot be trusted while the AI
 > cannot value an economic action. B-4 should be answered before any wave-2 art or renderer work.
+
+
+---
+
+## ✅ S6-09 sweep — W-1 / W-4 / W-5 closed, 2026-08-24
+
+**W-1 (reciprocity 0/11).** Reciprocal downstream blocks added to 12 GDDs, generated from each
+wave-2 GDD's own Dependencies table so the new documents stay the authority. `unit-system.md` and
+`ai-opponent.md` each take all 7 — unsurprising: the wave-2 corpus is mostly new unit properties
+and the AI reasoning that must account for them.
+
+★ Why this was worth more than tidiness: the Dependencies section is what tells an author what
+they are about to break, and it only works when read *from the document being edited*. Someone
+opening `unit-system.md` to change `UnitTypeDef` saw nothing indicating seven documents now build
+on it. Every pointer existed; every one pointed the wrong way for that question.
+
+**W-5 (naming).** Deliberately not a find-replace. Occurrences fell into three classes and only
+one should change:
+
+| Class | Treatment |
+|---|---|
+| Stale live reference ("produced from a Production Outpost") | Renamed |
+| Prose *about* the rename ("the Production Outpost becomes the Barracks") | Left — it is the record of the change |
+| A section describing a **deleted** mechanic (outpost-keyed income) | ⛔ **Marked superseded, never renamed** |
+
+Renaming the third class would have been the worst outcome available: it would read as a live rule
+describing a structure that no longer feeds income at all.
+
+Scope was also narrowed on purpose. 2,385 of the 2,523 matching lines are in the session log, with
+more in retrospectives, past playtests, dated consistency reports and closed sprints. Those are the
+audit trail — the names were correct when written, and rewriting them falsifies the record.
+
+★ **The real find.** Three documents — `base-production.md`, `ap-economy.md`, `research-tech.md` —
+had the S6 rework bolted on as a leading block with the entire original body left underneath,
+describing the old roster and the deleted income formula **in the present tense**. A reader who
+skipped the block got a coherent, confident, completely superseded design. Each now carries an
+unmissable divider and a correction table.
+
+★ `faction-identity.md` carried an actual error rather than a stale name: its per-stat saturation
+argument cited "Economy Outpost `build_time` = 1" as a floored stat. That structure's successor now
+sits at `build_time` 3, so it is not floored and the example never applied. The paragraph is
+specifically about auditing headroom against **live** values, so the correction was left visible as
+its own cautionary example.
+
+**W-4 (pre-rescale arithmetic).** `unit-system.md` gains a scale note rather than rescaled numbers.
+Its conclusions are unaffected — the rescale was proportional — and rewriting them would silently
+restate arguments the user approved at the old scale. The remaining W-4 documents are covered by
+the three dividers or carry no Credit figures.
+
+**Beyond the three warnings**, the sweep reconciled `design/registry/entities.yaml`, which had
+drifted for four sprints. That file is the grep-first baseline for `/consistency-check` and this
+very skill, so its stale entries would have been treated as authoritative and used to flag correct
+documents as inconsistent. All 11 spot-checked values now match `data/`.
+
+### ⚠ Left open, deliberately
+
+| | |
+|---|---|
+| **B-4 — the Pillar 3 legibility budget** | ✅ **Answered 2026-08-24 (S6-11)** — `design/legibility-budget.md`. What remains is running **S5-03**, which is a playtest, not a document |
+| **Barracks / Defensive Structure stat drift** | Data says Barracks 900 and Defensive 600/1; `base-production.md`'s roster table says 600 and 500/2. Live balance values on a gate that has only just started passing — reconciling them either way is a **balance decision**, not a data correction |

@@ -239,17 +239,205 @@ func test_menu_model_owned_unit_with_affordable_reachable_tile_move_enabled() ->
 	assert_int(move_entry.reason).is_equal(CommandFSM.Reason.NONE)
 
 
+func test_disband_is_offered_only_when_it_would_unblock_something() -> void:
+	# ★ User decision, 2026-08-25 (revised the same day to add the second trigger).
+	# Disband appears when it would RELIEVE something — a Credit deficit or a
+	# population ceiling. Those are the two states it exists for; outside them it
+	# would be a permanently visible, irreversible row on every unit the player
+	# owns. A player with nothing blocked gets NOTHING_BLOCKED, which the menu DROPS
+	# rather than renders — see ActionMenu._is_inapplicable for why that is a
+	# deliberate exception to the "situational disablement earns a visible row" rule.
+	var state := _make_state(0)
+	var unit := _place_unit(state, 1, 0, Vector2i(3, 3), _make_unit_type())
+	state.per_player[0].current_ap = 10
+
+	var clear: CommandFSM.VerbEntry = _find_entry(
+		CommandFSM.menu_model(state, unit), CommandFSM.Verb.DISBAND
+	)
+	assert_bool(clear.enabled).is_false()
+	assert_int(clear.reason).is_equal(CommandFSM.Reason.NOTHING_BLOCKED)
+
+	state.per_player[0].in_deficit = true
+	var broke: CommandFSM.VerbEntry = _find_entry(
+		CommandFSM.menu_model(state, unit), CommandFSM.Verb.DISBAND
+	)
+	assert_bool(broke.enabled).override_failure_message(
+		"a player in deficit must be offered the one action that reduces upkeep"
+	).is_true()
+	assert_int(broke.ap_cost).is_greater(0)
+
+
+func test_population_cap_offers_disband_even_to_a_solvent_player() -> void:
+	# ★★ The second trigger, and the reason it was added the same day. Freeing
+	# population is a legitimate NON-deficit reason to disband, and with only the
+	# deficit trigger a solvent player at cap was production-locked with no
+	# voluntary way out — they had to wait for a unit to die.
+	var state := _make_state(0)
+	var type := _make_unit_type()
+	var unit := _place_unit(state, 1, 0, Vector2i(3, 3), type)
+	state.per_player[0].current_ap = 10
+	assert_bool(state.per_player[0].in_deficit).is_false() # solvent throughout
+
+	# Fill to the ceiling. effective_cap is read rather than assumed so this stays
+	# correct if the faction base or a cap bonus is retuned.
+	var cap: int = Population.effective_cap(state, 0)
+	var next_id: int = 100
+	while Population.current_population(state, 0) < cap:
+		_place_unit(state, next_id, 0, Vector2i(next_id % 9, 8), type)
+		next_id += 1
+
+	var entry: CommandFSM.VerbEntry = _find_entry(
+		CommandFSM.menu_model(state, unit), CommandFSM.Verb.DISBAND
+	)
+	assert_bool(entry.enabled).override_failure_message(
+		"a solvent player at population cap must still be able to make room"
+	).is_true()
+
+
+func test_being_over_a_fallen_cap_offers_disband_too() -> void:
+	# ★ "At cap" is >=, not ==, and the difference is a real game state: the cap
+	# FALLS when a Barracks dies (population-cap.md PC-6) and units above the new
+	# ceiling are deliberately not destroyed. A player sitting strictly OVER cap is
+	# production-locked, which is exactly when a voluntary way back under matters
+	# most — an == test would have left them stranded.
+	var state := _make_state(0)
+	var type := _make_unit_type()
+	var unit := _place_unit(state, 1, 0, Vector2i(3, 3), type)
+	state.per_player[0].current_ap = 10
+
+	var cap: int = Population.effective_cap(state, 0)
+	var next_id: int = 200
+	while Population.current_population(state, 0) <= cap: # deliberately one PAST
+		_place_unit(state, next_id, 0, Vector2i(next_id % 9, 7), type)
+		next_id += 1
+	assert_int(Population.current_population(state, 0)).is_greater(cap)
+
+	var entry: CommandFSM.VerbEntry = _find_entry(
+		CommandFSM.menu_model(state, unit), CommandFSM.Verb.DISBAND
+	)
+	assert_bool(entry.enabled).is_true()
+
+
+func test_disband_in_deficit_is_still_gated_on_ap_and_nothing_else() -> void:
+	# ★ Never gated on the deficit LOCK that blocks produce/build/research: disband
+	# is the one action that REDUCES upkeep, so refusing it while in deficit would
+	# make a deficit unrecoverable by the player's own choice (UR-7). The deficit is
+	# what SHOWS this verb; it must never be what blocks it.
+	var state := _make_state(0)
+	var unit := _place_unit(state, 1, 0, Vector2i(3, 3), _make_unit_type())
+	state.per_player[0].in_deficit = true
+	state.per_player[0].current_ap = 0
+
+	var entry: CommandFSM.VerbEntry = _find_entry(
+		CommandFSM.menu_model(state, unit), CommandFSM.Verb.DISBAND
+	)
+
+	assert_bool(entry.enabled).is_false()
+	assert_int(entry.reason).override_failure_message(
+		"the only thing that may disable an offered Disband is AP"
+	).is_equal(CommandFSM.Reason.INSUFFICIENT_AP)
+
+
+func test_attack_entry_carries_its_ap_price_when_enabled() -> void:
+	# ★ 2026-08-25 (action-menu.md OQ-2). Attack is the one verb whose price is a
+	# single number known before any preview opens, so the model carries it and the
+	# menu shows it on the row. The widget renders this figure; it never computes
+	# one (Pass-Through Invariant).
+	var state := _make_state(0)
+	var type := _make_unit_type(1, 8, 1)
+	var attacker := _place_unit(state, 1, 0, Vector2i(3, 3), type)
+	_place_unit(state, 2, 1, Vector2i(3, 4), type) # adjacent enemy = a legal target
+	state.per_player[0].current_ap = 10
+
+	var entry: CommandFSM.VerbEntry = _find_entry(
+		CommandFSM.menu_model(state, attacker), CommandFSM.Verb.ATTACK
+	)
+
+	assert_bool(entry.enabled).is_true()
+	assert_int(entry.ap_cost).is_equal(Combat.attack_cost_for(attacker))
+	assert_int(entry.ap_cost).is_greater(0)
+
+
+func test_attack_entry_still_carries_its_price_when_disabled() -> void:
+	# ★ The price is MORE useful on the disabled row, not less: "needs AP" alone
+	# says you are short, "2 AP · needs AP" says by how much.
+	var state := _make_state(0)
+	var type := _make_unit_type(1, 8, 1)
+	var attacker := _place_unit(state, 1, 0, Vector2i(3, 3), type)
+	_place_unit(state, 2, 1, Vector2i(3, 4), type)
+	state.per_player[0].current_ap = 0
+
+	var entry: CommandFSM.VerbEntry = _find_entry(
+		CommandFSM.menu_model(state, attacker), CommandFSM.Verb.ATTACK
+	)
+
+	assert_bool(entry.enabled).is_false()
+	assert_int(entry.ap_cost).is_equal(Combat.attack_cost_for(attacker))
+
+
+func test_verbs_without_a_single_price_say_so_rather_than_reporting_zero() -> void:
+	# ★★ The sentinel earns its keep here. Move's price is per-TILE, Produce's is
+	# per-TYPE, and Wait is genuinely free — reporting 0 for any of them would put
+	# "0 AP" on a row and tell the player something false about two of the three.
+	var state := _make_state(0)
+	var unit := _place_unit(state, 1, 0, Vector2i(3, 3), _make_unit_type(1, 8))
+	state.per_player[0].current_ap = 10
+
+	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, unit)
+	for verb: int in [CommandFSM.Verb.MOVE, CommandFSM.Verb.PRODUCE, CommandFSM.Verb.WAIT]:
+		assert_int(_find_entry(menu, verb).ap_cost).override_failure_message(
+			"verb %d has no single price and must report NO_SINGLE_COST, not a number" % verb
+		).is_equal(CommandFSM.NO_SINGLE_COST)
+
+
 func test_menu_model_unit_with_zero_ap_move_disabled_insufficient_ap() -> void:
+	# ★ 2026-08-24 — this test's NAME was right all along and its ASSERTION was
+	# wrong. It expected OUT_OF_RANGE for a unit standing in open ground with 0 AP,
+	# because that is what the code did: Movement.reachable() applies its
+	# affordability cut INSIDE the BFS, so "no AP" and "walled in" both came back
+	# as an empty set and the menu reported both as "no route".
+	#
+	# The two point a player at opposite fixes — clear a path, versus end the turn —
+	# so the conflation was a real defect (action-menu.md OQ-5), not a wording nit.
+	# Left as a cautionary note: a test whose name contradicts its assertion is
+	# worth reading twice, because one of the two is describing intent and the other
+	# is describing a bug.
 	var state := _make_state(0)
 	var type := _make_unit_type(1, 8)
 	var unit := _place_unit(state, 1, 0, Vector2i(2, 2), type)
-	state.per_player[0].current_ap = 0 # reachable() returns nothing affordable.
+	state.per_player[0].current_ap = 0 # open ground all around; only AP is missing.
 
 	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, unit)
 	var move_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.MOVE)
 
 	assert_bool(move_entry.enabled).is_false()
-	assert_int(move_entry.reason).is_equal(CommandFSM.Reason.OUT_OF_RANGE)
+	assert_int(move_entry.reason).override_failure_message(
+		"a unit in open ground with no AP needs AP — it is not out of range"
+	).is_equal(CommandFSM.Reason.INSUFFICIENT_AP)
+
+
+func test_a_unit_both_boxed_in_and_broke_reports_out_of_range_not_ap() -> void:
+	# ★ When both are true, OUT_OF_RANGE is the more useful thing to say: no amount
+	# of AP would help this unit, so pointing the player at their AP pool would send
+	# them to end their turn and find the unit still stuck. The two reasons are
+	# mutually exclusive here on purpose — each one names the fix that would
+	# actually work.
+	var state := _make_state(0)
+	var type := _make_unit_type(1, 8)
+	var unit := _place_unit(state, 1, 0, Vector2i(5, 5), type)
+	state.per_player[0].current_ap = 0
+	_place_unit(state, 2, 1, Vector2i(5, 4), type)
+	_place_unit(state, 3, 1, Vector2i(5, 6), type)
+	_place_unit(state, 4, 1, Vector2i(4, 5), type)
+	_place_unit(state, 5, 1, Vector2i(6, 5), type)
+
+	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, unit)
+	var move_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.MOVE)
+
+	assert_bool(move_entry.enabled).is_false()
+	assert_int(move_entry.reason).override_failure_message(
+		"no amount of AP frees a boxed-in unit — saying 'needs AP' sends the player nowhere"
+	).is_equal(CommandFSM.Reason.OUT_OF_RANGE)
 
 
 func test_menu_model_unit_fully_boxed_in_move_disabled_out_of_range() -> void:
@@ -361,7 +549,7 @@ func test_menu_model_attack_already_attacked_disabled_regardless_of_ap_or_range(
 # not hidden (menu_model always returns a full 5-row set) or erroring.
 # ==============================================================================
 
-func test_menu_model_always_returns_all_five_verb_rows_never_hides_a_verb() -> void:
+func test_menu_model_always_returns_a_row_for_every_verb_never_hides_one() -> void:
 	var state := _make_state(0)
 	var type := _make_unit_type(1, 8, 1)
 	var unit := _place_unit(state, 1, 0, Vector2i(0, 0), type)
@@ -369,15 +557,24 @@ func test_menu_model_always_returns_all_five_verb_rows_never_hides_a_verb() -> v
 
 	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, unit)
 
-	# Five fixed rows (Cancel Build added by Story 004) — indexing by Verb value
-	# stays valid. A unit's Cancel-Build row is disabled (NOT_UNDER_CONSTRUCTION),
-	# not hidden.
-	assert_int(menu.size()).is_equal(5)
+	# ★ Derived from the enum, not a hardcoded count. This test asserted "5" and
+	# broke on the day Disband was added (2026-08-25) — correctly, but for the
+	# wrong reason: what MATTERS is that the model reports on every verb it knows
+	# about, whatever that set currently is. Counting off the enum keeps that
+	# property true as verbs come and go, and still fails loudly if menu_model ever
+	# starts omitting one.
+	#
+	# The MODEL never hides a verb. The WIDGET drops the ones disabled because they
+	# do not apply to this kind of entity (ActionMenu._is_inapplicable) — that is a
+	# rendering choice made downstream of this, on a complete model.
+	assert_int(menu.size()).is_equal(CommandFSM.Verb.size())
 	var verbs: Array[int] = []
 	for entry: CommandFSM.VerbEntry in menu:
 		verbs.append(entry.verb)
-	assert_array(verbs).contains([CommandFSM.Verb.MOVE, CommandFSM.Verb.ATTACK, \
-		CommandFSM.Verb.PRODUCE, CommandFSM.Verb.WAIT, CommandFSM.Verb.CANCEL_BUILD])
+	for verb: int in CommandFSM.Verb.values():
+		assert_array(verbs).override_failure_message(
+			"menu_model returned no row for verb %d" % verb
+		).contains([verb])
 
 
 func test_menu_model_empty_legal_targets_attack_disabled_no_targets_not_erroring() -> void:
@@ -400,12 +597,24 @@ func test_menu_model_structure_produce_no_deploy_space_disabled_not_erroring() -
 	var producer_type := _make_structure_type(6, 1, [unit_type])
 	var producer := _place_structure(state, 1, 0, Vector2i(5, 5), producer_type)
 	state.per_player[0].current_ap = 10
-	# Occupy all 4 cardinal neighbors so legal_deploy_tiles() is empty.
+	# Occupy the producer's ENTIRE deploy radius so legal_deploy_tiles() is empty.
+	# ★ S6-16: this filled only the four cardinal neighbours, which stopped being
+	# sufficient when the deploy radius moved 1 -> 2 to fix the one-unit cliff
+	# (s5-04-one-unit-cliff-diagnosis). Derived from the config so it keeps
+	# testing "no deploy space" rather than "four specific tiles".
 	var blocker_type := _make_unit_type()
-	_place_unit(state, 2, 0, Vector2i(5, 4), blocker_type)
-	_place_unit(state, 3, 0, Vector2i(6, 5), blocker_type)
-	_place_unit(state, 4, 0, Vector2i(5, 6), blocker_type)
-	_place_unit(state, 5, 0, Vector2i(4, 5), blocker_type)
+	var radius: int = StructureBalance.base_production.deploy_radius
+	var next_id: int = 2
+	for dy: int in range(-radius, radius + 1):
+		var span: int = radius - absi(dy)
+		for dx: int in range(-span, span + 1):
+			if dx == 0 and dy == 0:
+				continue
+			_place_unit(state, next_id, 0, Vector2i(5 + dx, 5 + dy), blocker_type)
+			next_id += 1
+	assert_array(BaseProduction.legal_deploy_tiles(state, producer, unit_type)) \
+		.override_failure_message("the arrangement must actually leave no deploy space") \
+		.is_empty()
 
 	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, producer)
 	var produce_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.PRODUCE)
@@ -471,7 +680,9 @@ func test_menu_model_under_construction_structure_still_selects_wait_enabled_ap_
 
 	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, producer)
 
-	assert_int(menu.size()).is_equal(5)
+	# Enum-derived, for the same reason as the row-count test above: the point is
+	# that the model reports on every verb, not that there happen to be N of them.
+	assert_int(menu.size()).is_equal(CommandFSM.Verb.size())
 	var move_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.MOVE)
 	var attack_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.ATTACK)
 	var produce_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.PRODUCE)
@@ -486,6 +697,12 @@ func test_menu_model_under_construction_structure_still_selects_wait_enabled_ap_
 	assert_bool(wait_entry.enabled).is_true()
 	# Story 004: an under-construction owned structure DOES offer Cancel Build.
 	assert_bool(cancel_entry.enabled).is_true()
+	# ...and never Disband, whatever its state: structures are not disbanded (UR-7).
+	# The two destructive verbs are mutually exclusive by entity KIND, which is what
+	# keeps a menu from ever offering two ways to destroy the same thing.
+	var disband_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.DISBAND)
+	assert_bool(disband_entry.enabled).is_false()
+	assert_int(disband_entry.reason).is_equal(CommandFSM.Reason.NOT_A_UNIT)
 
 
 func test_menu_model_non_producer_structure_produce_disabled_not_a_producer() -> void:

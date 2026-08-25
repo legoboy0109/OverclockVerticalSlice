@@ -38,21 +38,36 @@ func test_hq_template_matches_stat_table() -> void:
 	assert_bool(hq.producible_types.has(UnitTypes.SCOUT)).is_true()
 
 
-func test_economy_outpost_template_matches_stat_table() -> void:
-	var eo := StructureTypes.ECONOMY_OUTPOST
+func test_factory_template_matches_stat_table() -> void:
+	var eo := StructureTypes.FACTORY
 	assert_int(eo.hp).is_equal(8)
-	assert_int(eo.build_cost).is_equal(400)  # ★ S6-02: ×100 Credit rescale
-	assert_int(eo.build_time).is_equal(1)
+	# ★ S6-09: aligned to `base-production.md`'s roster table (1,000 / 3 / 200). The
+	# data had been carrying the renamed Economy Outpost's numbers (400 / 1 / 100)
+	# ever since S6-03 renamed the resource rather than re-statting it -- a rename
+	# moves a file, it does not move the design intent behind the numbers inside it.
+	assert_int(eo.build_cost).is_equal(1000)
+	assert_int(eo.build_time).is_equal(3)
+	assert_int(eo.upkeep).is_equal(200)
+	assert_int(eo.max_count).is_equal(2)
+	# Produces nothing YET -- GROUND_VEHICLE units are wave 2 (`unit-classes.md`).
+	# ★ This is why S6-09 also pulled the Factory from the player's build roster:
+	# a 1,000-Credit, 200-upkeep structure that produces nothing is a trap, not a
+	# choice. Restore it in the change that gives it something to build.
 	assert_int(eo.production_cap).is_equal(0)
 	assert_int(eo.producible_types.size()).is_equal(0)
 	assert_int(eo.defense).is_equal(0)
 	assert_bool(eo.can_counterattack).is_false()
 
 
-func test_production_outpost_template_matches_stat_table() -> void:
-	var po := StructureTypes.PRODUCTION_OUTPOST
+func test_barracks_template_matches_stat_table() -> void:
+	var po := StructureTypes.BARRACKS
 	assert_int(po.hp).is_equal(14)
-	assert_int(po.build_cost).is_equal(900)  # ★ S6-02: ×100 Credit rescale
+	# ★ S6-10: 900 -> 600, aligning with `base-production.md`'s roster table. The 900
+	# was the ×100 rescale of the pre-rework 9 and had never been re-derived against
+	# the new roster. This one is load-bearing -- Barracks throughput was one of the
+	# two levers that fixed the S6-06 resolution gate -- so it was measured against
+	# the regression batch rather than assumed safe.
+	assert_int(po.build_cost).is_equal(600)
 	assert_int(po.build_time).is_equal(2)
 	assert_int(po.production_cap).is_equal(4)
 	assert_int(po.defense).is_equal(0)
@@ -66,8 +81,11 @@ func test_production_outpost_template_matches_stat_table() -> void:
 func test_defensive_structure_template_matches_stat_table() -> void:
 	var ds := StructureTypes.DEFENSIVE_STRUCTURE
 	assert_int(ds.hp).is_equal(10)
-	assert_int(ds.build_cost).is_equal(600)  # ★ S6-02: ×100 Credit rescale
-	assert_int(ds.build_time).is_equal(1)
+	# ★ S6-10: 600/1 -> 500/2 per the roster table. The extra build turn is the
+	# meaningful half: a turret that completes the turn after you pay for it is a
+	# reaction, and the table prices it as a commitment.
+	assert_int(ds.build_cost).is_equal(500)
+	assert_int(ds.build_time).is_equal(2)
 	assert_int(ds.production_cap).is_equal(0)
 	assert_int(ds.attack).is_equal(4)
 	assert_int(ds.attack_range).is_equal(2)
@@ -95,7 +113,7 @@ func test_template_read_twice_is_the_same_shared_object() -> void:
 	# Resource-ref identity: reading the registry const twice yields the SAME
 	# object (immutable, never re-instantiated) — ADR-0007's identity discipline.
 	assert_bool(StructureTypes.HQ == StructureTypes.HQ).is_true()
-	assert_object(StructureTypes.ECONOMY_OUTPOST).is_same(StructureTypes.ECONOMY_OUTPOST)
+	assert_object(StructureTypes.FACTORY).is_same(StructureTypes.FACTORY)
 
 
 # --- AC-lifecycle: BuildStatus enum + per-instance @export fields ------------
@@ -126,7 +144,7 @@ func test_per_instance_fields_are_export_carrying_survive_duplicate() -> void:
 	s.entity_id = 7
 	s.owner = 1
 	s.position = Vector2i(3, 4)
-	s.type = StructureTypes.PRODUCTION_OUTPOST
+	s.type = StructureTypes.BARRACKS
 	s.current_hp = 11
 	s.build_status = StructureState.BuildStatus.COMPLETED
 	s.build_turns_remaining = 2
@@ -137,7 +155,7 @@ func test_per_instance_fields_are_export_carrying_survive_duplicate() -> void:
 	assert_int(copy.entity_id).is_equal(7)
 	assert_int(copy.owner).is_equal(1)
 	assert_that(copy.position).is_equal(Vector2i(3, 4))
-	assert_object(copy.type).is_same(StructureTypes.PRODUCTION_OUTPOST)  # path-having template shared, not copied
+	assert_object(copy.type).is_same(StructureTypes.BARRACKS)  # path-having template shared, not copied
 	assert_int(copy.current_hp).is_equal(11)
 	assert_int(copy.build_status).is_equal(StructureState.BuildStatus.COMPLETED)
 	assert_int(copy.build_turns_remaining).is_equal(2)

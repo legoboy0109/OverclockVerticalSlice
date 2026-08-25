@@ -221,13 +221,13 @@ func test_build_with_exact_credits_and_ap_surcharge_via_apply_action_commits_ato
 	var state := _make_state(0, 0)
 	var anchor := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(0, 0))
 	_place(state, anchor)
-	var cost: int = BaseProduction.effective_build_cost(state, StructureTypes.ECONOMY_OUTPOST, 0)
+	var cost: int = BaseProduction.effective_build_cost(state, StructureTypes.FACTORY, 0)
 	state.per_player[0].current_credits = cost
 	state.per_player[0].current_ap = Balance.economy.build_ap_cost
 	var target_tile := Vector2i(1, 0) # manhattan==1 from the anchor.
 	# Non-vacuous precondition: the tile is actually legal before we act.
-	assert_bool(target_tile in BaseProduction.legal_build_tiles(state, 0, StructureTypes.ECONOMY_OUTPOST)).is_true()
-	var action := _build(StructureTypes.ECONOMY_OUTPOST, target_tile, 0)
+	assert_bool(target_tile in BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)).is_true()
+	var action := _build(StructureTypes.FACTORY, target_tile, 0)
 
 	# Act
 	var result: ActionResult = state.apply_action(action)
@@ -241,7 +241,7 @@ func test_build_with_exact_credits_and_ap_surcharge_via_apply_action_commits_ato
 	var placed_id: int = state.grid.occupant_at(target_tile.x, target_tile.y)
 	assert_int(placed_id).is_not_equal(GridState.EMPTY_OCCUPANT)
 	var placed: StructureState = state.entities_by_id[placed_id]
-	assert_object(placed.type).is_same(StructureTypes.ECONOMY_OUTPOST)
+	assert_object(placed.type).is_same(StructureTypes.FACTORY)
 	assert_int(placed.build_status).is_equal(StructureState.BuildStatus.UNDER_CONSTRUCTION)
 	# ... and the commit emitted a StructurePlacedEvent for the new structure
 	# (event-stream symmetry with AC-7's StructureDestroyedEvent check).
@@ -249,7 +249,7 @@ func test_build_with_exact_credits_and_ap_surcharge_via_apply_action_commits_ato
 	for e: Event in result.events:
 		if e is StructurePlacedEvent and e.entity_id == placed_id:
 			saw_placed = true
-			assert_object(e.structure_type).is_same(StructureTypes.ECONOMY_OUTPOST)
+			assert_object(e.structure_type).is_same(StructureTypes.FACTORY)
 			assert_int(e.owner).is_equal(0)
 	assert_bool(saw_placed).is_true()
 
@@ -261,7 +261,7 @@ func test_unaffordable_build_credits_short_via_apply_action_rejected_state_uncha
 	var state := _make_state(0, 0)
 	var anchor := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(0, 0))
 	_place(state, anchor)
-	var cost: int = BaseProduction.effective_build_cost(state, StructureTypes.ECONOMY_OUTPOST, 0)
+	var cost: int = BaseProduction.effective_build_cost(state, StructureTypes.FACTORY, 0)
 	state.per_player[0].current_credits = cost - 1
 	state.per_player[0].current_ap = Balance.economy.build_ap_cost
 	var target_tile := Vector2i(1, 0)
@@ -269,7 +269,7 @@ func test_unaffordable_build_credits_short_via_apply_action_rejected_state_uncha
 	var ap_before: int = state.per_player[0].current_ap
 	var occupancy_before: PackedInt32Array = state.grid.occupancy.duplicate()
 	var entity_count_before: int = state.entities_by_id.size()
-	var action := _build(StructureTypes.ECONOMY_OUTPOST, target_tile, 0)
+	var action := _build(StructureTypes.FACTORY, target_tile, 0)
 
 	# Act
 	var result: ActionResult = state.apply_action(action)
@@ -298,9 +298,9 @@ func test_outpost_completing_at_real_start_turn_counts_same_turn_income() -> voi
 	# Credits.credit_income(...) exactly (Credits bank additively, never a
 	# reset-to-snapshot like AP).
 	var state := _make_state(0, 0)
-	var completed_a := _make_structure(1, 0, Vector2i(0, 0), StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.COMPLETED)
-	var completed_b := _make_structure(2, 0, Vector2i(1, 0), StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.COMPLETED)
-	var completing := _make_structure(3, 0, Vector2i(2, 0), StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
+	var completed_a := _make_structure(1, 0, Vector2i(0, 0), StructureTypes.FACTORY, StructureState.BuildStatus.COMPLETED)
+	var completed_b := _make_structure(2, 0, Vector2i(1, 0), StructureTypes.FACTORY, StructureState.BuildStatus.COMPLETED)
+	var completing := _make_structure(3, 0, Vector2i(2, 0), StructureTypes.FACTORY, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
 	_place(state, completed_a)
 	_place(state, completed_b)
 	_place(state, completing)
@@ -333,7 +333,7 @@ func test_outpost_completing_at_real_start_turn_counts_same_turn_income() -> voi
 	for e: Event in turn_events:
 		if e is StructureCompletedEvent and e.entity_id == completing.entity_id:
 			saw_completed = true
-			assert_object(e.structure_type).is_same(StructureTypes.ECONOMY_OUTPOST)
+			assert_object(e.structure_type).is_same(StructureTypes.FACTORY)
 	assert_bool(saw_completed).is_true()
 	# ... and THIS SAME start_turn call's frozen income snapshot already
 	# reflects n=3 -- the Rule-6 ordering proof. Derived from Balance.economy's
@@ -362,8 +362,8 @@ func test_two_outposts_completing_same_start_turn_both_count() -> void:
 	# current_credits starts at the known baseline 0 so the post-add_income
 	# value equals Credits.credit_income(...) exactly.
 	var state := _make_state(0, 0)
-	var completing_a := _make_structure(1, 0, Vector2i(0, 0), StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
-	var completing_b := _make_structure(2, 0, Vector2i(1, 0), StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
+	var completing_a := _make_structure(1, 0, Vector2i(0, 0), StructureTypes.FACTORY, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
+	var completing_b := _make_structure(2, 0, Vector2i(1, 0), StructureTypes.FACTORY, StructureState.BuildStatus.UNDER_CONSTRUCTION, 1)
 	_place(state, completing_a)
 	_place(state, completing_b)
 	state.active_player = 1
@@ -395,7 +395,7 @@ func test_produce_via_apply_action_creates_real_active_selectable_unit() -> void
 	# Arrange -- a real COMPLETED Production Outpost with ample AP + Credits
 	# (both legs of the dual-cost gate generously funded).
 	var state := _make_state(100, 100000)  # ★ S6-02: ×100 Credit rescale — 100 no longer funds a Trooper (400)
-	var producer := _make_structure(1, 0, Vector2i(0, 0), StructureTypes.PRODUCTION_OUTPOST, StructureState.BuildStatus.COMPLETED)
+	var producer := _make_structure(1, 0, Vector2i(0, 0), StructureTypes.BARRACKS, StructureState.BuildStatus.COMPLETED)
 	_place(state, producer)
 	var deploy_tile := Vector2i(1, 0) # manhattan==1 from the producer, empty.
 	assert_bool(deploy_tile in BaseProduction.legal_deploy_tiles(state, producer, UnitTypes.TROOPER)).is_true()
@@ -535,7 +535,7 @@ func test_under_construction_structure_force_destroyed_no_refund() -> void:
 	# known AP + Credits balance unrelated to the structure's build_cost, so any
 	# (incorrect) refund on EITHER pool would visibly change it.
 	var state := _make_state(7, 7)
-	var structure := _make_structure(1, 0, Vector2i(3, 3), StructureTypes.ECONOMY_OUTPOST, StructureState.BuildStatus.UNDER_CONSTRUCTION, 2)
+	var structure := _make_structure(1, 0, Vector2i(3, 3), StructureTypes.FACTORY, StructureState.BuildStatus.UNDER_CONSTRUCTION, 2)
 	_place(state, structure)
 	var ap_before: int = state.per_player[0].current_ap
 	var credits_before: int = state.per_player[0].current_credits
@@ -584,7 +584,7 @@ func test_legal_build_tiles_relegalizes_live_after_enemy_structure_destroyed() -
 	# otherwise be legal) but is excluded BEFORE destruction, proving the
 	# standoff rule is actually active, not vacuously passing.
 	assert_int(state.grid.manhattan_distance(excluded_tile, enemy_structure.position)).is_equal(2)
-	var before: Array[Vector2i] = BaseProduction.legal_build_tiles(state, 0, StructureTypes.ECONOMY_OUTPOST)
+	var before: Array[Vector2i] = BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
 	assert_bool(excluded_tile in before).is_false()
 
 	# Act -- destroy the enforcing enemy structure via the real terminal exit.
@@ -593,5 +593,5 @@ func test_legal_build_tiles_relegalizes_live_after_enemy_structure_destroyed() -
 	# Assert -- a fresh, independent legal_build_tiles call now includes the
 	# previously-excluded tile -- live re-derivation, never a cached result
 	# from the pre-destruction call.
-	var after: Array[Vector2i] = BaseProduction.legal_build_tiles(state, 0, StructureTypes.ECONOMY_OUTPOST)
+	var after: Array[Vector2i] = BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
 	assert_bool(excluded_tile in after).is_true()

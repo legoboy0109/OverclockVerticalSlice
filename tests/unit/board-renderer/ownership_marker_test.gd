@@ -147,12 +147,85 @@ func test_the_decal_stays_inside_its_own_tile() -> void:
 	assert_float(OwnershipMarker.BAND_INNER).is_greater(0.0)
 
 
-func test_marker_texture_is_one_tile_at_the_shared_art_scale() -> void:
+func test_a_markers_texture_is_exactly_the_diamond_that_holds_its_band() -> void:
+	# ★ 2026-08-24: was "the texture is one tile". It no longer is, and the change is
+	# the point: a BASE_RING's band sits OUTSIDE the tile rim, so a tile-sized image
+	# would crop it at the rim and silently draw a broken ring. Every style's texture
+	# is now sized to its own outer edge — the tile style's is slightly SMALLER than
+	# a tile (its band stops at BAND_OUTER), which draws identically since the
+	# trimmed border was transparent.
+	for style: OwnershipMarker.Style in [OwnershipMarker.Style.TILE, OwnershipMarker.Style.BASE_RING]:
+		var outer: float = OwnershipMarker.band_for(style).y
+		var image: Image = OwnershipMarker.texture_for(Factions.RUSH, style).get_image()
+		assert_int(image.get_width()).override_failure_message(
+			"style %d's image is not wide enough to hold its band" % style
+		).is_equal(int(ceilf(BoardRenderer.TILE_WIDTH_PX * outer * OwnershipMarker.TEXTURE_SCALE)))
+		assert_int(image.get_height()).is_equal(
+			int(ceilf(BoardRenderer.TILE_HEIGHT_PX * outer * OwnershipMarker.TEXTURE_SCALE))
+		)
 	# Kept in step with the entity sprites' 2x rule, so one board never mixes scales.
-	var image: Image = OwnershipMarker.texture_for(Factions.RUSH).get_image()
-	assert_int(image.get_width()).is_equal(int(BoardRenderer.TILE_WIDTH_PX * OwnershipMarker.TEXTURE_SCALE))
-	assert_int(image.get_height()).is_equal(int(BoardRenderer.TILE_HEIGHT_PX * OwnershipMarker.TEXTURE_SCALE))
 	assert_float(OwnershipMarker.TEXTURE_SCALE).is_equal(EntitySpriteFeed.TEXTURE_SCALE)
+
+
+func test_the_base_ring_sits_outside_the_tile_rim_and_the_tile_style_inside_it() -> void:
+	# ★ The whole distinction between the two styles, as a number. A structure's base
+	# plate is as wide as the tile and taller than the tile diamond, so a band inside
+	# the rim is a band underneath the building — which is exactly what happened when
+	# structures were correctly grounded and every decal on the board vanished.
+	var tile: Vector2 = OwnershipMarker.band_for(OwnershipMarker.Style.TILE)
+	var ring: Vector2 = OwnershipMarker.band_for(OwnershipMarker.Style.BASE_RING)
+
+	assert_float(tile.y).override_failure_message(
+		"the unit decal must stay inside its tile so adjacent markers never merge"
+	).is_less(1.0)
+	assert_float(ring.x).override_failure_message(
+		"a ring whose inner edge is inside the rim is a ring underneath the building"
+	).is_greater(1.0)
+	assert_float(ring.x).is_less(ring.y)
+
+
+func test_the_ring_is_no_wider_than_it_has_to_be() -> void:
+	# ★ The counterweight to the test above, and the reason the inner edge is
+	# measured against the NEAR half only. A ring big enough to clear every
+	# structure's widest row anywhere in its art needs ~1.5 tiles — visibly bigger
+	# than the tile it labels, and reaching well into the neighbours. The far half is
+	# SUPPOSED to be occluded by the building standing on it, so it does not get a
+	# vote. Pinned so a future retune cannot quietly reintroduce the oversized ring.
+	var ring: Vector2 = OwnershipMarker.band_for(OwnershipMarker.Style.BASE_RING)
+	assert_float(ring.y).override_failure_message(
+		"the ring has grown wide enough to read as a multi-tile footprint"
+	).is_less(1.30)
+
+
+func test_both_styles_carry_the_same_faction_shapes() -> void:
+	# The ring is the SAME decal at a different radius, not a second mark. Rush's
+	# front cap, Boom's flank gap and Neutral's even ring must all survive the move
+	# outward, or the non-hue tell only works on units.
+	for style: OwnershipMarker.Style in [OwnershipMarker.Style.TILE, OwnershipMarker.Style.BASE_RING]:
+		var rush: Image = OwnershipMarker.texture_for(Factions.RUSH, style).get_image()
+		var boom: Image = OwnershipMarker.texture_for(Factions.BOOM, style).get_image()
+		# The near vertex is Rush's solid cap and Boom's deliberate gap — the one
+		# pixel that separates the two factions with hue removed.
+		var near_x: int = rush.get_width() / 2
+		var near_y: int = rush.get_height() - 2
+		assert_float(rush.get_pixel(near_x, near_y).a).override_failure_message(
+			"style %d lost Rush's front cap" % style
+		).is_greater(0.0)
+		assert_float(boom.get_pixel(near_x, near_y).a).override_failure_message(
+			"style %d lost Boom's front gap — the non-hue tell" % style
+		).is_equal(0.0)
+
+
+func test_each_style_is_cached_separately_not_overwriting_the_other() -> void:
+	# Regression: the cache was keyed by faction alone. With two styles that would
+	# hand whichever was requested first to both, so either every unit wore a ring or
+	# every structure wore a tile band.
+	var tile: ImageTexture = OwnershipMarker.texture_for(Factions.RUSH, OwnershipMarker.Style.TILE)
+	var ring: ImageTexture = OwnershipMarker.texture_for(Factions.RUSH, OwnershipMarker.Style.BASE_RING)
+	assert_object(ring).is_not_same(tile)
+	assert_object(
+		OwnershipMarker.texture_for(Factions.RUSH, OwnershipMarker.Style.BASE_RING)
+	).is_same(ring)
 
 
 func test_textures_are_cached_not_redrawn_per_entity() -> void:

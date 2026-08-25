@@ -219,5 +219,15 @@ func test_default_tres_resource_loads_and_resolves_all_twelve_classes() -> void:
 	# Assert
 	assert_object(offsets).is_not_null()
 	assert_bool(offsets is GlyphOffsets).is_true()
-	assert_vector(offsets.offset_for(BoardRenderer.GlyphClass.HP_PIP)).is_equal(Vector2.ZERO)
+	# ★ 2026-08-24: hp_pip is no longer ZERO. TR-hud-011 requires the hp glyph never
+	# be occluded, and the doc says that is "guaranteed upstream by the GlyphOffsets
+	# authoring discipline" -- but the authored value was (0,0), i.e. dead centre on
+	# the tile, exactly where the entity sprite stands. The guarantee had no value
+	# behind it. Both hp classes now sit clear of their own art: units at the tile's
+	# front edge, structures above the tower.
+	assert_vector(offsets.offset_for(BoardRenderer.GlyphClass.HP_PIP)) \
+		.override_failure_message("hp_pip at the tile centre draws behind the unit it describes") \
+		.is_not_equal(Vector2.ZERO)
+	assert_vector(offsets.offset_for(BoardRenderer.GlyphClass.HP_PIP)).is_equal(offsets.hp_pip)
+	assert_vector(offsets.offset_for(BoardRenderer.GlyphClass.STRUCTURE_HP)).is_equal(offsets.structure_hp)
 	assert_vector(offsets.offset_for(BoardRenderer.GlyphClass.D3_ECHO)).is_equal(offsets.d3_echo)

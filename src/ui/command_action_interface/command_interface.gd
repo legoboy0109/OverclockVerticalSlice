@@ -113,6 +113,23 @@ extends Node
 ## the same frame by construction (never one polling/reacting to the other).
 signal commit_flash_requested(result: ActionResult)
 
+## A commit was dispatched and the owning system REJECTED it. Carries the
+## [enum Action.Reason] the validator returned.
+##
+## [b]Why this needs its own signal.[/b] [signal GameState.action_applied] is
+## emitted on success only (ADR-0004 step 7), and [method dispatch_commit] returns
+## whether a commit was [i]dispatched[/i], not whether it succeeded — so before
+## 2026-08-24 a rejected commit reached nothing at all. The player pressed confirm
+## on a highlighted tile, the action was refused, and the interface said nothing:
+## no flash, no menu refresh, no reason. That is the exact silent-failure the
+## contextual menu exists to end, surviving one layer below it.
+##
+## Rejections are rare by construction (every commit path pre-checks legality
+## against the same queries the validators use), but "rare" is what makes a silent
+## one so hard for a player to interpret — they will assume the input did not
+## register and press again.
+signal commit_rejected(reason: int)
+
 
 ## Selection/inspection target change (ADR-0016 §6 / ADR-0015 §6 seam,
 ## TR-hud-013): emitted whenever this interface's persistent selection OR
@@ -524,10 +541,15 @@ func is_input_live(state: GameState) -> bool:
 ## own-turn check) before every selection attempt; hover/inspection reads
 ## (e.g. a read-only info panel) are expected to bypass this gate entirely and
 ## read [param state] directly, which this method does not prevent.
-func try_select(state: GameState, unit: UnitState) -> bool:
+## ★ 2026-08-24: [param entity] widened from [UnitState] to [EntityState]. CR-3
+## says "left-clicking an entity the active player owns... selects it", and a
+## defensive structure both attacks and produces — but the old signature made
+## every structure unselectable, so the two verbs it owns were unreachable through
+## the interface that exists to reach verbs.
+func try_select(state: GameState, entity: EntityState) -> bool:
 	if not is_input_live(state):
 		return false
-	_selected_id = unit.entity_id
+	_selected_id = entity.entity_id
 	_fsm_state = CommandFSM.next_state(_fsm_state, CommandFSM.Trigger.SELECT_OWN, state)
 	_emit_selection(_selected_id, true) # pinned selection (ADR-0016 §6).
 	return true
@@ -549,15 +571,115 @@ func try_select(state: GameState, unit: UnitState) -> bool:
 ## bespoke assignment — governs the resulting state), then delegates to
 ## [method _recompute_tier1] (and [method _recompute_tier2] for
 ## [constant CommandFSM.State.PREVIEW_MOVE]).
-func enter_preview(state: GameState, unit: UnitState, target_state: CommandFSM.State) -> void:
+func enter_preview(state: GameState, entity: EntityState, target_state: CommandFSM.State) -> void:
 	if _fsm_state == CommandFSM.State.GAME_OVER:
 		return # absorbing terminal — no preview accepted (Story 008, AC-34).
-	_selected_id = unit.entity_id
-	var trigger: CommandFSM.Trigger = CommandFSM.Trigger.PICK_MOVE \
-		if target_state == CommandFSM.State.PREVIEW_MOVE else CommandFSM.Trigger.PICK_ATTACK
+	_selected_id = entity.entity_id
+	# ★ 2026-08-24 — was a binary "PICK_MOVE if PREVIEW_MOVE else PICK_ATTACK",
+	# written when only two previews had callers. The action menu opens all four
+	# verbs, and the old expression silently mapped Produce and Build onto the
+	# ATTACK trigger — which the FSM would then route to PREVIEW_ATTACK, i.e. the
+	# wrong preview for the verb the player just picked.
+	var trigger: CommandFSM.Trigger = _trigger_for_preview(target_state)
 	_fsm_state = CommandFSM.next_state(CommandFSM.State.ENTITY_SELECTED, trigger, state)
 	_emit_selection(_selected_id, true) # still the pinned selection; deduped if unchanged.
-	_recompute_tier1_and_2(state, unit)
+	_recompute_tier1_and_2(state, entity)
+
+
+## The [enum CommandFSM.Trigger] that drives [constant CommandFSM.State.ENTITY_SELECTED]
+## into [param target_state]. Total over the four preview states; any other value
+## falls back to [constant CommandFSM.Trigger.PICK_MOVE], whose transition is inert
+## from a non-ENTITY_SELECTED state anyway.
+static func _trigger_for_preview(target_state: CommandFSM.State) -> CommandFSM.Trigger:
+	match target_state:
+		CommandFSM.State.PREVIEW_ATTACK:
+			return CommandFSM.Trigger.PICK_ATTACK
+		CommandFSM.State.PREVIEW_PRODUCE:
+			return CommandFSM.Trigger.PICK_PRODUCE
+		CommandFSM.State.PREVIEW_BUILD:
+			return CommandFSM.Trigger.PICK_BUILD_CMD
+		_:
+			return CommandFSM.Trigger.PICK_MOVE
+
+
+## Enters the PLAYER-LEVEL build placement preview
+## ([constant CommandFSM.State.PREVIEW_BUILD]) — the one preview with no acting
+## entity (CR-5: Build belongs to the player, not to a selection), which is why it
+## cannot go through [method enter_preview] and needs its own entry point.
+##
+## [b]This was missing entirely until 2026-08-24.[/b] The action menu's Build flow
+## painted its own legal-tile overlay and held its own pending type, but never drove
+## the FSM, so [code]fsm_state()[/code] stayed [constant CommandFSM.State.IDLE]
+## throughout — and every consumer that switches on it (the commit router, the
+## cost-preview echo) silently took its default branch. Clicking a highlighted build
+## tile tried to SELECT rather than to build. The GDD's States table has always
+## listed [code]IDLE + Player-level Build command -> PREVIEW_BUILD[/code]; nothing
+## fired the trigger.
+##
+## Clears the Move/Attack tier sets and repaints: a build preview owns the overlay
+## while it is open, and a leftover reachable set would draw underneath it. Callers
+## paint their own legal-tile overlay AFTER this returns, never before.
+##
+## Returns whether the interface is now in [constant CommandFSM.State.PREVIEW_BUILD]
+## — false from [constant CommandFSM.State.GAME_OVER], which is absorbing.
+func enter_build_preview(state: GameState) -> bool:
+	if _fsm_state == CommandFSM.State.GAME_OVER:
+		return false
+	_fsm_state = CommandFSM.next_state(
+		_fsm_state, CommandFSM.Trigger.PICK_BUILD_CMD, state
+	)
+	_reachable.clear()
+	_targets.clear()
+	_after_move_attackable.clear()
+	_render_overlays()
+	return _fsm_state == CommandFSM.State.PREVIEW_BUILD
+
+
+## Backs the interface out of an open preview to
+## [constant CommandFSM.State.ENTITY_SELECTED], keeping the selection and clearing
+## the preview's overlay. Returns whether anything was backed out of — false when
+## no preview is open, so a caller can layer further back-out meanings (deselect,
+## then pause) on top without either level guessing
+## (`design/ux/action-menu.md`, decision 1).
+##
+## Spends nothing. CR-1's "cancel exits any preview to the menu, spending nothing
+## at every step" is the whole contract here.
+func back_out_preview(state: GameState) -> bool:
+	if not _is_preview_state(_fsm_state) \
+			and _fsm_state != CommandFSM.State.PREVIEW_PRODUCE \
+			and _fsm_state != CommandFSM.State.PREVIEW_BUILD:
+		return false
+	_fsm_state = CommandFSM.next_state(_fsm_state, CommandFSM.Trigger.BACK_OUT, state)
+	_reachable.clear()
+	_targets.clear()
+	_after_move_attackable.clear()
+	_render_overlays()
+	return true
+
+
+## Clears the selection to [constant CommandFSM.State.IDLE] — CR-3's "clicking
+## empty terrain or pressing ESC deselects". Returns whether there was a selection
+## to clear.
+##
+## Routes through [method CommandFSM.next_state] with
+## [constant CommandFSM.Trigger.SELECT_ENEMY_OR_EMPTY] rather than assigning
+## [constant CommandFSM.State.IDLE] directly, so the FSM's own table stays the only
+## thing that decides where a trigger lands — including from
+## [constant CommandFSM.State.GAME_OVER], which is absorbing and must not be left
+## by a deselect.
+func deselect(state: GameState) -> bool:
+	if _fsm_state == CommandFSM.State.IDLE or _fsm_state == CommandFSM.State.GAME_OVER:
+		return false
+	_fsm_state = CommandFSM.next_state(
+		_fsm_state, CommandFSM.Trigger.SELECT_ENEMY_OR_EMPTY, state
+	)
+	_selected_id = -1
+	_reachable.clear()
+	_targets.clear()
+	_after_move_attackable.clear()
+	_emit_selection(-1, false)
+	_render_overlays()
+	return true
 
 
 ## Board-change re-issue hook (ADR-0015 §3, AC-19): call whenever
@@ -567,10 +689,10 @@ func enter_preview(state: GameState, unit: UnitState, target_state: CommandFSM.S
 ## overlay reflects the new board state... no reselect trick." A no-op if no
 ## preview is currently open (Tier-1/2 have nothing to refresh outside
 ## [constant CommandFSM.State.PREVIEW_MOVE]/[constant CommandFSM.State.PREVIEW_ATTACK]).
-func notify_action_applied(state: GameState, unit: UnitState) -> void:
+func notify_action_applied(state: GameState, entity: EntityState) -> void:
 	if not _is_preview_state(_fsm_state):
 		return
-	_recompute_tier1_and_2(state, unit)
+	_recompute_tier1_and_2(state, entity)
 
 
 ## Tier-4 (ADR-0015 §3): reacts to a commit's [ActionResult] — never a
@@ -583,10 +705,10 @@ func notify_action_applied(state: GameState, unit: UnitState) -> void:
 ## (never transition [member _fsm_state]). On [code]true[/code]: this story
 ## does nothing further — leaving/advancing the FSM on a successful commit is
 ## Story 007's full commit-dispatch scope.
-func _on_commit_result(result: ActionResult, state: GameState, unit: UnitState) -> void:
+func _on_commit_result(result: ActionResult, state: GameState, entity: EntityState) -> void:
 	if result.ok:
 		return
-	_recompute_tier1_and_2(state, unit)
+	_recompute_tier1_and_2(state, entity)
 
 
 ## The commit-dispatch entry point (ADR-0015 §5 Turn Manager/Movement/Combat/
@@ -623,9 +745,13 @@ func _on_commit_result(result: ActionResult, state: GameState, unit: UnitState) 
 ## [code]action.player[/code] once before [code]apply_action[/code].
 func commit(state: GameState, action: Action) -> ActionResult:
 	if not is_input_live(state):
+		commit_rejected.emit(Action.Reason.NOT_ACTIVE_PLAYER)
 		return ActionResult.new(false, Action.Reason.NOT_ACTIVE_PLAYER, [])
 	action.player = _local_player
 	var result: ActionResult = state.apply_action(action)
+	if not result.ok:
+		# Surfaced, never swallowed — see [signal commit_rejected].
+		commit_rejected.emit(result.reason)
 	# Story 008 post-commit convergence (this committing instance). Read directly
 	# from [param state] so this is correct even without an [method attach_to_state]
 	# subscription; the shared handler independently converges non-committing
@@ -786,13 +912,19 @@ func is_after_move_attackable(tile: Vector2i) -> bool:
 ## every code path that touches Tier-1/2 (entry, board-change re-issue,
 ## Tier-4 reject re-issue) leaves the painted overlay in sync with whatever it
 ## just (re)computed, never a second independent "paint the overlay" call site.
-func _recompute_tier1_and_2(state: GameState, unit: UnitState) -> void:
+func _recompute_tier1_and_2(state: GameState, entity: EntityState) -> void:
 	match _fsm_state:
 		CommandFSM.State.PREVIEW_MOVE:
-			_recompute_tier1(state, unit)
-			_recompute_tier2(state, unit)
+			# Movement's queries are unit-only by construction — structures do not
+			# move, and CommandFSM's own Move entry is permanently disabled for them.
+			# A structure can still REACH this branch (it is selectable now), so the
+			# guard is what keeps a widened selection from reaching a query that has
+			# no meaning for it.
+			if entity is UnitState:
+				_recompute_tier1(state, entity)
+				_recompute_tier2(state, entity)
 		CommandFSM.State.PREVIEW_ATTACK:
-			_recompute_tier1(state, unit)
+			_recompute_tier1(state, entity) # Combat's queries take any EntityState.
 		_:
 			pass
 	_render_overlays()
@@ -803,16 +935,18 @@ func _recompute_tier1_and_2(state: GameState, unit: UnitState) -> void:
 ## exactly once, and (re)populates the corresponding dict keyed by tile.
 ## Clears both dicts first so a stale entry from a prior preview/unit can
 ## never leak into the freshly recomputed set.
-func _recompute_tier1(state: GameState, unit: UnitState) -> void:
+func _recompute_tier1(state: GameState, entity: EntityState) -> void:
 	_reachable.clear()
 	_targets.clear()
 	match _fsm_state:
 		CommandFSM.State.PREVIEW_MOVE:
-			var tiles: Array[Movement.ReachableTile] = _reachable_fn.call(state, unit)
+			if not (entity is UnitState):
+				return # see _recompute_tier1_and_2's guard.
+			var tiles: Array[Movement.ReachableTile] = _reachable_fn.call(state, entity)
 			for r: Movement.ReachableTile in tiles:
 				_reachable[r.tile] = r
 		CommandFSM.State.PREVIEW_ATTACK:
-			var results: Array[Combat.TargetResult] = _legal_targets_fn.call(state, unit)
+			var results: Array[Combat.TargetResult] = _legal_targets_fn.call(state, entity)
 			for t: Combat.TargetResult in results:
 				_targets[t.tile] = t
 
@@ -952,6 +1086,30 @@ func glyph_anchor(tile: Vector2i, glyph_class: int) -> Vector2:
 ## [br]- any other state (IDLE, ENTITY_SELECTED, PREVIEW_PRODUCE,
 ## PREVIEW_BUILD, GAME_OVER): [method BoardRenderer.clear_overlay] — no
 ## overlay belongs on the board outside an open Move/Attack preview.
+## The tiles the board cursor may jump between right now — the "salient tile set"
+## ADR-0014's [method BoardCursor.jump_to_next] is defined against.
+##
+## ★ Keyed on the SAME [enum CommandFSM.State] switch [method _render_overlays]
+## uses, deliberately: the set a player can cycle through must be exactly the set
+## that is highlighted on screen. Deriving them separately would let the two drift,
+## and a jump landing on an unhighlighted tile — or skipping a highlighted one — is
+## the kind of thing a player reads as the game being broken rather than as two
+## code paths disagreeing.
+##
+## Empty outside a preview, which makes cursor-jump a no-op there rather than an
+## error (see [method BoardCursor.jump_to_next]'s empty-candidates contract).
+func salient_tiles() -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	match _fsm_state:
+		CommandFSM.State.PREVIEW_MOVE:
+			for tile: Vector2i in _reachable:
+				out.append(tile)
+		CommandFSM.State.PREVIEW_ATTACK:
+			for tile: Vector2i in _targets:
+				out.append(tile)
+	return out
+
+
 func _render_overlays() -> void:
 	if _renderer == null:
 		return

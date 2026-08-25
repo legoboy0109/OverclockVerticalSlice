@@ -23,6 +23,31 @@ extends Resource
 ## per ADR-0003; numerically identical to the GDD's `floor(build_cost × 0.5)`
 ## across the whole tunable range (30–60). Story 005 owns the refund
 ## arithmetic itself — this Resource only stores the constant.
+## Infantry-cap slots a player has before building any Barracks
+## (`population-cap.md`). Per-FACTION once factions ship (domain D3); this is the
+## Democratic Alliance baseline.
+@export var base_infantry_cap: int = 4
+
+## Absolute ceiling on the infantry cap regardless of Barracks or tech. ★ With
+## `max_count` now hard-capping Barracks this rarely binds — it is retained as a
+## backstop against a faction authored with an extreme combination, not as a routine dial.
+@export var cap_hard_ceiling: int = 14
+
+## How far from a producer a newly-produced unit may be placed, in manhattan steps
+## (`base-production.md` Rule 4).
+##
+## ★ **This was effectively 1 until 2026-08-24, and 1 is unshippable.** A producer
+## has 4 tiles at radius 1, so four enemy units standing on them ended that player's
+## game permanently — production is the only route back onto the board. S5-04
+## measured a +1-unit advantage producing ZERO lead changes across six games against
+## 6.75 in an even match; the diagnosis traced it to exactly that.
+##
+## At 2 a producer has up to 12 candidate tiles, so locking one out needs more units
+## than `cap_hard_ceiling` allows. **Do not lower this to 1.** Raising it further
+## mostly makes reinforcements arrive further forward, which is a feel question
+## rather than a safety one.
+@export var deploy_radius: int = 2
+
 @export var cancel_refund_pct: int = 50
 
 ## AP cost to fire a Defensive Structure — deliberately lower than the unit

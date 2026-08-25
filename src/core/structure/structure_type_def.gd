@@ -18,7 +18,7 @@
 ## Usage:
 ## [codeblock]
 ## var hq_hp: int = StructureTypes.HQ.hp
-## var producible: Array[UnitTypeDef] = StructureTypes.PRODUCTION_OUTPOST.producible_types
+## var producible: Array[UnitTypeDef] = StructureTypes.BARRACKS.producible_types
 ## [/codeblock]
 class_name StructureTypeDef
 extends Resource
@@ -32,6 +32,44 @@ extends Resource
 ## ★ Structures that GENERATE value still pay. Exempting the Research Lab would make
 ## "build a Lab, research everything, sit" free, which is the unbounded-accumulation
 ## defect the PIVOT verdict diagnosed, wearing a different hat.
+## Turns this producer must wait after producing before it may produce again.
+## ★ 0 = no cooldown (the pre-S6-07 behaviour), so adding the field changes nothing
+## until a type opts in.
+##
+## ★★ [b]Why this exists — measured, not speculative.[/b] The S6-06 gate batch showed
+## 0/21 games resolving with zero HQ damage, and the reason was not the economy, the AI's
+## paralysis, or the population cap (all three were investigated and fixed, none was it).
+## Late-game armies sat at ~2.5 units on BOTH sides because units died exactly as fast as
+## they were replaced: two symmetric AIs reinforcing instantly from HQs at opposite ends of
+## a small map, trading one-for-one forever. Perpetual attrition was the EQUILIBRIUM.
+##
+## A cooldown is the user's chosen lever (2026-08-24, "slower reinforcement"): it makes a
+## loss cost TIME rather than a turn's Credits, which is what lets one side achieve the
+## local superiority the stalemate denies both.
+@export var production_cooldown_turns: int = 0
+
+## Infantry-cap slots this structure grants its owner while completed and alive
+## (`population-cap.md` PC-5). The Barracks is the only type that grants any.
+##
+## ★ Granting cap through an ATTACKABLE structure rather than an untouchable purchase is
+## the design point: destroying a Barracks lowers the enemy's ceiling, which is a way to
+## attack an army's *future* rather than its present — exactly the kind of reason to
+## attack the PIVOT verdict found the game lacking.
+@export var cap_bonus: int = 0
+
+## Maximum number of this structure a player may have at once — completed AND under
+## construction combined. ★ **0 means unlimited** (the pre-S6-03 behaviour), so adding
+## this field changes nothing until a type opts in.
+##
+## ★★ **This is the load-bearing half of the PIVOT fix at the rules layer.** The vertical
+## slice failed because the AI always had another thing worth building, so AP never
+## reached movement. With every structure capped, a player reaches a state with
+## **nothing left to build** — at which point AP has nowhere to go but manoeuvre.
+##
+## Per `base-production.md` these are per-FACTION values (Faction Identity domain D5);
+## until factions ship, the value here is the baseline for every player.
+@export var max_count: int = 0
+
 @export var upkeep: int = 0
 
 @export var build_cost: int

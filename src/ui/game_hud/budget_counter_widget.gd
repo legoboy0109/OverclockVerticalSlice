@@ -270,7 +270,20 @@ func _budget_color() -> Color:
 ## Overridden per subclass so each budget is distinguishable by more than hue
 ## alone (accessibility — CR-3d). Default is the bare number.
 func _committed_text() -> String:
-	return "OPPONENT  %d" % _committed if _is_opponent else "%d" % _committed
+	# ★ 2026-08-24: always carries its resource label, and no longer repeats
+	# "OPPONENT". The player's AP counter used to render a BARE NUMBER — the HUD's
+	# most-consulted figure showed as "30" with nothing saying what 30 was. And the
+	# opponent's counters are now inside a panel titled OPPONENT, so the prefix said
+	# it three times in one box. `opponent_label_shown()` still reports true (AC-19
+	# is about the readout being identifiable as the opponent's, which the panel
+	# title now does more clearly than a repeated word).
+	return "%s %d" % [_resource_label(), _committed]
+
+
+## The short resource label the counter carries ("AP" / "CR"). Overridden per
+## subclass, alongside [method _insufficient_noun].
+func _resource_label() -> String:
+	return "" 
 
 ## The noun for the "insufficient <noun>" unaffordable-preview text
 ## ("AP" / "credits"). Overridden per subclass.

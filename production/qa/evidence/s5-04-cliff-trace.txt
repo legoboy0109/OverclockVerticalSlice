@@ -1,0 +1,16 @@
+DIAGNOSE CLIFF — +1 Trooper handicap, favoured P0, underdog P1
+turn | u:units cred    AP  def | can_field | deploy | validate_produce
+-----|------------------------|-----------|--------|------------------
+   2 | u:0    1000    30    no | YES       |      3 | OK                           | ring free/free/free/ENEMY
+   4 | u:0    1200    45    no | YES       |      3 | REJECT PRODUCER_ON_COOLDOWN  | ring free/free/free/ENEMY
+   6 | u:0    1300    45    no | YES       |      3 | REJECT PRODUCER_ON_COOLDOWN  | ring free/free/free/ENEMY
+   8 | u:0    1400    45    no | YES       |      2 | OK                           | ring free/ENEMY/free/ENEMY
+  10 | u:0    1300    45    no | YES       |      2 | REJECT PRODUCER_ON_COOLDOWN  | ring free/ENEMY/free/ENEMY
+  12 | u:0    1400    45    no | YES       |      1 | REJECT PRODUCER_ON_COOLDOWN  | ring ENEMY/ENEMY/free/ENEMY
+  14 | u:0    1500    45    no | YES       |      0 | REJECT NOT_LEGAL_DEPLOY_TILE | ring ENEMY/ENEMY/ENEMY/ENEMY
+  16 | u:0    2500    45    no | YES       |      0 | REJECT NOT_LEGAL_DEPLOY_TILE | ring ENEMY/ENEMY/ENEMY/ENEMY
+  18 | u:0    3500    45    no | YES       |      0 | REJECT NOT_LEGAL_DEPLOY_TILE | ring ENEMY/ENEMY/ENEMY/ENEMY
+  20 | u:0    4500    45    no | YES       |      0 | REJECT NOT_LEGAL_DEPLOY_TILE | ring ENEMY/ENEMY/ENEMY/ENEMY
+  22 | u:0    5500    45    no | YES       |      0 | REJECT NOT_LEGAL_DEPLOY_TILE | ring ENEMY/ENEMY/ENEMY/ENEMY
+  24 | u:0    6500    45    no | YES       |      0 | REJECT NOT_LEGAL_DEPLOY_TILE | ring ENEMY/ENEMY/ENEMY/ENEMY
+ended turn 25, winner P0

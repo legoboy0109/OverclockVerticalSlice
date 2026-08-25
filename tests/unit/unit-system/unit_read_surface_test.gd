@@ -113,8 +113,16 @@ func test_game_state_reader_exposes_only_unit_info_as_script_method() -> void:
 	# match_status/current_ap/income_breakdown/can_afford/entities/entity_at) plus
 	# the signal-subscription broker (subscribe_action_applied/
 	# unsubscribe_action_applied) -- the brokers register a Callable listener on an
-	# existing signal, NOT a mutation path to GameState. The allowlist grows with
-	# each read accessor / non-mutating affordance but must never admit a mutator.
+	# existing signal, NOT a mutation path to GameState. S6-07 added the economy
+	# readout getters (total_upkeep/net_income/population/population_cap) and S6-08
+	# the terminal-state getters (win_reason/tiebreak_metric/tiebreak_scores) --
+	# all pure pass-throughs to static queries. ★ tiebreak_scores is the one worth
+	# a second look: it forwards to GameState.tiebreak_scores(), which COMPUTES a
+	# metric rather than reading a field. It is still a read -- the computation is
+	# pure and writes nothing -- but it is the shape a mutator could hide in, so it
+	# is admitted deliberately rather than by pattern-match.
+	# The allowlist grows with each read accessor / non-mutating affordance but
+	# must never admit a mutator.
 	assert_array(script_method_names).override_failure_message(
 		"GameStateReader must expose ONLY _init + read accessors + non-mutating " +
 		"affordances; any other script-defined method is a potential mutation " +
@@ -124,8 +132,18 @@ func test_game_state_reader_exposes_only_unit_info_as_script_method() -> void:
 		"structure_info", "can_afford_build", "can_afford_produce",
 		"active_player", "round_number", "match_status", "winner", "current_ap",
 		"income_breakdown", "can_afford", "current_credits", "can_afford_credits",
+		"total_upkeep", "net_income", "population", "population_cap",
+		"win_reason", "tiebreak_metric", "tiebreak_scores",
 		"entities", "entity_at",
 		"subscribe_action_applied", "unsubscribe_action_applied",
+		# ★ 2026-08-25 (WaitAction / the stand-down mark). idle_entity_count and
+		# is_stood_down are reads with the same shape as tiebreak_scores above:
+		# idle_entity_count COMPUTES rather than reading a field — it walks the
+		# entity list evaluating CommandFSM.menu_model — but menu_model is pure and
+		# writes nothing, so the computation cannot mutate. Admitted deliberately.
+		# _is_stood_down is its static helper; a private name is not a private
+		# METHOD in GDScript, so it has to be listed like any other.
+		"idle_entity_count", "is_stood_down", "_is_stood_down",
 	])
 
 	# Belt-and-suspenders, human-readable: the specific mutation shapes must be

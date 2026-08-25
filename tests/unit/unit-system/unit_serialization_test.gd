@@ -47,6 +47,12 @@ extends GdUnitTestSuite
 const KNOWN_FIELDS: Array[String] = [
 	"entity_id", "owner", "position",
 	"type", "current_hp", "has_attacked", "tiles_moved_this_turn",
+	# ★ 2026-08-25 — the Wait verb's per-turn stand-down mark (WaitAction).
+	# Registered here because it MUST survive duplicate_deep(): the AI clones the
+	# state to look ahead, and a field silently dropped by the clone would make a
+	# lookahead disagree with the board it was cloned from. This guard caught the
+	# field on the turn it was added, which is exactly what it is for.
+	"stood_down",
 ]
 
 
