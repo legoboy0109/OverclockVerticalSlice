@@ -236,6 +236,51 @@ stories:
     # ★ A check that can only ever return "not measured" is noise in the gate --
     #   but choosing what hardware to target is the user's call, not a technical one.
 
+  - id: "s7-09"
+    name: "★★ The one-unit cliff — is there a skill route back? ANSWERED: yes"
+    file: "production/playtests/s7-09-cliff-skill-floor-2026-08-25.md"
+    priority: must-have
+    status: done
+    owner: "qa-lead + ai-programmer"
+    estimate_days: 0.5
+    blocker: ""
+    completed: "2026-08-25"
+    # ✅ DONE (0637581). The project's biggest open design question is ANSWERED WITH EVIDENCE,
+    # and the answer is that the question was built on a measurement artifact.
+    # ★★ simulate_matches.gd drives BOTH SEATS with the same AI.choose_action and the same
+    #   weights, deterministically. There is NO SKILL DIFFERENTIAL ANYWHERE IN IT -- so neither
+    #   side can outplay the other, and a comeback is BY DEFINITION the trailing player
+    #   outplaying the leader. "Zero lead changes at +1" could only ever have been zero.
+    #   ⇒ Equal play from a worse position losing every time is ARITHMETIC, not a design
+    #     property. The harness was asked a question it structurally could not answer.
+    # Method: with probability p per turn the FAVOURED side commits at most one action instead
+    # of playing its turn out ("played a worse turn", not "did not show up"). Deterministic
+    # hash(game, turn) draw, never randi(). Default 0 is byte-identical to the shipped batch,
+    # verified by diff. Variant offsets became a table so the cell could widen n=6 -> n=14.
+    # RESULT (+1 handicap, n=14 per row):
+    #   leader degraded   games w/ lead change   mean doubt   underdog wins
+    #        0%                  0/14                3%           0/14
+    #       15%                  4/14               22%           1/14
+    #       35%                  8/14               40%           4/14
+    #       50%                 12/14               66%           6/14
+    # ⇒ A SKILL ROUTE BACK EXISTS. At equal play the advantage converts every time; at ANY
+    #   play gap it stops being certain.
+    # ⇒ NO COMEBACK MECHANIC IS NEEDED, and adding one would contradict game-concept.md for
+    #   nothing -- the drama was there and unmeasurable. ★ The correct fix for "the measurement
+    #   says no recoverable middle" was to fix the measurement.
+    # ⚠ WHAT IT DOES NOT ESTABLISH: a one-action cap is a proxy for skill, not skill (a weaker
+    #   human does the WRONG thing, not LESS); n=14 so the middle of the sweep is directional;
+    #   both sides are still the same greedy one-ply scorer, so a human differs IN KIND.
+    # ★ FIRST PASS RAN AT n=6 and showed a non-monotone dip that looked like a threshold
+    #   effect. It was sample noise. n was raised BEFORE any conclusion was drawn.
+    # ⚠ THE SAME CAVEAT NOW APPLIES TO s6-06: 18/18 handicap conversion is what a
+    #   symmetric-policy harness MUST produce. It is not evidence the advantage is correctly
+    #   SIZED. Gate re-verified after the harness change and unchanged: 18/22 resolve by HQ
+    #   destruction (mean 29 turns), 4 mirror games at the 60-turn round cap, 18/18 conversion,
+    #   seats P0 10 / P1 12, lowest HQ 1/40, 709 damage-carrying rows.
+    # ⛔ WHAT REMAINS IS A TUNING QUESTION FOR THE USER, not a structural one: one Trooper is
+    #   worth roughly 30-35% of decision quality. Is a one-unit lead meant to be that strong?
+
   # --- Carried, human-gated, NOT on this sprint's critical path ---
   - id: "s5-03-observer"
     name: "★ S5-03 naive-observer session (~20 min) — the last unscripted half"
@@ -269,19 +314,16 @@ stories:
 
   - id: "one-unit-cliff"
     name: "⛔ DESIGN CALL — is there a skill route back from one unit down?"
-    file: "production/playtests/s5-04-one-unit-cliff-diagnosis-2026-08-24.md"
+    file: "production/playtests/s7-09-cliff-skill-floor-2026-08-25.md"
     priority: carried
-    status: blocked
+    status: done
     owner: "user"
     estimate_days: 0.0
-    blocker: "user — design direction"
-    completed: ""
-    # ★ THE MOST VALUABLE OPEN QUESTION ON THE PROJECT. +1 Trooper takes the game
-    # from 6.75 lead changes to ZERO, with no gradient. The deploy-tile LATCH
-    # underneath it was a defect and is fixed (s6-16); the cliff itself did not
-    # move, which is what separated them.
-    # ★ NOT a bug and not obviously wrong: game-concept.md rejects comeback
-    #   mechanics explicitly, twice, and requirement 1 passing IS that rejection
-    #   working. The narrow question is whether a SKILL route back exists, and the
-    #   measurement says no.
-    # ⇒ It shapes what wave 2 is FOR, so it wants answering before content scope.
+    blocker: ""
+    completed: "2026-08-25"
+    # ✅ ANSWERED BY MEASUREMENT (s7-09), so it never became a design call. YES, a skill route
+    # back exists -- the cliff was an artifact of a harness where both seats run one identical
+    # deterministic policy. game-concept.md's rejection of comeback mechanics stands and costs
+    # the game nothing.
+    # ⇒ SUPERSEDED BY A TUNING QUESTION, which IS the user's: one Trooper is worth roughly
+    #   30-35% of decision quality. Is a one-unit lead meant to be that strong?
