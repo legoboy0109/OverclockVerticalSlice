@@ -1,0 +1,91 @@
+## UX Review: Contextual Action Menu
+
+**Date**: 2026-08-25 · **Story**: S7-07
+**Document**: `design/ux/action-menu.md` (592 lines)
+**Reviewer**: `/ux-review` skill
+**Platform Target (authoritative)**: `.claude/docs/technical-preferences.md` — PC + **Steam Deck**,
+gamepad **required**, floor **1280×800**
+**Accessibility Tier**: Standard (`design/accessibility-requirements.md`)
+
+> ⚠ **Independence: still not achieved, and this is the second time.** S7-07 existed because the
+> previous review was a self-audit by the spec's author. So is this one. What it *can* do
+> objectively — verify every claim against the shipped code, and re-check the spec against config
+> that has moved — it does, and that is where both blocking findings came from. **A subjective
+> design/accessibility critique still wants separate eyes.**
+
+### Completeness: 14/14 sections present
+All required sections present: header, Purpose & Player Need, Player Context on Arrival,
+Navigation Position, Entry & Exit Points, Layout Specification, States & Variants, Interaction Map,
+Events Fired, Transitions & Animations, Data Requirements, Accessibility, Localization, Acceptance
+Criteria (30). No gaps.
+
+### ✅ Claim verification against the shipped code — all pass
+The high-value check, and the one that found real defects last time (two of the previous review's
+six blocking issues were the spec describing something the build did not do).
+
+| Claim | Verified |
+|---|---|
+| AC-15 — rebound key shows on the row | ✅ `action_menu.gd:742` reads live `InputMap.action_get_events` |
+| AC-16 — Reduced Motion removes the fade | ✅ `_reduced_motion` injected via `configure()` |
+| AC-17 — `[C]`/`[V]` cycles retired | ✅ only historical comments remain in `project.godot` |
+| AC-21 — AP/Credit projected-cost echo | ✅ `vertical_slice_root.gd:1285` calls `open_ap_preview` — **the S6-32 defect stayed fixed** |
+| AC-24 — refused commit reaches the player | ✅ `commit_rejected` connected at `vertical_slice_root.gd:407` |
+
+★ Both of the previous review's *real* defects remain wired. Nothing has silently regressed.
+
+### Quality Issues: 2 blocking, 2 advisory
+
+**1. Platform Target header is stale — [BLOCKING]**
+- **What's wrong**: the header reads *"Gamepad secondary (partial)"*. `technical-preferences.md`
+  now reads **"Gamepad Support: Full — required"** with **Steam Deck as the target hardware floor**
+  (changed in S7-08, after this spec was written).
+- **Where**: document header.
+- ★ **The spec's *content* is fine** — the Interaction Map already gives gamepad full parity
+  (D-pad, A, B, X/Y, LB/RB, L3, Back). Only the header's claim about the platform is wrong, and it
+  is the line a reader trusts to know how much gamepad work is optional.
+- **Fix**: update the header to match `technical-preferences.md`.
+
+**2. The resolution criterion omits the floor — [BLOCKING]**
+- **What's wrong**: AC-22 tests **1920×1080 and 2560×1440**. Both are *larger* than the shipping
+  floor of **1280×800**. A menu that fits at 1080p can clip at 800p, and this criterion would not
+  catch it.
+- **Where**: Acceptance Criteria, AC-22.
+- ★ This is the single most consequential finding here: the menu is a floating plate with
+  clearance, flip and clamp rules, and **every one of those rules is resolution-sensitive.** The
+  spec's own AC-6/7/8 (clearance, edge flip, vertical clamp) are exactly what a smaller viewport
+  stresses, and none of them is currently tested at the smallest supported size.
+- **Fix**: add 1280×800 to AC-22, and re-check AC-6/7/8 there specifically.
+
+**3. Text legibility at the floor is unaddressed — [ADVISORY]**
+- The Accessibility section commits to Standard tier but says nothing about minimum text size at
+  1280×800 on a 7″ panel. `technical-preferences.md` records this as an open Deck-Verified gap
+  project-wide, so the spec is not uniquely at fault — but this surface carries per-row reason
+  text, which is the smallest type in the menu.
+
+**4. Godot-vs-Redot dual-focus parity still assumed — [ADVISORY]**
+- The spec flags it: *"Redot 26.2 fork parity on this behaviour is assumed, not verified (GDD
+  OQ-6)."* Still true. ★ It is now *cheaply* verifiable — S7-05 produced a real exported binary,
+  so this can be checked on the shipping build rather than in the editor.
+
+### GDD Alignment: ALIGNED
+`command-action-interface.md` CR-1's loop (select → menu → verb → preview → commit) is fully
+transcribed. The four decisions the GDD did not make are stated as decisions with their costs.
+All six original open questions are closed; OQ-4 (pad accelerators possibly redundant) remains a
+playtest observation rather than a defect.
+
+### Accessibility: COMPLIANT (Standard tier)
+Focus order defined and restricted to actionable rows; colour never the sole signal (disabled rows
+carry dimming **and** words); three distinct attention states specified; the lock glyph deliberately
+omitted with reasoning. Contrast figures are measured, not asserted.
+
+### Pattern Library: CONSISTENT
+Standard Cancel, Standard Button and the focus-indicator treatment are referenced rather than
+re-specified. No new pattern is invented without being flagged.
+
+### Verdict: **NEEDS REVISION**
+**Blocking**: 2 — both are the spec having been overtaken by the Steam Deck decision (S7-08), not
+authoring defects. **Advisory**: 2.
+
+★ **Nothing here impugns the implementation.** Every behavioural claim verified against the code.
+The gap is that the platform moved under a spec written before it, and the acceptance criteria have
+not caught up.
