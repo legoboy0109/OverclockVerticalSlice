@@ -95,7 +95,7 @@ New Skirmish from the main menu. ⚠ If the binary is stale, rebuild:
 | ID | Task | Est. | Notes |
 |----|------|-----:|-------|
 | **S8-08** | Idle power draw — conditional throttle, not `low_processor_usage_mode` outright | 0.5 | ⚠ The glow pulses and motion runs on tweens; sleeping the loop makes both choppy. Wants measuring on device |
-| **S8-09** | Verify Redot/Godot dual-focus parity against the exported binary | 0.25 | `action-menu.md`'s remaining advisory; cheap now that a binary exists |
+| ✅ **S8-09** | Verify Redot/Godot dual-focus parity | 0.25 | **DONE 2026-08-26 — PASS.** `tools/CaptureDualFocus.tscn`, 8/8 checks, deterministic ×3. Closes the ux-review's advisory 4 and GDD OQ-6. ⚠ Opened `action-menu.md` **OQ-7**: hover is close to invisible on its own (~3% lift; `flat` suppresses the hover StyleBox) — a design call, left open. Report: `production/playtests/s8-09-dual-focus-2026-08-26.md` |
 
 ## Capacity
 

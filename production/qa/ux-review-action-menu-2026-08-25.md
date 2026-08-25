@@ -100,6 +100,20 @@ The two advisories are **not** fixed and remain open by choice: text legibility 
 project-wide Deck-Verified gap tracked in `technical-preferences.md`, and Redot/Godot dual-focus
 parity is now cheaply checkable against the S7-05 binary but was not checked here.
 
+> ### ✅ Advisory 4 CLOSED — 2026-08-26 (S8-09)
+> Checked, and it holds. `tools/CaptureDualFocus.tscn` measures the behaviour on a real framebuffer
+> instead of assuming it: 8 of 8 checks pass, deterministic across three runs. Focus and hover are
+> independent state in Redot 26.2, and they are different **marks** — focus draws a 2px outline,
+> hover draws no box. Report: `production/playtests/s8-09-dual-focus-2026-08-26.md`.
+>
+> ⚠ It also surfaced something the review could not have: **hover on its own is close to invisible**
+> (a ~3% brightness lift on already-near-white glyphs, because `flat = true` suppresses the theme's
+> hover StyleBox). The spec's binding claim passes; whether its promised *third* attention state is
+> really there is now `action-menu.md` **OQ-7**, open and left for the spec's owner.
+>
+> ★ Advisory 3 (text legibility at 1280×800) remains open and is still the project-wide gap —
+> partially addressed by S8-07's floor UI scale, still unobserved on a device.
+
 ### Verdict (at review time): **NEEDS REVISION**
 **Blocking**: 2 — both are the spec having been overtaken by the Steam Deck decision (S7-08), not
 authoring defects. **Advisory**: 2.
