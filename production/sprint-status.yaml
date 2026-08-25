@@ -201,11 +201,34 @@ stories:
     name: "Fix or retire smoke checks 16/17 (performance)"
     file: "tests/smoke/critical-paths.md"
     priority: nice-to-have
-    status: blocked
+    status: done
     owner: "technical-director"
     estimate_days: 0.5
-    blocker: "user — target hardware is a direction call"
-    completed: ""
+    blocker: ""
+    completed: "2026-08-25"
+    # ✅ DONE — the direction call landed 2026-08-25: **STEAM DECK IS THE FLOOR** (user's
+    # choice), 1080p/1440p desktop as the quality target.
+    # ★ The choice was NOT about whether the game runs -- it packages to 5.1 MB and peaks at
+    #   145 MB headless. The Deck was chosen as the TIGHTEST CONSTRAINT THAT IMPROVES THE
+    #   PRODUCT: it forces board and text to stay readable small and turns "partial gamepad
+    #   support" into an obligation. ★ And most of the work is already done against it -- the
+    #   S5-03 legibility gate was measured at 1280x720, slightly TIGHTER than the Deck's 1280x800.
+    # Budgets set with a measured basis, not aspirations: 60 FPS / 16.6 ms, <500 draw calls,
+    # 1 GB resident ceiling with a 700 MB soft alert (~7x current), 512 MB VRAM, <2 GB package.
+    # Smoke checks 16/17 now have thresholds and a documented sampling command; a third
+    # (idle cost) added, and it currently FAILS.
+    # ⛔ FOUR DECK-VERIFIED GAPS RECORDED, none fixed -- each cheap now, expensive at submission:
+    #   1. Controller glyphs -- the legend names keyboard keys regardless of active device. The
+    #      bindings all exist (s6-17/20/23/25); only the DISPLAY is wrong.
+    #   2. Text legibility at 1280x800 -- design viewport is 1600x900 and window/stretch/mode is
+    #      UNSET (disabled), so UI renders at fixed pixel size and simply gets less room, on a
+    #      7-inch panel. ui_scale exists but nothing picks a per-device default.
+    #   3. Idle power draw -- low_processor_usage_mode unset. ⚠ NOT the one-liner it looks like:
+    #      the glow shader pulses and motion runs on tweens, so sleeping the loop makes both
+    #      choppy. Real fix is conditional and wants measuring ON DEVICE.
+    #   4. Native Linux vs Proton -- undecided; the export preset exists either way.
+    # ⚠ ALL FIGURES ARE DESKTOP MEASUREMENTS REASONED TO THE TARGET. No Deck has run this build.
+    #   Enough for a regression gate, NOT enough for a store-page spec claim.
     # ⛔ BLOCKED ON A DIRECTION CALL, not on work. technical-preferences.md still
     # reads [TO BE CONFIGURED] for the memory ceiling and names no target hardware,
     # so there is no threshold to pass or fail against. Both checks have returned

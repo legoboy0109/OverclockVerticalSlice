@@ -17,12 +17,43 @@
 <!-- Written by /setup-engine. Read by /ux-design, /ux-review, /test-setup, /team-ui, and /dev-story -->
 <!-- to scope interaction specs, test helpers, and implementation to the correct input methods. -->
 
-- **Target Platforms**: PC (Steam / Epic)
-- **Input Methods**: Keyboard/Mouse (primary), Gamepad (secondary)
-- **Primary Input**: Keyboard/Mouse
-- **Gamepad Support**: Partial
-- **Touch Support**: None
-- **Platform Notes**: Mouse-driven grid tactics. No hover-only interactions — every core action must be reachable by click (and, where practical, a keyboard shortcut) so a gamepad/cursor port stays feasible. Keep the board readable at 1080p and 1440p.
+- **Target Platforms**: PC (Steam / Epic) + **Steam Deck**
+- **★ Target Hardware Floor**: **Steam Deck** (decided 2026-08-25, S7-08) — 1280×800, Zen 2 4c/8t, RDNA 2 8 CU, 16 GB *shared* LPDDR5, 15 W
+- **Quality Target**: 1920×1080 and 2560×1440 desktop
+- **Input Methods**: Keyboard/Mouse (primary), Gamepad (**required**, not secondary)
+- **Primary Input**: Keyboard/Mouse on desktop; **gamepad on the floor target**
+- **Gamepad Support**: **Full — required.** Was "Partial"; the Deck floor makes it a hard requirement, not a nice-to-have
+- **Touch Support**: None (the Deck's touchscreen is not a design target; its trackpads present as a mouse)
+- **Platform Notes**: Mouse-driven grid tactics. No hover-only interactions — every core action must be reachable by click (and, where practical, a keyboard shortcut). Keep the board readable at **1280×800 first**, then 1080p and 1440p.
+
+> ### ★ Why the Deck is the floor, and what it costs
+> The game packages to **5.1 MB** and peaks at **145 MB** headless, so nothing about this choice
+> is about whether it runs. The Deck was chosen because it is **the tightest constraint that
+> actually improves the product**: it forces the board and text to stay readable small, and it
+> turns "partial gamepad support" into an obligation. Turn-based tactics is also a genre that
+> sells on the device.
+>
+> ★ **Most of the legibility work is already done against it** — the S5-03 iso-legibility gate
+> was measured at **1280×720**, slightly *tighter* than the Deck's 1280×800.
+
+> ### ⛔ Known gaps against Steam Deck Verified — recorded, not yet fixed
+> These are cert criteria, and each is cheap now and expensive at submission.
+> 1. **Controller glyphs.** The on-screen legend names keyboard keys (`[Arrows]`, `[Enter]`,
+>    `[Esc]`) regardless of the active device. Verified requires controller glyphs when a
+>    controller is in use. The bindings all exist (S6-17/20/23/25); only the *display* is wrong.
+> 2. **Text legibility at 1280×800.** The project's design viewport is **1600×900** and
+>    `window/stretch/mode` is unset (i.e. `disabled`), so UI renders at fixed pixel sizes and
+>    simply gets less room at 1280×800 — on a 7″ panel. `GameSettings.ui_scale` exists
+>    (0.75–1.50, default 1.0) but nothing selects a sensible default *for the device*.
+> 3. **Idle power draw.** `low_processor_usage_mode` is not set. A turn-based game renders a
+>    static board at full rate while the player thinks — on a handheld that is battery and heat
+>    spent on nothing. ⚠ **But it is not the one-line fix it looks like**: the board is never
+>    fully static — the glow shader pulses continuously and unit motion runs on tweens, so
+>    sleeping the main loop would make both choppy. The real fix is conditional (throttle only
+>    while genuinely idle, or lower `max_fps` when no animation is in flight) and wants measuring
+>    on the device. **Recorded as a gap, deliberately not fixed blind.**
+> 4. **Native Linux build.** An export preset now exists (S7-03) and the Deck runs Linux
+>    natively; whether to ship native or via Proton is undecided.
 
 ## Naming Conventions
 
@@ -38,14 +69,26 @@
 
 ## Performance Budgets
 
-- **Target Framerate**: 60 FPS
-- **Frame Budget**: 16.6 ms/frame
-- **Draw Calls**: < 500 (generous for 2D isometric; TileMap batching should keep this low)
-- **Memory Ceiling**: [TO BE CONFIGURED — set when target hardware is known; 2D tactics is light]
+Measured on 2026-08-25 and set against the Steam Deck floor. **Every figure below has a
+number behind it** — these are budgets with headroom, not aspirations.
 
-> Defaults for a 2D isometric tactics game; re-tune against real target hardware
-> once the prototype exists. Turn-based means no hard real-time constraint —
-> 60 FPS is for smooth camera/UI feel, not simulation deadlines.
+| Budget | Value | Basis |
+|---|---|---|
+| **Target Framerate** | **60 FPS** on the Deck at 1280×800 | Deck LCD is 60 Hz; OLED does 90 but 60 is the honest floor |
+| **Frame Budget** | **16.6 ms/frame** | 1/60 |
+| **Draw Calls** | **< 500** | Generous for 2D isometric; TileMap batching keeps this far lower |
+| **★ Memory Ceiling** | **1 GB resident**, soft alert at **700 MB** | Measured **145 MB** headless with no textures resident; expect ~400–600 MB rendering. The ceiling is ~7× current usage — a tripwire for a leak or an asset mistake, not a target to grow into |
+| **VRAM / texture budget** | **512 MB** | The Deck shares its 16 GB, so texture memory is taken from the same pool the OS needs |
+| **Package size** | **< 2 GB** | Currently **5.1 MB**. Recorded so a future asset wave has a stated limit |
+
+> ★ **Turn-based means there is no simulation deadline.** 60 FPS buys smooth camera and UI feel,
+> nothing else — a turn can take as long as it takes. ⚠ The corollary matters on a handheld:
+> **the frame budget is not the power budget.** A static board rendered 60 times a second costs
+> the same battery as a busy one, which is what gap 3 above is about.
+>
+> ⚠ **These are unverified on real hardware.** No Deck has run this build; the numbers are
+> measured on a desktop and reasoned to the target. **Re-measure on the device before trusting
+> any of them**, and before quoting a minimum spec on a store page.
 
 ## Testing
 
