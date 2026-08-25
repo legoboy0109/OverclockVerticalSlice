@@ -423,6 +423,62 @@ stories:
     # Suite 1253/1253. Menu + slice boot clean. Harness gained --max-rounds=N so the shipped
     # value was CHOSEN FROM A CURVE rather than guessed.
 
+  - id: "s7-13"
+    name: "★★ Chase the seat bias — ROOT CAUSE FOUND (BFS neighbour order)"
+    file: "production/playtests/s7-13-seat-bias-2026-08-25.md"
+    priority: must-have
+    status: done
+    owner: "ai-programmer + qa-lead"
+    estimate_days: 0.5
+    blocker: ""
+    completed: "2026-08-25"
+    # ✅ ROOT CAUSE PROVEN. NOT FIXED — the fix is a deliberate AI change, see below.
+    # ★★ Movement.reachable() expands neighbours N->E->S->W, and the AI's advance fold keeps
+    #   the FIRST tile among equal-scoring candidates (_is_better needs STRICTLY better to
+    #   replace). So BFS enumeration order becomes a hidden DIRECTIONAL PREFERENCE that
+    #   decides matches. Changing that one line changes who wins:
+    #     N->E->S->W (shipped): material converts  7/14, east seat wins 14/14
+    #     N->W->S->E (probe)  : material converts 14/14, seats split 7/7  <-- fair
+    # ★ WHY IT IS ASYMMETRIC BETWEEN THE SEATS: for the WEST player the easterly tie-break tile
+    #   is TOWARD the enemy; for the EAST player it is BACK toward its own base. The same rule
+    #   pulls one side into the open and lets the other consolidate — and in a deterministic
+    #   game with no fog, whoever commits first loses the exchange.
+    #   ⇒ This is S5-04's "the player who moves first loses every mirror" seen from its actual
+    #     cause. It was never about moving first; it was about being pulled forward.
+    # NARROWED BY CONTROLLED RUNS, not by reading code:
+    #   - NOT the player index — mirror cell identical (1:3) whichever seat is forced to start
+    #   - NOT turn order — same table; a small first-mover component exists in the +1 cell but
+    #     runs the OPPOSITE way (P0 wins 4 moving second, 0 moving first)
+    #   - IS the board position — swapping which HQ each seat owns moves the advantage with it
+    #     (normal P0 0 / P1 14; swapped P0 10 / P1 4)
+    # ⚠⚠ THE FIRST SWAP EXPERIMENT WAS INVALID AND IT NEARLY SHIPPED AS A CONCLUSION.
+    #   _bonus_tile and the mirror seeding read the HQ_A/HQ_B CONSTANTS instead of the HQ each
+    #   seat actually owned, so under --swap-hqs the favoured player's bonus Troopers spawned
+    #   BESIDE THE ENEMY BASE. Both now take the owning HQ as a parameter, and the un-swapped
+    #   path was re-verified to reproduce P0 0 / P1 14 EXACTLY before the swapped result was
+    #   believed. ⇒ Re-derive the control after touching a harness, every time.
+    # ⛔ WHAT THIS INVALIDATES:
+    #   - s6-06's "material advantage converts 18/18" is NOT a measure of the economy or combat.
+    #     Under the shipped order it is 7/14 on a fair-start batch; 18/18 was the east seat
+    #     winning its own games plus the round cap truncating the rest.
+    #   - s7-09 (skill floor) and s7-10 (exchange rate) both ran with this bias present. Their
+    #     RELATIVE comparisons hold (both arms under identical conditions); NO ABSOLUTE BALANCE
+    #     CLAIM SURVIVES.
+    # ⛔ THE FIX IS NOT "REVERSE THE ORDER" — N->W->S->E is just a different arbitrary direction
+    #   that happens to test well on an east-west map and would bias the other way on a
+    #   north-south one. The correct fix is a MIRROR-INVARIANT tie-break in the AI: when
+    #   candidates tie on distance and score, decide on something independent of enumeration
+    #   order (distance to enemy HQ, then own HQ, then a deterministic final key). That is a
+    #   behavioural AI change that will move every number recorded to date — deliberate work,
+    #   not an end-of-session patch.
+    # ★ USER'S SUGGESTION ASSESSED: a first-turn AP reduction does NOT address this. It is the
+    #   standard remedy for a first-MOVER advantage, and the mirror cell shows turn order
+    #   contributes nothing (identical whichever seat starts). The small turn-order component
+    #   that does exist runs the OPPOSITE way — moving first is a slight DISADVANTAGE — so
+    #   cutting the first player's AP would deepen the real problem rather than offset it.
+    # Harness gained --start-player=N and --swap-hqs. Suite 1253/1253. No production behaviour
+    # changed by this story.
+
   # --- Carried, human-gated, NOT on this sprint's critical path ---
   - id: "s5-03-observer"
     name: "★ S5-03 naive-observer session (~20 min) — the last unscripted half"
