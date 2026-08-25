@@ -13,10 +13,23 @@
 # peaked at 5,724 still climbing; ZERO HQ damage across 4,182 turn-rows, and zero
 # again across 1,260 more after a siege drive was added and PROVEN to fire.
 #
-# ⛔ THE GATE: ./redot --headless tools/SimulateMatches.tscn must show games
-#   resolving on PLAY (HQ destruction), from BOTH seats, with the
-#   material-advantaged side winning more often than not, and non-zero HQ damage
-#   existing at all. Run it after s6-02 and s6-04, not only at s6-06.
+# ✅ THE GATE PASSED 2026-08-24, batch 5 (2626f6d, merged ae120bc). Baseline ->
+#   result: resolve-on-play 0/20 -> 18/21 (mean 25 turns); HQ damage zero across
+#   4,182 rows -> lowest HQ 1/40 with 608 damage-carrying rows; seat split 95-100%
+#   one seat -> P0 9 / P1 9; handicap conversion 0/5 -> 18/18; peak Credits 5,724
+#   and CLIMBING -> 9,550 and FLAT.
+#   ★★ THE METHOD LESSON, and it is the sprint's most valuable output: four levers
+#     were tried; THREE found and fixed genuine defects and moved resolution NOT AT
+#     ALL (bounding the economy, implementing CREDIT_TO_AP_RATE, valuing production
+#     capacity). The two that worked were about INCENTIVES, not correctness --
+#     production cooldowns, and decisively hq_siege_value 12 -> 60. A correct system
+#     that rewards the wrong thing plays exactly like a broken one.
+#   ⚠ Read 18/18 handicap conversion SCEPTICALLY: the gate asked for "more often
+#     than not" and got TOTAL correlation, which suggests no comeback mechanism.
+#   ⚠ The 3 distance games are the +0 mirror, and that cell is n=1 NOT n=3 --
+#     `variant` perturbs bonus-unit placement and at +0 there are no bonus units,
+#     so all three runs are byte-identical. Fix the harness before concluding
+#     anything from that cell.
 #
 # ★★ TWO CONSTANTS MUST BE CORRECTED BEFORE ANY MEASUREMENT IS TRUSTED
 #   (cross-review 2026-08-24, design/gdd/gdd-cross-review-2026-08-24.md):
@@ -39,9 +52,10 @@
 #
 # SPRINT 5 CLOSED 6/10: s5-01/02/05/06/08 done, s5-07 review (captures done,
 #   human sign-off owed). s5-03 (iso-legibility) and s5-04 (swing-back) remain
-#   HUMAN-GATED and have now rolled FOUR sprints. s5-04 is deliberately deferred
-#   until after the s6-06 gate -- playing it now would judge a build whose
-#   central failure is already known and already scheduled for repair.
+#   HUMAN-GATED and have now rolled FOUR sprints. ★★ s5-04's deferral condition is
+#   NOW MET (2026-08-25): the s6-06 gate passed, so the AI can actually lose and a
+#   session finally measures a real game. It is unblocked and is the highest-value
+#   item on the board -- and it still needs the user at a display.
 #   s5-09/s5-10 descoped (nice-to-haves, recorded trade).
 
 sprint: 6
@@ -49,7 +63,7 @@ goal: "Make matches resolve on play: implement the economy rework (upkeep, resea
 start: "2026-08-25"
 end: "2026-09-08"
 generated: "2026-08-24"
-updated: "2026-08-24"
+updated: "2026-08-25"
 # Committed 7.5d (must 5.5 + should 2.0) against ~8 available. Nice-to-haves ride the buffer.
 # Design corpus backing this sprint: unit-upkeep.md (#15), population-cap.md (#16),
 # ap-economy.md + research-tech.md + base-production.md (all In Revision 2026-08-24).
@@ -229,11 +243,31 @@ stories:
     name: "⛔ THE GATE — AI-vs-AI regression batch"
     file: "production/playtests/swing-back-simulation-appendix-2026-08-21.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: "qa-lead + ai-programmer"
     estimate_days: 0.5
     blocker: "s6-05"
-    completed: ""
+    completed: "2026-08-24"
+    # ✅ GATE PASSED, batch 5 (2626f6d, merged ae120bc). Resolve-on-play 18/21, mean 25
+    # turns; lowest HQ seen 1/40 with 608 damage-carrying rows; kills split P0 9 / P1 9;
+    # handicap converts 18/18; peak banked Credits 9,550 and FLAT (target <15,000).
+    # ★★ FOUR levers were tried. THREE of them -- bounding the economy, implementing
+    #   CREDIT_TO_AP_RATE, and valuing production capacity -- each found and fixed a GENUINE
+    #   defect and each moved resolution NOT AT ALL. The two that moved it were about
+    #   INCENTIVES: production cooldowns (slower reinforcement), and decisively, making the
+    #   objective outscore trading. _combat_value scaled an HQ hit by hp_removed/max_hp, so a
+    #   5-damage chip scored 0.75 against 3.00 for a Trooper kill -- units correctly broke off
+    #   a reachable objective to fight. hq_siege_value 12 -> 60 (break-even 48).
+    #   ⇒ s6-05's own PREDICTION ("a kill still outscores an HQ chip 4:1 -- that may be correct
+    #     play or the trading pattern surviving; THE BATCH DECIDES") was right, and it was the
+    #     trading pattern. The batch decided.
+    # ⚠ The 3 games that go the distance are the +0 MIRROR -- a deterministic AI on a symmetric
+    #   board should tiebreak. But the harness gives that cell n=1, NOT n=3: `variant` perturbs
+    #   bonus-unit placement and at +0 handicap there are no bonus units, so all three are
+    #   byte-identical. Fix the harness before that cell is used to conclude anything.
+    # ⚠ Read 18/18 handicap conversion SCEPTICALLY: the gate asked for "more often than not"
+    #   and got TOTAL correlation. Right direction, but it suggests the slice has no comeback
+    #   mechanism. Worth a look during balance work.
     # ./redot --headless tools/SimulateMatches.tscn (~25 min for a full batch)
     # PASS = games resolve on PLAY (HQ destruction) not the round cap; outcomes appear
     # from BOTH seats; the material-advantaged side wins more often than not; non-zero
@@ -247,11 +281,26 @@ stories:
     name: "HUD — gross / upkeep / net income + population readout"
     file: "design/gdd/game-hud.md"
     priority: should-have
-    status: ready-for-dev
+    status: done
     owner: "ui-programmer"
     estimate_days: 1.0
     blocker: "s6-02, s6-04"
-    completed: ""
+    completed: "2026-08-24"
+    # ✅ DONE (3ddcad7). The income popover was still RENDERING base + outpost + econ_tech
+    # long after s6-01 deleted the Economy Outpost: its data model had been repointed, its
+    # _draw() had not, so the player saw two permanently-zero terms for mechanics that no
+    # longer exist and could not see upkeep or net at all. Now gross - upkeep = net, with net
+    # larger and the only coloured figure (UR-8). open_preview() projects net after a
+    # prospective purchase (AC-20). New PopulationWidget for AC-12, kept SEPARATE from income
+    # on purpose -- upkeep is a gradient you watch approach, the cap is a hard stop.
+    # ★ A LIVE DEFECT surfaced while writing that up. AC-12's other half -- "the produce
+    #   affordance is visibly disabled with a stated reason" -- was not merely unshipped. The
+    #   cap was enforced in the rules (BaseProduction.validate), respected by the AI, and
+    #   displayed by the new widget, but THE VERB MENU NEVER CHECKED IT. A player at cap saw
+    #   Produce enabled, chose a unit, and got a rejection with no forewarning. Fixed in
+    #   CommandFSM.
+    # ⚠ Presentation call that is the USER'S to overrule (unit-upkeep UOQ-5, reversible):
+    #   net gets the visual weight rather than all three figures being equal.
     # Cross-review B-3: the spec mandated base + outpost + econ_tech, two of which no
     # longer exist. Replacement: gross - upkeep = net, which also gives unit-upkeep UR-8's
     # three-figure contract a home it never had in the HUD spec.
@@ -264,11 +313,27 @@ stories:
     name: "Victory / defeat presentation"
     file: "design/gdd/game-hud.md"
     priority: should-have
-    status: ready-for-dev
+    status: done
     owner: "ui-programmer"
     estimate_days: 1.0
     blocker: "s6-06"
-    completed: ""
+    completed: "2026-08-24"
+    # ✅ DONE (9c65447). Both of CR-9's clauses, which needed genuinely DIFFERENT presentation
+    # rather than one path with a swapped noun: an HQ kill explains itself; a round-limit
+    # finish explains nothing (nothing died, the board still looks playable), so that path
+    # also shows the deciding metric and both scores.
+    # ★ Required RECORDING WHY the match ended: the deciding HQ is already erased from
+    #   entities_by_id by the time the HUD reads terminal state, so the cause is unrecoverable
+    #   after the fact. Adds GameState.WinReason + win_reason, and reason/metric/
+    #   metric_by_player on GameOverEvent.
+    # ★★ AC-22 HAD BEEN SILENTLY LIVE FOR A SPRINT. It was marked "deferred -- not testable in
+    #   VS scope, activate when MAX_ROUNDS ships". MAX_ROUNDS shipped in s6-03, and ~1 game in
+    #   7 was ending on it, untested, with no presentation. Nothing connected arming the round
+    #   cap to that AC's activation condition. ⇒ LESSON, recorded in game-hud.md: a deferral
+    #   whose trigger is another story's side effect WILL NOT RE-OPEN ITSELF -- name the story
+    #   that satisfies it.
+    # ⚠ Presentation call that is the USER'S to overrule (game-hud OQ-2, reversible): a capped
+    #   game shows the deciding metric and both scores.
     # game-hud CR-9 / AC-17 / AC-22, unimplemented and carried since Sprint 5. A one-line
     # status message is the current stopgap. ★ Invisible while games never ended; immediately
     # player-facing the moment they do -- which is what this sprint is trying to make true.
@@ -278,11 +343,33 @@ stories:
     name: "/propagate-design-change sweep — reciprocity, pre-rescale arithmetic, naming"
     file: "design/gdd/gdd-cross-review-2026-08-24.md"
     priority: nice-to-have
-    status: backlog
+    status: done
     owner: "producer"
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-08-24"
+    # ✅ DONE (f959146 + 3 doc commits). W-1 reciprocity restored across 12 GDDs. W-5 naming
+    # triaged BY CONTEXT, not find-replaced -- three documents (base-production, ap-economy,
+    # research-tech) turned out to have the S6 rework bolted on top with the entire superseded
+    # body left underneath IN THE PRESENT TENSE, and now carry dividers. W-4 handled with scale
+    # notes rather than rewritten numbers. Plus the entity registry, four sprints stale and the
+    # baseline /consistency-check trusts.
+    # ★ Which surfaced the bigger problem: the FACTORY PRODUCES NOTHING (ground vehicles are
+    #   wave 2) and grants no income, yet was offered in the build roster. Re-statting it to
+    #   base-production.md's roster table (1,000 / 3 / 200, from the renamed Economy Outpost's
+    #   400 / 1 / 100) made the trap three times more expensive. PULLED FROM THE ROSTER until
+    #   it can build something. The AI already skipped it unprompted; this only ever cost the
+    #   human.
+    # ★ Also fixed the same rename's second inheritance: the AI's economy-investment throttle
+    #   still counted a Factory build as an economy action, in BOTH the shipped driver AND
+    #   simulate_matches.gd's hand-copied duplicate -- the one whose own comment demands it
+    #   "match EXACTLY ... a looser rule here would silently simulate a different AI than the
+    #   one that ships". A new parity suite pins it.
+    # ⚠ FLAGGED FOR A DIRECTION CALL, NOT CHANGED: Barracks (data 900 vs table 600) and
+    #   Defensive Structure (600/1 vs 500/2) drift the same way the Factory did -- but they are
+    #   LIVE BALANCE VALUES on a gate that has only just started passing, and Barracks
+    #   throughput was one of the two levers that fixed it. Re-statting them is a balance
+    #   decision, not a cleanup.
     # Cross-review W-1 (0/11 dependency reciprocity), W-4 (pre-rescale arithmetic in prose
     # across 5 Approved docs), W-5 ("Production Outpost" naming in ~10 docs). Mechanical --
     # no conclusions change, the rescale is proportional. APOQ-SCALE-2.
@@ -291,11 +378,18 @@ stories:
     name: "Factory art — re-point the retired Economy Outpost assets"
     file: "design/assets/specs/vs-entities-assets.md"
     priority: nice-to-have
-    status: backlog
+    status: in-progress
     owner: "art-director"
     estimate_days: 0.5
     blocker: "s6-03"
     completed: ""
+    # ◐ PARTIALLY DONE, and not by this story. s6-03's rename COPIED rather than moved: all
+    # seven struct_factory_* PNGs + sidecars exist and are BYTE-IDENTICAL to the seven
+    # struct_economy_outpost_* files, WHICH ARE STILL IN THE TREE. Runtime already reads the
+    # factory names, so the duplicates are inert weight, not a live fork -- but they are a
+    # trap: an art edit to "the factory sprite" has two plausible targets and only one of them
+    # renders. ⇒ REMAINING: delete the 7 stale PNGs + 7 sidecars, and update the manifest,
+    # entity inventory and vs-entities-assets.md spec text. Still zero new generations.
     # User-approved 2026-08-24: reuse struct_economy_outpost_{rush,boom,neutral}_{idle,
     # destroyed} + _idle_glow as struct_factory_*. Seven files + .import sidecars, manifest,
     # entity inventory, and the spec text. ZERO new generations.
@@ -321,11 +415,17 @@ stories:
     name: "★ Swing-back playtest — carried, DEFERRED until after the s6-06 gate"
     file: "production/playtests/swing-back-playtest-session-2026-08-19.md"
     priority: carried
-    status: blocked
+    status: ready-for-dev
     owner: "user"
     estimate_days: 1.0
-    blocker: "s6-06"
+    blocker: ""
     completed: ""
+    # ★★ UNBLOCKED 2026-08-25 -- s6-06 PASSED. The deferral condition is met: the AI can now
+    # actually lose, and matches resolve on play at a mean 25 turns, so this session finally
+    # measures a real game instead of judging a build whose central failure was already known.
+    # ⇒ THIS IS NOW THE HIGHEST-VALUE ITEM ON THE BOARD, and it needs the user at a display.
+    # The session file production/playtests/swing-back-playtest-session-2026-08-19.md is open
+    # but ENTIRELY EMPTY: every per-game row and every Analysis A-D answer is a placeholder.
     # ★ Deliberately deferred, and this is a change from three sprints of trying to run it.
     # Playing it now would judge a build whose central failure is already known and already
     # scheduled for repair -- the same mistake that rolled it over three times. After s6-06
