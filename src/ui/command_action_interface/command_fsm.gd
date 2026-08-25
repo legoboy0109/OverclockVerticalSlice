@@ -415,6 +415,174 @@ static func _produce_entry(state: GameState, entity: EntityState) -> VerbEntry:
 	return VerbEntry.new(Verb.PRODUCE, false, reason)
 
 
+## ProduceOption — one row of [method produce_options]' submenu: a single unit
+## type a producer could deploy, with the dual cost of deploying it and whether
+## it is available right now.
+##
+## Inner class of [CommandFSM] for the same reason [VerbEntry] is — external
+## references use the [code]CommandFSM.ProduceOption[/code] prefix.
+##
+## [member reason] is the same [enum Reason] bitmask [VerbEntry] carries, and
+## carries the same guarantee: [constant Reason.NONE] iff [member enabled].
+## Costs are reported even on a DISABLED row — the price is exactly what the
+## player needs in order to understand why the row is disabled, so hiding it
+## would defeat the purpose (`design/ux/action-menu.md`, submenu wireframe).
+class ProduceOption extends RefCounted:
+	## The unit type this row deploys.
+	var unit_type: UnitTypeDef
+	## Credits the deployment would cost, from [method Unit.effective_produce_cost].
+	var credit_cost: int
+	## AP the deployment would cost — the flat per-action surcharge, identical for
+	## every row (ADR-0006 dual-cost).
+	var ap_cost: int
+	## True iff this type is deployable right now: affordable in BOTH pools, under
+	## the population cap, and with production cap and deploy space remaining.
+	var enabled: bool
+	## Bitmask (OR) of every [enum Reason] flag that made this row unavailable.
+	var reason: int
+
+	func _init(t: UnitTypeDef, cc: int, ac: int, e: bool, r: int) -> void:
+		unit_type = t
+		credit_cost = cc
+		ap_cost = ac
+		enabled = e
+		reason = r
+
+
+## PURE: the per-type submenu behind [constant Verb.PRODUCE] — one
+## [ProduceOption] for every type [param entity] can produce, in the producer's
+## own [member StructureTypeDef.producible_types] order.
+##
+## [b]Why this exists as a sibling of [method menu_model] rather than inside it.[/b]
+## [method menu_model]'s Produce entry answers one question — "is producing
+## anything possible right now" — by short-circuiting on the FIRST affordable,
+## fieldable type. That is the right answer for a menu ROW, and the wrong answer
+## for a menu the player is choosing FROM: it cannot say which types are the
+## affordable ones. This walks every type instead and reports each independently,
+## so the submenu can show a Scout enabled and a Heavy disabled-with-reason in the
+## same list (`design/ux/action-menu.md` AC-13).
+##
+## [b]Returns an EMPTY array, never a null or an error[/b], for any [param entity]
+## that is not a completed producer — the caller has already been told that by
+## [method menu_model]'s Produce entry (NOT_A_PRODUCER / NOT_COMPLETED), and a
+## submenu is never opened off a disabled row. Empty is the honest answer to "what
+## can this thing make", not a failure.
+##
+## [b]Pass-Through Invariant (TR-cmdui-010)[/b] holds here exactly as it does in
+## [method menu_model]: every cost and legality answer comes from an owning
+## system's side-effect-free query ([method Unit.effective_produce_cost],
+## [method Credits.can_afford], [method AP.can_afford],
+## [method Population.can_field],
+## [method BaseProduction.effective_production_cap],
+## [method BaseProduction.legal_deploy_tiles]) — this function names no balance
+## constant of its own.
+##
+## O(producible types), each with that type's own query cost.
+static func produce_options(state: GameState, entity: EntityState) -> Array[ProduceOption]:
+	var options: Array[ProduceOption] = []
+	if not (entity is StructureState):
+		return options
+	var producer: StructureState = entity
+	if producer.build_status != StructureState.BuildStatus.COMPLETED:
+		return options
+
+	# Producer-wide gates: these fail identically for every type, so they are
+	# computed ONCE and OR-ed into every row rather than re-derived per type. A
+	# player at production cap sees every row disabled for that reason, which is
+	# true and is the explanation they need.
+	var shared: int = Reason.NONE
+	if producer.units_produced_this_turn >= BaseProduction.effective_production_cap(
+			state, producer, producer.owner):
+		shared |= Reason.PRODUCTION_CAP_REACHED
+	if BaseProduction.legal_deploy_tiles(state, producer, null).is_empty():
+		shared |= Reason.NO_DEPLOY_SPACE
+
+	# The AP surcharge is per-ACTION, not per-type (ADR-0006), so it is also a
+	# shared gate — but it is folded in per row below so each row's reason mask is
+	# self-contained and readable on its own.
+	var ap_cost: int = Balance.economy.produce_ap_cost
+	var ap_affordable: bool = AP.can_afford(state, producer.owner, ap_cost)
+
+	for unit_type: UnitTypeDef in producer.type.producible_types:
+		var credit_cost: int = Unit.effective_produce_cost(state, unit_type, producer.owner)
+		var reason: int = shared
+		if not ap_affordable:
+			reason |= Reason.INSUFFICIENT_AP
+		if not Credits.can_afford(state, producer.owner, credit_cost):
+			reason |= Reason.INSUFFICIENT_CREDITS
+		if not Population.can_field(state, producer.owner, unit_type):
+			reason |= Reason.POPULATION_CAP_REACHED
+		options.append(ProduceOption.new(
+			unit_type, credit_cost, ap_cost, reason == Reason.NONE, reason
+		))
+	return options
+
+
+## BuildOption — one row of [method build_options]' player-level Build picker.
+##
+## The Build sibling of [ProduceOption], and deliberately a separate class rather
+## than a shared "type option": Build belongs to the PLAYER (CR-5) and Produce
+## belongs to a producer, they are gated by different queries, and collapsing them
+## would mean one class whose fields are half-meaningless in each of its two uses.
+class BuildOption extends RefCounted:
+	## The structure type this row would place.
+	var structure_type: StructureTypeDef
+	## Credits the build would cost, from [method BaseProduction.effective_build_cost].
+	var credit_cost: int
+	## AP the build would cost — the flat per-action surcharge (ADR-0006 dual-cost).
+	var ap_cost: int
+	## True iff this type is placeable right now: affordable in BOTH pools with at
+	## least one legal tile to put it on.
+	var enabled: bool
+	## Bitmask (OR) of every [enum Reason] flag that made this row unavailable.
+	var reason: int
+
+	func _init(t: StructureTypeDef, cc: int, ac: int, e: bool, r: int) -> void:
+		structure_type = t
+		credit_cost = cc
+		ap_cost = ac
+		enabled = e
+		reason = r
+
+
+## PURE: one [BuildOption] per type in [param types], for [param player], in the
+## order given.
+##
+## [b]Player-level, not entity-level[/b] (CR-5): Build takes no selected entity,
+## which is why it has no [VerbEntry] in [method menu_model] at all and why this
+## takes a player index where [method produce_options] takes a producer. The HUD's
+## persistent Build control is its entry point; this is the model behind that
+## control's type picker.
+##
+## Reuses [constant Reason.NO_DEPLOY_SPACE] for "nowhere legal to put it" rather
+## than adding a build-specific flag — the two mean the same thing to a player
+## (there is no tile for this), and one flag with one phrase is one fewer thing for
+## a translator and a reader to hold.
+##
+## Same Pass-Through discipline as its siblings: every answer comes from
+## [method BaseProduction.effective_build_cost],
+## [method BaseProduction.legal_build_tiles], [method Credits.can_afford] and
+## [method AP.can_afford]. No balance constant is named here.
+static func build_options(state: GameState, player: int, \
+		types: Array[StructureTypeDef]) -> Array[BuildOption]:
+	var options: Array[BuildOption] = []
+	var ap_cost: int = Balance.economy.build_ap_cost
+	var ap_affordable: bool = AP.can_afford(state, player, ap_cost)
+	for type: StructureTypeDef in types:
+		var credit_cost: int = BaseProduction.effective_build_cost(state, type, player)
+		var reason: int = Reason.NONE
+		if not ap_affordable:
+			reason |= Reason.INSUFFICIENT_AP
+		if not Credits.can_afford(state, player, credit_cost):
+			reason |= Reason.INSUFFICIENT_CREDITS
+		if BaseProduction.legal_build_tiles(state, player, type).is_empty():
+			reason |= Reason.NO_DEPLOY_SPACE
+		options.append(BuildOption.new(
+			type, credit_cost, ap_cost, reason == Reason.NONE, reason
+		))
+	return options
+
+
 ## Builds the Cancel Build [VerbEntry] (Story 004, ADR-0015 §2) — see
 ## [method menu_model]'s doc comment for the full rule. Enabled iff
 ## [param entity] is a [StructureState] AND

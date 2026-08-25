@@ -85,7 +85,7 @@ func test_jump_moves_the_cursor_onto_a_highlighted_tile() -> void:
 	var unit: UnitState = await _produce_a_unit(root)
 	assert_object(unit).is_not_null()
 
-	# Walk onto the unit and select it — selection opens the move preview, which is
+	# Walk onto the unit, select it, then enter the Move preview — the preview is
 	# what populates the salient set.
 	while root.cursor_tile() != unit.position:
 		var c: Vector2i = root.cursor_tile()
@@ -95,6 +95,11 @@ func test_jump_moves_the_cursor_onto_a_highlighted_tile() -> void:
 			break
 		root.move_cursor(step)
 	root.select_at_cursor()
+	# ★ 2026-08-24: selection now opens the ACTION MENU, not a move preview — CR-1's
+	# loop is select -> menu -> verb -> preview, and jump-cursor is a PREVIEW tool
+	# (it steps between the salient tiles of the verb you are in). So the preview
+	# has to be entered explicitly, exactly as a player picking "Move" does.
+	root.open_verb_preview(CommandFSM.Verb.MOVE)
 	await get_tree().process_frame
 
 	var salient: Array[Vector2i] = root.command_interface().salient_tiles()
@@ -121,6 +126,7 @@ func test_repeated_jumps_stay_within_the_highlighted_set() -> void:
 			break
 		root.move_cursor(step)
 	root.select_at_cursor()
+	root.open_verb_preview(CommandFSM.Verb.MOVE) # jump-cursor is a PREVIEW tool.
 	await get_tree().process_frame
 
 	var salient: Array[Vector2i] = root.command_interface().salient_tiles()

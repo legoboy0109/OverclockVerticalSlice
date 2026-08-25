@@ -37,19 +37,31 @@ const UI_SCALE_DEFAULT: float = 1.0
 ## a menu is how someone locks themselves out of the settings screen that would
 ## fix it.
 const REBINDABLE: Array[StringName] = [
-	&"board_act", &"board_build", &"board_build_cycle",
-	&"board_produce", &"board_produce_cycle",
+	&"board_act", &"board_attack", &"board_build",
+	&"board_produce",
 	&"board_end_turn", &"board_pause", &"board_menu_focus",
 	&"board_cursor_cycle",
 ]
 
 ## Human-readable names for the rebindable actions.
+## ★ 2026-08-24 (action menu). Three changes, all consequences of the contextual
+## action menu replacing per-command keys (`design/ux/action-menu.md`, decisions
+## 2 and 3):
+## [br]• [code]board_act[/code] is relabelled Move — it no longer means
+##   "move or attack, whichever fits".
+## [br]• [code]board_attack[/code] is new, the other half of that split.
+## [br]• The two type-cycle bindings are GONE. They mutated a hidden selection
+##   that the menu's submenu now shows outright, so the table would have listed
+##   two rebindable keys for a command the player can no longer issue.
+##
+## A saved override for a removed action stays harmlessly in the settings file and
+## is skipped on load ([method _capture_defaults] and [method apply_all] both gate
+## on [method InputMap.has_action]) — it is neither applied nor an error.
 const ACTION_LABELS: Dictionary = {
-	&"board_act": "Move / Attack",
+	&"board_act": "Move",
+	&"board_attack": "Attack",
 	&"board_build": "Build",
-	&"board_build_cycle": "Cycle Build Type",
 	&"board_produce": "Produce",
-	&"board_produce_cycle": "Cycle Unit Type",
 	&"board_end_turn": "End Turn",
 	&"board_pause": "Pause",
 	&"board_menu_focus": "Focus Action Panel",
