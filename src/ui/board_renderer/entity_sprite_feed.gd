@@ -572,7 +572,14 @@ func _refresh_marker(entity: EntityState) -> void:
 		# setting its own would be the exact escape the ADR's guardrail forbids.
 		_marker_nodes[id] = marker
 		_board.marker_layer.add_child(marker)
-	var texture: ImageTexture = OwnershipMarker.texture_for(_faction_for(entity.owner))
+	# ★ 2026-08-24: structures wear the BASE_RING style. Their base plate is as wide
+	# as the tile and taller than the tile diamond, so the tile-inset band sits
+	# entirely underneath them — which is exactly what happened the moment
+	# structures were correctly grounded on their own tile: the decal disappeared
+	# under every building and took the non-hue ownership tell with it.
+	var style: OwnershipMarker.Style = OwnershipMarker.Style.BASE_RING \
+		if entity is StructureState else OwnershipMarker.Style.TILE
+	var texture: ImageTexture = OwnershipMarker.texture_for(_faction_for(entity.owner), style)
 	marker.texture = texture
 	var size: Vector2 = texture.get_size()
 	marker.scale = Vector2.ONE / OwnershipMarker.TEXTURE_SCALE
