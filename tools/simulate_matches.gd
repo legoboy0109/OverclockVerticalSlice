@@ -70,20 +70,81 @@ const MIRROR_OPENINGS: Array[Vector2i] = [
 ]
 
 
+## ★ S7-09 EXPERIMENT KNOB — play-strength degradation applied to the FAVOURED side only.
+##
+## [b]Why this exists.[/b] S5-04 reported "the +1 cell shows ZERO lead changes" and read it
+## as *the game has no recoverable middle*. But this harness drives BOTH seats with the same
+## [method AI.choose_action] and the same weights, fully deterministically — there is no
+## skill differential anywhere in it. Equal play from a worse position losing every single
+## time is arithmetic, not a design property.
+##
+## ⇒ **The harness could not express the thing the conclusion was about.** A comeback requires
+## the trailing player to play BETTER, and nothing here can play better or worse than anything
+## else. This knob introduces the missing variable so the question becomes answerable.
+##
+## [b]The model.[/b] With probability [code]_degrade_favoured_pct[/code] per turn, the favoured
+## side commits at most ONE action that turn instead of playing its turn out. That is "played a
+## worse turn" rather than "did not show up" — monotone in the percentage, and it never makes
+## the favoured side do anything illegal or actively self-harming.
+##
+## ⚠ [b]Default 0 = byte-identical to the shipped batch.[/b] The S6-06 gate numbers must stay
+## comparable, so the degradation path is entirely inert unless asked for.
+##
+## Usage:
+## [codeblock]
+## ./redot --headless tools/SimulateMatches.tscn -- --degrade-favoured=20 --only-handicap=1
+## [/codeblock]
+var _degrade_favoured_pct: int = 0
+
+## Restricts the batch to a single handicap cell (-1 = all). The sweep only needs +1, and a
+## full batch is ~25 minutes against ~7 for one cell.
+var _only_handicap: int = -1
+
+## Variants per handicap cell (default 3 = the shipped batch). ★ Raised only for experiments:
+## the +1 cell at 3 variants is n=6, which is too thin to read a gradient from — the S7-09
+## sweep's first pass showed a non-monotone dip that was purely sample noise.
+var _variants: int = 3
+
+
 func _ready() -> void:
+	_parse_args()
 	_run()
+
+
+func _parse_args() -> void:
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--degrade-favoured="):
+			_degrade_favoured_pct = int(arg.split("=")[1])
+		elif arg.begins_with("--only-handicap="):
+			_only_handicap = int(arg.split("=")[1])
+		elif arg.begins_with("--variants="):
+			_variants = clampi(int(arg.split("=")[1]), 1, _VARIANT_Y_OFFSETS.size())
+	if _degrade_favoured_pct != 0 or _only_handicap != -1 or _variants != 3:
+		print("SIM_CONFIG,degrade_favoured_pct=%d,only_handicap=%d,variants=%d" % [
+			_degrade_favoured_pct, _only_handicap, _variants
+		])
+
+
+## Deterministic per-(game, turn) draw in [0, 100). ★ Never [method @GlobalScope.randi] —
+## ADR-0003 forbids unseeded RNG anywhere near a reproducible measurement, and a sweep whose
+## rows cannot be re-derived is not evidence. Same inputs always give the same draw.
+static func _draw(game: int, turn: int) -> int:
+	var h: int = (game * 73856093) ^ (turn * 19349663)
+	return absi(h) % 100
 
 
 func _run() -> void:
 	var game: int = 0
 	for handicap: int in HANDICAPS:
+		if _only_handicap != -1 and handicap != _only_handicap:
+			continue
 		for favoured: int in [0, 1]:
 			if handicap == 0 and favoured == 1:
 				continue # symmetric is the same game twice; run it once.
 			# ★ S5-04: the mirror cell runs one game per symmetric opening (each a
 			# genuinely different close game); handicap cells keep their original
 			# three variants so gate numbers stay comparable batch to batch.
-			var count: int = MIRROR_OPENINGS.size() if handicap == 0 else 3
+			var count: int = MIRROR_OPENINGS.size() if handicap == 0 else _variants
 			for variant: int in count:
 				game += 1
 				_play(game, favoured, handicap, variant)
@@ -102,7 +163,7 @@ func _play(game: int, favoured: int, handicap: int, variant: int) -> void:
 	while state.match_status != GameState.MatchStatus.GAME_OVER and turn < MAX_TURNS:
 		turn += 1
 		_snapshot(game, favoured, handicap, variant, turn, state)
-		_run_one_turn(state)
+		_run_one_turn(state, game, turn, favoured)
 	var capped: int = 1 if turn >= MAX_TURNS else 0
 	print("SIM_END,%d,%d,%d,%d,%d,%d,%d" % [
 		game, favoured, handicap, variant, turn, state.winner, capped
@@ -112,9 +173,17 @@ func _play(game: int, favoured: int, handicap: int, variant: int) -> void:
 ## The shipped AI turn loop with the pacing timer removed — otherwise identical to
 ## [method AITurnDriver.run_ai_turn], including the reject bound and the trailing
 ## [EndTurnAction] that hands the turn back.
-func _run_one_turn(state: GameState) -> void:
+func _run_one_turn(state: GameState, game: int = 0, turn: int = 0, favoured: int = -1) -> void:
 	var economy_investments: int = 0
 	var rejects: int = 0
+	var committed: int = 0
+	# ★ S7-09: at most one action this turn, for the favoured side only, on a draw that
+	# fires _degrade_favoured_pct of the time. Inert at the default 0.
+	var capped_turn: bool = (
+		_degrade_favoured_pct > 0
+		and state.active_player == favoured
+		and _draw(game, turn) < _degrade_favoured_pct
+	)
 	while true:
 		var action: Action = AI.choose_action(state, economy_investments)
 		if action == null:
@@ -126,6 +195,7 @@ func _run_one_turn(state: GameState) -> void:
 				break
 			continue
 		rejects = 0
+		committed += 1
 		# Must match AITurnDriver._is_economy_or_research EXACTLY — this counter feeds
 		# back into AI.choose_action's cadence cap (ADR-0011 §1/§6), so a looser rule
 		# here would silently simulate a different AI than the one that ships.
@@ -137,6 +207,8 @@ func _run_one_turn(state: GameState) -> void:
 			economy_investments += 1
 		if state.match_status == GameState.MatchStatus.GAME_OVER:
 			return
+		if capped_turn and committed >= 1:
+			break
 	var end_turn := EndTurnAction.new()
 	end_turn.player = state.active_player
 	state.apply_action(end_turn)
@@ -248,7 +320,16 @@ func _build_match(favoured: int, handicap: int, variant: int) -> GameState:
 
 ## Bonus units are placed near their owner's HQ, offset by [param variant] so the three
 ## games in a cell diverge.
+## ★ S7-09: offsets are a TABLE rather than `hq.y - 1 + variant` so the variant count can
+## be raised for statistical power without walking the bonus units off the map. The first
+## three entries reproduce the old arithmetic EXACTLY (-1, 0, +1), so every previously
+## recorded batch number stays comparable; entries 3+ fan out symmetrically instead of
+## marching in one direction toward the south edge.
+const _VARIANT_Y_OFFSETS: Array[int] = [-1, 0, 1, -2, 2, -3, 3]
+
+
 func _bonus_tile(favoured: int, index: int, variant: int) -> Vector2i:
 	var hq: Vector2i = HQ_A if favoured == 0 else HQ_B
 	var dir: int = 1 if favoured == 0 else -1
-	return Vector2i(hq.x + dir * (1 + index), hq.y - 1 + variant)
+	var dy: int = _VARIANT_Y_OFFSETS[variant % _VARIANT_Y_OFFSETS.size()]
+	return Vector2i(hq.x + dir * (1 + index), hq.y + dy)
