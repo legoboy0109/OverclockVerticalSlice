@@ -415,8 +415,25 @@ those words describe is queried, never stored here.
 - **Three distinct attention states**, per the GDD's input notes: mouse-hover, board cursor, and
   menu keyboard-focus. This surface owns the third, and it is the genuine Godot 4.6 dual-focus case —
   mouse focus and keyboard focus are separate subsystems and can both be live, so the focused row's
-  indicator must be visually distinct from the hovered row's. ⚠ Redot 26.2 fork parity on this
-  behaviour is assumed, not verified (GDD OQ-6).
+  indicator must be visually distinct from the hovered row's.
+  ✅ **VERIFIED on Redot 26.2, 2026-08-26 (S8-09)** — no longer assumed. GDD OQ-6 is closed.
+  Measured on a real framebuffer: a focused row keeps `has_focus()` while a different row is
+  hovered, that row reports `DRAW_HOVER`, and hover never steals focus. The cues are different
+  *marks*, not different brightnesses — **focus draws a 2px outline (moves 17.9% of the row's
+  pixels); hover draws no box at all (2.9%, the glyphs only)**. That distinction is what makes them
+  tellable apart, and it is deliberately not carried by brightness, because `font_focus_color` and
+  `font_hover_color` are set to the same white. Report:
+  `production/playtests/s8-09-dual-focus-2026-08-26.md`.
+  ⚠ **The focus outline is drawn OUTSIDE the row's own rect** (expand margins on the theme's focus
+  StyleBox): a row at y 521..548 draws its border at y 519-520 and y 549-550. Rows are spaced far
+  enough apart that it does not collide today — but anything that tightens row spacing, or clips
+  rows to their own rect, will eat the keyboard cue.
+  ⛔ **OQ-7 (new, open): hover is close to invisible on its own.** It lifts the label from
+  `LABEL_ENABLED` `(0.90, 0.94, 1.00)` to white — a ~3% change on already-near-white text — because
+  `flat = true` suppresses the theme's hover StyleBox and leaves font colour as hover's only
+  channel. This spec promises three *distinct* attention states; two of them are strong and the
+  third is barely a state. The binding claim above still passes. Whether hover needs a visible mark
+  of its own is a **design call, deliberately not taken by the agent that measured it.**
 - **Disabled rows are visible but not focusable.** Focus stops only on rows that do something —
   the same treatment the Settings screen's reset buttons use. The reason text is rendered inline on
   the row, so it is readable without focusing it.
