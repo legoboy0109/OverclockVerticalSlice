@@ -323,3 +323,47 @@ more of it changes nothing — 0/5/10/15/20/30 all produced byte-identical outco
 > *before compensating with a resource, check that the resource is actually binding.* The same
 > trap appeared three times in Sprint 7 — money was not the constraint (S7-10), cover could not
 > register because the AI cannot use it (S7-11), and AP is not scarce (S7-16).
+
+---
+
+## Match settings at New Game — starting AP, and whatever follows it
+
+**Requested 2026-08-26 (S8-23), explicitly "in the future". Deferred, not scheduled.**
+
+**What:** let the player choose `flat_ap_per_turn` when starting a new skirmish, instead of it being
+a build-time constant. The immediate driver was setting it to 20 — which required a code edit, a
+test update and a GDD amendment for what is conceptually *a number the player might want to pick*.
+
+★ **Why it is worth doing beyond convenience.** The 20-vs-30 question is unmeasured and unmeasurable
+by script: the whole argument is about how scarcity *feels*. A setup slider turns "rebuild the game
+to try the other value" into "play a game each way", which is the only way that question ever gets
+answered — and the same is true of every tuning constant the design is unsure about.
+
+### What it actually touches
+
+- **`EconomyConfig` is a shared, read-only `Resource`** loaded once by the `Balance` autoload
+  (`preload("res://data/balance/economy_config.tres")`). ⛔ **It is deliberately NOT on `GameState`**
+  — its own docs say so, because `GameState.clone()` deep-copies and the AI clones state constantly
+  in its search loop. **A per-match override must not simply be moved onto `GameState`**, or every
+  clone carries a copy of the tuning config and the AI's hot loop pays for it.
+- ★ The likely shape: a per-match `EconomyConfig` **duplicate** created at match start from the
+  chosen settings, held by `MatchService` (not `GameState`), with `Balance.economy` resolving
+  through it. Needs a real look — this note is a starting point, not a design.
+- **New-game UI.** There is no skirmish setup screen today; New Skirmish starts immediately. This
+  needs one, which makes it meaningfully bigger than "add a slider".
+- **Save/load and settings persistence** — per `GameSettings`' existing overrides-only convention
+  (S6-24), so a player inherits future default changes rather than being pinned to today's value.
+
+### ⚠ What to decide first, before building anything
+
+**Which values are player-facing, and which are balance the designer owns.** A setup screen that
+exposes every tuning constant is a debug menu, not a game. ★ Starting AP has a clear case; carryover
+cap, AP surcharges and the Credit curve probably do not. **That is a design call and nobody has
+made it.**
+
+### Related, and cheap by comparison
+
+⚠ **A debug/dev override would deliver most of the value for a fraction of the work** — a launch
+flag or a dev-only field that sets the budget without a UI. If the real goal is *trying values
+quickly* rather than *shipping a player-facing option*, do that first and let the setup screen wait
+for evidence that players want it.

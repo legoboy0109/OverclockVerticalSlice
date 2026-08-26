@@ -10,6 +10,16 @@
 # Naming follows tests/README.md: [system]_[feature]_test.gd + test_[scenario]_[expected].
 extends GdUnitTestSuite
 
+## Starting AP for the over-cap surcharge cases, seeded directly into the fixture.
+##
+## ⚠ A FIXTURE VALUE, deliberately NOT `Balance.economy.flat_ap_per_turn`. These tests
+## assert that AP spent equals the reported `min_cost`; the starting budget is only an
+## input large enough not to interfere. Binding it to the live balance config would make
+## a movement suite fail whenever the economy is retuned — and it nearly did, when
+## S8-23 took the budget 30 -> 20. Kept here as one named constant so the fixture and its
+## assertions cannot drift apart, which is what the bare literal 30 allowed.
+const _SURCHARGE_START_AP: int = 30
+
 
 const GRID_SIZE := 10
 
@@ -228,7 +238,7 @@ func test_move_to_reachable_destination_spends_exactly_its_reported_min_cost() -
 	# Arrange — Heavy: move_cost 3, soft_move_cap 1 (so a 2-tile path is
 	# guaranteed to include an over-cap tile), fresh, plenty of AP.
 	var type := _make_type(3, 1)
-	var state := _make_state(0, 30)
+	var state := _make_state(0, _SURCHARGE_START_AP)
 	var unit := _place_unit(state, 1, 0, Vector2i(5, 5), type)
 
 	var reachable_results: Array[Movement.ReachableTile] = Movement.reachable(state, unit)
@@ -243,14 +253,14 @@ func test_move_to_reachable_destination_spends_exactly_its_reported_min_cost() -
 
 	# Assert — AP spent equals the reported min_cost exactly.
 	assert_bool(result.ok).is_true()
-	assert_int(AP.current_ap(state, 0)).is_equal(30 - expected_cost)
+	assert_int(AP.current_ap(state, 0)).is_equal(_SURCHARGE_START_AP - expected_cost)
 
 
 func test_move_to_reachable_destination_on_clone_spends_exactly_its_reported_min_cost() -> void:
 	# Arrange — same setup, but executed against a clone() of the authoritative
 	# state (AC-6's "must hold on any clone()" requirement).
 	var type := _make_type(3, 1)
-	var authoritative := _make_state(0, 30)
+	var authoritative := _make_state(0, _SURCHARGE_START_AP)
 	_place_unit(authoritative, 1, 0, Vector2i(5, 5), type)
 
 	var clone: GameState = authoritative.clone()
@@ -268,9 +278,9 @@ func test_move_to_reachable_destination_on_clone_spends_exactly_its_reported_min
 
 	# Assert — AP spent equals the reported min_cost exactly, on the clone only.
 	assert_bool(result.ok).is_true()
-	assert_int(AP.current_ap(clone, 0)).is_equal(30 - expected_cost)
+	assert_int(AP.current_ap(clone, 0)).is_equal(_SURCHARGE_START_AP - expected_cost)
 	# Authoritative state untouched by the clone's commit.
-	assert_int(AP.current_ap(authoritative, 0)).is_equal(30)
+	assert_int(AP.current_ap(authoritative, 0)).is_equal(_SURCHARGE_START_AP)
 
 
 # --- Direct Movement.validate()/apply() coverage (finer assertions) ---------

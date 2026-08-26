@@ -25,7 +25,7 @@
 >
 > | | Old | **New** | Factor |
 > |---|---:|---:|---:|
-> | `FLAT_AP_PER_TURN` | 10 | ★ **30** | ×3 |
+> | `FLAT_AP_PER_TURN` | 10 | ★ **30** → ⚠ **20** (2026-08-26, S8-23) | ×3, then ×0.67 |
 > | `AP_CARRYOVER_CAP` | 5 | ★ **15** | ×3 |
 > | Max AP at a turn's start | 15 | ★ **45** | ×3 |
 > | **AP action costs** (`move_cost`, `attack_cost`, surcharges) | 1–3 | ★ **unchanged** | ×1 |
@@ -51,6 +51,32 @@
 > **Abundant AP dilutes Pillar 1.** "Every Choice Is a Tradeoff" rests on AP being scarce enough
 > that spending it on economy visibly costs you tempo. At 30 AP a typical army can move *and* attack
 > in the same turn, so the triage that made the pillar felt is softer.
+
+> ### ⚠⚠ `FLAT_AP_PER_TURN` was set to **20** on 2026-08-26 (S8-23, user decision)
+> Everything below describing the **30** budget is the *previous* tuning and is left in place as
+> the reasoning behind it — ★ it is still the argument that has to be beaten, not dead text.
+>
+> **What 20 costs, stated in units rather than adjectives.** A Trooper spends 4 AP to move *and*
+> attack, so **20 AP fully activates 5 units** where 30 activated 7. Population caps at
+> `base_infantry_cap` 4 + 2 per Barracks = **10 realistic**, so at a full army roughly **half your
+> units stand idle every turn**.
+>
+> ⛔ **That is the exact problem the ×3 rescale existed to fix** — the `ap_carryover_cap` note in
+> `economy_config.gd` says so outright, and adds that the restoring dial for scarcity is the
+> `*_ap_cost` surcharges, **not** cutting this value.
+>
+> ★ **Taken anyway, deliberately, as an experiment in tempo pressure.** The same note records that
+> making AP cheap *dilutes Pillar 1*, and no measurement can settle whether scarcity reads as a
+> meaningful constraint or as being denied your turn. **A person playing it can.**
+>
+> ⛔⛔ **It is therefore UNMEASURED. Every balance sweep — S7-09 through S7-17, the one-unit cliff,
+> cover, the round cap, seat bias, first-turn compensation — ran at 30**, as did all AI tuning.
+> **Do not quote any of those numbers against a 20-AP build** until they are re-run.
+>
+> ⚠ **`AP_CARRYOVER_CAP` was left at 15**, so carryover is now **75%** of a turn's budget rather
+> than 50% — a materially different rule about banking tempo. Flagged rather than silently
+> rescaled, because it is a design call, not arithmetic.
+
 >
 > This is a real cost, knowingly accepted — the alternative was armies the player could not command.
 > **The dial that restores tension without undoing the fix is AP action costs**, which were

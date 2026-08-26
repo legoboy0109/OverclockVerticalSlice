@@ -123,14 +123,15 @@ silently, and the sprint file said something untrue for six merges.
 | ✅ **S8-15** | A shorter, bulkier Builder | technical-artist | 0.5 | `cc3b81a` | User feedback on the shipped look. ★ **The lever is crouch, not scale** — every wording that shrinks the legs makes SDXL delete them |
 | ✅ **S8-16** | A cargo cradle you can actually see | technical-artist | 0.5 | `f168832` | User asked for the cradle to read. Two further generation rounds failed **structurally** — prompt weight is finite — so it is authored geometry composited on the approved master, the same call ASSET-006/007 made for terrain |
 | ✅ **S8-17** | An opponent that actually plays | ai-programmer | 1.0 | `31a4cd6` | ⛔⛔ **The AI was demolishing everything it built.** Produce a Builder → spend it on a Barracks → cancel the Barracks for the refund → repeat, every turn. It ended matches owning nothing but its HQ with 6,000+ Credits banked, **and the player was facing an empty board** |
+| ✅ **S8-23** | AP per turn → 20 | game-designer | 0.25 | *(pending)* | ★ **User decision, deliberately against the config's own advice.** A Trooper costs 4 AP to move+attack, so 20 activates **5** units where 30 activated 7 — and population caps at 10, so **~half a full army idles each turn**. ⛔ That is the problem the ×3 rescale fixed. Taken as an experiment in tempo pressure: whether scarcity reads as constraint or as being denied your turn is **exactly what a play session can answer and no script can.** ⚠ **Invalidates every S7-09…S7-17 balance number** |
 | ✅ **S8-22** | The crate comes off | technical-artist | 0.5 | *(pending)* | ⛔ **Four rounds, abandoned — user's call.** S8-21 found the cause: the hull is **not in the projection it looks like**, its top-left edge measuring **−0.179** against a true dimetric **−0.500**. Every drawn cradle was a perfect rhombus, so it sat on the machine in a different projection. ★ The hunched silhouette already read as "carrier" without it. ✅ Sprite **157 → 145 px**, restoring all of S8-15's "shorter"; tool deleted |
 | ✅ **S8-21** | Match the machine's perspective, not the textbook's | technical-artist | 0.5 | `670c871` | The measured-projection fix. ★ **Superseded by S8-22 but the finding stands** and is recorded in `generation-prompts.md`: a generated render is not on your grid |
 | ✅ **S8-20** | The crate stops looking tacked on | technical-artist | 0.5 | *(pending)* | User feedback on the approved look. ⚠ **By the intake rule this is a NO — it does not block the measurement and should have gone to `post-gate-backlog.md`.** Admitted on the user's direct request, and recorded as such rather than quietly reclassified. ★ Cost nothing in height: **157 → 154 px** |
 | ✅ **S8-19** | A Builder you can tell is yours | technical-artist | 0.5 | `7b4adca` | ⛔ Accent coverage **22.8% vs a 30% floor** — and `accent_coverage_test.gd` kept a hand-written archetype list the Builder was not in, so the gate written to catch exactly this never looked. ★ **Blocks the measurement** — S5-03 observer Q1 is *"can they say which units are theirs"* |
 | ✅ **S8-18** | The sprint file tells the truth | producer | 0.25 | `b9de7e8` | This section, and the `/sprint-plan update` that re-baselined it. The plan recorded none of S8-10…S8-17 for six merges, so for most of the sprint it described a sprint that was not happening |
 
-**Absorbed: 8.0 days** (5.75 + S8-18 0.25 + S8-19 0.5 + S8-20 0.5 + S8-21 0.5 + S8-22 0.5). Planned was 4.75 against ~8 available; actual is
-**~12.75 against ~8**. ★ The critical path did not slip because of it — S8-01 is gated on the
+**Absorbed: 8.25 days** (5.75 + S8-18 0.25 + S8-19 0.5 + S8-20 0.5 + S8-21 0.5 + S8-22 0.5). Planned was 4.75 against ~8 available; actual is
+**~13.0 against ~8**. ★ The critical path did not slip because of it — S8-01 is gated on the
 user, not on capacity — but the sprint is over its box and the plan never said so.
 
 ### ★★ What S8-17 says about the test suite
@@ -175,8 +176,8 @@ the sprint's centre; **the answer would simply not have been about this game.**
 - **Planned: 4.75** (must 2.75 + should 2.0). ★ Deliberately light: **the critical path is
   gated on one hour of the user's time**, and loading the sprint with agent work is how the
   validation half rolled over six times before.
-- **Unplanned absorbed: 8.0** (S8-10…S8-22, see the section above). ★ **S8-19 is the intake rule's first live application** — it was admitted because it blocks the measurement, not because it was next
-- ⚠ **Actual: ~12.75 against ~8. About 4.75 days over the box, and the buffer is spent.**
+- **Unplanned absorbed: 8.25** (S8-10…S8-23, see the section above). ★ **S8-19 is the intake rule's first live application** — it was admitted because it blocks the measurement, not because it was next
+- ⚠ **Actual: ~13.0 against ~8. About 5 days over the box, and the buffer is spent.**
   ⚠ **S8-20 is the first item the intake rule said NO to that was admitted anyway.** Recorded as an
   exception on the user's direct request — ★ **the rule's value is that this is now visible instead
   of invisible**, which is exactly what it was adopted for.

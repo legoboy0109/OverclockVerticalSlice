@@ -106,7 +106,21 @@ extends Resource
 
 ## Flat AP granted at every start-of-turn reset — the tactical budget floor.
 ## Not income-driven: AP does not scale with the economy (contrast the Credit curve).
-@export var flat_ap_per_turn: int = 30
+##
+## ⚠ [b]SET TO 20 ON 2026-08-26 (user decision, S8-23) — DELIBERATELY AGAINST THE
+## ADVICE IN THE `ap_carryover_cap` NOTE BELOW.[/b] That note says the restoring dial
+## for AP scarcity is the `*_ap_cost` surcharges and NOT cutting this value, because
+## cutting it re-creates the idle-army problem the ×3 rescale was made to fix.
+## [br][br]The idle-army arithmetic at 20, stated so it is not rediscovered:
+## a Trooper costs 4 AP to move and attack, so [b]20 AP fully activates 5 units[/b]
+## (7 at 30). Population caps at `base_infantry_cap` 4 + 2 per Barracks = 10 realistic,
+## so [b]a full army leaves ~5 units idle every turn.[/b]
+## [br][br]★ Taken anyway and on purpose: it is an [i]experiment in tempo pressure[/i].
+## AP being cheap is what the rescale note itself records as diluting Pillar 1, and
+## whether scarcity feels like a meaningful constraint or like being denied your turn
+## is exactly the kind of question only a person playing can answer. ⛔ [b]It is
+## therefore UNMEASURED: every balance sweep (S7-09…S7-17) ran at 30.[/b]
+@export var flat_ap_per_turn: int = 20
 
 ## Max unspent AP that carries into the next turn (any excess is lost). Start-of-turn
 ## AP = flat_ap_per_turn + min(leftover, ap_carryover_cap), so max AP = 45 at defaults.

@@ -746,3 +746,42 @@ stories:
     #   start would have saved ~1.5 days AND REACHED THE SAME END STATE. The rule was right.
     # ✅ Base look APPROVED by the user the same day ("it looks good"), closing s8-14's open sign-off.
     # Suite 1307/1307. Evidence: production/qa/evidence/s8-14-builder/04-crate-removed.png
+
+  - id: "s8-23"
+    name: "★ AP per turn 30 -> 20, and the adjustable-value request deferred"
+    file: "design/gdd/ap-economy.md"
+    priority: must-have
+    status: done
+    owner: "game-designer"
+    estimate_days: 0.25
+    blocker: ""
+    completed: "2026-08-26"
+    # ✅ USER DECISION 2026-08-26, taken DELIBERATELY AGAINST THE CONFIG'S OWN ADVICE and recorded
+    #   that way in economy_config.gd rather than quietly.
+    # ⚠ THE ARITHMETIC, so it is not rediscovered: a Trooper spends 4 AP to move AND attack, so
+    #   20 AP fully activates 5 units where 30 activated 7. Population caps at base_infantry_cap 4
+    #   + 2 per Barracks = 10 realistic ⇒ AT A FULL ARMY ROUGHLY HALF YOUR UNITS IDLE EVERY TURN.
+    # ⛔ THAT IS THE EXACT PROBLEM THE x3 RESCALE (2026-08-24) EXISTED TO FIX. The ap_carryover_cap
+    #   note says so outright and adds that the restoring dial for scarcity is the *_ap_cost
+    #   surcharges, NOT cutting this value.
+    # ★ TAKEN ANYWAY, ON PURPOSE: an experiment in TEMPO PRESSURE. The same note records that cheap
+    #   AP DILUTES PILLAR 1, and no script can settle whether scarcity reads as a meaningful
+    #   constraint or as being denied your turn. A PERSON PLAYING IT CAN — which makes this the
+    #   right moment for it, immediately before s8-01.
+    # ⛔⛔ IT IS UNMEASURED. Every balance sweep -- s7-09 cliff, s7-10 tuning, s7-11 cover, s7-12
+    #   round cap, s7-13/14/15 seat bias, s7-16 first-turn compensation -- RAN AT 30, as did all AI
+    #   tuning. DO NOT QUOTE ANY OF THOSE NUMBERS AGAINST A 20-AP BUILD until re-run.
+    # ⚠ AP_CARRYOVER_CAP LEFT AT 15, so carryover is now 75% of a turn's budget instead of 50% -- a
+    #   materially different rule about banking tempo. FLAGGED TO THE USER, not silently rescaled,
+    #   because it is a design call and they did not ask for it.
+    # ★ TEST FIX WORTH KEEPING: move_action_test.gd pinned a bare literal 30 that was really its own
+    #   FIXTURE value, so retuning the economy broke a MOVEMENT suite -- unrelated churn. Now one
+    #   named constant _SURCHARGE_START_AP feeding both the fixture and its assertions.
+    #   ⚠ economy_config_test.gd KEEPS ITS LITERAL (20) on purpose: that suite's whole job is to pin
+    #     shipped tuning, so there the number IS the subject of the assertion, not an input to it.
+    # ⇒ DEFERRED to post-gate-backlog.md: "make it adjustable when starting a new game" (user said
+    #   "in the future"). ⚠ NOT a slider -- EconomyConfig is a shared read-only Resource deliberately
+    #   kept OFF GameState because clone() deep-copies and the AI clones constantly; a per-match
+    #   override must not just be moved onto GameState. Also needs a skirmish setup screen, which
+    #   does not exist. ★ A dev/launch-flag override would deliver most of the value far cheaper.
+    # Suite 1307/1307.
