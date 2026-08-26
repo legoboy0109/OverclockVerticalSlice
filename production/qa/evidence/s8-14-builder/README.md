@@ -11,7 +11,8 @@
 | `02-builder-destroyed.png` | Destroyed state · 3 hues × 2 facings |
 | `03-builder-vs-roster.png` | ★ Silhouette check — Builder vs the full rush roster |
 | `04-cradle-detail-2x.png` | S8-16 cradle at 2× in all three hues |
-| ★ `05-cradle-before-after.png` | **S8-20 cradle re-seat — before/after at shipped scale and 2.8×** |
+| ★ `05-cradle-before-after.png` | S8-20 cradle re-seat — before/after |
+| ★★ `06-cradle-projection-fix.png` | **S8-21 — the cradle drawn in the hull's OWN projection. This is the one that mattered** |
 
 ⚠ **These composite the SHIPPED runtime PNGs at shipped size onto the stage colour.**
 They deliberately **do not** use `board_preview.py`, which re-runs `cutout(pockets=True)` on its
@@ -140,3 +141,51 @@ cradle **into** the hull rather than perching it on top means less canvas growth
 
 Accent re-measured after the re-derive: **35.1% / 35.5%**, still clearing the 30% floor, roster
 spread **1.79×**. Suite 1307/1307.
+
+
+---
+
+## ⛔⛔ S8-21 — "still looks off", and this time the cause was structural
+
+Second round of feedback on the cradle. S8-20 had fixed four genuine defects and the crate still
+looked wrong, which is itself the finding: **when correcting several real problems does not fix the
+symptom, the diagnosis is incomplete, not the execution.**
+
+### The hull is not in the projection the cradle was drawn in
+
+Measured off the bare master's own silhouette:
+
+| Hull top edge | Measured slope | True 2:1 dimetric | Off by |
+|---|---:|---:|---:|
+| **left** | **−0.179** | −0.500 | ⛔ **64%** |
+| right | +0.305 | +0.500 | 39% |
+
+★★ **This machine is a GENERATED render.** SDXL painted a *plausible-looking* three-quarter view,
+not a mathematically correct dimetric one — and it is **asymmetric**, the left edge far shallower
+than the right. `draw_cargo_cradle.py` drew a perfect **symmetric 2:1 rhombus**.
+
+⇒ **The crate was in one projection and the machine it sits on was in another.** The eye reads that
+immediately and cannot name it, which is precisely what "looks off" means. **No amount of tone,
+occlusion, rim lighting or mounting hardware can fix a projection mismatch** — which is exactly why
+S8-20 corrected four real defects and moved the needle only slightly.
+
+### The fix — measure the render, don't assume the grid
+
+`measure_projection()` fits the hull's actual top-edge slopes from its alpha and feeds them to the
+face builder, so the cradle is constructed in **the machine's own perspective**. ★ It re-measures
+every run, so a re-rolled master carries its own geometry automatically — nothing to keep in sync.
+
+★ **This is the same principle the file already stated for colour** and did not apply to shape: *the
+brief describes what was ASKED for; the render is what EXISTS; the sprite must agree with the
+render.* The palette note learned it in S8-16. Geometry took until S8-21.
+
+⚠ **Guarded**: a degenerate or inverted fit falls back to true dimetric rather than shearing the box
+into a mess.
+
+### ✅ And it is flatter, which pays back the height
+
+Following the hull's shallower left axis makes the cradle sit lower. The sprite is **148 px** —
+against 157 as originally shipped and 154 after S8-20. ★ **The cradle now costs 3 px of height
+instead of 12**, so most of what it took from S8-15's user-requested "shorter and bulkier" is back.
+
+Accent 34.2% / 34.4%, floor OK, spread 1.83×. Suite 1307/1307.

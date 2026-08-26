@@ -65,25 +65,97 @@ ACCENT_SHADE = (0xC4, 0x42, 0x1F)  # near-right rim, away from it
 INK = (0x22, 0x26, 0x30)         # outline
 
 
+def measure_projection(master: Image.Image,
+                       span: int = 260) -> tuple[float, float]:
+    """The hull's ACTUAL top-edge slopes, left and right of its apex.
+
+    ⛔⛔ THE REASON THE CRADLE KEPT LOOKING WRONG (S8-21). This machine is a
+    GENERATED render, and SDXL painted a *plausible* three-quarter view, not a
+    mathematically correct 2:1 dimetric one. Measured on the shipped master, the
+    hull's top-left edge runs at slope -0.18 where a true iso edge would be -0.50
+    — 64% off — and it is ASYMMETRIC, the right edge sitting at +0.44.
+
+    Drawing the cradle as a perfect symmetric 2:1 rhombus therefore glued an object
+    in ONE projection onto a machine in ANOTHER. The eye reads that instantly and
+    cannot name it, which is exactly the "looks off" report. ★★ No amount of tone,
+    occlusion or mounting hardware can fix a projection mismatch — S8-20 fixed four
+    real defects and the crate still looked wrong, because none of them were this.
+
+    ⇒ Measure the render and match it. Same principle the palette note above already
+    states for colour: the brief describes what was ASKED for, the render is what
+    EXISTS, and the sprite has to agree with the render.
+    """
+    import numpy as np
+
+    alpha = np.array(master)[:, :, 3] > 60
+    h, w = alpha.shape
+    top = []
+    for x in range(w):
+        col = np.nonzero(alpha[:, x])[0]
+        if len(col):
+            top.append((x, col[0]))
+    if len(top) < 60:
+        return -0.5, 0.5
+    top = np.array(top, dtype=float)
+    apex_x = top[int(np.argmin(top[:, 1])), 0]
+
+    def fit(lo: float, hi: float, fallback: float) -> float:
+        seg = top[(top[:, 0] > lo) & (top[:, 0] < hi)]
+        if len(seg) < 30:
+            return fallback
+        return float(np.polyfit(seg[:, 0], seg[:, 1], 1)[0])
+
+    left = fit(apex_x - span, apex_x - 40, -0.5)
+    right = fit(apex_x + 40, apex_x + span, 0.5)
+    # Guard against a degenerate fit on an odd master — a flat or inverted edge
+    # would produce a sheared mess, so fall back to true dimetric.
+    if not (-1.2 < left < -0.03) or not (0.03 < right < 1.2):
+        return -0.5, 0.5
+    return left, right
+
+
+def _face(cx: float, cy: float, w: float,
+          sl: float = -0.5, sr: float = 0.5) -> list[tuple[float, float]]:
+    """Top face as a parallelogram in the HULL's projection, centred on (cx, cy).
+
+    Returns [N, E, S, W]. With sl=-0.5, sr=+0.5 this is the old symmetric 2:1
+    rhombus exactly, so the default behaviour is unchanged.
+    """
+    hw = w / 2.0
+    # Edge vectors along the machine's two apparent ground axes.
+    ex, ey = hw, hw * sr           # apex -> E
+    wx, wy = -hw, -hw * sl         # apex -> W  (sl is negative going left-to-right)
+    n = (cx - (ex + wx) / 2.0, cy - (ey + wy) / 2.0)
+    e = (n[0] + ex, n[1] + ey)
+    w_ = (n[0] + wx, n[1] + wy)
+    s = (n[0] + ex + wx, n[1] + ey + wy)
+    return [n, e, s, w_]
+
+
 def _rhombus(cx: float, cy: float, w: float) -> list[tuple[float, float]]:
-    """2:1 dimetric rhombus centred on (cx, cy), `w` wide and w/2 tall."""
-    hw, hh = w / 2.0, w / 4.0
-    return [(cx, cy - hh), (cx + hw, cy), (cx, cy + hh), (cx - hw, cy)]
+    """True 2:1 dimetric rhombus — kept for callers that want exact iso."""
+    return _face(cx, cy, w, -0.5, 0.5)
 
 
 def draw_cradle(canvas: Image.Image, cx: float, cy: float, width: float,
-                height: float, wall: float) -> None:
-    """Paint an open-topped iso box whose RIM centre is (cx, cy)."""
+                height: float, wall: float,
+                sl: float = -0.5, sr: float = 0.5) -> None:
+    """Paint an open-topped box whose RIM centre is (cx, cy).
+
+    ★ `sl`/`sr` are the HULL'S measured top-edge slopes, so the box sits in the same
+    projection as the machine rather than in textbook dimetric. See
+    [func]measure_projection[/func] — this is the fix for "the crate looks off".
+    """
     d = ImageDraw.Draw(canvas)
-    outer = _rhombus(cx, cy, width)
-    inner = _rhombus(cx, cy, width - wall * 2)
+    outer = _face(cx, cy, width, sl, sr)
+    inner = _face(cx, cy, width - wall * 2, sl, sr)
 
     n, e, s, w = outer
     _, ie, is_, iw = inner
 
     # --- inner well: floor + the two far inner walls, so the opening has depth --
     floor_depth = height * 0.55
-    floor = _rhombus(cx, cy + floor_depth, width - wall * 2)
+    floor = _face(cx, cy + floor_depth, width - wall * 2, sl, sr)
     d.polygon([iw, (iw[0], iw[1] + floor_depth), (floor[2][0], floor[2][1]),
                is_], fill=WELL_DARK)
     d.polygon([ie, (ie[0], ie[1] + floor_depth), (floor[2][0], floor[2][1]),
@@ -91,7 +163,7 @@ def draw_cradle(canvas: Image.Image, cx: float, cy: float, width: float,
     d.polygon(floor, fill=WELL_DARK)
     # the near inner faces (behind the rim) — darkest, they never catch light
     d.polygon([iw, inner[0], ie, (ie[0], ie[1] + floor_depth * 0.5),
-               (cx, cy - _rhombus(0, 0, width - wall * 2)[0][1] * -1 + floor_depth * 0.5),
+               (cx, cy - _face(0, 0, width - wall * 2, sl, sr)[0][1] * -1 + floor_depth * 0.5),
                (iw[0], iw[1] + floor_depth * 0.5)], fill=WELL_DARK)
 
     # --- outer side faces, extruded straight down --------------------------
@@ -128,7 +200,7 @@ def draw_cradle(canvas: Image.Image, cx: float, cy: float, width: float,
 
 
 def draw_mounts(canvas: Image.Image, cx: float, cy: float, width: float,
-                height: float) -> None:
+                height: float, sl: float = -0.5, sr: float = 0.5) -> None:
     """Chunky brackets tying the cradle's corners down onto the hull.
 
     ★ THE DECISIVE 'ATTACHED' CUE. Occlusion alone says an object is RESTING on a
@@ -143,7 +215,7 @@ def draw_mounts(canvas: Image.Image, cx: float, cy: float, width: float,
     floating silhouette.
     """
     d = ImageDraw.Draw(canvas)
-    n, e, s, w = _rhombus(cx, cy, width)
+    n, e, s, w = _face(cx, cy, width, sl, sr)
     leg = height * 1.05
     thick = width * 0.055
     for (px_, py_), face in ((w, PLATE_MID), (e, PLATE_DARK), (s, PLATE_DARK)):
@@ -239,6 +311,12 @@ def main() -> None:
     canvas = Image.new("RGBA", (mw, mh + pad), (0, 0, 0, 0))
     canvas.alpha_composite(master, (0, pad))
 
+    # ★ Measure the machine's own projection BEFORE the cradle goes on, from the
+    # bare master — the whole point is to match what the generator actually painted.
+    sl, sr = measure_projection(master)
+    print(f"  hull projection: left {sl:+.3f}, right {sr:+.3f} "
+          f"(true dimetric is -0.500/+0.500)")
+
     big = canvas.resize((canvas.width * SS, canvas.height * SS), Image.NEAREST)
     layer = Image.new("RGBA", big.size, (0, 0, 0, 0))
     # Brackets first — the box is drawn over them so they run underneath it.
@@ -248,6 +326,7 @@ def main() -> None:
         cy=args.cy * (mh + pad) * SS,
         width=args.width * mw * SS,
         height=args.height * mh * SS,
+        sl=sl, sr=sr,
     )
     draw_cradle(
         layer,
@@ -256,6 +335,7 @@ def main() -> None:
         width=args.width * mw * SS,
         height=args.height * mh * SS,
         wall=args.wall * mw * SS,
+        sl=sl, sr=sr,
     )
     # ★ Contact shading BEFORE the cradle goes down: darken the hull in a band
     # under the cradle's footprint. Without it the box reads as pasted on — a
