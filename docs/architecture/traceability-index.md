@@ -99,3 +99,15 @@ gaps):
 None — registry `version: 3`. No TR-ID has been revised, deprecated, or superseded. The v3 bump
 re-pointed 7 `adr:` fields (baseprod-002/003/005/008 → ADR-0017; research-003/004/005 → ADR-0018);
 no IDs were renumbered.
+
+**2026-08-26 — CR-4 structural/situational clarification: still none, and that is the finding.**
+`/propagate-design-change` ran on `command-action-interface.md` CR-4 after S8-10 changed which
+disabled verbs render (`change-impact-2026-08-26-action-menu-cr4.md`). **0 of 18 ADRs and 0 of 24
+`TR-cmdui-*` were affected** — the structural filter lives in the *view*
+(`ActionMenu._is_inapplicable`), while ADR-0015's `menu_model` still returns `{verb, enabled,
+reason}` for every verb, so the architectural contract never moved. ⚠ The reason nothing traced is
+that **the disabled-vs-hidden rule was never encoded as a TR** — it existed only as GDD prose, which
+is how a dead "Produce — not a producer" row shipped on every unit and survived a full art sprint
+and two spec reviews. Deliberately still not given a TR (it is a presentation rule with no
+architectural consequence), but recorded: *the rules most likely to rot quietly are the ones no
+downstream artifact depends on.*
