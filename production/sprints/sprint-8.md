@@ -102,8 +102,9 @@ New Skirmish from the main menu. ⚠ If the binary is stale, rebuild:
 ★ **This section is the trade the Definition of Done asks for, and it is written after the fact
 rather than before.** Eight stories landed that the plan did not contain. The DoD's own rule —
 *"if 3 unplanned stories land, the next action is `/sprint-plan`"* — was passed on the third and
-not acted on until the eighth. **Recording it here does not close that; `/sprint-plan` still owes
-a decision.** Sprints 6 and 7 broke the same rule, which is why it was written down.
+not acted on until the eighth. ✅ **`/sprint-plan update` has since run** (2026-08-26): capacity
+re-baselined below, and an **intake rule** adopted so the next find is routed rather than absorbed
+by default. Sprints 6 and 7 broke the same rule, which is why it was written down.
 
 ### Where it came from
 
@@ -122,10 +123,11 @@ silently, and the sprint file said something untrue for six merges.
 | ✅ **S8-15** | A shorter, bulkier Builder | technical-artist | 0.5 | `cc3b81a` | User feedback on the shipped look. ★ **The lever is crouch, not scale** — every wording that shrinks the legs makes SDXL delete them |
 | ✅ **S8-16** | A cargo cradle you can actually see | technical-artist | 0.5 | `f168832` | User asked for the cradle to read. Two further generation rounds failed **structurally** — prompt weight is finite — so it is authored geometry composited on the approved master, the same call ASSET-006/007 made for terrain |
 | ✅ **S8-17** | An opponent that actually plays | ai-programmer | 1.0 | `31a4cd6` | ⛔⛔ **The AI was demolishing everything it built.** Produce a Builder → spend it on a Barracks → cancel the Barracks for the refund → repeat, every turn. It ended matches owning nothing but its HQ with 6,000+ Credits banked, **and the player was facing an empty board** |
+| ✅ **S8-18** | The sprint file tells the truth | producer | 0.25 | `b9de7e8` | This section, and the `/sprint-plan update` that re-baselined it. The plan recorded none of S8-10…S8-17 for six merges, so for most of the sprint it described a sprint that was not happening |
 
-**Absorbed: 5.75 days.** Committed was 4.75 against ~8 available; actual is **~10.5 against ~8**.
-★ The critical path did not slip because of it — S8-01 is gated on the user, not on capacity —
-but the sprint is over its box and the plan never said so.
+**Absorbed: 6.0 days** (5.75 + S8-18's 0.25). Planned was 4.75 against ~8 available; actual is
+**~10.75 against ~8**. ★ The critical path did not slip because of it — S8-01 is gated on the
+user, not on capacity — but the sprint is over its box and the plan never said so.
 
 ### ★★ What S8-17 says about the test suite
 
@@ -162,16 +164,62 @@ the sprint's centre; **the answer would simply not have been about this game.**
 
 ## Capacity
 
+★ **Re-baselined 2026-08-26** via `/sprint-plan update`, after eight unplanned stories landed.
+**Nothing is cut and the sprint goal is unchanged** — the overage is accepted as-is (user's call).
+
 - Total days: 10 · Buffer (20%): 2 · **Available: ~8**
 - **Planned: 4.75** (must 2.75 + should 2.0). ★ Deliberately light: **the critical path is
   gated on one hour of the user's time**, and loading the sprint with agent work is how the
   validation half rolled over six times before.
-- ⚠ **Actual: ~10.5** — 4.75 planned + **5.75 unplanned** (see the section above). The sprint is
-  **~2.5 days over its box**, and the buffer is spent.
-  ★ **The critical path did not slip for it**: S8-01 is gated on the user's hour, not on capacity,
-  and every unplanned story came out of the user playing. ⚠ **But the light plan was the
-  mitigation** for the six-sprint roll-over, and it was quietly abandoned while the roll-over it
-  guarded against is still live.
+- **Unplanned absorbed: 6.0** (S8-10…S8-18, see the section above)
+- ⚠ **Actual: ~10.75 against ~8. About 2.75 days over the box, and the buffer is spent.**
+
+### ★★ Why over-box is the right answer here rather than a cut
+
+**Capacity was never the binding constraint.** S8-01 is gated on **one hour of the user's time**,
+not on days available — so the critical path could not have gone faster under a lighter plan, and
+did not go slower under a heavier one. Cutting scope now would buy back a resource nothing is
+waiting on.
+
+⚠ **Note what that admits: the day estimates do not bind anything in this project.** They are a
+record of effort spent, not a budget anyone enforced. Three sprints running have exceeded them
+without the excess being noticed at the time. ★ **Treat them as telemetry, not as a gate** — and
+do not quote "available days" as though it constrains a decision.
+
+⛔ **What the overage DID cost is real, and it is not capacity.** The deliberately-light plan was
+the *stated mitigation* for a play session that had already rolled six times. It was abandoned
+without anyone deciding to abandon it — and **the session has now rolled a seventh.** The lost
+thing was the mitigation, not the days.
+
+## ★★ Intake rule while the verdict is pending — decided 2026-08-26
+
+**The question to ask of anything found from here on: does it stop the play session from measuring
+what it is meant to measure?**
+
+| | Then | This sprint's eight, sorted |
+|---|---|---|
+| **Yes — it blocks the measurement** | **Fix it now**, and record it as unplanned above | **S8-12** — the keyboard could not choose a verb *at all*, and the Build picker was wired to nothing · **S8-17** — the AI was demolishing everything it built, so the player faced an empty board · **S8-10** — found mid-session |
+| **No** | ⇒ **`post-gate-backlog.md`**, unscheduled, with enough context to be picked up cold | **S8-13** — a core economy change · **S8-14/15/16** — art · **S8-11** — propagation · **S8-18** — bookkeeping |
+
+★ **This is Sprint 5's retro rule with one exception carved out, not a new rule.** The routing
+mechanism and its destination have existed since 2026-08-21. ⛔ **Nothing was routed to it this
+sprint — because nobody asked the question**, not because anyone decided against it.
+
+⚠ **The strict version was considered and rejected.** Routing *everything* would have left the AI
+demolishing its own buildings **during the session that decides the project**, and left the
+keyboard path dead under a question about how the game feels to play. A measurement instrument
+that is broken is not a scope question.
+
+### ⚠ Applied honestly, five of the eight should have gone to the backlog
+
+Including **S8-13, the largest single item in the sprint.** ★ **It was the user's call and is not
+being reversed** — the Build-by-Builder rework is a better game and it stays. The point is
+narrower and worth keeping: **the call was never framed as a routing decision.** It was framed as
+"should Build work this way", which has an obvious answer, instead of "should this happen *now*,
+before the premise it changes has been tested" — which does not.
+
+★★ **That is the whole finding of this re-plan.** 6.0 unplanned days entered a sprint that had
+budgeted 4.75 in total, and **no individual decision along the way was wrong.**
 
 ## ★ Carried and explicitly NOT in this sprint
 
@@ -191,7 +239,7 @@ the sprint's centre; **the answer would simply not have been about this game.**
 | **Analysis D comes back negative** | ★ Medium | **Very high** | It would invalidate the Sprint 4 pivot. ⚠ That is the *point* — better found now than after wave 2 is built on it. A PIVOT verdict is a legitimate outcome and the KILL clause is still not engaged |
 | **The verdict is PROCEED but the gate says CONCERNS** | Medium | Low | Expected and fine. The gate names blockers; they become Sprint 9 |
 | ⚠ **The build moved under the pending session** — S8-12/13/17 changed the keyboard path, what Build *is*, and whether the AI plays at all | ✅ **Occurred** | Medium | ★ **S8-01 answers must come from the current binary.** Rebuild before playing. The six questions are unchanged and Analysis D is still the sprint's centre — but Build now costs a whole unit rather than a HUD click, so an answer given on the old build would not have been about this game |
-| ⚠ **Unplanned work displaces the light-plan mitigation** | ✅ **Occurred** — 8 stories, 5.75 days | Medium | ⛔ Recorded above; **`/sprint-plan` still owed.** ★ Note the work was *not* discretionary — every story traces to the user playing, which is the sprint's own critical path doing its job |
+| ⚠ **Unplanned work displaces the light-plan mitigation** | ✅ **Occurred** — 9 stories, 6.0 days | Medium | ✅ **Settled 2026-08-26**: capacity re-baselined, overage accepted, **intake rule** adopted (above). ★ The work was *not* discretionary — every story traces to the user playing, which is this sprint's own critical path doing its job. ⛔ **But the mitigation it displaced is still displaced** — the session has rolled a seventh time |
 
 ## Definition of Done
 
@@ -203,8 +251,11 @@ the sprint's centre; **the answer would simply not have been about this game.**
 - [ ] Full suite green, slice boots clean, exported binary boots clean
 - [x] ◐ No unplanned work absorbed without a recorded trade — ★ **the rule Sprints 6 and 7 both
       broke. Mechanically: if 3 unplanned stories land, the next action is `/sprint-plan`.**
-      ⚠ **BROKEN, then recorded late.** Eight stories landed (S8-10…S8-17); the threshold was
-      passed on the third and the trade written at the eighth. The record now exists —
-      ⛔ **`/sprint-plan` does not.** Third sprint running.
+      ⚠ **BROKEN, then recorded late, then settled.** Eight stories landed (S8-10…S8-17); the
+      threshold was passed on the third and the trade written at the eighth (S8-18).
+      ✅ **`/sprint-plan update` run 2026-08-26** — capacity re-baselined, overage accepted, and
+      an **intake rule** adopted so the next find is routed rather than absorbed by default.
+      ★ Third sprint running that broke this; **the first that ended with a rule instead of an
+      apology.**
 - [ ] ⛔ **S8-01 re-run against the CURRENT build** — the game the user played is not the game that
       exists now (S8-12 keyboard, S8-13 Build-by-Builder, S8-17 an AI that plays)

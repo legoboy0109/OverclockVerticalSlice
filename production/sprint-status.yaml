@@ -23,6 +23,38 @@
 # ★ DELIBERATELY LIGHT COMMITMENT (4.75d of ~8 available). Loading the sprint with agent work
 #   is how the validation half rolled over six times before.
 #
+# ⚠⚠ RE-BASELINED 2026-08-26 (/sprint-plan update). NINE unplanned stories landed (s8-10..s8-18,
+#   6.0d), so ACTUAL is ~10.75d against ~8. Overage ACCEPTED, nothing cut, goal unchanged.
+#   ★ Capacity was never the binding constraint -- s8-01 is gated on ONE HOUR OF THE USER'S TIME,
+#     not on days. The day estimates are TELEMETRY, NOT A GATE; three sprints running have blown
+#     them without anyone noticing at the time. Do not quote "available days" as a constraint.
+#   ⛔ What the overage cost is NOT capacity: the deliberately-light plan WAS the mitigation for a
+#     session that had already rolled six times. It was abandoned without a decision, and the
+#     session has now rolled a SEVENTH.
+#
+# ★★ INTAKE RULE WHILE THE VERDICT IS PENDING -- decided 2026-08-26. ASK OF ANYTHING FOUND:
+#   "DOES IT STOP THE PLAY SESSION FROM MEASURING WHAT IT IS MEANT TO MEASURE?"
+#     YES -> fix it now, record it as unplanned.  (s8-12 keyboard dead / s8-17 AI doing nothing)
+#     NO  -> route to post-gate-backlog.md, unscheduled.  (s8-13 economy / s8-14/15/16 art)
+#   ★ This is SPRINT 5'S RETRO RULE with one exception carved out, not a new rule. The mechanism
+#     and its destination have existed since 2026-08-21; nothing was routed to it this sprint
+#     BECAUSE NOBODY ASKED THE QUESTION, not because anyone decided against it.
+#   ⚠ The STRICT version was considered and REJECTED: it would have left the AI demolishing its
+#     own buildings DURING THE SESSION THAT DECIDES THE PROJECT. A broken instrument is not a
+#     scope question.
+#   ⚠ Applied honestly, FIVE OF THE NINE should have gone to the backlog -- including s8-13, the
+#     largest. ★ It was the user's call, it is NOT being reversed, and the game is better for it.
+#     The point is narrower: THE CALL WAS NEVER FRAMED AS A ROUTING DECISION. It was framed as
+#     "should Build work this way" (obvious answer) instead of "should this happen NOW, before the
+#     premise it changes has been tested" (not obvious). No individual decision was wrong, and
+#     6.0 unplanned days entered a sprint that budgeted 4.75 in total.
+#
+# ⛔⛔ s8-01 MUST BE ANSWERED ON THE CURRENT BUILD. s8-12 (keyboard), s8-13 (Build is a Builder's
+#   verb, and the Builder is CONSUMED) and s8-17 (the AI actually plays) changed the game the six
+#   questions are ABOUT. ANALYSIS D IS AFFECTED MOST -- Build is the economic action whose FEEL D
+#   asks about, and it now costs a WHOLE UNIT rather than a HUD click. The question is unchanged;
+#   an answer from the old build would not have been about this game. Binary rebuilt 2026-08-26.
+#
 # ⛔ NOT IN THIS SPRINT: wave 2 content and faction content -- designed, waiting, and they must
 #   KEEP waiting until a human has tested the premise. First-move compensation was ACCEPTED
 #   2026-08-25 (s7-18) with revisit triggers in post-gate-backlog.md section 7.
@@ -32,7 +64,7 @@ goal: "Get a fresh PROCEED/PIVOT/KILL verdict on the vertical slice and re-run t
 start: "2026-08-26"
 end: "2026-09-09"
 generated: "2026-08-25"
-updated: "2026-08-25"
+updated: "2026-08-26"
 
 stories:
   - id: "s8-00"
@@ -251,11 +283,320 @@ stories:
     name: "Verify Redot/Godot dual-focus parity against the exported binary"
     file: "design/ux/action-menu.md"
     priority: nice-to-have
-    status: backlog
+    status: done
     owner: "godot-specialist"
     estimate_days: 0.25
     blocker: ""
-    completed: ""
+    completed: "2026-08-26"
+    # ✅ DONE 2026-08-26 -- PASS (0e2429c). tools/CaptureDualFocus.tscn, 8/8 checks, deterministic
+    # x3. Closes the ux-review's advisory 4 and GDD OQ-6.
+    # ⚠ OPENED action-menu.md OQ-7: hover is close to invisible on its own (~3% lift; `flat`
+    #   suppresses the hover StyleBox). A DESIGN CALL, left open.
+    # Report: production/playtests/s8-09-dual-focus-2026-08-26.md
     # action-menu.md's last advisory — mouse focus and keyboard focus are separate subsystems and
     # can both be live; the spec ASSUMES Redot 26.2 fork parity (GDD OQ-6). Cheap now that s7-05
     # produced a real binary.
+
+  # ==========================================================================
+  # UNPLANNED — absorbed 2026-08-26, recorded late (s8-18), settled by
+  # /sprint-plan update. See sprint-8.md "Unplanned work absorbed".
+  # ★ ALL NINE TRACE TO ONE ROOT: THE USER PLAYED THE GAME. The first real
+  #   session surfaced defects a headless suite structurally cannot see, and
+  #   each fix exposed the next. That is the critical path doing its job —
+  #   ⚠ the problem was the SILENCE, not the work.
+  # ==========================================================================
+
+  - id: "s8-10"
+    name: "Playtest fixes from the first real session"
+    file: "production/sprints/sprint-8.md"
+    priority: must-have
+    status: done
+    owner: "gameplay-programmer"
+    estimate_days: 0.5
+    blocker: ""
+    completed: "2026-08-26"
+    # ✅ 69a6447. Three defects, all found by a person playing:
+    # 1. COVER FLOATED HALF A TILE — the exact s6-29 structures defect again. Bottom-centre
+    #    anchoring at the tile CENTRE is right for a unit (feet = bottom of art) and wrong for
+    #    anything on a base diamond. Fixed via COVER_PROP_GROUND_INSET_PX, derived from tile
+    #    metrics, applied to Sprite2D.offset and NEVER position (position is the Y-sort key AND
+    #    the pick_regions anchor). Test ties it to the structure inset so they cannot drift.
+    # 2. MENU SHOWED INAPPLICABLE VERBS — NOT_A_PRODUCER missing from _is_inapplicable(). Every
+    #    ordinary unit carried a dead "Produce — not a producer" row.
+    #    ★★ THE LINE IS STRUCTURAL vs SITUATIONAL AND THAT LINE IS THE DESIGN (user's call):
+    #    "can never apply to this kind of thing" -> HIDDEN; "needs AP / no targets / already
+    #    attacked" -> STAYS DIMMED WITH ITS REASON, because that row is what teaches the rule.
+    # 3. ROWS PRINTED PER-VERB KEYS for verbs you activate by selecting them — two instructions
+    #    for one outcome. Hints removed; ★ bindings deliberately KEPT (live, rebindable, fast path).
+    # ⚠ Two existing tests asserted the OLD behaviour and were REWRITTEN, NOT DELETED — one had
+    #   explicitly required the price to JOIN the shortcut rather than replace it.
+
+  - id: "s8-11"
+    name: "CR-4 propagation — /propagate-design-change"
+    file: "docs/architecture/change-impact-2026-08-26-action-menu-cr4.md"
+    priority: should-have
+    status: done
+    owner: "producer"
+    estimate_days: 0.25
+    blocker: ""
+    completed: "2026-08-26"
+    # ✅ 4dbc76c. 0 of 18 ADRs, 0 of 24 TR-cmdui-* affected. Lean mode, so the TD gate was skipped
+    # by the skill's own rule.
+    # ★★ THE PASS RAN BACKWARDS AND THAT WAS THE FINDING. The GDD had not been touched since
+    #   s6-09 — the decision had moved in the UX SPEC AND THE CODE, and the GDD was the LAGGARD.
+    #   Propagation normally flows GDD -> ADR -> code; here it flowed the other way and the
+    #   "impact analysis" was really a catch-up. Worth watching for again.
+
+  - id: "s8-12"
+    name: "The confirm key, and a Build button wired to nothing"
+    file: "design/ux/action-menu.md"
+    priority: must-have
+    status: done
+    owner: "ui-programmer"
+    estimate_days: 0.5
+    blocker: ""
+    completed: "2026-08-26"
+    # ✅ 6ae29d3. BLOCKED THE MEASUREMENT — a keyboard player was playing a broken game.
+    # 1. KEYBOARD COULD NOT CHOOSE A VERB AT ALL. Godot's Button does not accept the PRESS half of
+    #    a keyboard activation — it arms and waits for the release. So the press ALSO reached
+    #    _unhandled_input, which treated it as the board's confirm, re-selected the entity under
+    #    the cursor, and REBUILT THE MENU OUT FROM UNDER THE ROW THAT WAS MID-PRESS. The release
+    #    then landed on a fresh row that had never seen a press, so `pressed` never fired.
+    #    ⚠ Invisible unless the cursor stood on a selectable owned entity — WHICH IS THE NORMAL
+    #      CASE, because selecting one is how the menu got opened. On an empty tile the re-select
+    #      failed, nothing rebuilt, and the row worked. Same keypress, opposite outcome, which is
+    #      exactly how it was reported. ui_accept now belongs to the menu whenever a row has focus.
+    # 2. TEARING DOWN A FOCUSED ROW LEFT THE BOARD DEAF. Rebuilding the plate freed rows still
+    #    holding keyboard focus, leaving the viewport routing key events at a DANGLING POINTER and
+    #    marking them handled — so _unhandled_input stopped being called. Focus is now released
+    #    before the rows are destroyed, and before the fade-out rather than at the end of it.
+    # 3. ⛔ BUILD HAD NEVER WORKED FROM THE UI. build_type_chosen was emitted INTO A VOID.
+    #    begin_build_preview() had no production caller; THE TESTS CALLED IT DIRECTLY, which is
+    #    why the suite stayed green while the only path a player can take was dead.
+    #    ⚠ THIRD DEAD HOOK FOUND THIS WAY (after board_cursor_cycle, notify_action_applied).
+    # ★ Tests deliberately push REAL InputEventKey through the viewport and press REAL picker rows,
+    #   because every method in both chains already worked WHEN CALLED BY HAND. action-menu.md AC-9
+    #   ("complete a full move using only the keyboard") had NO TEST AT ALL — it does now, and it
+    #   fails without the fix. Suite 1290/1290.
+
+  - id: "s8-13"
+    name: "★★ Build belongs to a Builder, and the Builder is spent"
+    file: "design/gdd/command-ui.md"
+    priority: must-have
+    status: done
+    owner: "gameplay-programmer"
+    estimate_days: 1.5
+    blocker: ""
+    completed: "2026-08-26"
+    # ✅ 5b28d99. USER DECISION 2026-08-25. Build was a PLAYER-level command (CR-5): any tile
+    # beside any entity you owned was legal, no unit involved, entry point a persistent HUD button.
+    # It is now A VERB OF A SELECTED BUILDER UNIT.
+    # ⚠ BY THE INTAKE RULE ADOPTED 2026-08-26 THIS SHOULD HAVE GONE TO post-gate-backlog.md —
+    #   it did not block the measurement, and it CHANGES THE ECONOMY THE PENDING VERDICT IS ABOUT.
+    #   ★ NOT BEING REVERSED (user's call, and the game is better for it). Recorded because the
+    #     call was framed as "should Build work this way" rather than "should this happen NOW".
+    # WHAT CHANGED:
+    # - New Builder unit. HQ produces ONLY Builders; the Scout moved to the Barracks, now the SOLE
+    #   source of every fighting unit. The opening is therefore FIXED: make a Builder, walk it out,
+    #   spend it on a Barracks, THEN field an army.
+    # - Build tiles are neighbours of the ACTING Builder, never of the player's entities at large
+    #   (else you could raise a building beside a builder standing somewhere else).
+    #   legal_build_tiles_for(builder) is the rule; the player-wide union survives ONLY as "could
+    #   this player build anywhere?" for menu greying and the AI's affordability gate, and MUST
+    #   NOT validate a commit.
+    # - ★ THE BUILDER IS CONSUMED by what it raises, so its cost is a PERMANENT SURCHARGE ON EVERY
+    #   BUILDING rather than the price of a unit you keep. Destroy happens LAST, after the
+    #   structure is placed, so a mid-apply failure cannot leave a player who has paid with no
+    #   Builder and no building. Its destruction events are APPENDED, not discarded — otherwise
+    #   the sprite stands beside the building it became and the population counter never learns.
+    # - Builders are DEFENCELESS (attack_range 0 yields no legal targets at all), so they need
+    #   escorting. The trait is the data flag UnitTypeDef.can_build, NEVER a type comparison, so a
+    #   second builder-capable unit is a .tres edit.
+    # - CommandFSM.Verb.BUILD APPENDED (never inserted — existing ordinals preserved). Structural
+    #   vs situational per CR-4: an ordinary unit's Build row is HIDDEN; a Builder that is broke or
+    #   boxed in keeps a VISIBLE DIMMED row naming which, because that row teaches the price.
+    # - HUD Build button REMOVED. A button cannot say WHICH BUILDER it means, and one that picked
+    #   silently would spend the wrong unit. request_build_at_cursor(), cycle_buildable() and
+    #   selected_buildable() deleted with it — all three expressed a Build that no longer exists.
+    # - AI taught to build with Builders. ⚠ Without this it would have SILENTLY STOPPED BUILDING
+    #   and got quietly weaker with no error anywhere.
+    # - CommandFSM.entry_for() added: the menu array is ordered for DISPLAY, and appending BUILD
+    #   broke every caller that indexed it by enum ordinal.
+    # ★ NO SOFT-LOCK: losing every Builder is recoverable (make another); losing the HQ is already
+    #   a decisive defeat, so no living player is ever locked out of building.
+    # ⚠ Tests rewritten, not deleted, wherever a rule genuinely changed — including one INVERTED
+    #   ("a friendly structure alone no longer makes a build tile"), the rule most likely to be
+    #   reintroduced by accident. Suite 1302/1302, 0 orphans.
+
+  - id: "s8-14"
+    name: "The Builder gets a body — and the art guard gets teeth"
+    file: "assets/art/manifest.md"
+    priority: should-have
+    status: done
+    owner: "technical-artist"
+    estimate_days: 1.0
+    blocker: ""
+    completed: "2026-08-26"
+    # ✅ 6b5733e. ASSET-012. The Builder shipped PLAYABLE on 2026-08-25 with NO ART, rendering as
+    # the engine's magenta placeholder.
+    # ⛔⛔ THE GUARD WAS THE REAL BUG. test_every_vs_type_now_has_shipped_art and its glow-mask
+    #   sibling each carried a HAND-WRITTEN LIST of the nine types, so they guarded only what
+    #   somebody had remembered to transcribe. The manifest CLAIMED "a roster addition that
+    #   outruns the art now fails the suite instead of shipping a magenta placeholder onto the
+    #   board". IT DID NOT — the Builder outran the art and the suite stayed green. Both now
+    #   enumerate UnitTypes.ALL / StructureTypes.ALL (added here for that purpose), so a new .tres
+    #   EXTENDS THE GUARD BY ITSELF.
+    #   ★★ A COVERAGE CHECK THAT KEEPS ITS OWN COPY OF THE THING IT COVERS IS NOT A COVERAGE CHECK.
+    # THE ART: hunched four-legged carrier walker (body plan: user's call). Stooped, back-heavy,
+    #   cargo mass slung high, unarmed — the roster's only support unit, and the silhouette has to
+    #   say "not a soldier" BEFORE ANY COLOUR IS READ. Sized by width at 140px, narrower than the
+    #   Scout's 148 so the two four-legged units stay tellable apart.
+    # THREE ROUNDS, TWO MEASURED DEAD ENDS (post-mortem in generation-prompts.md):
+    #   - r1 orange-dominant, would have FAILED the grayscale role test. My prompt said orange
+    #     covered "the whole hull"; the family recipe names the SPECIFIC ACCENT PARTS and says grey
+    #     everywhere else.
+    #   - r2's winner sat on a cast shadow that CANNOT BE LIFTED. Feet and shadow measured at
+    #     IDENTICAL luma (median 104 vs 102) so no threshold separates them; --deshadow punched
+    #     42-45% of the hull out at every strength. Re-rolled shadow-free instead of cleaning
+    #     harder, which is how the Trooper got there too.
+    #   ⚠ The anti-ground wording pulls toward a HOVERING CRAFT — one candidate came out a legless
+    #     flying platform. The legs clause has to hold the line.
+    # ⚠ THE BASE LOOK WAS SELECTED BY ME, NOT USER-APPROVED — every other manifest entry carries an
+    #   explicit sign-off. Recorded as such; RE-ROLL FREELY.
+    # ✅ Both coverage guards verified FAILING before the art landed (naming the exact missing
+    #   files) and passing after. Suite 1302/1302.
+
+  - id: "s8-15"
+    name: "A shorter, bulkier Builder"
+    file: "assets/art/manifest.md"
+    priority: nice-to-have
+    status: done
+    owner: "technical-artist"
+    estimate_days: 0.5
+    blocker: ""
+    completed: "2026-08-26"
+    # ✅ cc3b81a. User feedback on the shipped look: too tall and leggy. Seed 1510903717 (r6_c2),
+    # superseding r3_c2. Full set regenerated: 3 hues x 2 facings x idle+destroyed, plus glow masks.
+    # ★★ THE LEVER IS CROUCH, NOT SCALE — and getting that wrong cost two rounds. Every wording
+    #   that SHRINKS the legs makes SDXL DELETE them: "four VERY SHORT stubby stump legs, tiny legs
+    #   dwarfed by the huge body" produced a LEGLESS SLED and a TRACKED BARGE. Piling on bulk words
+    #   made it worse — the extra length DISPLACED the grey-dominance and four-leg clauses, and r4
+    #   came back orange-dominant, two-legged AND treaded, EVERY EARLIER FIX UNDONE AT ONCE.
+    #   What works: describe the legs at FULL SIZE and BEND them — "bent and folded in a deep
+    #   crouch" + "body hanging low slung between the four legs, belly close to the ground".
+    # ⚠⚠ A BOUNDING-BOX ASPECT RATIO IS NOT A SQUATNESS SCORE. I scored candidates on it and it
+    #   ranked THE LEGLESS SLED TOP (1.24 vs the leggy original's 0.95), because deleting the legs
+    #   is the cheapest way to get wider-than-tall. The shipped version scores 0.97 —
+    #   STATISTICALLY INDISTINGUISHABLE from what it replaces — while looking dramatically bulkier,
+    #   because what actually changed is the BODY-TO-LEG RATIO, which that metric cannot see.
+    # ★ SHADOW LIFTABLE THIS TIME, AND THE MEASUREMENT IS THE REASON: machine median luma 99,
+    #   shadow 117, background 163 — the shadow sits in a BAND BETWEEN them, so a border-seeded
+    #   flood lifts it with 0.0% hull loss. Contrast r2, where feet and shadow measured 104 vs 102.
+    #   MEASURE BEFORE DECLARING IT HOPELESS. A second enclosed-pocket pass handles the patch
+    #   walled in by the legs, which no border flood can reach at any threshold.
+    # ⚠ board_preview.py RE-RUNS cutout(pockets=True) on its input, so it can show artifacts ABSENT
+    #   FROM YOUR MASTER — it showed a shadow slab under a master that was already clean, which
+    #   nearly sent me chasing a non-existent defect. Judge a finished sprite by resampling the
+    #   master to its shipped width and compositing on the stage colour, which is what the game does.
+    # Suite 1302/1302.
+
+  - id: "s8-16"
+    name: "A cargo cradle you can actually see"
+    file: "assets/art/manifest.md"
+    priority: nice-to-have
+    status: done
+    owner: "technical-artist"
+    estimate_days: 0.5
+    blocker: ""
+    completed: "2026-08-26"
+    # ✅ f168832. User asked for the cradle to read clearly on the Builder's back.
+    # ⛔ TWO MORE GENERATION ROUNDS FAILED, AND THE FAILURE IS STRUCTURAL. r7 described the cradle
+    #   as open skeletal frame rails, r8 as "a big separate box like a skip on a truck". Neither
+    #   landed, because PROMPT WEIGHT IS FINITE: describing the cradle strongly enough to appear
+    #   STEALS WEIGHT from the clauses holding the body together, and every promising candidate
+    #   came back with the cast shadow, the orange dominance or the long legs RESTORED.
+    # ⇒ The cradle is AUTHORED GEOMETRY (draw_cargo_cradle.py) composited onto the approved master.
+    #   ★ Same call ASSET-006/007 made for the terrain tiles: WHEN THE REQUIREMENT IS PRECISE, A
+    #     DRAW HITS IT BY CONSTRUCTION AND A GENERATOR CANNOT.
+    # THREE THINGS DECIDED THE SHAPE:
+    #   - A BOX, NOT AN OPEN FRAME. The sprite ships 140px wide; rails a few master-pixels thick
+    #     are SUB-PIXEL after the downscale and disappear. What survives a resample is SILHOUETTE,
+    #     so the cradle is a hard mass breaking the top outline, its opening read as a DARK
+    #     INTERIOR rather than thin geometry.
+    #   - PALETTE SAMPLED OFF THE RENDER, NOT THE SPEC. The brief's #6E7C99 is markedly blue; what
+    #     the generator actually painted is NEAR-NEUTRAL (median 110,111,111). Mixed at the nominal
+    #     value the cradle read as A BOLT-ON FROM ANOTHER MACHINE.
+    #   - CONTACT SHADING IS NOT OPTIONAL. A flat box with no occlusion where it meets the hull
+    #     reads as a STICKER. The first draft looked exactly like one.
+    # ★ The rim is painted in the SHARED ACCENT CONSTANT on purpose — that is what recolor.py keys
+    #   on, and it is why the cradle turns cyan/silver with the rest of the body instead of staying
+    #   orange in every faction. Verified in all three hues.
+    # ⚠ COST: the sprite grew 145 -> 157px tall, giving back some of s8-15's "shorter". Sunk as
+    #   deep as it can go while still reading as CARRIED. A visible cradle and a minimal silhouette
+    #   are OPPOSED; this is the chosen point on that trade, and it is CHEAP TO MOVE.
+    # Suite 1302/1302.
+
+  - id: "s8-17"
+    name: "⛔⛔ An opponent that actually plays"
+    file: "design/gdd/ai-opponent.md"
+    priority: must-have
+    status: done
+    owner: "ai-programmer"
+    estimate_days: 1.0
+    blocker: ""
+    completed: "2026-08-26"
+    # ✅ 31a4cd6. BLOCKED THE MEASUREMENT — the player was facing an empty board.
+    # THE SYMPTOM: on the real opening board the AI produced a Builder, spent it on a Barracks,
+    # CANCELLED THE BARRACKS FOR THE REFUND, and repeated that EVERY TURN. It ended matches owning
+    # NOTHING BUT ITS HQ with 6,000+ Credits banked.
+    # ⛔⛔ THREE THINGS COMBINED, AND NO UNIT TEST COULD SEE ANY OF THEM:
+    # 1. The cancel-build anti-oscillation gate keyed on `economy_investments` — the economy-CADENCE
+    #    counter. s6-09 CORRECTLY stopped BuildActions counting toward that cadence (since s6-01 the
+    #    only real economy action is RESEARCH), which SILENTLY DISABLED THE GATE: it never
+    #    incremented on a build, so "never cancel what you just built" NEVER FIRED.
+    #    ★★ TWO DIFFERENT QUESTIONS — "how much cadence have I spent?" and "did I just build
+    #    something?" — WERE SHARING ONE VARIABLE, so a CORRECT change to one BROKE the other.
+    #    Separate parameters now.
+    # 2. _cancel_build_value returned RAW CREDITS while every verb it competes with is scored in
+    #    AP-EQUIVALENT. ai-opponent.md AC-22 specifies CANCEL_REFUND_RATE x build_cost x
+    #    CREDIT_TO_AP_RATE; the conversion was MISSING, so a 300-Credit refund outscored any real
+    #    play BY A FACTOR OF 100.
+    #    ⚠⚠ THE UNIT TESTS ASSERTED THE IMPLEMENTATION, so CODE AND TESTS AGREED WITH EACH OTHER
+    #    WHILE BOTH CONTRADICTED THE GDD — a defect a test written FROM THE CODE cannot catch BY
+    #    CONSTRUCTION. Tests rewritten AGAINST THE SPEC.
+    # 3. Even correctly scaled, cancel still won on turns where the AI had NO OTHER CANDIDATE — HQ
+    #    on cooldown, no units, no Builder left. The GDD's "rarely clears PASS_THRESHOLD against a
+    #    concrete positive play" QUIETLY ASSUMES A POSITIVE PLAY EXISTS. Cancel Build is now gated
+    #    on `in_deficit`, this game's crisis state, which makes "a rare safety-valve action, not a
+    #    proactive strategy" TRUE IN CODE rather than merely intended.
+    # ⚠ WHY THE BUILDER REWORK EXPOSED IT: (1) and (2) were LATENT FOR MONTHS. s8-13 COLLAPSED THE
+    #   AI'S OPTION SET — the HQ makes only Builders and a Builder is consumed by what it raises —
+    #   so on alternate turns cancel became its ONLY move. The rework did not cause the bug.
+    # ★★ NEW GATE ASSERTS OUTCOMES, NOT SCORES:
+    #   tests/integration/ai-opponent/ai_plays_a_real_opening_test.gd drives SIX REAL TURNS — the
+    #   AI commits actions, STILL OWNS A STRUCTURE AT THE END OF A TURN (build-then-cancel fails
+    #   this), fields an army, and spends rather than hoards. VERIFIED FAILING WITHOUT THE FIX.
+    #   ⛔ Every existing AI test scored ONE CANDIDATE or drove ONE TURN — WHICH IS EXACTLY WHY A
+    #     WHOLE MATCH OF DOING NOTHING SAILED THROUGH 1,300 GREEN TESTS.
+    # ✅ Verified end to end: the AI now goes HQ -> Builder -> Barracks -> army, holding 4 units by
+    #   round 6. Suite 1307/1307.
+
+  - id: "s8-18"
+    name: "The sprint file tells the truth"
+    file: "production/sprints/sprint-8.md"
+    priority: should-have
+    status: done
+    owner: "producer"
+    estimate_days: 0.25
+    blocker: ""
+    completed: "2026-08-26"
+    # ✅ b9de7e8 + the /sprint-plan update that followed it. The plan listed s8-00..s8-09 and
+    # STOPPED; s8-10..s8-17 were absorbed with no entry anywhere, so FOR SIX MERGES THE PLAN
+    # DESCRIBED A SPRINT THAT WAS NOT HAPPENING.
+    # ADDED: "Unplanned work absorbed" section with per-story rows and merge hashes; capacity
+    # re-baselined; two risks marked Occurred; the s8-01 re-run requirement in the DoD; the
+    # INTAKE RULE (see header). s8-00/05/06/07 marked done. sprint-status.yaml corrected —
+    # s8-09 still read `backlog` despite being done.
+    # ⚠ The DoD rule "if 3 unplanned stories land, the next action is /sprint-plan" was passed on
+    #   the THIRD story and acted on at the EIGHTH. ★ Sprints 6 and 7 broke the same rule; this is
+    #   the FIRST that ended with a rule instead of an apology.
