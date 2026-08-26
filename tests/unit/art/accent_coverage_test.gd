@@ -18,7 +18,28 @@
 extends GdUnitTestSuite
 
 const _ART := "res://assets/art/units"
-const _ARCHETYPES: Array[String] = ["scout", "trooper", "heavy", "sniper"]
+
+## Every unit archetype in the LIVE roster, as art-path tokens.
+##
+## ⚠⚠ THIS USED TO BE A HAND-WRITTEN LIST — [code]["scout", "trooper", "heavy", "sniper"][/code] —
+## and the Builder shipped on 2026-08-25 carrying accent on 22.8% of its body, [b]7 points under
+## the floor below[/b], without ever tripping this gate. It was simply not in the list.
+##
+## ★★ That is EXACTLY the defect S8-14 found and fixed in the two sibling art guards, which had
+## each kept their own copy of the nine types and so let the Builder ship as a magenta placeholder
+## while the suite stayed green. Those two were rewritten to enumerate [constant UnitTypes.ALL];
+## this one — written EARLIER, for the SAME purpose — was not touched, and stayed broken for
+## another four stories.
+## ⇒ [b]Fixing an anti-pattern where you found it is not fixing it.[/b] When a guard keeps its own
+##   copy of the thing it covers, look for its siblings in the same breath.
+##
+## Derived through [method EntitySpriteCatalog.type_token], the SAME call the renderer uses to
+## build a sprite path, so this gate cannot drift from what the game actually loads.
+func _archetypes() -> Array[String]:
+	var out: Array[String] = []
+	for type: UnitTypeDef in UnitTypes.ALL:
+		out.append(EntitySpriteCatalog.type_token(type.display_name))
+	return out
 
 ## Faction tokens that carry OWNERSHIP and must therefore carry hue.
 const _OWNED_FACTIONS: Array[String] = ["rush", "boom"]
@@ -101,7 +122,7 @@ func test_every_owned_faction_sprite_carries_enough_accent_to_read_as_owned() ->
 	# (S5-08 measured the non-hue backup absent roster-wide), so a unit with little saturated area
 	# has little ownership signal no matter how good its ΔE is.
 	var checked: int = 0
-	for archetype: String in _ARCHETYPES:
+	for archetype: String in _archetypes():
 		for faction: String in _OWNED_FACTIONS:
 			var path: String = _sprite_path(archetype, faction)
 			var pct: float = _coverage_pct(path)
@@ -123,7 +144,7 @@ func test_every_owned_faction_sprite_carries_enough_accent_to_read_as_owned() ->
 	# ⚠ Guard the scan itself: a path typo would otherwise make this suite pass vacuously.
 	assert_int(checked).override_failure_message(
 		"Scanned no sprites — the path pattern is wrong and this suite is asserting nothing."
-	).is_equal(_ARCHETYPES.size() * _OWNED_FACTIONS.size())
+	).is_equal(_archetypes().size() * _OWNED_FACTIONS.size())
 
 
 func test_neutral_stays_achromatic() -> void:
@@ -132,7 +153,7 @@ func test_neutral_stays_achromatic() -> void:
 	# ideology". Neutral means UNOWNED, so carrying ownership hue would be the defect here.
 	# ⚠ A first draft of this suite asserted a coverage FLOOR for every faction and would have
 	#   failed correct art. Neutral measured 0.0-0.5% across the roster, which is right.
-	for archetype: String in _ARCHETYPES:
+	for archetype: String in _archetypes():
 		var path: String = _sprite_path(archetype, "neutral")
 		var pct: float = _coverage_pct(path)
 		if pct < 0.0:
@@ -149,7 +170,7 @@ func test_the_two_owned_factions_agree_per_archetype() -> void:
 	# rounding. A real gap means one faction's derive chain (recolor -> facings -> runtime ->
 	# state variants) went wrong for that archetype alone — a failure that is invisible on the
 	# board because each sprite looks fine in isolation.
-	for archetype: String in _ARCHETYPES:
+	for archetype: String in _archetypes():
 		var rush: float = _coverage_pct(_sprite_path(archetype, "rush"))
 		var boom: float = _coverage_pct(_sprite_path(archetype, "boom"))
 		if rush < 0.0 or boom < 0.0:
@@ -164,7 +185,7 @@ func test_the_roster_does_not_drift_apart_in_ownership_signal() -> void:
 	# back toward one unit being far harder to identify than its neighbours, which is the shape of
 	# the original defect rather than any single unit's absolute value.
 	var means: Dictionary = {}
-	for archetype: String in _ARCHETYPES:
+	for archetype: String in _archetypes():
 		var total: float = 0.0
 		var n: int = 0
 		for faction: String in _OWNED_FACTIONS:
