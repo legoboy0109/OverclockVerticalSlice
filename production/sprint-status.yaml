@@ -785,3 +785,105 @@ stories:
     #   override must not just be moved onto GameState. Also needs a skirmish setup screen, which
     #   does not exist. ★ A dev/launch-flag override would deliver most of the value far cheaper.
     # Suite 1307/1307.
+
+  - id: "s8-26"
+    name: "⛔ A third of matches deadlock — root-caused"
+    file: "production/playtests/s8-26-ai-deadlock-2026-08-26.md"
+    priority: must-have
+    status: done
+    owner: "ai-programmer"
+    estimate_days: 0.5
+    blocker: ""
+    completed: "2026-08-26"
+    # Found by the s8-24 smoke check. 10/30 AI-vs-AI matches ended in TOTAL DEADLOCK:
+    # neither side ever fielded more than ONE unit, ~24,000 Credits banked, no HQ damage.
+    # ⚠ I FIRST BLAMED THE AP CHANGE AND WAS WRONG. Re-running at 30 AP / carry 15 gave an
+    #   IDENTICAL 10/30. ★ Why the error: the 9% baseline was recorded 2026-08-25 and the
+    #   33% measured today, so the comparison silently spanned s8-13, which rebuilt the
+    #   whole production chain. A BEFORE/AFTER GAP IS ONLY ATTRIBUTABLE TO THE CHANGE YOU
+    #   HAVE IN MIND IF NOTHING ELSE CHANGED IN THE GAP -- and six stories did.
+    # ⚠ Two INSTRUMENTS were lying, both fixed: diagnose_ai.gd passed the count of ALL
+    #   actions into choose_action's economy_investments parameter (so the tool built to
+    #   diagnose "why did the AI pass with its budget unspent" MANUFACTURED that symptom),
+    #   and SIM_END's `capped` field compares against the harness's MAX_TURNS=200 rather
+    #   than VS_MAX_ROUNDS, reading 0 always. The second was already in .agent/notes.md,
+    #   and reading it is the only reason "0% hit the cap" did not ship as a finding.
+
+  - id: "s8-27"
+    name: "★ Stop producing units into a grave"
+    file: "src/gameplay/ai/ai_config.gd"
+    priority: must-have
+    status: done
+    owner: "ai-programmer"
+    estimate_days: 0.5
+    blocker: ""
+    completed: "2026-08-26"
+    # ✅ THE MECHANISM: both AIs build their Barracks toward the middle, so their deploy
+    #   rings end up ADJACENT. Production scoring rewards forward tiles via
+    #   _reachability_multiplier with NOTHING weighing the unit's immediate death, so each
+    #   side produced one Sniper per turn (attack 6 vs 3 hp = one-shot), traded it, forever.
+    # ★ NOT a scoring-weight bug and NOT a missing-candidate bug, both of which I suspected
+    #   first. The AI was producing from its Barracks correctly EVERY TURN. Into a grave.
+    # FIX: _deploy_tile_is_lethal() -> deploy_into_death_penalty (0.15).
+    #   ★ A MULTIPLIER, NOT A VETO: if every deploy tile is threatened (a base under siege)
+    #     a veto leaves the AI unable to produce AT ALL -- a worse deadlock than the one
+    #     being fixed.
+    #   ★ Uses Combat.preview_damage against a provisional UnitState, not raw attack vs hp,
+    #     so cover and defense resolve exactly as the real exchange would (CR-4).
+    # RESULT: deadlocks 10/30 -> 0/30, median match 16 -> 27 rounds, credits banked down.
+
+  - id: "s8-28"
+    name: "★★ Production queue — produce starts a build, the unit arrives later"
+    file: "design/gdd/population-cap.md"
+    priority: must-have
+    status: done
+    owner: "gameplay-programmer"
+    estimate_days: 1.5
+    blocker: ""
+    completed: "2026-08-26"
+    # ✅ USER DECISION. Builder 1 · Scout 1 · Trooper 1 · Sniper 2 · Heavy 2 owner-turns.
+    # ★★ THE GDD ALREADY SPECIFIED THIS. population-cap.md PC-3: "units under production
+    #   count against the cap -- a unit in a producer's QUEUE occupies its slot from the
+    #   moment production is committed", and population.gd carried a comment naming itself
+    #   as where that work would land IF production ever became multi-turn. It did.
+    # DESIGN CALLS, all the user's: destroyed producer destroys the unit with NO refund
+    #   (documented AT the erase site, because an ABSENCE OF CODE is what someone would
+    #   "fix" by mistake); ONE unit at a time (being busy IS the cooldown now, which is why
+    #   this REPLACED StructureTypeDef.production_cooldown_turns rather than stacking);
+    #   cancellable with a partial refund, mirroring cancel-build.
+    # ⚠ Deploy tile chosen at commit, RE-VALIDATED on completion; if the producer is boxed
+    #   in it HOLDS the unit rather than destroying it -- already paid for, block temporary.
+    # ★ Population is NOT re-checked on delivery: PC-3 reserved the slot at commit, so
+    #   re-checking would double-count the unit against itself.
+    # ⚠ A BUG I INTRODUCED AND CAUGHT: _complete_production called grid.place(x, y, id)
+    #   where the signature is place(id, x, y). One transposed line = 1,027 suite errors.
+    # ⚠ production_cooldown_test.gd REWRITTEN as production_queue_test.gd, not deleted:
+    #   every cooldown scenario has a queue equivalent, because those properties are what
+    #   the S6-07 lever needed and are just as load-bearing now.
+    # MEASURED: 0 deadlocks, armies now reach the population cap of 10 (was 6), median end
+    #   credits 2,650 -> 100. ⚠ 47% now reach the 60-round cap (was ~9% at s7-12) but NONE
+    #   are deadlocks -- HQs take damage, armies fill, credits are spent. GENUINE LONG
+    #   GRINDS from slower attrition. ⛔ OPEN: worth a decision before s8-01.
+
+  - id: "s8-29"
+    name: "Each player starts with a Builder behind their HQ"
+    file: "src/core/map/vs_map.gd"
+    priority: should-have
+    status: done
+    owner: "game-designer"
+    estimate_days: 0.25
+    blocker: ""
+    completed: "2026-08-26"
+    # ✅ USER DECISION, to make the opening faster.
+    # ★ WHY IT MATTERS: since s8-13 the HQ makes ONLY Builders and every fighting unit
+    #   comes from a Barracks, so every game opened with the same forced turn -- the one
+    #   where the only legal play is the same play every time. This removes it.
+    # ⚠ BEHIND the HQ, never in front: a Builder has attack_range 0 and cannot defend
+    #   itself, so seeding it toward the enemy hands the opponent a free turn-one kill.
+    #   Behind also leaves the HQ's forward deploy ring clear.
+    # ★ The tile rule is SINGLE-SOURCED in VSMap.starting_builder_tile and the seeding in
+    #   VerticalSliceRoot.seed_starting_builders, called by BOTH the slice and
+    #   simulate_matches.gd. A hand-copied setup in two files is exactly the drift that
+    #   produced the S7-15 placement-bias confound.
+    # ⚠ Committed together with s8-28 rather than separately -- the two should have been
+    #   split, and the s8-28 commit message does not mention this story.
