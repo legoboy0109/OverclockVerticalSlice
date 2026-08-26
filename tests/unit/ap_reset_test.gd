@@ -4,9 +4,14 @@
 # longer income-driven and no longer discarded at end of turn. reset_turn()
 # now reads the leftover unspent AP still sitting in current_ap (never
 # discarded) and overwrites it with
-# flat_ap_per_turn + min(leftover, ap_carryover_cap) — 10 + min(leftover, 5)
-# at EconomyConfig defaults, so start-of-turn AP is bounded by
-# [0, flat_ap_per_turn + ap_carryover_cap] == [0, 15]. No RNG, no
+# flat_ap_per_turn + min(leftover, ap_carryover_cap) — 20 + min(leftover, 10)
+# at EconomyConfig values as of 2026-08-26 (S8-23/25), so start-of-turn AP is
+# bounded by [0, flat_ap_per_turn + ap_carryover_cap] == [0, 30].
+# ⚠ This comment said "10 + min(leftover, 5) ... [0, 15]" until 2026-08-26 — the
+# PRE-RESCALE values, stale since 2026-08-24. The assertions below always derived
+# from cfg and so stayed correct; only the prose rotted. Same failure mode
+# vertical_slice_root.gd records at VS_MAX_ROUNDS: a comment restating another
+# file's values is a claim with an expiry date. No RNG, no
 # time-dependent asserts, no file I/O; each test builds its own isolated
 # state via GameStateFactory (no shared mutable fixtures).
 #

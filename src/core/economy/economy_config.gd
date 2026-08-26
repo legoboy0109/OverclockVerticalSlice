@@ -129,7 +129,11 @@ extends Resource
 ## regardless of player intent, which made larger rosters unusable. Accepted cost — AP is
 ## now less scarce, which dilutes Pillar 1. The restoring dial is the *_ap_cost surcharges
 ## below, NOT cutting this back (that re-creates the idle-army problem).
-@export var ap_carryover_cap: int = 15
+## ⚠ 15 -> 10 on 2026-08-26 (S8-25, user decision), restoring the RATIO the rescale set.
+## Carryover was 50% of a turn's budget at 15/30; leaving it at 15 against S8-23's new 20
+## made it 75%, a materially different rule about how much tempo can be banked. 10/20 is
+## 50% again — so this is a correction back to the intended proportion, not a new lever.
+@export var ap_carryover_cap: int = 10
 
 ## ★ S7-16 — one-off AP granted to the player who moves FIRST, on their first turn only.
 ##

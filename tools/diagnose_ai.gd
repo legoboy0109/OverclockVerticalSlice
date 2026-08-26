@@ -95,16 +95,50 @@ func _trace(state: GameState) -> void:
 		var committed: int = 0
 		var first_verb: String = "-"
 		var first_score: float = 0.0
+		# ⛔ FIXED 2026-08-26 (S8-26). This passed `committed` — the count of ALL actions
+		# taken this turn — into a parameter that means `economy_investments_committed`.
+		# The two are wildly different: `committed` climbs on every move and attack, so
+		# after a couple of ordinary actions the AI believed it had blown its economy
+		# CADENCE CAP (ADR-0011 §1/§6) and stopped producing.
+		# ⇒ This tool reported "REJECTED:PRODUCE, no move/attack/build candidates" —
+		#   a deadlock THAT IT WAS CAUSING ITSELF. It is the instrument for diagnosing
+		#   "why did the AI pass with its budget unspent", and it manufactured exactly
+		#   that symptom.
+		# ★ simulate_matches.gd and diagnose_cliff.gd both pass a real economy counter;
+		#   only this file was wrong, which is why the batch numbers were trustworthy and
+		#   the trace was not. Kept in lockstep with the driver, same as the simulator.
+		var economy_investments: int = 0
+		var rejects: int = 0
+		var seq: Array[String] = []
 		while true:
-			var action: Action = AI.choose_action(state, committed)
+			var action: Action = AI.choose_action(state, economy_investments)
 			if action == null:
 				break
 			if committed == 0:
 				first_verb = _verb_name(action)
 			var result: ActionResult = state.apply_action(action)
 			if not result.ok:
-				first_verb = "REJECTED:" + _verb_name(action)
-				break
+				# ⚠ Mirror the simulator: a rejection is not automatically the end of a
+				# turn — the driver retries other candidates. Bailing on the first one
+				# made an ordinary rejected candidate look like a terminal stall.
+				rejects += 1
+				first_verb = "REJECTED:%s:%s" % [_verb_name(action), Action.Reason.keys()[result.reason]]
+				if rejects >= 8:
+					break
+				continue
+			rejects = 0
+			var tag: String = _verb_name(action)
+			if action is AttackAction:
+				var atk = state.entities_by_id.get((action as AttackAction).attacker_id)
+				var tgt = state.entities_by_id.get((action as AttackAction).target_id)
+				var an: String = (atk.type.display_name if atk != null and atk.type != null else "?")
+				var tn: String = (tgt.type.display_name if tgt != null and tgt.type != null else "?")
+				tag = "ATTACK(%s->%s)" % [an, tn]
+			elif action is ProduceAction:
+				tag = "PRODUCE(%s)" % (action as ProduceAction).unit_type.display_name
+			seq.append(tag)
+			if action.verb == Action.Verb.RESEARCH:
+				economy_investments += 1
 			committed += 1
 			if committed > 40:
 				first_verb = "RUNAWAY"
@@ -116,6 +150,7 @@ func _trace(state: GameState) -> void:
 			bests["move"], bests["attack"], bests["produce"], bests["build"],
 			AIBalance.ai.pass_threshold,
 		])
+		print("      seq=%s" % str(seq))
 
 		var end_turn := EndTurnAction.new()
 		end_turn.player = player

@@ -103,7 +103,21 @@ const AI_PLAYER: int = 1
 ## against a metric that had already been correct for days.
 ## ⇒ A note describing another file's behaviour is a claim with an expiry date. When the
 ##   behaviour moves, this kind of comment does not follow it.
-const VS_MAX_ROUNDS: int = 40
+## ⚠ 40 -> 60 on 2026-08-26 (S8-25, user decision), to keep pace with the AP cut.
+## [br][br]S8-23 took `flat_ap_per_turn` 30 -> 20. Fewer AP means fewer actions, which
+## means less damage per turn, which means slower attrition — [b]the cap did not move,
+## the game got slower underneath it.[/b] Measured over 30 AI-vs-AI matches: games
+## decided by the cap rather than by winning went [b]9% -> 33%[/b] (S8-24 smoke check).
+## [br][br]⛔ That is the exact failure S7-12 raised the cap from 30 to fix, in its own
+## words "the cap was deciding games that should have been decided on play". A capped
+## game is awarded on a unit-count tiebreak, so it feels like neither a win nor a loss —
+## which lands squarely on S5-04 Analysis A ("did the game feel yours to lose?").
+## [br][br]★ 60 is not a guess: a turn now does roughly two-thirds the work, so a match
+## needs about 1.5x the rounds, and 40 x 1.5 = 60 restores the previous proportion.
+## ⚠ Cost: a capped game runs longer in wall-clock than it ever has. Re-measure if the
+## AP budget moves again — [b]this constant is now COUPLED to `flat_ap_per_turn`[/b],
+## which it was not before.
+const VS_MAX_ROUNDS: int = 60
 
 ## Provisional camera zoom over the placeholder board (final feel = `/ux-design`).
 # Camera framing. The board is fit into the viewport minus these HUD-reserved
