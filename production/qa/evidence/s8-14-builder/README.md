@@ -1,7 +1,7 @@
 # S8-14 / S8-15 / S8-16 — Builder art evidence
 
 **Captured**: 2026-08-26 · **By**: `/qa-plan sprint` (QA plan Finding 2)
-**Status**: ✅ Accent defect **FIXED** (S8-19, re-rendered 2026-08-26) · ⛔ base look **still not signed off**.
+**Status**: ✅ Base look **approved** by the user 2026-08-26 ("it looks good") · ✅ accent defect fixed (S8-19) · ✅ cradle re-seated on user feedback (S8-20).
 
 ## Sheets
 
@@ -11,6 +11,7 @@
 | `02-builder-destroyed.png` | Destroyed state · 3 hues × 2 facings |
 | `03-builder-vs-roster.png` | ★ Silhouette check — Builder vs the full rush roster |
 | `04-cradle-detail-2x.png` | S8-16 cradle at 2× in all three hues |
+| ★ `05-cradle-before-after.png` | **S8-20 cradle re-seat — before/after at shipped scale and 2.8×** |
 
 ⚠ **These composite the SHIPPED runtime PNGs at shipped size onto the stage colour.**
 They deliberately **do not** use `board_preview.py`, which re-runs `cutout(pockets=True)` on its
@@ -101,3 +102,41 @@ floor to 40% makes it fail naming *"builder rush … 33.9% … below the 40.0% f
 3. **The S8-15 → S8-16 trade**: the cradle grew the sprite 145 → 157 px, giving back part of S8-15's
    "shorter". ★ Acknowledged in the commit as the chosen point on an opposed trade, and **cheap to
    move**.
+
+
+---
+
+## S8-20 — "the crate on the back looks a bit tacked on"
+
+User feedback on the approved look, 2026-08-26. ★ **S8-16 had already identified this exact failure
+mode** — its own note reads *"a flat box with no occlusion where it meets the hull reads as a
+sticker, which is exactly what the first draft looked like"* — so the contact treatment existed and
+was simply not doing enough. **Four separate causes, measured rather than guessed:**
+
+| Cause | Was | Now |
+|---|---|---|
+| ⛔ **Value** — the single biggest one | Cradle lit face **150** against a hull median of **114**. A lighter object on a darker surface pops forward no matter what else is right. The palette had been matched to the hull's *lit panels* (160–162), not its median | `PLATE_LIT` **150 → 124**, `PLATE_MID` 112 → 102 |
+| **Outline** | INK traced the **whole** box, including the lower edges buried in the hull. ★ A hard black line all the way round is the strongest sticker cue there is — real geometry has no outline where it meets another surface | Ink only on the edges that form silhouette |
+| **Rim lighting** | Both near rim edges painted one flat `ACCENT`, so the rim read as a **decal outline traced on the hull** | Directional: `ACCENT_LIT` on the near-left, `ACCENT_SHADE` on the near-right. ⚠ Both kept inside `recolor.py`'s accent gate so all three still re-key together |
+| **Contact shadow** | A **rectangular band** across the bounding width — the wrong shape. The footprint is a 2:1 rhombus, so it darkened hull the cradle never touches and missed hull it does. Occlusion that doesn't match an object's shape reads as dirt, not contact | Distance-field off the **cradle's own alpha**, biased downward. Right shape by construction, and it picks up the brackets for free |
+
+★★ **Plus the decisive addition: mounting brackets.** Occlusion says an object is *resting* on a
+surface; visible hardware says it is *fixed* to one. Three chunky struts at the rim corners, drawn
+**before** the box so it overlaps them and they read as running underneath. ⚠ Sized at ~34 master px
+because the sprite ships at ~0.17×, so anything under ~20 px vanishes in the resample.
+
+### ⚠ Two things that were tried and rejected
+
+- **A wider "cargo bed" spanning the back** (width 0.60–0.68). It **overhangs the hull silhouette**
+  on both sides and reads as a tray balanced on top — worse than what it replaced.
+- **A taller, more prominent box.** Makes the cradle read as more three-dimensional and *more*
+  separate. Prominence and integration pull opposite ways here.
+
+### ✅ And the height trade went the right way for once
+
+S8-16 grew the sprite 145 → 157 px, giving back part of S8-15's "shorter and bulkier". Seating the
+cradle **into** the hull rather than perching it on top means less canvas growth: **157 → 154 px.**
+★ Slightly shorter than what shipped, so this recovers a little of what the cradle cost.
+
+Accent re-measured after the re-derive: **35.1% / 35.5%**, still clearing the 30% floor, roster
+spread **1.79×**. Suite 1307/1307.

@@ -642,3 +642,51 @@ stories:
     #   Roster spread 2.75x -> 1.85x. Suite 1307/1307.
     # ⛔ STILL OPEN: the Builder's BASE LOOK has never been user-approved (S8-14 selected it).
     #   Evidence to judge it by: production/qa/evidence/s8-14-builder/
+
+  - id: "s8-20"
+    name: "The crate stops looking tacked on — cradle re-seated"
+    file: "design/assets/asset-manifest.md"
+    priority: nice-to-have
+    status: done
+    owner: "technical-artist"
+    estimate_days: 0.5
+    blocker: ""
+    completed: "2026-08-26"
+    # ✅ User feedback on the approved look: "the crate on the back looks a bit tacked on."
+    # ⚠⚠ BY THE INTAKE RULE THIS IS A "NO" — art polish, does not block the measurement, and it
+    #   should have gone to post-gate-backlog.md. Admitted on the user's DIRECT REQUEST and recorded
+    #   as an exception rather than quietly reclassified as a blocker.
+    #   ★ THE RULE'S VALUE IS THAT THIS IS NOW VISIBLE INSTEAD OF INVISIBLE. That is what it is for.
+    # ★ S8-16 HAD ALREADY NAMED THIS FAILURE MODE — "a flat box with no occlusion where it meets the
+    #   hull reads as a sticker, which is exactly what the first draft looked like." The contact
+    #   treatment existed; it was just too weak. FOUR CAUSES, MEASURED NOT GUESSED:
+    #   1. ⛔ VALUE, the big one. Cradle lit face 150 vs a hull median of 114. The palette had been
+    #      matched to the hull's LIT PANELS (160-162) instead of its median, and a lighter object on
+    #      a darker surface pops forward no matter what else is right. -> 124 / 102.
+    #   2. INK outlined the WHOLE box, including lower edges buried in the hull. ★ A hard black line
+    #      all the way round is the strongest sticker cue there is — real geometry has NO OUTLINE
+    #      where it meets another surface. -> silhouette-forming edges only.
+    #   3. Both near rim edges were one flat ACCENT, so the rim read as a DECAL OUTLINE traced onto
+    #      the hull rather than an edge catching light. -> ACCENT_LIT / ACCENT_SHADE, directional.
+    #      ⚠ Both kept inside recolor.py's accent gate (hue<=45, sat>=0.25, val>=0.10) so all three
+    #        still re-key; a rim tone outside it stays ORANGE on a cyan unit.
+    #   4. Contact shadow was a RECTANGLE over a RHOMBUS footprint — it darkened hull the cradle
+    #      never touches and missed hull it does, and occlusion that does not match an object's
+    #      shape reads as DIRT, not contact. -> distance-field off the cradle's OWN ALPHA, biased
+    #      downward. Right shape by construction, and picks up the brackets for free.
+    # ★★ PLUS THE DECISIVE ADDITION: MOUNTING BRACKETS. Occlusion says an object is RESTING on a
+    #   surface; visible hardware says it is FIXED to one. Three struts at the rim corners, drawn
+    #   BEFORE the box so it overlaps them. ⚠ ~34 master px — the sprite ships at ~0.17x, so
+    #   anything under ~20px vanishes in the resample.
+    # ⚠ TRIED AND REJECTED ON RENDER (not on a metric):
+    #   - A wider "cargo bed" (width 0.60-0.68) OVERHANGS THE HULL SILHOUETTE and reads as a tray
+    #     balanced on top. Worse than what it replaced.
+    #   - A taller/more prominent box reads as MORE separate. PROMINENCE AND INTEGRATION PULL
+    #     OPPOSITE WAYS, which is the whole difficulty of this asset.
+    # ✅ THE HEIGHT TRADE WENT THE RIGHT WAY FOR ONCE. Seating the cradle INTO the hull rather than
+    #   perching it on top needs less canvas growth: 157 -> 154 px, recovering a little of what
+    #   S8-16 cost S8-15's "shorter and bulkier".
+    # ✅ art-source/cleaned/builder_rush_r6_c2_precradle.png now kept, so the cradle can be re-cut
+    #   without git archaeology (it previously required checking out b57f6b8).
+    # ✅ Accent re-measured after re-derive: 35.1% / 35.5%, floor OK, spread 1.79x. Suite 1307/1307.
+    # ✅ BASE LOOK APPROVED by the user the same day — "it looks good" — closing S8-14's open sign-off.
