@@ -649,6 +649,39 @@ static func _nearest_threatening_enemy(state: GameState, unit: UnitState) -> _Th
 	return result
 
 
+## True when an enemy could [b]kill outright[/b] a [param unit_type] deployed on
+## [param tile] — predicted damage >= its full hp — before it ever acts.
+##
+## ⛔ [b]S8-27: the missing gate behind a third of matches deadlocking.[/b] Production
+## scoring rewarded forward deploy tiles via [method _reachability_multiplier] with
+## nothing weighing the unit's immediate death. Both AIs built a Barracks toward the
+## middle, their deploy rings ended up adjacent, and each produced one Sniper per turn
+## into a mutual one-shot (attack 6 vs 3 hp) forever — population never above 1, no HQ
+## damage, ~24,000 Credits banked, every game running to the cap.
+##
+## ★ Uses [method Combat.preview_damage] against a provisional [UnitState] rather than
+## comparing raw [code]attack[/code] to [code]hp[/code], so cover and defense are
+## accounted for exactly as the real exchange would — the AI must reason with the same
+## numbers the game resolves with (CR-4).
+## ⚠ Reach comes from [method _threat_reach_of], the SAME next-turn reach the retreat
+## logic uses, so "threatened" means one thing across the whole AI.
+static func _deploy_tile_is_lethal(lookahead: GameState, owner: int, \
+		tile: Vector2i, unit_type: UnitTypeDef) -> bool:
+	var probe := UnitState.new()
+	probe.owner = owner
+	probe.position = tile
+	probe.type = unit_type
+	probe.current_hp = unit_type.hp
+	for e: EntityState in lookahead.entities():
+		if e.owner == owner:
+			continue
+		if lookahead.grid.manhattan_distance(tile, e.position) > _threat_reach_of(e):
+			continue
+		if Combat.preview_damage(lookahead, e, probe) >= unit_type.hp:
+			return true
+	return false
+
+
 ## The next-turn threat reach of [param entity] as a potential attacker: a
 ## [UnitState]'s [code]soft_move_cap + attack_range[/code] (it can close
 ## distance and still attack next turn), or a [StructureState]'s bare
@@ -975,6 +1008,11 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 			# rescale by luck rather than by design -- and it left produce incomparable with
 			# move/attack, which are AP-native. Now both convert explicitly.
 			var value: float = credits_to_ap(_production_value(unit_type, multiplier))
+			# ★ S8-27: a unit that dies before it acts bought nothing. Without this the
+			# reachability multiplier pulls production onto the most forward tile, which
+			# against a mirrored opponent is exactly the tile its army can one-shot.
+			if _deploy_tile_is_lethal(lookahead, producer.owner, tile, unit_type):
+				value *= AIBalance.ai.deploy_into_death_penalty
 			# ★ Denominator uses LIFETIME cost, not the purchase price -- otherwise the AI
 			# under-prices every unit and over-builds into the deficit lock.
 			var denom: float = float(Balance.economy.produce_ap_cost) \

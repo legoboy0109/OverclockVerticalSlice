@@ -19,7 +19,7 @@
 ## Usage: `./redot --headless tools/DiagnoseAI.tscn`
 extends Node
 
-const TURNS_TO_TRACE: int = 24
+const TURNS_TO_TRACE: int = 40
 # Mirror SimulateMatches exactly -- diagnosing a different board would diagnose a
 # different problem.
 const MAP_W: int = 12
@@ -129,11 +129,8 @@ func _trace(state: GameState) -> void:
 			rejects = 0
 			var tag: String = _verb_name(action)
 			if action is AttackAction:
-				var atk = state.entities_by_id.get((action as AttackAction).attacker_id)
-				var tgt = state.entities_by_id.get((action as AttackAction).target_id)
-				var an: String = (atk.type.display_name if atk != null and atk.type != null else "?")
-				var tn: String = (tgt.type.display_name if tgt != null and tgt.type != null else "?")
-				tag = "ATTACK(%s->%s)" % [an, tn]
+				var aa := action as AttackAction
+				tag = "ATTACK(%s->%s)" % [str(aa.attacker_tile), str(aa.target_tile)]
 			elif action is ProduceAction:
 				tag = "PRODUCE(%s)" % (action as ProduceAction).unit_type.display_name
 			seq.append(tag)
@@ -151,6 +148,20 @@ func _trace(state: GameState) -> void:
 			AIBalance.ai.pass_threshold,
 		])
 		print("      seq=%s" % str(seq))
+		var info: Array[String] = []
+		for e in state.entities():
+			if e.owner != player: continue
+			if e is StructureState:
+				var st := e as StructureState
+				info.append("%s[%s,rem=%d,made=%d/%d,deploy=%d]" % [
+					st.type.display_name,
+					"DONE" if st.build_status == StructureState.BuildStatus.COMPLETED else "BUILDING",
+					st.build_turns_remaining, st.units_produced_this_turn,
+					BaseProduction.effective_production_cap(state, st, player),
+					BaseProduction.legal_deploy_tiles(state, st, null).size()])
+		print("      structs=%s deficit=%s pop=%d/%d" % [str(info),
+			str(state.per_player[player].in_deficit),
+			Population.current_population(state, player), Population.effective_cap(state, player)])
 
 		var end_turn := EndTurnAction.new()
 		end_turn.player = player

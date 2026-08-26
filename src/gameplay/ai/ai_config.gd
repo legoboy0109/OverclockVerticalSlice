@@ -95,6 +95,28 @@ extends Resource
 ## and the nearest threat (tiles-normalized).
 @export var retreat_value_per_tile_fled: float = 0.20
 
+
+## ★ S8-27 — value multiplier for producing a unit onto a deploy tile where an enemy
+## can [b]kill it outright[/b] before it ever acts.
+##
+## ⛔ [b]Fixes a total deadlock in a third of matches.[/b] Both AIs build a Barracks
+## toward the middle, so their deploy rings end up adjacent. Production scoring rewarded
+## forward tiles through `_reachability_multiplier` and had [b]no counterweight for the
+## unit dying immediately[/b] — so each side produced one Sniper per turn (attack 6 vs a
+## Sniper's 3 hp, an instant one-shot), traded it, and repeated. Population never exceeded
+## 1 on either side, no HQ was ever damaged, and both banked ~24,000 Credits until the
+## round cap. Measured 10/30 games before this, 0 after.
+##
+## ★ A MULTIPLIER, NOT A VETO, and that distinction matters: if every deploy tile is
+## threatened — a base under siege — a vetoed candidate would leave the AI unable to
+## produce [i]at all[/i], which is a worse deadlock than the one being fixed. At 0.15 a
+## safe tile beats a lethal one decisively while a lethal deploy still beats doing nothing.
+##
+## ⚠ Applies only to an [b]outright kill[/b] (predicted damage >= the new unit's full hp),
+## not to any threatened tile. Deploying into danger is often correct; deploying into
+## guaranteed death before the unit acts never is.
+@export var deploy_into_death_penalty: float = 0.15
+
 ## ★ S7-11 — flat `positional_value` / `retreat_value` bonus for ENDING a move on a
 ## Cover tile.
 ##
