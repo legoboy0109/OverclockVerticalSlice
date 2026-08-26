@@ -52,11 +52,16 @@ SS = 4  # supersample factor
 # 162), while the spec's #6E7C99 is markedly blue. A cradle mixed at the nominal
 # value reads as a bolt-on from a different machine. Measure the render, not the
 # brief.
-PLATE_LIT = (0x96, 0x98, 0x9A)   # lit top/rim   — just under the hull's lit panels
-PLATE_MID = (0x70, 0x72, 0x76)   # base plating   — the hull's median
+PLATE_LIT = (0x7C, 0x7D, 0x7E)   # lit top/rim   — just ABOVE the hull's MEDIAN (S8-20)
+PLATE_MID = (0x66, 0x68, 0x6C)   # base plating   — at/below the hull's median (S8-20)
 PLATE_DARK = (0x4A, 0x4C, 0x52)  # shadowed outer face
 WELL_DARK = (0x24, 0x2C, 0x3E)   # inner well — reads as empty, not as a lid
 ACCENT = (0xFF, 0x5A, 0x2E)      # rush accent; recolor.py re-keys this
+ACCENT_LIT = (0xFF, 0x77, 0x4A)   # near-left rim, toward the light
+ACCENT_SHADE = (0xC4, 0x42, 0x1F)  # near-right rim, away from it
+# ⚠ Both stay inside recolor.py's accent gate (hue <=45 deg, sat >=0.25, val >=0.10)
+# so all three re-key together. A rim tone that falls outside it stays ORANGE on a
+# cyan unit, which is a palette violation you can see from across the board.
 INK = (0x22, 0x26, 0x30)         # outline
 
 
@@ -101,37 +106,109 @@ def draw_cradle(canvas: Image.Image, cx: float, cy: float, width: float,
                   fill=PLATE_LIT, outline=INK)
 
     # --- accent: the two rim edges facing the camera ------------------------
+    # ⚠ LIT DIRECTIONALLY, NOT FLAT. A rim painted one uniform bright value all the
+    # way round reads as a decal outline traced onto the hull rather than as an edge
+    # catching light — it was a main contributor to the "tacked on" note (S8-20).
+    # §4.1 differentiates faces in lightness only, so the two near edges take the
+    # same accent hue at different values, matching the hull's light direction.
     band = max(wall * 0.45, 2.0)
-    for a, b in ((3, 2), (2, 1)):          # W->S and S->E, the near edges
+    for (a, b), tone in (((3, 2), ACCENT_LIT), ((2, 1), ACCENT_SHADE)):
         ax, ay = outer[a]
         bx, by = outer[b]
         d.polygon([(ax, ay), (bx, by), (bx, by + band), (ax, ay + band)],
-                  fill=ACCENT)
+                  fill=tone)
 
-    d.line([*outer, outer[0]], fill=INK, width=max(1, int(SS * 0.9)))
+    # ⚠ INK ONLY THE EDGES THAT FORM SILHOUETTE. The first version outlined the whole
+    # box, including the lower edges buried in the hull — a hard black line all the
+    # way around an object is the single strongest "sticker" cue there is, because
+    # real geometry has no outline where it meets another surface.
+    d.line([outer[3], outer[0], outer[1]], fill=INK, width=max(1, int(SS * 0.9)))
+    d.line([outer[1], outer[2], outer[3]], fill=INK, width=max(1, int(SS * 0.9)))
     d.line([*inner, inner[0]], fill=INK, width=max(1, int(SS * 0.7)))
+
+
+def draw_mounts(canvas: Image.Image, cx: float, cy: float, width: float,
+                height: float) -> None:
+    """Chunky brackets tying the cradle's corners down onto the hull.
+
+    ★ THE DECISIVE 'ATTACHED' CUE. Occlusion alone says an object is RESTING on a
+    surface; visible hardware says it is FIXED to it. The user's note on the shipped
+    version was that the crate looked "a bit tacked on" — and a crate with no
+    fixings genuinely is. Drawn BEFORE the cradle body so the box overlaps them and
+    they read as running underneath it.
+
+    ⚠ Sized to survive the resample. The sprite ships at ~0.17x the master, so a
+    strut under ~20 master px vanishes entirely; these are ~34 px and read as two
+    or three shipped pixels of hard-edged shadow, which is enough to break the
+    floating silhouette.
+    """
+    d = ImageDraw.Draw(canvas)
+    n, e, s, w = _rhombus(cx, cy, width)
+    leg = height * 1.05
+    thick = width * 0.055
+    for (px_, py_), face in ((w, PLATE_MID), (e, PLATE_DARK), (s, PLATE_DARK)):
+        d.polygon([(px_ - thick, py_), (px_ + thick, py_),
+                   (px_ + thick * 0.7, py_ + leg), (px_ - thick * 0.7, py_ + leg)],
+                  fill=face, outline=INK)
 
 
 def _shade_contact(base: Image.Image, cradle: Image.Image, cx: float, cy: float,
                    width: float, height: float, drop: float = 0.30,
                    strength: float = 0.62) -> None:
-    """Multiply the hull under the cradle's footprint, so it sits IN the machine."""
-    band = int(height * drop)
-    x0, x1 = int(cx - width / 2), int(cx + width / 2)
-    y0 = int(cy + height * 0.45)
-    px = base.load()
-    cp = cradle.load()
-    for y in range(max(0, y0), min(base.height, y0 + band)):
-        # fade the shade out with depth so the band has no hard lower edge
-        t = 1.0 - (y - y0) / max(band, 1)
-        k = 1.0 - (1.0 - strength) * t
-        for x in range(max(0, x0), min(base.width, x1)):
-            if cp[x, y][3] > 0:      # never darken the cradle itself
-                continue
-            r, g, b, a = px[x, y]
-            if a == 0:
-                continue
-            px[x, y] = (int(r * k), int(g * k), int(b * k), a)
+    """Occlude the hull around the cradle's own silhouette, so it sits IN the machine.
+
+    ⚠ REWRITTEN 2026-08-26 (S8-20) after the user reported the crate still looked
+    "a bit tacked on". The first version multiplied a RECTANGULAR band across the
+    cradle's bounding width. That is the wrong shape: the cradle's footprint is a
+    2:1 rhombus with brackets hanging off it, so a rectangle darkened hull the
+    cradle never touches and missed hull it does, and the eye reads occlusion that
+    does not match an object's shape as dirt rather than as contact.
+
+    ★ This distance-fields off the CRADLE'S OWN ALPHA instead, so the shading is the
+    right shape by construction and automatically picks up the mounting brackets —
+    no geometry is restated here, which is also why it cannot drift if the box
+    changes. Darkening falls off with distance, and is strongest in the first ring
+    where a real contact shadow is nearly black.
+    """
+    import numpy as np
+
+    occ = np.array(cradle)[:, :, 3] > 0
+    if not occ.any():
+        return
+    arr = np.array(base).astype(np.float32)
+    alpha = arr[:, :, 3] > 0
+
+    # Distance bands by repeated dilation — cheaper than a full transform and the
+    # falloff only needs a handful of steps to read.
+    rings = max(3, int(height * drop))
+    dist = np.full(occ.shape, np.inf, dtype=np.float32)
+    dist[occ] = 0.0
+    cur = occ.copy()
+    for step in range(1, rings + 1):
+        grown = cur.copy()
+        grown[1:, :] |= cur[:-1, :]
+        grown[:-1, :] |= cur[1:, :]
+        grown[:, 1:] |= cur[:, :-1]
+        grown[:, :-1] |= cur[:, 1:]
+        newly = grown & ~cur
+        dist[newly] = float(step)
+        cur = grown
+
+    # ★ Bias DOWNWARD. Light comes from above in this art, so the contact shadow
+    # belongs under the object; darkening evenly all round haloes it and looks like
+    # a glow, which reads as pasted-on just as badly as no shading at all.
+    ys = np.arange(occ.shape[0])[:, None].astype(np.float32)
+    top = float(np.argmax(occ.any(axis=1)))
+    below = np.clip((ys - top) / max(height, 1.0), 0.0, 1.0) * 0.65 + 0.35
+
+    band = np.isfinite(dist) & ~occ & alpha
+    t = np.zeros(occ.shape, dtype=np.float32)
+    t[band] = 1.0 - (dist[band] / float(rings))
+    t = t * below
+    k = 1.0 - (1.0 - strength) * t
+    for c in range(3):
+        arr[:, :, c] = np.where(band, arr[:, :, c] * k, arr[:, :, c])
+    base.paste(Image.fromarray(arr.astype(np.uint8)), (0, 0))
 
 
 def main() -> None:
@@ -141,16 +218,16 @@ def main() -> None:
     p.add_argument("dst")
     p.add_argument("--cx", type=float, default=0.56,
                    help="rim centre X as a fraction of master width")
-    p.add_argument("--cy", type=float, default=0.055,
+    p.add_argument("--cy", type=float, default=0.095,
                    help="rim centre Y as a fraction of master height (from the top "
                         "of the GROWN canvas)")
     p.add_argument("--width", type=float, default=0.46,
                    help="cradle width as a fraction of master width")
-    p.add_argument("--height", type=float, default=0.13,
+    p.add_argument("--height", type=float, default=0.100,
                    help="extrusion height as a fraction of master height")
     p.add_argument("--wall", type=float, default=0.030,
                    help="rim thickness as a fraction of master width")
-    p.add_argument("--grow", type=float, default=0.16,
+    p.add_argument("--grow", type=float, default=0.06,
                    help="extra canvas above the master, fraction of its height")
     args = p.parse_args()
 
@@ -164,6 +241,14 @@ def main() -> None:
 
     big = canvas.resize((canvas.width * SS, canvas.height * SS), Image.NEAREST)
     layer = Image.new("RGBA", big.size, (0, 0, 0, 0))
+    # Brackets first — the box is drawn over them so they run underneath it.
+    draw_mounts(
+        layer,
+        cx=args.cx * mw * SS,
+        cy=args.cy * (mh + pad) * SS,
+        width=args.width * mw * SS,
+        height=args.height * mh * SS,
+    )
     draw_cradle(
         layer,
         cx=args.cx * mw * SS,
