@@ -53,17 +53,26 @@ func test_unknown_faction_falls_back_to_the_neutral_hue() -> void:
 # --- AC-2: mask paths carry no faction token --------------------------------
 
 func test_every_vs_type_now_has_a_shipped_glow_mask() -> void:
-	# Arrange / Act / Assert — masks are hue-agnostic, so one per unit facing and one
-	# per structure covers the roster. Coverage guard for the 2026-08-19 art round.
-	for archetype: String in ["scout", "trooper", "heavy", "sniper"]:
+	# Masks are hue-agnostic, so one per unit facing and one per structure covers
+	# the roster.
+	#
+	# ⚠ ENUMERATES THE LIVE ROSTER, never a hand-written list. This guard used to
+	# carry its own copy of the type names, which meant it only guarded the types
+	# somebody had remembered to add to it — the Builder shipped on 2026-08-25 with
+	# no art at all and this test stayed green, which is the exact failure it exists
+	# to prevent. Driving it from [constant UnitTypes.ALL] /
+	# [constant StructureTypes.ALL] means a new `.tres` extends the guard by itself.
+	for type: UnitTypeDef in UnitTypes.ALL:
 		for facing: String in ["e", "w"]:
-			var path := "res://assets/art/units/unit_%s_%s_idle_01_glow.png" % [archetype, facing]
+			var path := "res://assets/art/units/unit_%s_%s_idle_01_glow.png" % [
+				type.display_name.to_lower(), facing
+			]
 			assert_bool(ResourceLoader.exists(path)).override_failure_message(
 				"missing glow mask: %s" % path
 			).is_true()
-	for name: String in ["hq", "barracks", "factory",
-			"defensive_structure", "research_lab"]:
-		var path := "res://assets/art/structures/struct_%s_idle_glow.png" % name
+	for type: StructureTypeDef in StructureTypes.ALL:
+		var path := "res://assets/art/structures/struct_%s_idle_glow.png" % \
+			type.display_name.to_lower().replace(" ", "_")
 		assert_bool(ResourceLoader.exists(path)).override_failure_message(
 			"missing glow mask: %s" % path
 		).is_true()

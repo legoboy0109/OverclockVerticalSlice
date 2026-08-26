@@ -261,6 +261,43 @@ this is what finally delivered the §3.1 "outline dominated by locomotion" read.
 > biological, humanoid figure, standing man, upright biped` on top of the biped set — a four-legged
 > noun pulls toward animals, and the Heavy's noun pulls back toward the Trooper's biped.
 
+### ⚑⚑ ASSET-012 · Builder — SHIPPED (hunched four-legged carrier walker)
+
+Body plan chosen by the user 2026-08-25: a **hunched carrier walker** — stooped, back-heavy,
+cargo-cradle mass slung high, four short legs. It is the roster's only support unit, and the
+silhouette has to say "not a soldier" before any colour is read. Sized by **width** (140px) like
+the Scout, but shipped narrower so the two four-legged units stay tellable apart (§3.1).
+
+**Shipped — seed 3399497708 → `art-source/generated/asset-012-builder/builder_rush_r3_c2.png`**
+⚠ **Selected by the session, NOT user-approved** — every other base look in this file carries an
+explicit user sign-off. Re-roll freely.
+
+**Prompt:** `flat cel-shaded isometric game asset sprite of a sci-fi four-legged engineering carrier walker, one lone figure alone in empty space, floating on a plain flat solid pale grey background, no ground, no floor, no surface beneath it, entire figure fully visible in frame, wide empty margin around the figure, small centered figure viewed from a distance, mostly mid slate-grey #6E7C99 matte armor plating over the whole machine, predominantly grey armor, cool neutral grey plating with darker #3E4860 shadowed facets, no head, four short thick armored walking legs planted under the body, hunched stooped posture with the back arched up high, large empty open box cargo cradle mounted high on its back, bulky rounded load-bearing hull, heavy back-loaded mass, compact stubby build, unarmed utility machine, a few large solid hot orange-red #FF5A2E accent color blocks on the cargo cradle frame and the shoulder plates only, small bold flat orange accent panels on grey armor, flat cel shading, flat color fields, no gradients, hand painted 2D illustration, 2:1 dimetric projection, large simple panel shapes, hard clean edges, minimalist geometric design, TRON aesthetic, single isolated game character asset cut out on a blank background, one pose only, nothing else in the image`
+
+**Negative:** the walker set, plus a hard anti-ground block leading it — `shadow, cast shadow, drop shadow, ground shadow, contact shadow, shadow under the feet, dark patch under the figure, ground plane, floor, floor line, horizon, horizon line, ground line, baseline, surface, standing on ground, rocks, rubble, dirt, terrain` — and three new guards learned this round: `orange body, fully orange machine, orange hull, mostly orange, orange dominant, all orange plating` · `scale reference figure, person for scale, human beside the machine, small figure beside it` · `weapon, gun, cannon, turret, rifle, missile pod, gun barrel`.
+
+> #### ⚠⚠ Two dead ends, both measured — do not repeat them
+>
+> **1. "Orange blocks covering the whole hull" makes an ORANGE MACHINE.** Round 1's six candidates
+> all came out orange-dominant and would have failed §5.2's grayscale role test. The family recipe
+> says orange covers *the chest plate and both shoulder pauldrons* — a part, named. Say
+> "predominantly grey armor" AND name the specific accent parts, and negate the failure directly.
+>
+> **2. This render CANNOT be de-shadowed, for the Heavy's reason — and here it is proven.**
+> Round 2's winner sat on a cast-shadow slab. Measured over the bottom band: **feet luma median
+> 104, shadow luma median 102** — the distributions are *identical*, so no ink/saturation/luma
+> threshold separates them. `--deshadow` at every strength punched **42–45% of the hull** out
+> (vs 1.2% without it). `--pockets` alone is safe on a dark-background render and destructive on a
+> light one — it leaked 20% into the Builder's light plating.
+>
+> ★ **The fix was to re-roll shadow-free rather than to clean harder**, which is how the Trooper
+> got there too. The anti-ground negative block above is what did it: of round 3's five candidates,
+> **two scored zero on a ground-band detector**. ⚠ But note the cost — the "floating, no ground"
+> wording pulls hard toward a hovering craft, and candidate 1 came out as a legless flying
+> platform. Keep `four short thick armored walking legs planted under the body` doing the work.
+>
+> **Cutout that shipped:** `8 --largest-only --trim` — no `--pockets`, no `--deshadow`.
+
 > ### Shadow cleanup (2026-08-19) — always derive from `art-source/cleaned/`
 >
 > | Asset | Setting | Result |

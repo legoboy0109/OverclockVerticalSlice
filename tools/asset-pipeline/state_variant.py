@@ -64,7 +64,7 @@ def destroyed(path: str, sat_keep: float = SAT_KEEP,
 
 def _targets() -> list[tuple[str, str]]:
     jobs = []
-    for a in ("scout", "trooper", "heavy", "sniper"):
+    for a in ("builder", "scout", "trooper", "heavy", "sniper"):
         for hue in ("rush", "boom", "neutral"):
             for f in ("e", "w"):
                 jobs.append((os.path.join(ART, "units",

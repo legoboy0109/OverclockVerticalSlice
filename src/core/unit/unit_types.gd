@@ -17,3 +17,13 @@ const SCOUT: UnitTypeDef = preload("res://data/units/scout.tres")
 const TROOPER: UnitTypeDef = preload("res://data/units/trooper.tres")
 const HEAVY: UnitTypeDef = preload("res://data/units/heavy.tres")
 const SNIPER: UnitTypeDef = preload("res://data/units/sniper.tres")
+
+## ★ Every unit type in the roster, in declaration order.
+##
+## Exists so a coverage check can enumerate the roster instead of transcribing it.
+## ⚠ The art-coverage guard used to hold its OWN hand-written list of types, which
+## meant it only ever guarded the types someone had remembered to add — the Builder
+## shipped with no sprite and the suite stayed green, which is precisely the failure
+## that list was written to prevent. Adding a `.tres` to this registry now
+## automatically extends the guard.
+const ALL: Array[UnitTypeDef] = [BUILDER, SCOUT, TROOPER, HEAVY, SNIPER]
