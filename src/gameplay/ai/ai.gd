@@ -247,7 +247,8 @@ static func _tile_wins_tie(state: GameState, tile: Vector2i, best_tile: Vector2i
 ## (ADR-0011 §2, Story 005) — the deterministic
 ## [code]score[/code]-then-[code]ap_cost[/code]-then-[code]entity_id[/code]
 ## tie-break comparator every per-verb helper folds its candidates through.
-static func choose_action(state: GameState, economy_investments_committed: int) -> Action:
+static func choose_action(state: GameState, economy_investments_committed: int, \
+		builds_committed_this_turn: int = 0) -> Action:
 	var lookahead: GameState = state.clone()
 
 	var best := _Candidate.new()
@@ -256,7 +257,7 @@ static func choose_action(state: GameState, economy_investments_committed: int) 
 		best = _score_production_candidates(lookahead, entity, economy_investments_committed, best)
 		best = _score_build_and_economy_candidates(lookahead, entity, economy_investments_committed, best)
 		best = _score_research_candidates(lookahead, entity, economy_investments_committed, best)
-		best = _score_cancel_build_candidates(lookahead, entity, economy_investments_committed, best)
+		best = _score_cancel_build_candidates(lookahead, entity, builds_committed_this_turn, best)
 
 	# Pass-threshold gate (ADR-0011 §1, AC-9): a candidate that does not clear
 	# AIBalance.ai.pass_threshold is not worth the AP — return null so the driver
@@ -1421,7 +1422,7 @@ static func _economy_tech_marginal_value(econ_tier_bonus: int, _unused_projected
 ## here, mirroring [method BaseProduction.apply_cancel]'s own AP-credit-only
 ## contract).
 static func _score_cancel_build_candidates(lookahead: GameState, entity: EntityState, \
-		economy_investments_committed: int, best: _Candidate) -> _Candidate:
+		builds_committed_this_turn: int, best: _Candidate) -> _Candidate:
 	if not (entity is StructureState):
 		return best
 	var structure: StructureState = entity
@@ -1429,14 +1430,55 @@ static func _score_cancel_build_candidates(lookahead: GameState, entity: EntityS
 		return best
 	if structure.build_status != StructureState.BuildStatus.UNDER_CONSTRUCTION:
 		return best
-	# Anti-oscillation (mirrors the retreat gate, AC-31): once the AI has committed
-	# any economy investment this turn it stops enumerating cancel-build, so it
-	# never cancels a structure it just built. Cancel-build is scored on an
-	# absolute-AP refund basis (_cancel_build_value), which otherwise makes
-	# cancelling a just-built structure look profitable and drives a build<->cancel
-	# oscillation. A structure under construction from a prior turn stays
-	# cancellable on a turn where the AI has not itself built (committed == 0).
-	if economy_investments_committed > 0:
+	# Anti-oscillation (mirrors the retreat gate, AC-31): once the AI has BUILT
+	# anything this turn it stops enumerating cancel-build, so it never cancels a
+	# structure it just built. Cancel-build is scored on an absolute refund basis
+	# (_cancel_build_value), which otherwise makes cancelling a just-built structure
+	# look profitable and drives a build<->cancel oscillation. A structure under
+	# construction from a PRIOR turn stays cancellable on a turn where the AI has not
+	# itself built.
+	#
+	# ★★ THIS GATE WAS DEAD FROM S6-09 UNTIL 2026-08-26, and it is worth knowing why.
+	# It used to read `economy_investments_committed`, the counter behind the
+	# separate economy-CADENCE cap. S6-09 then made every BuildAction stop counting
+	# as an economy investment (deliberately, and correctly — since S6-01 the only
+	# real economy action is RESEARCH; see AITurnDriver._is_economy_or_research). The
+	# counter therefore never incremented on a build, and this gate never fired.
+	#
+	# It stayed invisible because the AI always had something better to do than
+	# cancel. The Builder rework (S8-13) collapsed that option set — the HQ makes
+	# only Builders and a Builder is consumed by what it raises — and the latent bug
+	# turned fatal: every turn the AI produced a Builder, spent it on a Barracks,
+	# CANCELLED the Barracks for the refund, then spun on cooldown-refused produces.
+	# It fielded nothing at all, for the whole match.
+	#
+	# ⚠ The lesson is the shape, not the incident: two different questions ("how much
+	# economy cadence have I spent?" and "did I just build something?") were sharing
+	# one variable, so a correct change to one silently disabled the other. They are
+	# separate parameters now.
+	if builds_committed_this_turn > 0:
+		return best
+
+	# ★★ SAFETY VALVE ONLY (2026-08-26). `ai-opponent.md` Edge Cases states the
+	# design outright: Cancel Build "rarely clears PASS_THRESHOLD against a concrete
+	# positive play — it's a rare safety-valve action, not a proactive strategy."
+	#
+	# The scorer could not deliver that on its own, because "rarely clears against a
+	# concrete positive play" silently assumes a positive play EXISTS. On a turn
+	# where the AI has none — HQ on cooldown, no units to move or attack, no Builder
+	# left to build with — cancel wins by default: any score beats no candidate at
+	# all. That is precisely the board the Builder rework produces on alternate
+	# turns, so the AI demolished its own Barracks every second turn, forever.
+	#
+	# Deficit is this game's crisis state (`unit-upkeep.md` UR-6 — upkeep exceeds
+	# income and the bank is empty, which also locks produce/build/research), so it
+	# is the condition a refund is genuinely FOR. Outside it, a structure under
+	# construction is an asset worth more than half its cost and the AI leaves it
+	# alone.
+	#
+	# ⚠ Deliberately NOT threat-awareness ("this structure is about to be
+	# destroyed") — `ai-opponent.md` OQ-3 puts that out of VS scope.
+	if not lookahead.per_player[lookahead.active_player].in_deficit:
 		return best
 
 	var value: float = _cancel_build_value(structure.type.build_cost)
@@ -1465,8 +1507,23 @@ static func _score_cancel_build_candidates(lookahead: GameState, entity: EntityS
 ## by AP cost[/b] (Cancel Build returns AP, it doesn't spend it), which is why
 ## the caller passes this value straight into [method _action_score] rather
 ## than a `value / ap_cost` ratio the way every other verb does.
+##
+## ★★ [b]The [method credits_to_ap] conversion was MISSING until 2026-08-26[/b], and
+## its absence is what made the AI cancel everything it built. `ai-opponent.md`
+## AC-22 specifies `CANCEL_REFUND_RATE × build_cost × CREDIT_TO_AP_RATE` — the rate
+## being there so a recovered CREDIT sum lands on the same scale as every other
+## value in the scorer, which is AP-equivalent. Returning raw Credits put this one
+## verb on a scale inflated by `credit_to_ap_rate` against every verb it competes
+## with, so a 300-Credit refund outscored any real play and cancelling became the
+## AI's best move on every board.
+##
+## ⚠ The unit tests asserted the RAW value, so code and tests agreed with each other
+## while both contradicted the GDD — which is exactly the shape of defect a test
+## cannot catch by construction. The spec's own prose was the tell: it calls Cancel
+## Build "a rare safety-valve action, not a proactive strategy", and the shipped
+## behaviour was the opposite.
 static func _cancel_build_value(build_cost: int) -> float:
-	return float(BaseProduction.cancel_refund(build_cost))
+	return credits_to_ap(float(BaseProduction.cancel_refund(build_cost)))
 
 
 ## ★ S7-15 — picks a build tile by a mirror-invariant preference instead of taking

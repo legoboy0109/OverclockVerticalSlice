@@ -432,7 +432,34 @@ loop continues while max(action_score(candidate) for candidate in legal_affordab
 
 - **If a unit could move to a tile that enables an attack** (a move+attack combo): the candidate is scored as `combat_value` computed from `legal_targets(unit, from_tile)` (Combat's hypothetical-tile query) at the combined AP cost `move_path_cost(unit, tile) + attack_cost`. This is the same evaluation Command & Action Interface's D-3 marker surfaces to the human player, so the AI is never "smarter" about move+attack combos than what the player's own preview already promises is possible.
 
-- **Cancel Build has no positive AP-equivalent cost to divide by** (it *refunds* Credits, it doesn't spend a resource) — so `action_score(cancel_build) = cancel_build_value` directly, where `cancel_build_value = CANCEL_REFUND_RATE × build_cost(structure) × CREDIT_TO_AP_RATE`. **Two-currency note (2026-08-05):** the refund is now in **Credits** (Base & Production refunds `floor(build_cost × CANCEL_REFUND_RATE)` Credits; the AP surcharge already spent is *not* refunded), so `cancel_build_value` multiplies by `CREDIT_TO_AP_RATE` to express the recovered Credits in AP-equivalent, consistent with every other economic value. Because a completed structure is normally worth more than half its cost, this rarely clears `PASS_THRESHOLD` against a concrete positive play — it's a rare safety-valve action, not a proactive strategy. The VS AI does not model "this structure is about to be destroyed" threat-awareness; that's out of scope for the simple heuristic (see Open Questions).
+- **Cancel Build has no positive AP-equivalent cost to divide by** (it *refunds* Credits, it doesn't spend a resource) — so `action_score(cancel_build) = cancel_build_value` directly, where `cancel_build_value = CANCEL_REFUND_RATE × build_cost(structure) × CREDIT_TO_AP_RATE`. **Two-currency note (2026-08-05):** the refund is now in **Credits** (Base & Production refunds `floor(build_cost × CANCEL_REFUND_RATE)` Credits; the AP surcharge already spent is *not* refunded), so `cancel_build_value` multiplies by `CREDIT_TO_AP_RATE` to express the recovered Credits in AP-equivalent, consistent with every other economic value. Because a completed structure is normally worth more than half its cost, this rarely clears `PASS_THRESHOLD` against a concrete positive play — it's a rare safety-valve action, not a proactive strategy.
+
+> ### ★★ Cancel Build is gated on DEFICIT (2026-08-26) — the sentence above could not enforce itself
+> "Rarely clears `PASS_THRESHOLD` **against a concrete positive play**" quietly assumes a positive
+> play exists. On a turn where the AI has none — HQ on cooldown, no units to move or attack, no
+> Builder left to build with — Cancel Build wins by default, because any score beats an empty
+> candidate list. The Builder rework (S8-13) produces exactly that board on alternate turns, and
+> the AI demolished its own Barracks every second turn for the whole match, ending with an empty
+> board and a full bank.
+>
+> So enumeration is now gated on `in_deficit` — this game's crisis state (`unit-upkeep.md` UR-6:
+> upkeep exceeds income and the bank is empty, which also locks produce/build/research). That is
+> the situation a refund is genuinely *for*, and it makes the "safety valve" description true in
+> code rather than merely intended.
+>
+> ⚠ Deliberately **not** threat-awareness ("this structure is about to be destroyed") — OQ-3 keeps
+> that out of VS scope.
+>
+> ⚠ **Two implementation defects had to be fixed alongside it**, both of which the test suite was
+> structurally unable to catch:
+> 1. The anti-oscillation gate keyed on the economy-**cadence** counter. S6-09 correctly stopped
+>    builds counting toward that cadence, which silently disabled the gate — two different
+>    questions sharing one variable, so a correct change to one broke the other. They are separate
+>    parameters now.
+> 2. `cancel_build_value` returned **raw Credits** while every competing verb is scored in
+>    AP-equivalent; AC-22's `CREDIT_TO_AP_RATE` leg was missing from the implementation. The unit
+>    tests asserted the implementation, so test and code agreed with each other while both
+>    contradicted this document. The VS AI does not model "this structure is about to be destroyed" threat-awareness; that's out of scope for the simple heuristic (see Open Questions).
 
 - **If two or more candidates tie on `action_score`** — "tie" meaning their scores differ by less than `SCORE_TIE_EPSILON` (Tuning Knobs), not a fragile raw-float `==`; the common exact case is two simultaneous lethal attacks both floored to the identical `LETHAL_FLOOR_BONUS` constant: resolved by a deterministic tiebreak — lowest `ap_cost` first (spend the cheaper equal-value action, leaving more AP for the next loop iteration), then lowest entity ID as a final stable tiebreak. No randomness is ever used (Pillar 2 — deterministic decisions). *(Emergent consequence of the secondary key: because entity IDs come from a monotonic counter (Unit System), an exact score+cost tie resolves to the **oldest** eligible entity first — deterministic and harmless (IDs are not player-visible or influenceable), documented so "why does the AI always act with unit #3 first" has a paper trail.)*
 

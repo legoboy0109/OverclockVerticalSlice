@@ -89,10 +89,16 @@ const MAX_CONSECUTIVE_REJECTS := 8
 ## (ADR-0011 §1), and neither does this driver.
 func run_ai_turn(state: GameState) -> void:
 	var economy_investments := 0
+	# ★ Tracked SEPARATELY from economy_investments (2026-08-26). The two answer
+	# different questions — "how much economy cadence have I spent?" vs "did I just
+	# build something?" — and sharing one counter is what silently disabled the
+	# cancel-build anti-oscillation gate from S6-09 onward. See
+	# AI._score_cancel_build_candidates for the full incident.
+	var builds_committed := 0
 	var consecutive_rejects := 0
 
 	while true:
-		var action: Action = AI.choose_action(state, economy_investments)
+		var action: Action = AI.choose_action(state, economy_investments, builds_committed)
 		if action == null:
 			break
 
@@ -111,6 +117,8 @@ func run_ai_turn(state: GameState) -> void:
 
 		if _is_economy_or_research(action):
 			economy_investments += 1
+		if action.verb == Action.Verb.BUILD:
+			builds_committed += 1
 
 		if state.match_status == GameState.MatchStatus.GAME_OVER:
 			return
