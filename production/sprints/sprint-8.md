@@ -123,10 +123,11 @@ silently, and the sprint file said something untrue for six merges.
 | ✅ **S8-15** | A shorter, bulkier Builder | technical-artist | 0.5 | `cc3b81a` | User feedback on the shipped look. ★ **The lever is crouch, not scale** — every wording that shrinks the legs makes SDXL delete them |
 | ✅ **S8-16** | A cargo cradle you can actually see | technical-artist | 0.5 | `f168832` | User asked for the cradle to read. Two further generation rounds failed **structurally** — prompt weight is finite — so it is authored geometry composited on the approved master, the same call ASSET-006/007 made for terrain |
 | ✅ **S8-17** | An opponent that actually plays | ai-programmer | 1.0 | `31a4cd6` | ⛔⛔ **The AI was demolishing everything it built.** Produce a Builder → spend it on a Barracks → cancel the Barracks for the refund → repeat, every turn. It ended matches owning nothing but its HQ with 6,000+ Credits banked, **and the player was facing an empty board** |
+| ✅ **S8-19** | A Builder you can tell is yours | technical-artist | 0.5 | `7b4adca` | ⛔ Accent coverage **22.8% vs a 30% floor** — and `accent_coverage_test.gd` kept a hand-written archetype list the Builder was not in, so the gate written to catch exactly this never looked. ★ **Blocks the measurement** — S5-03 observer Q1 is *"can they say which units are theirs"* |
 | ✅ **S8-18** | The sprint file tells the truth | producer | 0.25 | `b9de7e8` | This section, and the `/sprint-plan update` that re-baselined it. The plan recorded none of S8-10…S8-17 for six merges, so for most of the sprint it described a sprint that was not happening |
 
-**Absorbed: 6.0 days** (5.75 + S8-18's 0.25). Planned was 4.75 against ~8 available; actual is
-**~10.75 against ~8**. ★ The critical path did not slip because of it — S8-01 is gated on the
+**Absorbed: 6.5 days** (5.75 + S8-18's 0.25 + S8-19's 0.5). Planned was 4.75 against ~8 available; actual is
+**~11.25 against ~8**. ★ The critical path did not slip because of it — S8-01 is gated on the
 user, not on capacity — but the sprint is over its box and the plan never said so.
 
 ### ★★ What S8-17 says about the test suite
@@ -171,8 +172,8 @@ the sprint's centre; **the answer would simply not have been about this game.**
 - **Planned: 4.75** (must 2.75 + should 2.0). ★ Deliberately light: **the critical path is
   gated on one hour of the user's time**, and loading the sprint with agent work is how the
   validation half rolled over six times before.
-- **Unplanned absorbed: 6.0** (S8-10…S8-18, see the section above)
-- ⚠ **Actual: ~10.75 against ~8. About 2.75 days over the box, and the buffer is spent.**
+- **Unplanned absorbed: 6.5** (S8-10…S8-19, see the section above). ★ **S8-19 is the intake rule's first live application** — it was admitted because it blocks the measurement, not because it was next
+- ⚠ **Actual: ~11.25 against ~8. About 3.25 days over the box, and the buffer is spent.**
 
 ### ★★ Why over-box is the right answer here rather than a cut
 
@@ -198,7 +199,7 @@ what it is meant to measure?**
 
 | | Then | This sprint's eight, sorted |
 |---|---|---|
-| **Yes — it blocks the measurement** | **Fix it now**, and record it as unplanned above | **S8-12** — the keyboard could not choose a verb *at all*, and the Build picker was wired to nothing · **S8-17** — the AI was demolishing everything it built, so the player faced an empty board · **S8-10** — found mid-session |
+| **Yes — it blocks the measurement** | **Fix it now**, and record it as unplanned above | **S8-12** — the keyboard could not choose a verb *at all*, and the Build picker was wired to nothing · **S8-17** — the AI was demolishing everything it built, so the player faced an empty board · **S8-10** — found mid-session · ★ **S8-19** — the Builder's ownership was below the readability floor, and **S5-03 observer Q1 asks precisely whether a viewer can tell whose units are whose** |
 | **No** | ⇒ **`post-gate-backlog.md`**, unscheduled, with enough context to be picked up cold | **S8-13** — a core economy change · **S8-14/15/16** — art · **S8-11** — propagation · **S8-18** — bookkeeping |
 
 ★ **This is Sprint 5's retro rule with one exception carved out, not a new rule.** The routing

@@ -600,3 +600,45 @@ stories:
     # ⚠ The DoD rule "if 3 unplanned stories land, the next action is /sprint-plan" was passed on
     #   the THIRD story and acted on at the EIGHTH. ★ Sprints 6 and 7 broke the same rule; this is
     #   the FIRST that ended with a rule instead of an apology.
+
+  - id: "s8-19"
+    name: "★ A Builder you can tell is yours — accent coverage, and the gate that wasn't looking"
+    file: "design/assets/asset-manifest.md"
+    priority: must-have
+    status: done
+    owner: "technical-artist"
+    estimate_days: 0.5
+    blocker: ""
+    completed: "2026-08-26"
+    # ✅ 7b4adca. ★ THE INTAKE RULE'S FIRST LIVE APPLICATION, and it lands on the YES side:
+    #   S5-03 observer Q1 is literally "can they say WHICH UNITS ARE THEIRS". A unit below the
+    #   ownership-readability floor blocks the measurement, so it was fixed rather than backlogged.
+    # ⛔ THE DEFECT: Builder accent coverage 22.8% (rush) / 22.9% (boom) against the S8-05 gate's
+    #   30% FLOOR, and a roster spread of 2.75x against a 2.5x ceiling. Two of four assertions.
+    # ⛔⛔ IT NEVER TRIPPED THE GATE, because accent_coverage_test.gd kept
+    #   _ARCHETYPES = ["scout","trooper","heavy","sniper"] and the Builder was not in it.
+    #   ★★ THIS IS S8-14'S OWN FINDING, IN THE SIBLING TEST, FOUR STORIES LATER. S8-14 rewrote the
+    #     art-coverage and glow-mask guards to enumerate UnitTypes.ALL and wrote down "a coverage
+    #     check that keeps its own copy of the thing it covers is not a coverage check".
+    #     accent_coverage_test.gd was written EARLIER (S8-05), for the SAME purpose, and was never
+    #     looked at. The gate created BECAUSE "the Sniper defect shipped and survived a full art
+    #     sprint because nothing measured it" DID NOT MEASURE THE NEWEST UNIT.
+    #   ⇒ FIXING AN ANTI-PATTERN WHERE YOU FOUND IT IS NOT FIXING IT. When a guard keeps its own
+    #     copy of what it covers, GREP FOR ITS SIBLINGS IN THE SAME BREATH.
+    # ✅ FIXED THE ART, NOT THE THRESHOLD — which is what the test's own failure message instructs.
+    #   promote_accent.py --target 34 GROWS THE EXISTING ACCENT OUTWARD rather than inventing new
+    #   regions: the artist already decided WHERE the accent belongs, dilation only decides HOW FAR.
+    #   ⚠ That tool records two approaches that measured CORRECT and looked UNUSABLE — brightest-N
+    #     pixels (orange speckle) and value-banded components (corduroy). SILHOUETTE UNTOUCHED.
+    # ★ 34 CHOSEN BY EYE FROM RENDERED CANDIDATES, not as the smallest passing number:
+    #     22.8% fails the floor · 33.9% clears by ~4pts and the grey upper hull still dominates
+    #     38.1% passes but the grey mass visibly shrinks · 42.7% reads as a COMBAT unit (Trooper
+    #     is 42.5%) and fights the brief's "not a soldier before any colour is read".
+    #   ⇒ 33.9% is where BOTH are true, and it stays the roster's least-coloured unit by 8.6 pts.
+    #   ★ Per the standing rule: A CORRECT METRIC WITH WRONG ART IS THE NORMAL CASE. Render it.
+    # ✅ Gate enumerates UnitTypes.ALL via EntitySpriteCatalog.type_token — the SAME call the
+    #   renderer uses, so it cannot drift from what the game loads. VERIFIED TO HAVE TEETH: at a
+    #   40% floor it fails naming "builder rush ... 33.9%" and "builder boom ... 34.2%".
+    #   Roster spread 2.75x -> 1.85x. Suite 1307/1307.
+    # ⛔ STILL OPEN: the Builder's BASE LOOK has never been user-approved (S8-14 selected it).
+    #   Evidence to judge it by: production/qa/evidence/s8-14-builder/
