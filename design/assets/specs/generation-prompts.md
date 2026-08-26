@@ -324,37 +324,64 @@ the Scout, but shipped narrower so the two four-legged units stay tellable apart
 > sprites.
 
 
-> #### ⚑ The cargo cradle is DRAWN, not generated (2026-08-26)
+> #### ⛔⛔ The cargo cradle was ABANDONED after four rounds (2026-08-26) — read this before trying again
 >
-> User asked for the cradle to read clearly on the back. Two more rounds tried:
-> **r7** described it as open skeletal frame rails, **r8** as "a big separate box like a skip on a
-> truck". Neither landed. The failure is structural, not bad luck: **prompt weight is finite**, so
-> describing the cradle strongly enough to appear steals weight from the clauses holding the body
-> together — every promising r7/r8 candidate came back with the cast shadow, the orange dominance
-> or the long legs restored, i.e. undoing the very fixes of rounds 1–6.
+> **The Builder ships with NO cradle.** Its hunched, back-heavy silhouette carries "carrier" on its
+> own, which is what it was designed to do. ★ **The user's call, and the right one** — the crate
+> consumed four rounds and never looked correct on the machine.
 >
-> ★ So the cradle is authored geometry: `tools/asset-pipeline/draw_cargo_cradle.py`, composited
-> onto the approved r6_c2 master. Same call `ASSET-006`/`007` made for the terrain tiles — **when
-> the requirement is precise, a draw hits it by construction and a generator cannot.**
+> **Round 7–8 — generation.** r7 described open skeletal frame rails, r8 "a big separate box like a
+> skip on a truck". Neither landed, and the failure is **structural, not bad luck**: prompt weight
+> is finite, so describing the cradle strongly enough to appear steals weight from the clauses
+> holding the body together. Every promising candidate came back with the cast shadow, the orange
+> dominance or the long legs restored — **undoing the fixes of rounds 1–6.**
 >
-> Three things that decided the shape:
-> - **A box, not an open frame.** At the shipped 140 px, rails a few master-pixels thick are
->   sub-pixel and vanish. What survives a resample is SILHOUETTE, so the cradle is a hard mass that
->   breaks the top outline, with its opening read as a dark interior rather than as thin geometry.
-> - **Palette sampled off the render, not the spec.** The brief's `#6E7C99` is markedly blue; what
->   the generator actually painted is near-neutral (median rgb 110,111,111, lit panels 160,162,162).
->   A cradle mixed at the nominal value reads as a bolt-on from a different machine.
-> - **Contact shading is not optional.** A flat-shaded box with no occlusion where it meets the
->   hull reads as a sticker. `_shade_contact()` multiplies the hull under the cradle footprint.
+> **Round 9 (S8-16) — drawn and composited.** Authored geometry, on the ASSET-006/007 reasoning that
+> a precise requirement is hit by a draw and not by a generator. Shipped. ⛔ **User: "the crate on
+> the back looks a bit tacked on."**
 >
-> ⚠ **The rim must be painted in the shared `ACCENT` constant**, because that is what `recolor.py`
-> keys on — it is why the cradle turns cyan/silver with the rest of the body instead of staying
-> orange in every faction.
+> **Round 10 (S8-20) — four real defects fixed, symptom unchanged.** Value (the cradle's lit face
+> measured **150 against a hull median of 114**), an INK outline traced all the way round including
+> edges buried in the hull, a flat rim that read as a decal, and a **rectangular** contact shadow
+> under a **rhombus** footprint. All four were genuine. ⛔ Still "off".
+> ★★ **That is the lesson: when fixing several real problems does not move the symptom, the
+> diagnosis is incomplete, not the execution.**
 >
-> ⚠ **Cost: the sprite grew 145 → 157 px tall.** A cradle standing proud of the back necessarily
-> gives back some of the "shorter" from round 6; it is sunk as deep as it can go while still
-> reading as carried. That tension is inherent — a visible cradle and a minimal silhouette are
-> opposed, and this is the chosen point on that trade.
+> **Round 11 (S8-21) — the actual cause, and it was structural.** Measured off the master's own
+> silhouette:
+>
+> | Hull top edge | Measured | True 2:1 dimetric | Off by |
+> |---|---:|---:|---:|
+> | **left** | **−0.179** | −0.500 | ⛔ **64%** |
+> | right | +0.305 | +0.500 | 39% |
+>
+> ⇒ **This machine is not in the projection it looks like it is in.** SDXL painted a *plausible*
+> three-quarter view, not a correct dimetric one, and it is **asymmetric**. Every drawn cradle was a
+> perfect symmetric 2:1 rhombus, so **the crate was in one projection and the machine in another** —
+> which the eye catches instantly and cannot name. Matching the measured slopes helped visibly and
+> **still was not right.**
+>
+> ### ★★ What to take from this, if a future asset needs authored geometry on a generated render
+>
+> 1. ⛔ **A generated render is not on your grid.** Measure its actual axes before drawing anything
+>    onto it. The 2:1 dimetric in the prompt is what was *asked for*, not what was *painted*.
+> 2. ★ **This file already knew half of it.** The S8-16 palette note says *measure the render, not
+>    the brief* — because the spec's `#6E7C99` turned out markedly bluer than what was painted. That
+>    principle was applied to **colour** and never to **shape**. With a generated asset, **every**
+>    assumption about it is a hypothesis.
+> 3. ⚠ **Composited geometry on an organic render is a losing game at this scale.** The sprite ships
+>    at ~0.17× the master, so anything thin vanishes and anything thick reads as a foreign object.
+>    Prominence and integration pull in opposite directions.
+> 4. ✅ **The silhouette was always doing the work.** Rounds 1–6 produced a hunched, back-heavy
+>    machine that reads as a carrier and not a soldier **without any cargo box on it at all.** The
+>    cradle was solving a problem the body had already solved.
+>
+> ✅ **Removing it also reversed its costs**: the sprite went **157 → 145 px**, restoring all of
+> S8-15's user-requested "shorter and bulkier", and `draw_cargo_cradle.py` is deleted. Accent
+> coverage re-derived to 34.7% / 34.9%, clearing the S8-05 floor. Suite 1307/1307.
+>
+> ⚠ **If a cradle is ever wanted again, do NOT composite one.** Re-roll the body with the bed built
+> into the render, so there is no projection to mismatch.
 
 > #### Shadow removal on r6_c2 — the opposite case to r2, and worth contrasting
 >
