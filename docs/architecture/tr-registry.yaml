@@ -345,8 +345,8 @@ requirements:
       requirement: "ISO: D-pad cursor stepping maps to grid axes not screen axes; cycle/jump between salient tiles; one-tile-per-press" }
   - { id: TR-cmdui-020, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0014, created: 2026-07-23, revised: "", status: active,
       requirement: "Mouse-hover vs board-cursor precedence: most-recently-moved source owns active locus" }
-  - { id: TR-cmdui-021, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0014, created: 2026-07-23, revised: "", status: active,
-      requirement: "ENGINE RISK: verify Redot 26.2 inherited Godot 4.6 dual-focus unmodified before relying on it (verified 2026-07-23; residual ClassDB check at impl)" }
+  - { id: TR-cmdui-021, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0014, created: 2026-07-23, revised: 2026-08-26, status: active,
+      requirement: "ENGINE RISK: verify Redot 26.2 inherited Godot 4.6 dual-focus unmodified before relying on it (verified 2026-07-23; residual at-impl check CLOSED 2026-08-26 by S8-09 -- measured on a real framebuffer rather than via ClassDB: focus and hover are independent state, focus draws a 2px outline OUTSIDE the row rect, hover draws no box at all. tools/CaptureDualFocus.tscn; production/playtests/s8-09-dual-focus-2026-08-26.md)" }
   - { id: TR-cmdui-022, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0014, created: 2026-07-23, revised: "", status: active,
       requirement: "Gate destructive input behind synchronous dispatch + immediate FSM transition, INPUT_LOCK_MS (120ms); INPUT_LOCK_MS>=AP_TICK_DURATION_MS hard cross-system constraint" }
   - { id: TR-cmdui-023, system: cmdui, gdd: design/gdd/command-action-interface.md, adr: ADR-0015, created: 2026-07-23, revised: "", status: active,
