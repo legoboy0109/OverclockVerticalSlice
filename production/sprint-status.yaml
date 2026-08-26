@@ -690,3 +690,59 @@ stories:
     #   without git archaeology (it previously required checking out b57f6b8).
     # ✅ Accent re-measured after re-derive: 35.1% / 35.5%, floor OK, spread 1.79x. Suite 1307/1307.
     # ✅ BASE LOOK APPROVED by the user the same day — "it looks good" — closing S8-14's open sign-off.
+
+  - id: "s8-21"
+    name: "Match the machine's perspective, not the textbook's"
+    file: "design/assets/specs/generation-prompts.md"
+    priority: nice-to-have
+    status: done
+    owner: "technical-artist"
+    estimate_days: 0.5
+    blocker: ""
+    completed: "2026-08-26"
+    # ✅ 670c871. ★ SUPERSEDED BY s8-22 (the crate was then deleted) BUT THE FINDING STANDS and is
+    #   the most reusable thing to come out of this whole asset.
+    # ⛔⛔ THE HULL IS NOT IN THE PROJECTION IT APPEARS TO BE IN. Measured off its own alpha:
+    #     top-LEFT  edge slope -0.179  vs true 2:1 dimetric -0.500  -> 64% OFF
+    #     top-RIGHT edge slope +0.305  vs true 2:1 dimetric +0.500  -> 39% off
+    #   SDXL painted a PLAUSIBLE three-quarter view, not a correct one, and it is ASYMMETRIC.
+    #   Every drawn cradle was a perfect SYMMETRIC 2:1 rhombus ⇒ the crate was in one projection and
+    #   the machine under it in another. The eye reads that instantly and CANNOT NAME IT, which is
+    #   exactly what "looks off" means.
+    # ★★ THE META-LESSON, worth more than the fix: WHEN CORRECTING SEVERAL REAL PROBLEMS DOES NOT
+    #   MOVE THE SYMPTOM, THE DIAGNOSIS IS INCOMPLETE, NOT THE EXECUTION. s8-20 fixed four genuine
+    #   defects and the crate still looked wrong. That should have triggered "wrong model of the
+    #   problem" immediately; instead it cost another round.
+    # ★ generation-prompts.md ALREADY SAID "measure the render, not the brief" -- about COLOUR
+    #   (s8-16, when the spec's #6E7C99 proved markedly bluer than what was painted). Nobody applied
+    #   it to SHAPE. ⇒ With a generated asset EVERY assumption is a hypothesis: colour, projection,
+    #   scale, symmetry, light direction.
+
+  - id: "s8-22"
+    name: "★ The crate comes off — cargo cradle abandoned after four rounds"
+    file: "design/assets/asset-manifest.md"
+    priority: nice-to-have
+    status: done
+    owner: "technical-artist"
+    estimate_days: 0.5
+    blocker: ""
+    completed: "2026-08-26"
+    # ✅ USER'S CALL after "still looks off" on the projection-matched version. THE BUILDER SHIPS
+    #   WITH NO CARGO CRATE.
+    # ★★ THE SILHOUETTE WAS ALWAYS DOING THE WORK. Rounds 1-6 produced a hunched, back-heavy machine
+    #   that reads as "carrier, not soldier" WITH NO CARGO BOX AT ALL. The cradle spent four rounds
+    #   solving a problem the body had already solved.
+    # ✅ REMOVAL REVERSED EVERY COST IT HAD IMPOSED:
+    #     sprite height  157 -> 145 px  (ALL of s8-15's user-requested "shorter" restored)
+    #     accent         33.9% -> 34.7% (still clears the 30% floor; spread 1.80x)
+    #     tooling        draw_cargo_cradle.py DELETED (~250 lines)
+    # ⚠ IF A CRADLE IS EVER WANTED AGAIN: DO NOT COMPOSITE ONE. Re-roll the body with the bed IN the
+    #   render, so there is no projection to mismatch. Composited geometry on an organic generated
+    #   render loses at this scale — the sprite ships at ~0.17x the master, so thin geometry vanishes
+    #   and thick geometry reads as a foreign object. PROMINENCE AND INTEGRATION PULL OPPOSITE WAYS.
+    # ⚠⚠ PROCESS NOTE, recorded because it is the point of the intake rule: s8-20/21/22 were all
+    #   "NO" by that rule -- art polish, not blocking the measurement. Admitted on direct request.
+    #   ★ THREE ROUNDS ON ONE CRATE THAT WAS THEN DELETED. Routing it to post-gate-backlog.md at the
+    #   start would have saved ~1.5 days AND REACHED THE SAME END STATE. The rule was right.
+    # ✅ Base look APPROVED by the user the same day ("it looks good"), closing s8-14's open sign-off.
+    # Suite 1307/1307. Evidence: production/qa/evidence/s8-14-builder/04-crate-removed.png
