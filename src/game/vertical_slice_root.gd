@@ -812,15 +812,22 @@ func _on_action_applied(result: ActionResult) -> void:
 	_refresh_open_preview() # the board changed under any open range overlay.
 	_refresh_occupant_pick_regions() # entities moved/spawned/died — re-author the click targets.
 	_dispatch_motion(result)
-	# ★ 2026-08-24 — CR-4's "the menu re-filters for the same entity" (AC-25/AC-12).
-	# CommandInterface._reselect_after_commit has already decided whether the actor
-	# survives with a legal action left (ENTITY_SELECTED) or the selection collapses
-	# (IDLE); this re-reads that decision and re-opens or closes accordingly, so a
-	# move->attack chain is one sequence and a unit that dies to a counterattack
-	# leaves no menu hanging over an empty tile.
+	# ★ S8-32 (user decision 2026-08-26): the menu CLOSES after a successful action.
+	#
+	# ⚠ This reverses the 2026-08-24 behaviour, which re-opened it here to satisfy
+	# CR-4's "the menu re-filters for the same entity" (AC-25/AC-12) so a move->attack
+	# chain read as one sequence.
+	# ⚠ COST, stated so it is a known trade and not a surprise: chaining move -> attack
+	# on the same unit now takes a re-select. The menu no longer follows the unit
+	# around after it acts.
+	# ★ The selection itself is untouched — CommandInterface._reselect_after_commit
+	# still decides whether the actor survives with a legal action left, and the unit
+	# stays selected if it does. Only the MENU is dismissed, so the board is readable
+	# immediately after acting instead of having a plate over it.
 	_clear_placement_preview()
 	_close_cost_preview() # the projection just became the real number.
-	_open_action_menu()
+	if _action_menu != null:
+		_action_menu.close()
 	_refresh_status() # AP/affordability/selection may have changed.
 
 

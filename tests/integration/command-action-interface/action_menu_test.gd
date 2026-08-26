@@ -709,7 +709,13 @@ func test_choosing_a_different_verb_abandons_an_armed_cancel() -> void:
 
 	menu.open(state, site, Vector2(400, 400), 128.0)
 	_row_named(menu, "Cancel Build").emit_signal("pressed")
-	_row_named(menu, "Wait").emit_signal("pressed")
+	# ⚠ S8-32: this pressed "Wait" as its "some other verb", and Wait is unit-only now,
+	# so a structure has no such row. Attack is the equivalent here — a SITUATIONAL row
+	# (disabled NOT_COMPLETED while the site is building) that stays visible, which is
+	# exactly the CR-4 distinction: situational rows are shown with their reason,
+	# structural ones are hidden. The invariant under test is unchanged: touching any
+	# other row abandons a half-made destructive decision.
+	_row_named(menu, "Attack").emit_signal("pressed")
 
 	assert_bool(menu.is_armed(CommandFSM.Verb.CANCEL_BUILD)).is_false()
 	assert_bool(chosen.has(CommandFSM.Verb.CANCEL_BUILD)).is_false()

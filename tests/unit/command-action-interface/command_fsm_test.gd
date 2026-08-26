@@ -649,7 +649,7 @@ func test_menu_model_fully_spent_unit_all_ap_verbs_disabled_wait_enabled() -> vo
 	assert_int(wait_entry.reason).is_equal(CommandFSM.Reason.NONE)
 
 
-func test_menu_model_producer_at_production_cap_disabled_cap_reached_wait_enabled() -> void:
+func test_menu_model_producer_at_production_cap_disabled_cap_reached_and_offers_no_wait() -> void:
 	var state := _make_state(0)
 	var unit_type := _make_unit_type()
 	var producer_type := _make_structure_type(6, 1, [unit_type]) # cap = 1
@@ -663,10 +663,16 @@ func test_menu_model_producer_at_production_cap_disabled_cap_reached_wait_enable
 
 	assert_bool(produce_entry.enabled).is_false()
 	assert_bool((produce_entry.reason & CommandFSM.Reason.PRODUCTION_CAP_REACHED) != 0).is_true()
-	assert_bool(wait_entry.enabled).is_true()
+	# ⚠ REWRITTEN S8-32 (user decision): Wait is a UNIT verb now. The entry is still
+	# REPORTED — menu_model's contract is one entry per verb — but flagged NOT_A_UNIT,
+	# the "does not apply to this KIND of thing" reason ActionMenu already hides. This
+	# narrows CR-4's AC-10 ("always enabled, never gated"), so the assertion is inverted
+	# rather than deleted: a structure silently regaining a live Wait row must fail here.
+	assert_bool(wait_entry.enabled).is_false()
+	assert_int(wait_entry.reason).is_equal(CommandFSM.Reason.NOT_A_UNIT)
 
 
-func test_menu_model_under_construction_structure_still_selects_wait_enabled_ap_verbs_disabled() -> void:
+func test_menu_model_under_construction_structure_still_selects_ap_verbs_disabled() -> void:
 	# Under-construction structure: Produce disabled NOT_COMPLETED, Attack
 	# disabled NOT_COMPLETED, Move disabled (not a UnitState), Wait still
 	# clickable — "it still selects" (AC-10), Cancel Build is Story 004's
@@ -694,7 +700,11 @@ func test_menu_model_under_construction_structure_still_selects_wait_enabled_ap_
 	assert_int(attack_entry.reason).is_equal(CommandFSM.Reason.NOT_COMPLETED)
 	assert_bool(produce_entry.enabled).is_false()
 	assert_int(produce_entry.reason).is_equal(CommandFSM.Reason.NOT_COMPLETED)
-	assert_bool(wait_entry.enabled).is_true()
+	# ⚠ S8-32: Wait is unit-only now, so a structure reports it NOT_A_UNIT and the menu
+	# hides the row. ★ "It still selects" (AC-10) is unaffected — selecting an
+	# under-construction structure is what surfaces its Cancel Build, asserted next.
+	assert_bool(wait_entry.enabled).is_false()
+	assert_int(wait_entry.reason).is_equal(CommandFSM.Reason.NOT_A_UNIT)
 	# Story 004: an under-construction owned structure DOES offer Cancel Build.
 	assert_bool(cancel_entry.enabled).is_true()
 	# ...and never Disband, whatever its state: structures are not disbanded (UR-7).

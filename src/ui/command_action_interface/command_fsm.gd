@@ -327,13 +327,35 @@ static func next_state(current: State, trigger: Trigger, _state: GameState) -> S
 ## [code]Combat.legal_targets[/code] O(4*attack_range) DIRECT,
 ## [code]BaseProduction.legal_deploy_tiles[/code] O(4)) — no additional scan
 ## of its own (control-manifest Performance Guardrail class).
+## Wait, enabled for an own [UnitState] and structurally inapplicable otherwise
+## (S8-32, user decision 2026-08-26).
+##
+## ⚠ [b]This narrows CR-4's AC-10[/b], which specified Wait as the "always" verb —
+## always enabled, never gated on any query. It still means what it meant for a unit
+## ("I am done with this one, stop offering it back", and it is what the [code][/][code]
+## idle-cycle skips on); a STRUCTURE has no such need, since it never moves and its
+## produce/build rows already carry their own reasons.
+##
+## ★ Reported as [constant Reason.NOT_A_UNIT] rather than dropped from the array, and
+## that distinction is the whole design: [method menu_model]'s contract is that it
+## reports on EVERY verb and the presentation layer decides what to draw. NOT_A_UNIT is
+## the "does not apply to this KIND of thing" flag [method ActionMenu._is_inapplicable]
+## already hides — the same rule S8-10 settled for Produce on an ordinary unit. Dropping
+## the entry instead would break the one-entry-per-verb invariant that several callers,
+## and this file's own tests, rely on.
+static func _wait_entry(entity: EntityState) -> VerbEntry:
+	if entity is UnitState:
+		return VerbEntry.new(Verb.WAIT, true, Reason.NONE)
+	return VerbEntry.new(Verb.WAIT, false, Reason.NOT_A_UNIT)
+
+
 static func menu_model(state: GameState, entity: EntityState) -> Array[VerbEntry]:
 	var menu: Array[VerbEntry] = []
 	menu.append(_move_entry(state, entity))
 	menu.append(_attack_entry(state, entity))
 	menu.append(_produce_entry(state, entity))
 	menu.append(_build_entry(state, entity))
-	menu.append(VerbEntry.new(Verb.WAIT, true, Reason.NONE))
+	menu.append(_wait_entry(entity))
 	menu.append(_cancel_build_entry(state, entity))
 	menu.append(_disband_entry(state, entity))
 	return menu
