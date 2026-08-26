@@ -21,3 +21,8 @@ const FACTORY: StructureTypeDef = preload("res://data/structures/factory.tres")
 const BARRACKS: StructureTypeDef = preload("res://data/structures/barracks.tres")
 const DEFENSIVE_STRUCTURE: StructureTypeDef = preload("res://data/structures/defensive_structure.tres")
 const RESEARCH_LAB: StructureTypeDef = preload("res://data/structures/research_lab.tres")
+
+## ★ Every structure type in the roster, in declaration order. See
+## [constant UnitTypes.ALL] for why this exists — a coverage guard that keeps its
+## own copy of the roster only guards what someone remembered to copy.
+const ALL: Array[StructureTypeDef] = [HQ, FACTORY, BARRACKS, DEFENSIVE_STRUCTURE, RESEARCH_LAB]

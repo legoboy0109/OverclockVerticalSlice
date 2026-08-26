@@ -58,6 +58,11 @@ HUES = ("rush", "boom", "neutral")
 
 # (archetype, which axis the shipped size pins, shipped px)
 UNITS = (
+    # ★ The Builder pins WIDTH like the Scout: it is a four-legged walker whose
+    # read is the long hunched body, not its height. Shipped a touch narrower than
+    # the Scout so the two are tellable apart at a glance despite both being
+    # four-legged — §3.1's silhouette-separation rule.
+    ("builder", "w", 140),
     ("scout",   "w", 148),
     ("trooper", "h", 130),
     ("heavy",   "h", 148),

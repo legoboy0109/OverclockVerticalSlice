@@ -7,14 +7,22 @@
 
 | Total | Needed | In Progress | Done | Approved |
 |-------|--------|-------------|------|----------|
-| 11 | 0 | 1 | 10 | 0 |
+| 12 | 0 | 1 | 11 | 0 |
 
-> ✅ **The VS roster now has NO missing art** (2026-08-19). Every buildable structure and
-> producible unit resolves a real texture in all three hues plus a destroyed state and a glow
-> mask. Regression guards live in `entity_sprite_feed_test.gd`
+> ✅ **The VS roster has NO missing art** (re-verified 2026-08-25 after the Builder landed). Every
+> buildable structure and producible unit resolves a real texture in all three hues plus a
+> destroyed state and a glow mask. Regression guards live in `entity_sprite_feed_test.gd`
 > (`test_every_vs_type_now_has_shipped_art`) and `glow_uniform_state_test.gd`
-> (`test_every_vs_type_now_has_a_shipped_glow_mask`) — a roster addition that outruns the art
-> now fails the suite instead of shipping a magenta placeholder onto the board.
+> (`test_every_vs_type_now_has_a_shipped_glow_mask`).
+>
+> ⚠⚠ **That guarantee was FALSE between 2026-08-19 and 2026-08-25, and the guards did not catch
+> it.** Both tests carried their own hand-written list of the nine types, so they only ever
+> guarded what somebody had remembered to transcribe into them. The **Builder** shipped as a
+> playable unit with no art at all, the board drew a magenta placeholder, and the suite stayed
+> green — the exact failure the sentence above claimed was impossible. Both guards now enumerate
+> `UnitTypes.ALL` / `StructureTypes.ALL`, so adding a `.tres` extends the guard by itself. ★ The
+> lesson generalises: **a coverage check that keeps its own copy of the thing it covers is not a
+> coverage check.**
 
 > **"Done (idle)"** = base look approved, cleaned, all 3 hues, facings, and placed in
 > `assets/art/` with import sidecars — but **`idle` frame 01 only**; the §8.5 state sets
@@ -58,6 +66,7 @@ Role silhouettes separate fine without hue; army ownership does not. The art bib
 **non-hue ownership markers** (trim pattern / emblem / silhouette-family trait) remain the actual
 fix — this is the measured number for that work.
 
+| ASSET-012 | Builder | Infantry (4 facings) | rush/boom/neutral | Done (idle) | ★ **Hunched four-legged CARRIER walker** — body plan chosen by user 2026-08-25. The roster's only support unit; defenceless and consumed by the structure it raises, so the silhouette must read "not a soldier". Shipped from `art-source/generated/asset-012-builder/builder_rush_r3_c2.png` (seed 3399497708), cut with `8 --largest-only --trim`. Sized by **width** at 140px — narrower than the Scout's 148 so the two four-legged units stay tellable apart. ⚠ **Base look was NOT user-approved** (every other entry here carries a sign-off); it was selected by the session. ⚠ Took 3 rounds: round 1 came out orange-dominant (prompt said orange covered the whole hull), round 2 had an unremovable cast shadow — **feet and shadow measured at identical luma (104 vs 102)**, so `--deshadow` ate 42-45% of the hull. Fixed by re-rolling shadow-free, not by cleaning harder. Full post-mortem in `generation-prompts.md` |
 | ASSET-008 | Sniper | Unit | rush/boom/neutral | Done (idle) | **Base look approved 2026-08-19: `art-source/generated/asset-008-sniper/sniper_rush_r6_c1.png`** (seed 1599279841). Was "deferred" in the spec until the renderer made its absence visible. Ships at **h=156**, the tallest infantry — §3.1 puts it opposite the Scout on the posture axis, and that ratio is the primary thumbnail read. ⚠ Value-corrected in post: the raw generation came out at luma 0.253 against the roster's 0.355, i.e. the "units must be LIGHTER than the stage" defect the infantry session documented, hit again |
 | ASSET-009 | Factory *(was Economy Outpost)* | Structure | rush/boom/neutral | Done (idle) | **Base look approved 2026-08-19: `econ_rush_r5_c2.png`** (seed 2305656182). §3.2 identifier: low + wide, horizontal emphasis, collector forms. Took **5 rounds** — "solar array / collector panels" reliably summons a whole city block (the same failure `factory` has); the singular `bunker` noun plus angled intake vanes is what converged |
 | ASSET-010 | Defensive Structure | Structure | rush/boom/neutral | Done (idle) | **Base look approved 2026-08-19: `def_rush_r2_c2.png`** (seed 3933358768). §3.2 identifier: compact/thick/symmetrical with one dominant elevated emplacement breaking the top. Cleanest convergence of the four — **2 rounds** |

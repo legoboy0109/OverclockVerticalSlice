@@ -482,19 +482,21 @@ func test_unshipped_type_resolves_a_path_that_does_not_exist_rather_than_blank()
 
 func test_every_vs_type_now_has_shipped_art() -> void:
 	# Arrange — the coverage guard that replaces the old "Sniper is missing" test.
-	# All four previously-unshipped types landed 2026-08-19; this fails loudly if a
-	# roster addition ever outruns the art again.
-	var entities: Array[EntityState] = [
-		_make_unit(1, 0, Vector2i(0, 0), UnitTypes.SCOUT),
-		_make_unit(2, 0, Vector2i(1, 0), UnitTypes.TROOPER),
-		_make_unit(3, 0, Vector2i(2, 0), UnitTypes.HEAVY),
-		_make_unit(4, 0, Vector2i(3, 0), UnitTypes.SNIPER),
-		_make_structure(5, 0, Vector2i(4, 0), StructureTypes.HQ),
-		_make_structure(6, 0, Vector2i(5, 0), StructureTypes.BARRACKS),
-		_make_structure(7, 0, Vector2i(6, 0), StructureTypes.FACTORY),
-		_make_structure(8, 0, Vector2i(7, 0), StructureTypes.DEFENSIVE_STRUCTURE),
-		_make_structure(9, 0, Vector2i(8, 0), StructureTypes.RESEARCH_LAB),
-	]
+	#
+	# ⚠ ENUMERATES THE LIVE ROSTER, never a hand-written list. It used to hold its
+	# own copy of the nine types, so it guarded only what somebody had remembered to
+	# transcribe: the Builder shipped on 2026-08-25 with no art and this test stayed
+	# green while the board drew a magenta placeholder. Built from
+	# [constant UnitTypes.ALL] / [constant StructureTypes.ALL], a new `.tres` extends
+	# the guard on its own — which is what the manifest already claimed happened.
+	var entities: Array[EntityState] = []
+	var next_id: int = 1
+	for type: UnitTypeDef in UnitTypes.ALL:
+		entities.append(_make_unit(next_id, 0, Vector2i(next_id - 1, 0), type))
+		next_id += 1
+	for type: StructureTypeDef in StructureTypes.ALL:
+		entities.append(_make_structure(next_id, 0, Vector2i(next_id - 1, 0), type))
+		next_id += 1
 
 	# Act / Assert — idle and destroyed, in every faction hue.
 	for entity: EntityState in entities:
