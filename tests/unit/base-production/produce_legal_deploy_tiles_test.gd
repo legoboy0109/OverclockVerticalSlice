@@ -219,7 +219,7 @@ func test_legal_deploy_tiles_excludes_offboard_neighbours_at_high_board_edge() -
 
 # --- Production (Rule 7): the happy path -------------------------------------
 
-func test_produce_spends_both_pools_creates_active_unit_on_tile_and_increments_counter() -> void:
+func test_produce_spends_both_pools_starts_a_build_and_increments_counter() -> void:
 	# Arrange -- Completed Production Outpost, counter 0; fund EXACTLY the dual cost
 	# (ADR-0006 pivot): produce_cost Credits + produce_ap_cost AP surcharge, so both
 	# pools land at 0 after the commit.
@@ -236,9 +236,36 @@ func test_produce_spends_both_pools_creates_active_unit_on_tile_and_increments_c
 	# Assert -- both pools spent exactly (Credit main cost + AP surcharge).
 	assert_int(state.per_player[0].current_credits).is_equal(0)
 	assert_int(state.per_player[0].current_ap).is_equal(0)
-	# The new unit took the pending id and next_entity_id advanced by exactly one.
-	assert_int(state.next_entity_id).is_equal(next_id_before + 1)
-	# A new UnitState exists on the tile, immediately Active (no build lifecycle).
+	# ⚠ REWRITTEN, NOT DELETED (S8-28). This asserted that produce placed a live unit on
+	# the tile in the same call. Production is now MULTI-TURN, so the commit starts a
+	# build and the unit arrives from advance_build_timers. The dual-cost half of this
+	# test is unchanged and still the point: BOTH pools are spent AT COMMIT, which is what
+	# makes a queued unit a paid-for unit (and PC-3 a real rule, not a loophole).
+	# ★ No id is consumed yet — the unit does not exist until it is delivered.
+	assert_int(state.next_entity_id).is_equal(next_id_before)
+	# The tile stays EMPTY and passable while the unit is building.
+	assert_object(state.entity_at(tile)).is_null()
+	assert_bool(state.grid.is_passable(tile.x, tile.y)).is_true()
+	# The producer is now busy with exactly this unit, on exactly this tile.
+	assert_object(producer.producing_type).is_same(UnitTypes.TROOPER)
+	assert_int(producer.production_turns_remaining).is_equal(UnitTypes.TROOPER.production_turns)
+	assert_int(producer.production_tile.x).is_equal(tile.x)
+	assert_int(producer.production_tile.y).is_equal(tile.y)
+	# Producer counter incremented to 1.
+	assert_int(producer.units_produced_this_turn).is_equal(1)
+	# One ProductionStartedEvent — the ONLY signal that anything happened, because the
+	# board does not change on a produce commit any more.
+	assert_int(events.size()).is_equal(1)
+	assert_bool(events[0] is ProductionStartedEvent).is_true()
+	var evt: ProductionStartedEvent = events[0]
+	assert_int(evt.entity_id).is_equal(producer.entity_id)
+	assert_object(evt.unit_type).is_same(UnitTypes.TROOPER)
+	assert_int(evt.owner).is_equal(0)
+	assert_int(evt.tile.x).is_equal(tile.x)
+	assert_int(evt.tile.y).is_equal(tile.y)
+
+	# --- and the unit actually arrives when the timer runs out ---
+	BaseProduction.advance_build_timers(state, 0)
 	var deployed: EntityState = state.entity_at(tile)
 	assert_object(deployed).is_not_null()
 	assert_bool(deployed is UnitState).is_true()
@@ -246,20 +273,8 @@ func test_produce_spends_both_pools_creates_active_unit_on_tile_and_increments_c
 	assert_int(unit.owner).is_equal(0)
 	assert_object(unit.type).is_same(UnitTypes.TROOPER)
 	assert_int(unit.current_hp).is_equal(UnitTypes.TROOPER.hp)
-	assert_int(unit.entity_id).is_equal(next_id_before)
-	# The unit occupies the grid the instant this commits (single atomic apply).
 	assert_bool(state.grid.is_passable(tile.x, tile.y)).is_false()
-	# Producer counter incremented to 1.
-	assert_int(producer.units_produced_this_turn).is_equal(1)
-	# One deployment event carrying the unit's full identity (incl. owner).
-	assert_int(events.size()).is_equal(1)
-	assert_bool(events[0] is UnitDeployedEvent).is_true()
-	var evt: UnitDeployedEvent = events[0]
-	assert_int(evt.entity_id).is_equal(unit.entity_id)
-	assert_object(evt.unit_type).is_same(UnitTypes.TROOPER)
-	assert_int(evt.owner).is_equal(0)
-	assert_int(evt.tile.x).is_equal(tile.x)
-	assert_int(evt.tile.y).is_equal(tile.y)
+	assert_object(producer.producing_type).is_null()
 
 
 # --- Production (Rule 7): rejection gates ------------------------------------

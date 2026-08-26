@@ -36,6 +36,12 @@ func _produce_a_unit(root: VerticalSliceRoot) -> UnitState:
 	await get_tree().process_frame
 	root.request_produce_at_cursor()
 	await get_tree().process_frame
+	# ⚠ S8-28: production is multi-turn, so the commit alone leaves nothing on the board.
+	# This helper exists to GET A UNIT for the cursor tests to walk onto — advancing the
+	# timer keeps it doing that, and keeps these tests about the cursor rather than about
+	# a production rule they do not exercise.
+	BaseProduction.advance_build_timers(root.state(), root.state().active_player)
+	await get_tree().process_frame
 	return _own_unit(root)
 
 
@@ -71,10 +77,31 @@ func test_the_slice_exposes_a_jump_entry_point() -> void:
 # Behaviour: jumps only between highlighted tiles, and only during a preview.
 # ==============================================================================
 
-func test_jump_is_a_no_op_with_nothing_selected() -> void:
-	# Nothing is highlighted outside a preview, so there is nothing to jump between.
-	# A no-op, never an error (BoardCursor's empty-candidates contract).
+func test_jump_outside_a_preview_walks_your_own_idle_entities() -> void:
+	# ⚠ REWRITTEN 2026-08-29. This asserted jump was a NO-OP outside a preview, which
+	# was true only because player 0 started the match owning nothing that could act.
+	# S8-29 seeds a Builder behind each HQ, so the idle-entity fallback now has a real
+	# candidate — and walking it is exactly the 2026-08-25 behaviour that fallback was
+	# added for ("what have I not moved yet?").
 	var root: VerticalSliceRoot = await _make_root()
+	var before: Vector2i = root.cursor_tile()
+	assert_bool(root.jump_cursor()).is_true()
+	assert_vector(root.cursor_tile()).is_not_equal(before)
+	# It landed on something the player owns and can still act with.
+	var landed: EntityState = root.state().entity_at(root.cursor_tile())
+	assert_object(landed).is_not_null()
+	assert_int(landed.owner).is_equal(0)
+
+
+func test_jump_is_a_no_op_when_nothing_is_selected_and_nothing_is_idle() -> void:
+	# The original contract, preserved: with an empty salient set AND no idle entity,
+	# jump does nothing and never errors (BoardCursor's empty-candidates contract).
+	var root: VerticalSliceRoot = await _make_root()
+	var state := root.state()
+	# Stand down everything the player owns, emptying the idle-entity fallback.
+	for e: EntityState in state.entities():
+		if e.owner == 0:
+			e.stood_down = true
 	var before: Vector2i = root.cursor_tile()
 	assert_bool(root.jump_cursor()).is_false()
 	assert_vector(root.cursor_tile()).is_equal(before)

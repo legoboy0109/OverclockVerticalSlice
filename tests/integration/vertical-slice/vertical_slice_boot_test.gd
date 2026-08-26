@@ -52,8 +52,21 @@ func test_boots_a_live_match_with_board_hud_and_ai() -> void:
 	assert_object(state.per_player[1].faction).is_same(Factions.BOOM)
 	assert_bool(state.per_player[0].faction == state.per_player[1].faction).is_false()
 
-	# Two HQs placed, nothing else yet (the human hasn't acted, no AI turn ran).
-	assert_int(state.entities().size()).is_equal(2)
+	# Two HQs and two starting Builders — one behind each HQ (S8-29). Nothing else yet:
+	# the human hasn't acted and no AI turn has run.
+	# ⚠ Was 2 until 2026-08-29. The free Builder exists because since S8-13 the HQ makes
+	# ONLY Builders, so without it every game opens with the same forced turn.
+	assert_int(state.entities().size()).is_equal(4)
+	# ★ Behind the HQ, never in front: a Builder has attack_range 0 and cannot defend
+	# itself, so seeding it toward the enemy would gift the opponent a turn-one kill.
+	for player: int in 2:
+		var behind: Vector2i = VSMap.starting_builder_tile(state.entities_by_id[player].position)
+		var seeded: EntityState = state.entity_at(behind)
+		assert_object(seeded).override_failure_message(
+			"No starting Builder behind player %d's HQ." % player).is_not_null()
+		assert_bool(seeded is UnitState).is_true()
+		assert_object((seeded as UnitState).type).is_same(UnitTypes.BUILDER)
+		assert_int(seeded.owner).is_equal(player)
 
 	# Board + command interface + HUD all assembled and wired.
 	assert_object(root.board()).is_not_null()
@@ -171,9 +184,12 @@ func test_boot_authors_a_pick_region_per_starting_entity() -> void:
 	var root := _make_root()
 	var board := root.board()
 	var regions: Array = board.occupant_pick_regions
-	# Two HQs at boot → two regions, each carrying its entity id + tile, its rect
-	# covering that tile's centre so a click on the tile resolves the occupant.
-	assert_int(regions.size()).is_equal(2)
+	# Four starting entities at boot — two HQs and two Builders (S8-29) → four regions,
+	# each carrying its entity id + tile, its rect covering that tile's centre so a click
+	# on the tile resolves the occupant.
+	# ⚠ Was 2 until 2026-08-29. ★ That this number tracks the starting roster is the
+	# point of the test: a seeded entity with no pick region would be unclickable.
+	assert_int(regions.size()).is_equal(4)
 	for region: BoardRenderer.OccupantPickRegion in regions:
 		assert_bool(region.rect.has_point(board.grid_to_screen(region.tile))).is_true()
 	# Authored back-to-front (ascending screen Y = the Y-sort paint order) so pick_at's
@@ -328,7 +344,7 @@ func test_build_is_refused_outright_with_no_builder_selected() -> void:
 # Produce / Move / Attack — the selected-unit + HQ-production gameplay verbs.
 # ==============================================================================
 
-func test_produce_deploys_a_unit_from_the_hq() -> void:
+func test_produce_starts_a_build_that_deploys_a_unit_from_the_hq() -> void:
 	var root := _make_root()
 	var state := root.state()
 	state.per_player[0].current_ap = 20
@@ -341,6 +357,13 @@ func test_produce_deploys_a_unit_from_the_hq() -> void:
 
 	var before: int = state.entities().size()
 	assert_bool(root.request_produce_at_cursor()).is_true()
+	# ⚠ S8-28: production is multi-turn. The commit starts a build and the board is
+	# UNCHANGED until the timer runs out — that is the behaviour under test now.
+	assert_int(state.entities().size()).is_equal(before)
+	assert_object(hq.producing_type).is_same(utype)
+
+	BaseProduction.advance_build_timers(state, 0)
+
 	assert_int(state.entities().size()).is_equal(before + 1)   # a unit was deployed ...
 	assert_bool(state.entity_at(target) is UnitState).is_true() # ... on the target tile.
 
@@ -428,6 +451,12 @@ func test_produce_uses_a_second_producer_when_the_hq_is_at_cap() -> void:
 
 	var before: int = state.entities().size()
 	assert_bool(root.request_produce_at_cursor()).is_true() # produced from the outpost, HQ skipped.
+	# ⚠ S8-28: the commit starts a build on the OUTPOST; deliver it before asserting.
+	# ★ That the outpost — not the maxed HQ — is the one holding the build is the real
+	# subject of this test, and it is now directly observable rather than inferred.
+	assert_object(outpost.producing_type).is_same(utype)
+	assert_object(hq.producing_type).is_null()
+	BaseProduction.advance_build_timers(state, 0)
 	assert_int(state.entities().size()).is_equal(before + 1)
 	assert_bool(state.entity_at(target) is UnitState).is_true()
 
@@ -458,6 +487,9 @@ func test_produce_unit_type_selection_cycles_and_deploys_the_selected_type() -> 
 	var target: Vector2i = deploy[0]
 	_move_cursor_to(root, target)
 	assert_bool(root.request_produce_at_cursor()).is_true()
+	# ⚠ S8-28: deliver the build. The assertion that matters — the SELECTED type is the
+	# one that arrives — is unchanged, and is now also checkable before delivery.
+	BaseProduction.advance_build_timers(state, 0)
 	var produced: EntityState = state.entity_at(target)
 	assert_bool(produced is UnitState).is_true()
 	assert_str((produced as UnitState).type.display_name).is_equal(chosen.display_name)
@@ -500,6 +532,10 @@ func test_under_construction_producer_excluded_from_roster_until_complete() -> v
 	_move_cursor_to(root, deploy[0])
 	var before: int = state.entities().size()
 	assert_bool(root.request_produce_at_cursor()).is_true() # now produces from the completed outpost
+	# ⚠ S8-28: deliver the build. The invariant under test — an UNDER_CONSTRUCTION
+	# producer's types stay out of the roster until it completes — is untouched by the
+	# production queue and is asserted above.
+	BaseProduction.advance_build_timers(state, 0)
 	assert_int(state.entities().size()).is_equal(before + 1)
 
 
@@ -828,6 +864,9 @@ func test_board_occupant_layer_holds_one_real_sprite_per_live_entity() -> void:
 		if not child.name.begins_with(BoardRenderer.COVER_PROP_NAME_PREFIX):
 			sprites += 1
 
-	# One entity sprite per live entity — two HQs at boot.
+	# One entity sprite per live entity — two HQs and two starting Builders at boot
+	# (S8-29). ★ The first assertion is the real invariant and is self-maintaining; the
+	# literal below is deliberately kept alongside it so the suite would notice the
+	# starting roster changing SILENTLY, which is how the Builder shipped with no art.
 	assert_int(sprites).is_equal(state.entities().size())
-	assert_int(sprites).is_equal(2)
+	assert_int(sprites).is_equal(4)

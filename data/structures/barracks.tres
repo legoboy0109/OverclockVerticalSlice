@@ -10,7 +10,6 @@
 script = ExtResource("1")
 display_name = "Barracks"
 hp = 14
-production_cooldown_turns = 1
 cap_bonus = 2
 max_count = 3
 upkeep = 100

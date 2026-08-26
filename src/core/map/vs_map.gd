@@ -43,6 +43,27 @@ const HEIGHT: int = 10
 const HQ_A: Vector2i = Vector2i(2, 5)
 const HQ_B: Vector2i = Vector2i(9, 5)
 
+## The tile each seat's free starting Builder occupies — directly BEHIND its HQ,
+## i.e. one step further from the enemy (S8-29, user decision 2026-08-26).
+##
+## ★ [b]Why a starting Builder at all:[/b] since S8-13 the HQ makes only Builders and
+## every fighting unit comes from a Barracks, so the opening is a fixed
+## Builder → walk → Barracks sequence before anything can happen. Seeding the Builder
+## removes the most scripted turn in the game — the one where the only legal play is
+## the same play every time.
+##
+## ⚠ [b]BEHIND, not in front.[/b] The Builder is defenceless (`attack_range` 0), so
+## placing it toward the enemy would hand the opponent a free kill on turn one. Behind
+## also leaves the HQ's forward deploy ring clear for the units that come later.
+##
+## ★ Single-sourced here on purpose: [VerticalSliceRoot] and `tools/simulate_matches.gd`
+## both seed this, and the simulator exists to mirror the slice. A hand-copied tile rule
+## in two files is exactly the drift that produced the S7-15 placement-bias confound.
+static func starting_builder_tile(hq_tile: Vector2i) -> Vector2i:
+	var behind: int = -1 if hq_tile.x >= WIDTH / 2 else 1
+	return Vector2i(hq_tile.x - behind, hq_tile.y)
+
+
 ## Minimum Manhattan distance any cover tile must keep from either HQ. Equal to
 ## `BaseProductionConfig.deploy_radius` (2) + 1 — see layout rule 2.
 const MIN_HQ_CLEARANCE: int = 3

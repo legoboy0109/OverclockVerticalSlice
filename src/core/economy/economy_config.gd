@@ -184,7 +184,7 @@ extends Resource
 ##
 ## ⚠ Kept rather than deleted so the idea is not re-tried from scratch. A compensation that
 ## could work has to be denominated in something actually scarce — production rate
-## (`production_cooldown_turns` is the binding constraint, S7-10) or material. ★ Or note that
+## (⚠ S7-10 said `production_cooldown_turns` was the binding constraint; that field was retired at S8-28 and the constraint is now `UnitTypeDef.production_turns`) or material. ★ Or note that
 ## all ten second-mover wins are [b]round-cap tiebreak[/b] wins on unit count, while the only
 ## two games that resolve on play go to the FIRST mover — which suggests the effect may be an
 ## artifact of the tiebreak metric rather than a play advantage at all.

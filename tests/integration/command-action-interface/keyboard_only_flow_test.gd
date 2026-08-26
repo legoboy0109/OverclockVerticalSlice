@@ -176,6 +176,11 @@ func _deploy_a_unit_by_keyboard(root: VerticalSliceRoot) -> UnitState:
 	# The interface snaps the cursor onto a legal deploy tile, so confirm places.
 	await _tap(KEY_CONFIRM)
 	await _settle_input_lock()
+	# ⚠ S8-28: production is multi-turn, so the keyboard journey ENDS at "a build was
+	# started", not "a unit is on the board". Advance the timer so AC-9 still checks the
+	# thing it cares about — that the whole path is reachable with no mouse — rather than
+	# failing on a rule change it has nothing to do with.
+	BaseProduction.advance_build_timers(root.state(), root.state().active_player)
 	return _own_unit(root)
 
 

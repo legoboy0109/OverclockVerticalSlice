@@ -92,6 +92,11 @@ func _draw() -> void:
 ## past-tense, matching how the player would describe the same event out loud.
 const ENTRY_LABELS: Dictionary = {
 	&"UnitDeployedEvent": "Unit deployed",
+	# ★ S8-28: production is multi-turn, so a produce commit changes NOTHING on the
+	# board. Without an entry here the player presses Produce, watches Credits and AP
+	# drain, and sees no other consequence — which reads as a bug, not as a build.
+	&"ProductionStartedEvent": "Production started",
+	&"ProductionCancelledEvent": "Production cancelled",
 	&"UnitMovedEvent": "Unit moved",
 	&"UnitDestroyedEvent": "Unit destroyed",
 	&"DamageEvent": "Damage dealt",

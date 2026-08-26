@@ -11,4 +11,5 @@ attack_range = 2
 move_cost = 3
 soft_move_cap = 2
 upkeep = 300
+production_turns = 2
 produce_cost = 700

@@ -384,6 +384,11 @@ func _build_match(favoured: int, handicap: int, variant: int) -> GameState:
 		s.build_status = StructureState.BuildStatus.COMPLETED
 		state.entities_by_id[s.entity_id] = s
 
+	# ★ S8-29: one free Builder behind each HQ, via the SHARED routine the slice uses.
+	# This file's header demands it mirror the slice; hand-copying the placement here is
+	# the S7-15 confound waiting to happen again.
+	VerticalSliceRoot.seed_starting_builders(state, map.hq_tiles)
+
 	# ★ S5-04 mirror seeding: BOTH players get the same unit at mirrored tiles, so
 	# the position differs between variants while staying exactly fair.
 	if handicap == 0 and variant < MIRROR_OPENINGS.size():

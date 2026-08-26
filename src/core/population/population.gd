@@ -45,11 +45,13 @@ static func effective_cap(state: GameState, player: int) -> int:
 ## How many cap slots [param player] is currently using — every living unit they own
 ## whose type sets [member UnitTypeDef.counts_toward_cap].
 ##
-## [b]`population-cap.md` PC-3 ("units under production count") needs no machinery
-## here:[/b] production in this game is INSTANT — [code]BaseProduction.apply_produce[/code]
-## creates the [UnitState] and places it in the same call, so there is no queue for a unit
-## to sit in. If production ever becomes multi-turn, PC-3 becomes real work and this
-## function is where it lands.
+## [b]`population-cap.md` PC-3 — "units under production count against the cap" — is
+## implemented here as of S8-28.[/b] Production became multi-turn, so a producer can hold
+## a paid-for unit that is not yet on the board, and this counts it.
+##
+## ★ This comment previously said PC-3 "needs no machinery here" because production was
+## instant, and named this function as where the work would land if that ever changed.
+## It changed, and this is that work — the note was right, and worth having written.
 static func current_population(state: GameState, player: int) -> int:
 	var count: int = 0
 	for e: EntityState in state.entities():
@@ -59,6 +61,17 @@ static func current_population(state: GameState, player: int) -> int:
 		# A null type is invalid state, not a chargeable slot — same reasoning as
 		# Upkeep.total_upkeep, which iterates this identical entity list.
 		if u.type == null or not u.type.counts_toward_cap:
+			continue
+		count += 1
+	# ★ PC-3 (S8-28): a unit IN PRODUCTION occupies its slot from the moment production
+	# is committed. Its costs are already spent, so without this a player could queue
+	# past the cap and the check would do nothing — which is exactly the rationale
+	# population-cap.md gives for the rule.
+	for e: EntityState in state.entities():
+		if e.owner != player or not (e is StructureState):
+			continue
+		var st: StructureState = e as StructureState
+		if st.producing_type == null or not st.producing_type.counts_toward_cap:
 			continue
 		count += 1
 	return count

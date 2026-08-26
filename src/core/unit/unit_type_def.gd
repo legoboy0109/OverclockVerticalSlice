@@ -63,3 +63,19 @@ enum TargetingMode { DIRECT, AREA }
 ## [method BaseProduction.apply_build]). A unit with this set must be costed as part
 ## of the price of every building it can put down, not as a unit that survives.
 @export var can_build: bool = false
+
+
+## Owner-turns this unit spends IN PRODUCTION before it appears on the board
+## (S8-28, user decision 2026-08-26). Production is no longer instant: a
+## [ProduceAction] commits the cost and starts a build, and the unit is placed
+## when the timer reaches zero.
+##
+## ★ [b]This REPLACES the per-structure [code]production_cooldown_turns[/code].[/b]
+## A producer is busy while its unit is building, so the wait is now a property of
+## WHAT you are making rather than of the building making it — which is what makes
+## "more powerful units take longer" expressible at all.
+##
+## Shipped values: Builder 1 · Scout 1 · Trooper 1 · Sniper [b]2[/b] · Heavy [b]2[/b].
+## ⚠ Chosen by the user from three candidate curves; the gentler one, so only the two
+## most powerful units carry a delay and the early game keeps its pace.
+@export var production_turns: int = 1

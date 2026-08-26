@@ -69,10 +69,30 @@ enum BuildStatus { UNDER_CONSTRUCTION, COMPLETED }
 ## Units produced by this structure so far this owner-turn — producers only
 ## (`production_cap > 0`); `0`/unused on non-producer structure types. Reset
 ## to `0` at the owner's start-of-turn (ADR-0008 step 2).
-## Turns remaining before this producer may produce again (S6-07). Set to the type's
-## [member StructureTypeDef.production_cooldown_turns] on a successful produce, and
-## decremented once per owner-turn by [method Structure.reset_turn_flags].
-@export var production_cooldown_remaining: int = 0
+## The unit type currently IN PRODUCTION here, or [code]null[/code] when idle
+## (S8-28). A producer holds exactly ONE pending unit at a time — starting a build
+## is what makes it busy, which is why this REPLACED the old
+## [code]production_cooldown_remaining[/code] rather than sitting alongside it.
+##
+## ⚠ A shared reference into the [code]UnitTypes[/code] registry, never a duplicate —
+## identical to [member type]'s contract, and it must stay that way: the produce path
+## compares by identity ([code]in producible_types[/code]), which a per-structure copy
+## would silently break. Survives [method GameState.clone] by identity because the
+## registry entries are file-backed [code].tres[/code], so [code]duplicate_deep[/code]
+## does not copy them.
+@export var producing_type: UnitTypeDef = null
+
+## Owner-turns left until [member producing_type] is placed. Decremented once per
+## owner-turn by [method BaseProduction.advance_build_timers], the same pass that
+## advances structure construction. Meaningless while [member producing_type] is null.
+@export var production_turns_remaining: int = 0
+
+## The tile [member producing_type] will be placed on when it completes.
+##
+## ⚠ Chosen and validated at COMMIT time, then RE-VALIDATED on completion — a tile
+## legal when production started can be occupied two turns later. If it is, completion
+## falls back to any other legal deploy tile, and only fails if the producer has none.
+@export var production_tile: Vector2i = Vector2i.ZERO
 
 @export var units_produced_this_turn: int = 0
 

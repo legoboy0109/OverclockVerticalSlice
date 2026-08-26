@@ -25,28 +25,6 @@ extends Resource
 
 @export var display_name: String
 @export var hp: int
-## Credits drained every turn while this structure is alive AND completed
-## (S6-02, `unit-upkeep.md` UR-3/UR-5). The HQ is the only entity that must stay
-## at 0 — it cannot be given up, so charging for it is a flat tax, not a decision.
-##
-## ★ Structures that GENERATE value still pay. Exempting the Research Lab would make
-## "build a Lab, research everything, sit" free, which is the unbounded-accumulation
-## defect the PIVOT verdict diagnosed, wearing a different hat.
-## Turns this producer must wait after producing before it may produce again.
-## ★ 0 = no cooldown (the pre-S6-07 behaviour), so adding the field changes nothing
-## until a type opts in.
-##
-## ★★ [b]Why this exists — measured, not speculative.[/b] The S6-06 gate batch showed
-## 0/21 games resolving with zero HQ damage, and the reason was not the economy, the AI's
-## paralysis, or the population cap (all three were investigated and fixed, none was it).
-## Late-game armies sat at ~2.5 units on BOTH sides because units died exactly as fast as
-## they were replaced: two symmetric AIs reinforcing instantly from HQs at opposite ends of
-## a small map, trading one-for-one forever. Perpetual attrition was the EQUILIBRIUM.
-##
-## A cooldown is the user's chosen lever (2026-08-24, "slower reinforcement"): it makes a
-## loss cost TIME rather than a turn's Credits, which is what lets one side achieve the
-## local superiority the stalemate denies both.
-@export var production_cooldown_turns: int = 0
 
 ## Infantry-cap slots this structure grants its owner while completed and alive
 ## (`population-cap.md` PC-5). The Barracks is the only type that grants any.

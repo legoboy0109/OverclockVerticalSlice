@@ -270,6 +270,11 @@ func destroy_entity(entity_id: int) -> Array[Event]:
 	grid.remove(e.position.x, e.position.y) # (b)
 	entities_by_id.erase(entity_id)          # (c)
 	if e is StructureState:
+		# ★ S8-28 (user decision): a unit IN PRODUCTION here dies with the building, and
+		# its Credits are NOT refunded. No code is needed for it — erasing the structure
+		# takes `producing_type` with it — but it is a RULE, not an accident, and the
+		# reason destroying a Barracks mid-build is worth doing. Stated here because the
+		# absence of code is exactly what would let someone "fix" it by mistake.
 		var evt := StructureDestroyedEvent.new()
 		evt.entity_id = entity_id
 		evt.is_hq = e.is_hq()

@@ -424,6 +424,11 @@ func test_produce_via_apply_action_creates_real_active_selectable_unit() -> void
 
 	# Act
 	var result: ActionResult = state.apply_action(action)
+	# ⚠ S8-28: produce starts a MULTI-TURN build; advance the timer so the unit is
+	# actually delivered. The AC being verified is "a real, active, selectable unit
+	# reaches the board through the real apply_action path", which is unchanged —
+	# only the number of steps it takes to get there.
+	BaseProduction.advance_build_timers(state, 0)
 
 	# Assert -- a real UnitState entity exists on the tile ...
 	assert_bool(result.ok).is_true()

@@ -248,6 +248,14 @@ func test_cross_clone_produce_yields_field_wise_equal_states() -> void:
 	# Act
 	BaseProduction.apply_produce(a, action)
 	BaseProduction.apply_produce(b, action)
+	# ⚠ S8-28: produce starts a build rather than placing a unit, so deliver it before
+	# comparing. ★ Running the timer on BOTH clones is the stronger determinism check:
+	# it proves the new producing_type / production_turns_remaining / production_tile
+	# fields clone and advance identically, which is exactly the property a queue could
+	# break — producing_type is a SHARED TypeDef reference, and a per-clone duplicate of
+	# it would leave A and B field-wise equal but identity-unequal.
+	BaseProduction.advance_build_timers(a, 0)
+	BaseProduction.advance_build_timers(b, 0)
 	# Assert -- a unit was deployed (non-vacuous) and A ≡ B (incl. producer's
 	# units_produced_this_turn counter + both AP pools).
 	assert_object(a.entity_at(Vector2i(6, 5))).is_not_null()

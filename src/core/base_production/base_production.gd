@@ -380,18 +380,67 @@ static func effective_build_time(_state: GameState, structure_type: StructureTyp
 ## O(entity count) — one filtered, stable-order pass over [param player]'s
 ## entities (control-manifest Performance Guardrail); runs once per player
 ## per turn, never per-frame.
+## Places the unit a producer has finished building, clearing its queue (S8-28).
+##
+## ⚠ [b]RE-VALIDATES the deploy tile.[/b] `production_tile` was legal when production
+## started; two owner-turns later it can hold anything. If it is no longer legal this
+## falls back to any other legal deploy tile, and only gives up when the producer has
+## none — that case keeps the unit in the queue rather than destroying it, so a
+## temporarily boxed-in base does not silently eat what the player already paid for.
+##
+## ★ The population check is NOT repeated here. PC-3 counts a unit from the moment
+## production is committed, so its cap slot was reserved at commit — re-checking would
+## double-count it against itself and could refuse to deliver a unit already paid for.
+static func _complete_production(state: GameState, producer: StructureState) -> Array[Event]:
+	var unit_type: UnitTypeDef = producer.producing_type
+	var tile: Vector2i = producer.production_tile
+	var legal: Array[Vector2i] = legal_deploy_tiles(state, producer, null)
+	if not (tile in legal):
+		if legal.is_empty():
+			# Boxed in. Hold the unit — it is paid for, and the block is usually temporary.
+			producer.production_turns_remaining = 1
+			return [] as Array[Event]
+		tile = legal[0]
+
+	var unit := UnitState.new()
+	unit.entity_id = state.next_entity_id
+	unit.owner = producer.owner
+	unit.position = tile
+	unit.type = unit_type
+	unit.current_hp = unit_type.hp
+	state.entities_by_id[unit.entity_id] = unit
+	state.next_entity_id += 1
+	var placed: bool = state.grid.place(unit.entity_id, tile.x, tile.y)
+	assert(placed, "BaseProduction._complete_production: Grid.place failed on a tile legal_deploy_tiles accepted — legal_deploy_tiles/Grid desync.")
+
+	producer.producing_type = null
+	producer.production_turns_remaining = 0
+
+	var evt := UnitDeployedEvent.new()
+	evt.entity_id = unit.entity_id
+	evt.unit_type = unit_type
+	evt.owner = producer.owner
+	evt.tile = tile
+	return [evt] as Array[Event]
+
+
 static func advance_build_timers(state: GameState, player: int) -> Array[Event]:
 	var events: Array[Event] = []
 	for e: EntityState in state.entities():
 		if e.owner != player or not (e is StructureState):
 			continue
 		var structure: StructureState = e
-		# ★ S6-07: tick the production cooldown here. This runs once per owner-turn,
-		# strictly before the economy step, which is exactly the cadence a per-turn timer
-		# wants — and it is real product code, unlike Structure.reset_turn_flags, which is
-		# currently satisfied by a TEST STUB (tests/helpers/stubs/structure_stub.gd).
-		if structure.production_cooldown_remaining > 0:
-			structure.production_cooldown_remaining -= 1
+		# ★ S8-28: tick the PRODUCTION queue here. Runs once per owner-turn, strictly
+		# before the economy step — the cadence a per-turn timer wants, and real product
+		# code, unlike Structure.reset_turn_flags which is satisfied by a TEST STUB
+		# (tests/helpers/stubs/structure_stub.gd).
+		# ⚠ Deliberately ticks BEFORE the under-construction guard below: a COMPLETED
+		# producer is exactly the case that has a unit in flight, and an early `continue`
+		# would freeze every queue on the board.
+		if structure.producing_type != null:
+			structure.production_turns_remaining -= 1
+			if structure.production_turns_remaining <= 0:
+				events.append_array(_complete_production(state, structure))
 		if structure.build_status != StructureState.BuildStatus.UNDER_CONSTRUCTION:
 			continue
 		structure.build_turns_remaining -= 1
@@ -680,7 +729,10 @@ static func validate_produce(state: GameState, action: ProduceAction) -> int:
 	# ★ S6-07: reinforcement rate limit (user decision 2026-08-24, "slower reinforcement").
 	# Distinct from PRODUCTION_CAP_REACHED, which is a per-turn throughput limit on a
 	# producer that is otherwise free to produce again next turn.
-	if producer.production_cooldown_remaining > 0:
+	# ★ S8-28: one unit at a time. A producer with a build in flight is busy until it
+	# completes — this is what replaced the flat per-structure cooldown, so the wait is
+	# now a property of WHAT is being made rather than of the building making it.
+	if producer.producing_type != null:
 		return Action.Reason.PRODUCER_ON_COOLDOWN
 	# Dual-cost (ADR-0006 pivot): effective_produce_cost is the Credit main cost;
 	# produce also spends a PRODUCE_AP_COST AP surcharge. Legal iff BOTH afford.
@@ -736,36 +788,24 @@ static func apply_produce(state: GameState, action: ProduceAction) -> Array[Even
 	Credits.spend(state, player, cost)                          # Credit main cost
 	AP.spend(state, player, Balance.economy.produce_ap_cost)    # AP surcharge
 
-	var unit := UnitState.new()
-	unit.entity_id = state.next_entity_id
-	unit.owner = player
-	unit.position = action.tile
-	unit.type = action.unit_type
-	unit.current_hp = action.unit_type.hp
-
-	state.entities_by_id[unit.entity_id] = unit
-	state.next_entity_id += 1
-	# validate_produce (re-run above) guarantees the tile is in legal_deploy_tiles,
-	# i.e. in-bounds/passable/unoccupied — so place() cannot fail here. Assert it
-	# loudly rather than silently discard the bool: a false return would mean a
-	# legal_deploy_tiles/Grid desync leaving a half-committed unit (AP spent,
-	# entity registered, event emitted) with no grid occupant. (Dev-only tripwire;
-	# assert is stripped in release, matching this codebase's convention.)
-	var placed: bool = state.grid.place(unit.entity_id, action.tile.x, action.tile.y)
-	assert(placed, "BaseProduction.apply_produce: Grid.place failed on a tile validate_produce accepted — legal_deploy_tiles/Grid desync.")
+	# ★ S8-28: production is no longer instant. The commit STARTS a build; the unit is
+	# placed by advance_build_timers when the timer reaches zero. Costs are spent HERE,
+	# at commit, so a queued unit is already paid for — which is what makes PC-3
+	# ("units under production count against the cap") meaningful rather than a loophole.
+	producer.producing_type = action.unit_type
+	producer.production_turns_remaining = action.unit_type.production_turns
+	producer.production_tile = action.tile
 
 	producer.units_produced_this_turn += 1
 	# ★ 2026-08-25: acting clears the stand-down mark. It records "I am finished
 	# with this one", and the player has visibly changed their mind — leaving it
 	# set would keep the entity dim and skipped while it still had a turn left.
 	producer.stood_down = false
-	# ★ S6-07: arm the reinforcement cooldown. Set from the type so it stays data-driven
-	# and a value of 0 keeps the pre-S6-07 behaviour exactly.
-	producer.production_cooldown_remaining = producer.type.production_cooldown_turns
 
-	var evt := UnitDeployedEvent.new()
-	evt.entity_id = unit.entity_id
+	var evt := ProductionStartedEvent.new()
+	evt.entity_id = producer.entity_id
 	evt.unit_type = action.unit_type
 	evt.owner = player
 	evt.tile = action.tile
+	evt.turns_remaining = producer.production_turns_remaining
 	return [evt] as Array[Event]

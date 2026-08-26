@@ -968,6 +968,13 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 	# rejections emit no action_applied, so the commit-count bound never trips).
 	if producer.units_produced_this_turn >= BaseProduction.effective_production_cap(lookahead, producer, producer.owner):
 		return best
+	# ★ S8-28: a producer with a build in flight is BUSY (validate_produce returns
+	# PRODUCER_ON_COOLDOWN). Mirroring that gate here is not optional — without it
+	# choose_action re-proposes a produce every call, apply_action rejects it, and the
+	# driver's reject-continue loop spins. Exactly the freeze the production-cap gate
+	# above was added to prevent, one field along.
+	if producer.producing_type != null:
+		return best
 
 	var deploy_tiles: Array[Vector2i] = BaseProduction.legal_deploy_tiles(lookahead, producer, null)
 	if deploy_tiles.is_empty():
@@ -1274,11 +1281,22 @@ static func _capacity_value(lookahead: GameState, player: int, structure_type: S
 	if headroom <= 0:
 		return 0.0
 
-	# Units this producer would actually put on the board over the horizon. A producer on
-	# cooldown C yields one unit per (C+1) turns.
+	# Units this producer would actually put on the board over the horizon.
+	# ★ S8-28: the period is now the production time of what it BUILDS, not a flat
+	# per-structure cooldown — that field is gone. A producer is busy for
+	# `production_turns` per unit, so it yields one unit per that many turns.
+	# ⚠ Uses the CHEAPEST producible type's time, matching `_cheapest_producible_cost`
+	# above: both answer "what does this building realistically churn out", and pairing a
+	# cheap unit's cost with an expensive unit's build time would over-value the structure.
 	var throughput: float = 0.0
 	if produces:
-		var period: float = float(structure_type.production_cooldown_turns + 1)
+		var period: float = 1.0
+		var fastest: int = -1
+		for unit_type: UnitTypeDef in structure_type.producible_types:
+			if fastest < 0 or unit_type.production_turns < fastest:
+				fastest = unit_type.production_turns
+		if fastest > 0:
+			period = float(fastest)
 		throughput = float(AIBalance.ai.economy_horizon) / period
 
 	var usable: float = minf(throughput, float(headroom))

@@ -299,7 +299,37 @@ func _build_match() -> void:
 		hq.build_status = StructureState.BuildStatus.COMPLETED
 		_state.entities_by_id[hq.entity_id] = hq
 
+	seed_starting_builders(_state, map.hq_tiles)
+
 	_reader = GameStateReader.new(_state)
+
+
+## Gives each seat one free Builder behind its HQ (S8-29, user decision 2026-08-26).
+##
+## ★ [b]Static and shared on purpose.[/b] `tools/simulate_matches.gd` mirrors this
+## setup, and every balance number it produces is only meaningful if the boards match.
+## The S7-15 placement-bias confound came from exactly this kind of hand-copied setup
+## drifting between the slice and the harness, so both call this.
+##
+## ⚠ Skips a seat whose tile is occupied or impassable rather than failing — a map
+## variant could legitimately have no room behind an HQ, and a missing free Builder is
+## a slower opening, not a broken match.
+static func seed_starting_builders(state: GameState, hq_tiles: Array[Vector2i]) -> void:
+	for player: int in hq_tiles.size():
+		var tile: Vector2i = VSMap.starting_builder_tile(hq_tiles[player])
+		if not state.grid.in_bounds(tile.x, tile.y):
+			continue
+		if not state.grid.is_passable(tile.x, tile.y):
+			continue
+		var unit := UnitState.new()
+		unit.entity_id = state.next_entity_id
+		unit.owner = player
+		unit.position = tile
+		unit.type = UnitTypes.BUILDER
+		unit.current_hp = UnitTypes.BUILDER.hp
+		state.entities_by_id[unit.entity_id] = unit
+		state.next_entity_id += 1
+		state.grid.place(unit.entity_id, tile.x, tile.y)
 
 
 func _build_board_and_camera() -> void:
