@@ -268,9 +268,12 @@ cargo-cradle mass slung high, four short legs. It is the roster's only support u
 silhouette has to say "not a soldier" before any colour is read. Sized by **width** (140px) like
 the Scout, but shipped narrower so the two four-legged units stay tellable apart (§3.1).
 
-**Shipped — seed 3399497708 → `art-source/generated/asset-012-builder/builder_rush_r3_c2.png`**
-⚠ **Selected by the session, NOT user-approved** — every other base look in this file carries an
-explicit user sign-off. Re-roll freely.
+**Shipped — seed 1510903717 → `art-source/generated/asset-012-builder/builder_rush_r6_c2.png`**
+(supersedes r3_c2 seed 4134681416, which the user judged too tall and leggy on 2026-08-26)
+
+★ **The r6 recipe differs from r3 in exactly two clauses**, and that restraint is the finding:
+`four thick armored walking legs bent and folded in a deep crouch, crouching low stance` and
+`massive heavy body hanging low slung between the four legs, belly close to the ground`.
 
 **Prompt:** `flat cel-shaded isometric game asset sprite of a sci-fi four-legged engineering carrier walker, one lone figure alone in empty space, floating on a plain flat solid pale grey background, no ground, no floor, no surface beneath it, entire figure fully visible in frame, wide empty margin around the figure, small centered figure viewed from a distance, mostly mid slate-grey #6E7C99 matte armor plating over the whole machine, predominantly grey armor, cool neutral grey plating with darker #3E4860 shadowed facets, no head, four short thick armored walking legs planted under the body, hunched stooped posture with the back arched up high, large empty open box cargo cradle mounted high on its back, bulky rounded load-bearing hull, heavy back-loaded mass, compact stubby build, unarmed utility machine, a few large solid hot orange-red #FF5A2E accent color blocks on the cargo cradle frame and the shoulder plates only, small bold flat orange accent panels on grey armor, flat cel shading, flat color fields, no gradients, hand painted 2D illustration, 2:1 dimetric projection, large simple panel shapes, hard clean edges, minimalist geometric design, TRON aesthetic, single isolated game character asset cut out on a blank background, one pose only, nothing else in the image`
 
@@ -296,7 +299,49 @@ explicit user sign-off. Re-roll freely.
 > wording pulls hard toward a hovering craft, and candidate 1 came out as a legless flying
 > platform. Keep `four short thick armored walking legs planted under the body` doing the work.
 >
-> **Cutout that shipped:** `8 --largest-only --trim` — no `--pockets`, no `--deshadow`.
+> **Cutout that shipped (r3):** `8 --largest-only --trim` — no `--pockets`, no `--deshadow`.
+> **Cutout that shipped (r6, current):** `8 --largest-only`, then the two shadow passes below.
+
+> #### ⚠⚠⚠ A third dead end: you cannot make this walker squat by SHRINKING its legs
+>
+> Asked for "shorter and bulkier", the obvious edit is to shrink the legs. **Every wording that
+> does so makes SDXL delete them.** Two full rounds proved it:
+> - `four VERY SHORT stubby stump legs, tiny legs dwarfed by the huge body` → a **legless sled**
+>   and a **tracked barge**. The model resolves "four legs, but tiny" by dropping the legs.
+> - Piling on bulk words (`enormous`, `massive`, `filling the silhouette`) **displaces** the
+>   grey-dominance and four-leg clauses through sheer prompt length — round 4 came back
+>   orange-dominant, two-legged, and treaded, i.e. every earlier fix undone at once.
+>
+> ★ **The lever that works is CROUCH, not scale.** Keep the legs described at full size and bend
+> them: `bent and folded in a deep crouch` + `body hanging low slung between the four legs, belly
+> close to the ground`. The legs survive because nothing asked them to be small.
+>
+> ⚠⚠ **And do not trust a bounding-box aspect ratio as the "squatness" score.** It ranked the
+> legless sled top (aspect 1.24 vs the leggy original's 0.95) because deleting the legs is the
+> cheapest way to get wider-than-tall. The shipped r6_c2 scores **0.97 — statistically
+> indistinguishable from the version it replaced** — while looking dramatically bulkier, because
+> what actually changed is the BODY-TO-LEG RATIO, which that metric cannot see. Look at the
+> sprites.
+
+> #### Shadow removal on r6_c2 — the opposite case to r2, and worth contrasting
+>
+> This render's shadow **is** liftable, and the measurement is why: machine median luma **99**,
+> shadow median **117**, background **163**. The shadow occupies a band *above* the machine and
+> *below* the background, so a border-seeded flood restricted to that band and to the lower frame
+> lifts it with **0.0% hull loss**. (On r2 the same measurement gave feet 104 / shadow 102 —
+> identical — and nothing could separate them.) **Always measure before deciding it is hopeless.**
+>
+> Two passes, both in `.agent/` scratch tooling rather than shipped, because they are per-render:
+> a border flood at `luma 104..205, sat<=0.16, y>=0.50`, then an enclosed-pocket clear at
+> `luma 138..205, sat<=0.16, y>=0.42` for the patch walled in by the legs, which no border-seeded
+> flood can reach at any threshold.
+>
+> ⚠ **`board_preview.py` re-runs `cutout(pockets=True)` on whatever you hand it**, so it can show
+> artifacts that are not in your master — it was showing a shadow slab under a master that was
+> already clean. To judge a finished sprite, resample the master to its shipped width and
+> composite it on the stage colour directly; that is what the game actually does.
+
+
 
 > ### Shadow cleanup (2026-08-19) — always derive from `art-source/cleaned/`
 >
