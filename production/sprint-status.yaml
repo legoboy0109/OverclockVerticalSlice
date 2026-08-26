@@ -887,3 +887,32 @@ stories:
     #   produced the S7-15 placement-bias confound.
     # ⚠ Committed together with s8-28 rather than separately -- the two should have been
     #   split, and the s8-28 commit message does not mention this story.
+
+  - id: "s8-31"
+    name: "Round cap 60 -> 80"
+    file: "src/game/vertical_slice_root.gd"
+    priority: should-have
+    status: done
+    owner: "game-designer"
+    estimate_days: 0.25
+    blocker: ""
+    completed: "2026-08-26"
+    # ✅ USER DECISION. Second raise in one day: 40 -> 60 (s8-25) -> 80 (s8-31), because
+    #   TWO SEPARATE SLOWDOWNS landed after the original 40.
+    #   1. s8-23 cut AP 30 -> 20, so a turn does ~2/3 the work. 40 x 1.5 = 60 restored the
+    #      proportion, and that reasoning was sound.
+    #   2. s8-28 made production MULTI-TURN, so reinforcements arrive 1-2 turns after they
+    #      are paid for and attrition slowed AGAIN. 47% of matches then reached 60.
+    # MEASURED, 30 matches: reach cap 47% -> 33%, TRUE DEADLOCKS 0 in both.
+    #   ⚠ DIMINISHING RETURNS. It converted 4 of 30 games from timer-decided to
+    #     play-decided; median match length did NOT move (50 rounds both ways). The tail is
+    #     long because the remaining 10 are genuine grinds neither AI can close, not
+    #     because they are nearly finishing.
+    # ⛔⛔ THE DISTINCTION THAT MATTERS FOR THE NEXT PERSON: the same symptom -- "a third of
+    #   games end on the clock" -- had an AI DEFECT behind it at s8-26 and is a genuine
+    #   PACING consequence here. Raising the cap was the WRONG lever there and the right
+    #   one here. CHECK WHICH ONE YOU HAVE (are HQs taking damage? are Credits being
+    #   spent? do armies grow?) BEFORE reaching for this constant.
+    # ⚠ VS_MAX_ROUNDS is now COUPLED to flat_ap_per_turn AND to UnitTypeDef.production_turns.
+    #   It was independent of both before today. Re-measure if either moves.
+    # Binary rebuilt and boot-verified. Suite 1314/1314.

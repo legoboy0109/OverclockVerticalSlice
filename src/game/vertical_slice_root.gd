@@ -103,7 +103,8 @@ const AI_PLAYER: int = 1
 ## against a metric that had already been correct for days.
 ## ⇒ A note describing another file's behaviour is a claim with an expiry date. When the
 ##   behaviour moves, this kind of comment does not follow it.
-## ⚠ 40 -> 60 on 2026-08-26 (S8-25, user decision), to keep pace with the AP cut.
+## ⚠ 40 -> 60 -> 80 across 2026-08-26 (S8-25 then S8-31, user decisions). Two separate
+## slowdowns, each measured, each raising it again:
 ## [br][br]S8-23 took `flat_ap_per_turn` 30 -> 20. Fewer AP means fewer actions, which
 ## means less damage per turn, which means slower attrition — [b]the cap did not move,
 ## the game got slower underneath it.[/b] Measured over 30 AI-vs-AI matches: games
@@ -117,7 +118,7 @@ const AI_PLAYER: int = 1
 ## ⚠ Cost: a capped game runs longer in wall-clock than it ever has. Re-measure if the
 ## AP budget moves again — [b]this constant is now COUPLED to `flat_ap_per_turn`[/b],
 ## which it was not before.
-const VS_MAX_ROUNDS: int = 60
+const VS_MAX_ROUNDS: int = 80
 
 ## Provisional camera zoom over the placeholder board (final feel = `/ux-design`).
 # Camera framing. The board is fit into the viewport minus these HUD-reserved
