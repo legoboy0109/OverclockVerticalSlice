@@ -228,6 +228,79 @@ func test_destroying_a_producer_destroys_the_unit_inside_it() -> void:
 		"Destroying a producer refunded the build; it must not.").is_equal(credits_after_commit)
 
 
+# --- Cancelling ----------------------------------------------------------------
+
+func test_cancelling_production_refunds_credits_and_frees_the_producer() -> void:
+	# User decision: cancellable with a partial refund, mirroring cancel-build. The
+	# game already had one cancellation rule; this reuses it rather than adding a second.
+	var state := _state()
+	var hq := _hq(state, 0, Vector2i(4, 4))
+	assert_bool(_produce(state, hq, Vector2i(5, 4)).ok).is_true()
+	var after_commit: int = state.per_player[0].current_credits
+
+	var action := CancelProductionAction.new()
+	action.player = 0
+	action.producer_id = hq.entity_id
+	var result: ActionResult = state.apply_action(action)
+
+	assert_bool(result.ok).is_true()
+	assert_object(hq.producing_type).is_null()
+	assert_int(state.per_player[0].current_credits).is_greater(after_commit)
+	# ★ And the producer is free to start something else immediately — being busy is
+	# the only thing that was stopping it.
+	assert_bool(_produce(state, hq, Vector2i(5, 4)).ok).is_true()
+
+
+func test_cancelling_refunds_less_than_was_paid() -> void:
+	# ⛔ THE EXPLOIT GUARD. A full refund makes produce-then-cancel a free action, and
+	# S8-17 already had to fix an AI that farmed exactly that loop on structures until
+	# it owned nothing but an HQ and 6,000 banked Credits. Partial is what makes the
+	# decision cost something.
+	var state := _state()
+	var hq := _hq(state, 0, Vector2i(4, 4))
+	var before: int = state.per_player[0].current_credits
+	assert_bool(_produce(state, hq, Vector2i(5, 4)).ok).is_true()
+
+	var action := CancelProductionAction.new()
+	action.player = 0
+	action.producer_id = hq.entity_id
+	assert_bool(state.apply_action(action).ok).is_true()
+
+	assert_int(state.per_player[0].current_credits).override_failure_message(
+		"Cancelling returned the full price — produce/cancel is now a free action."
+	).is_less(before)
+
+
+func test_cancelling_frees_the_population_slot() -> void:
+	# PC-3 reserves the slot at commit, so cancelling must give it back — otherwise a
+	# cancelled build permanently costs the player a unit's worth of cap.
+	var state := _state()
+	var hq := _hq(state, 0, Vector2i(4, 4))
+	var before: int = Population.current_population(state, 0)
+	assert_bool(_produce(state, hq, Vector2i(5, 4)).ok).is_true()
+	assert_int(Population.current_population(state, 0)).is_equal(before + 1)
+
+	var action := CancelProductionAction.new()
+	action.player = 0
+	action.producer_id = hq.entity_id
+	assert_bool(state.apply_action(action).ok).is_true()
+
+	assert_int(Population.current_population(state, 0)).is_equal(before)
+
+
+func test_cancelling_an_idle_producer_is_rejected() -> void:
+	var state := _state()
+	var hq := _hq(state, 0, Vector2i(4, 4))
+	var action := CancelProductionAction.new()
+	action.player = 0
+	action.producer_id = hq.entity_id
+
+	var result: ActionResult = state.apply_action(action)
+
+	assert_bool(result.ok).is_false()
+	assert_int(result.reason).is_equal(Action.Reason.NOTHING_IN_PRODUCTION)
+
+
 # --- Helpers -------------------------------------------------------------------
 
 func _barracks(state: GameState, player: int, pos: Vector2i) -> StructureState:

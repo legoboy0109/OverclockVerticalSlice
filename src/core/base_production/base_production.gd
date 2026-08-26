@@ -565,6 +565,51 @@ static func validate_cancel(state: GameState, action: CancelBuildAction) -> int:
 ##
 ## O(1) plus the internal [method validate_cancel] re-check (control-manifest
 ## Performance Guardrail).
+## Rejection cause for [method apply_cancel_production], or [constant Action.Reason.OK].
+static func validate_cancel_production(state: GameState, action: CancelProductionAction) -> int:
+	if state.match_status != GameState.MatchStatus.IN_PROGRESS:
+		return Action.Reason.GAME_OVER
+	var player: int = state.active_player
+	var e: EntityState = state.entities_by_id.get(action.producer_id)
+	if e == null or not (e is StructureState):
+		return Action.Reason.NO_SUCH_ENTITY
+	var producer: StructureState = e as StructureState
+	if producer.owner != player:
+		return Action.Reason.ILLEGAL_TARGET
+	if producer.producing_type == null:
+		return Action.Reason.NOTHING_IN_PRODUCTION
+	return Action.Reason.OK
+
+
+## Abandons a producer's in-flight build, refunding Credits at the SAME rate
+## structures use (S8-28).
+##
+## ⚠ The AP surcharge is not refunded — identical to [method apply_cancel]. AP bought
+## tempo, the tempo was spent, and only Credits were ever recoverable.
+##
+## ★ Frees the population slot PC-3 reserved at commit, which is the whole reason a
+## player would cancel: it is the only way to undo a queue decision that has boxed them
+## out of producing something they now need more.
+static func apply_cancel_production(state: GameState, action: CancelProductionAction) -> Array[Event]:
+	if validate_cancel_production(state, action) != Action.Reason.OK:
+		return []
+	var player: int = state.active_player
+	var producer: StructureState = state.entities_by_id[action.producer_id]
+	var unit_type: UnitTypeDef = producer.producing_type
+	var refund: int = cancel_refund(Unit.effective_produce_cost(state, unit_type, player))
+	Credits.credit(state, player, refund)
+
+	producer.producing_type = null
+	producer.production_turns_remaining = 0
+
+	var evt := ProductionCancelledEvent.new()
+	evt.entity_id = producer.entity_id
+	evt.unit_type = unit_type
+	evt.owner = player
+	evt.refund = refund
+	return [evt] as Array[Event]
+
+
 static func apply_cancel(state: GameState, action: CancelBuildAction) -> Array[Event]:
 	if validate_cancel(state, action) != Action.Reason.OK:
 		return []

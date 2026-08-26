@@ -41,7 +41,10 @@ extends RefCounted
 ## (out of scope here, per ADR-0002/Story 002).
 ## [constant Verb.WAIT] appended 2026-08-25 (see [WaitAction]) — appended, never
 ## inserted, so every existing ordinal is preserved.
-enum Verb { MOVE, ATTACK, BUILD, PRODUCE, RESEARCH, CANCEL_BUILD, END_TURN, DISBAND, WAIT }
+## ⚠ APPENDED ONLY, never inserted — CommandFSM and several callers index this by
+## ordinal, and renumbering an existing verb silently rewires every one of them.
+## (S8-13 learned this when appending BUILD; CANCEL_PRODUCTION follows the rule.)
+enum Verb { MOVE, ATTACK, BUILD, PRODUCE, RESEARCH, CANCEL_BUILD, END_TURN, DISBAND, WAIT, CANCEL_PRODUCTION }
 
 ## Every rejection cause [method GameState.apply_action] can return, plus
 ## [constant Reason.OK] for a passing [code]validate()[/code]. Deliberately an
@@ -61,6 +64,7 @@ enum Reason {
 	NOT_PRODUCIBLE,
 	NOT_LEGAL_DEPLOY_TILE,
 	NOT_UNDER_CONSTRUCTION,
+	NOTHING_IN_PRODUCTION,
 	GAME_OVER,
 	FACTION_LOCKED,
 	NO_SUCH_ENTITY,

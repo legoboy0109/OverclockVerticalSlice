@@ -504,6 +504,11 @@ static func _ensure_dispatch_registered() -> void:
 	register_verb(Action.Verb.BUILD, BaseProduction.validate_build, BaseProduction.apply_build)
 	register_verb(Action.Verb.PRODUCE, BaseProduction.validate_produce, BaseProduction.apply_produce)
 	register_verb(Action.Verb.CANCEL_BUILD, BaseProduction.validate_cancel, BaseProduction.apply_cancel)
+	# ★ S8-28: the unit sibling of CANCEL_BUILD, added with the production queue.
+	# Registered here so it goes through the same validate-then-apply gate as every
+	# other verb — a cancel that bypassed apply_action would skip the GAME_OVER and
+	# active-player checks the gate owns.
+	register_verb(Action.Verb.CANCEL_PRODUCTION, BaseProduction.validate_cancel_production, BaseProduction.apply_cancel_production)
 	register_verb(Action.Verb.DISBAND, Upkeep.validate_disband, Upkeep.apply_disband)
 	register_verb(Action.Verb.WAIT, _validate_wait, _apply_wait)
 	_dispatch_registered = true
