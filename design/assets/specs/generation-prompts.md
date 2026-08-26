@@ -323,6 +323,39 @@ the Scout, but shipped narrower so the two four-legged units stay tellable apart
 > what actually changed is the BODY-TO-LEG RATIO, which that metric cannot see. Look at the
 > sprites.
 
+
+> #### ⚑ The cargo cradle is DRAWN, not generated (2026-08-26)
+>
+> User asked for the cradle to read clearly on the back. Two more rounds tried:
+> **r7** described it as open skeletal frame rails, **r8** as "a big separate box like a skip on a
+> truck". Neither landed. The failure is structural, not bad luck: **prompt weight is finite**, so
+> describing the cradle strongly enough to appear steals weight from the clauses holding the body
+> together — every promising r7/r8 candidate came back with the cast shadow, the orange dominance
+> or the long legs restored, i.e. undoing the very fixes of rounds 1–6.
+>
+> ★ So the cradle is authored geometry: `tools/asset-pipeline/draw_cargo_cradle.py`, composited
+> onto the approved r6_c2 master. Same call `ASSET-006`/`007` made for the terrain tiles — **when
+> the requirement is precise, a draw hits it by construction and a generator cannot.**
+>
+> Three things that decided the shape:
+> - **A box, not an open frame.** At the shipped 140 px, rails a few master-pixels thick are
+>   sub-pixel and vanish. What survives a resample is SILHOUETTE, so the cradle is a hard mass that
+>   breaks the top outline, with its opening read as a dark interior rather than as thin geometry.
+> - **Palette sampled off the render, not the spec.** The brief's `#6E7C99` is markedly blue; what
+>   the generator actually painted is near-neutral (median rgb 110,111,111, lit panels 160,162,162).
+>   A cradle mixed at the nominal value reads as a bolt-on from a different machine.
+> - **Contact shading is not optional.** A flat-shaded box with no occlusion where it meets the
+>   hull reads as a sticker. `_shade_contact()` multiplies the hull under the cradle footprint.
+>
+> ⚠ **The rim must be painted in the shared `ACCENT` constant**, because that is what `recolor.py`
+> keys on — it is why the cradle turns cyan/silver with the rest of the body instead of staying
+> orange in every faction.
+>
+> ⚠ **Cost: the sprite grew 145 → 157 px tall.** A cradle standing proud of the back necessarily
+> gives back some of the "shorter" from round 6; it is sunk as deep as it can go while still
+> reading as carried. That tension is inherent — a visible cradle and a minimal silhouette are
+> opposed, and this is the chosen point on that trade.
+
 > #### Shadow removal on r6_c2 — the opposite case to r2, and worth contrasting
 >
 > This render's shadow **is** liftable, and the measurement is why: machine median luma **99**,
