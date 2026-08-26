@@ -76,7 +76,7 @@ New Skirmish from the main menu. ⚠ If the binary is stale, rebuild:
 
 | ID | Task | Owner | Est. | Deps | Acceptance |
 |----|------|-------|-----:|------|------------|
-| **S8-00** | **Prepare the session** — a single ready-to-fill file with all six questions, room for notes, and no set-up required from the user | producer | 0.25 | — | The user opens one file, plays, and writes prose. No form-filling, no protocol to read first |
+| ✅ **S8-00** | **Prepare the session** — a single ready-to-fill file with all six questions, room for notes, and no set-up required from the user | producer | 0.25 | — | The user opens one file, plays, and writes prose. No form-filling, no protocol to read first |
 | ⛔ **S8-01** | **The play session** — S5-03 observer + S5-04 Analyses A/C/D | **user** | 1.0 | S8-00 | Six questions answered in the user's own words. Partial is fine and still unblocks the verdict |
 | **S8-02** | **Analyse and write up** — turn the notes into findings against the S5-03 and S5-04 reports | qa-lead | 0.5 | S8-01 | Each of the six questions has a recorded answer and a PASS / CONCERN / FAIL |
 | **S8-03** | ⛔ **`/vertical-slice` re-verdict** — a fresh PROCEED / PIVOT / KILL against `scope.md` §10 | producer + creative-director | 0.5 | S8-02 | All five criteria assessed with evidence. `REPORT.md` gains a new verdict section; the PIVOT stays as history |
@@ -86,9 +86,9 @@ New Skirmish from the main menu. ⚠ If the binary is stale, rebuild:
 
 | ID | Task | Owner | Est. | Notes |
 |----|------|-------|-----:|-------|
-| **S8-05** | **Accent-coverage check in the asset pipeline** | technical-artist | 0.5 | ★ S5-03's own recommendation #2, still open. The Sniper defect shipped and survived a full art sprint **because nothing measured it**, and every wave-2 unit has the same failure mode available. `analyse_legibility.py` already computes the number |
-| **S8-06** | **Controller glyphs** — the legend names keyboard keys regardless of active device | ui-programmer | 1.0 | Deck Verified gap 1. The bindings all exist; only the *display* is wrong |
-| **S8-07** | **Text legibility at 1280×800** — pick a sensible `ui_scale` default for the floor | ux-designer | 0.5 | Deck Verified gap 2, and the action-menu spec's open advisory. ★ Testable now against the real binary |
+| ✅ **S8-05** | **Accent-coverage check in the asset pipeline** | technical-artist | 0.5 | ★ S5-03's own recommendation #2, still open. The Sniper defect shipped and survived a full art sprint **because nothing measured it**, and every wave-2 unit has the same failure mode available. `analyse_legibility.py` already computes the number |
+| ✅ **S8-06** | **Controller glyphs** — the legend names keyboard keys regardless of active device | ui-programmer | 1.0 | Deck Verified gap 1. The bindings all exist; only the *display* is wrong |
+| ✅ **S8-07** | **Text legibility at 1280×800** — pick a sensible `ui_scale` default for the floor | ux-designer | 0.5 | Deck Verified gap 2, and the action-menu spec's open advisory. ★ Testable now against the real binary |
 
 ### Nice to Have
 
@@ -97,12 +97,81 @@ New Skirmish from the main menu. ⚠ If the binary is stale, rebuild:
 | **S8-08** | Idle power draw — conditional throttle, not `low_processor_usage_mode` outright | 0.5 | ⚠ The glow pulses and motion runs on tweens; sleeping the loop makes both choppy. Wants measuring on device |
 | ✅ **S8-09** | Verify Redot/Godot dual-focus parity | 0.25 | **DONE 2026-08-26 — PASS.** `tools/CaptureDualFocus.tscn`, 8/8 checks, deterministic ×3. Closes the ux-review's advisory 4 and GDD OQ-6. ⚠ Opened `action-menu.md` **OQ-7**: hover is close to invisible on its own (~3% lift; `flat` suppresses the hover StyleBox) — a design call, left open. Report: `production/playtests/s8-09-dual-focus-2026-08-26.md` |
 
+## ⚠ Unplanned work absorbed — recorded late, 2026-08-26
+
+★ **This section is the trade the Definition of Done asks for, and it is written after the fact
+rather than before.** Eight stories landed that the plan did not contain. The DoD's own rule —
+*"if 3 unplanned stories land, the next action is `/sprint-plan`"* — was passed on the third and
+not acted on until the eighth. **Recording it here does not close that; `/sprint-plan` still owes
+a decision.** Sprints 6 and 7 broke the same rule, which is why it was written down.
+
+### Where it came from
+
+Every one of these traces to the same root: **the user played the game.** The first real session
+(the one that produced S8-10) surfaced defects that a headless suite structurally cannot see, and
+each fix exposed the next. That is the sprint working as intended — ⚠ but the work was absorbed
+silently, and the sprint file said something untrue for six merges.
+
+| ID | Story | Owner | Est. | Merge | What it was |
+|----|-------|-------|-----:|-------|-------------|
+| ✅ **S8-10** | Playtest fixes from the first real session | gameplay-programmer | 0.5 | `69a6447` | Cover floated half a tile (the S6-29 structures defect again); the action menu showed inapplicable verbs; rows printed redundant per-verb key hints |
+| ✅ **S8-11** | CR-4 propagation | producer | 0.25 | `4dbc76c` | `/propagate-design-change` for S8-10's structural-vs-situational rule. **0 of 18 ADRs, 0 of 24 TRs affected.** ★ The pass ran *backwards* — the decision had moved in the UX spec and the code, and the GDD was the laggard |
+| ✅ **S8-12** | The confirm key, and a Build button wired to nothing | ui-programmer | 0.5 | `6ae29d3` | Keyboard could not choose a verb **at all** — the menu and the board fought over `ui_accept`. Tearing down a focused row left the board deaf. ⛔ And `build_type_chosen` was emitted into a void: **the only path a player can take was dead** while the suite stayed green, because the tests called the method directly. Third dead hook found this way |
+| ✅ **S8-13** | Build belongs to a Builder, and the Builder is spent | gameplay-programmer | 1.5 | `5b28d99` | ★★ **User decision.** Build stops being a player-level command (CR-5) and becomes a verb of a selected Builder unit, which is **consumed** by what it raises. HQ makes only Builders; the Barracks becomes the sole source of fighting units. The opening is now fixed: Builder → Barracks → army |
+| ✅ **S8-14** | The Builder gets a body — and the art guard gets teeth | technical-artist | 1.0 | `6b5733e` | ASSET-012. ⚠ **The guard was the real bug**: both art-coverage tests carried a hand-transcribed list of the nine types, so the Builder outran the art and the suite stayed green. Both now enumerate `UnitTypes.ALL` / `StructureTypes.ALL` |
+| ✅ **S8-15** | A shorter, bulkier Builder | technical-artist | 0.5 | `cc3b81a` | User feedback on the shipped look. ★ **The lever is crouch, not scale** — every wording that shrinks the legs makes SDXL delete them |
+| ✅ **S8-16** | A cargo cradle you can actually see | technical-artist | 0.5 | `f168832` | User asked for the cradle to read. Two further generation rounds failed **structurally** — prompt weight is finite — so it is authored geometry composited on the approved master, the same call ASSET-006/007 made for terrain |
+| ✅ **S8-17** | An opponent that actually plays | ai-programmer | 1.0 | `31a4cd6` | ⛔⛔ **The AI was demolishing everything it built.** Produce a Builder → spend it on a Barracks → cancel the Barracks for the refund → repeat, every turn. It ended matches owning nothing but its HQ with 6,000+ Credits banked, **and the player was facing an empty board** |
+
+**Absorbed: 5.75 days.** Committed was 4.75 against ~8 available; actual is **~10.5 against ~8**.
+★ The critical path did not slip because of it — S8-01 is gated on the user, not on capacity —
+but the sprint is over its box and the plan never said so.
+
+### ★★ What S8-17 says about the test suite
+
+Three independent faults combined, and **no unit test could see any of them**:
+
+1. The anti-oscillation gate keyed on `economy_investments`, the economy-*cadence* counter.
+   S6-09 correctly stopped BuildActions counting toward that cadence, which **silently disabled
+   the gate**. Two different questions — *"how much cadence have I spent?"* and *"did I just build
+   something?"* — shared one variable, so a correct change to one broke the other.
+2. `_cancel_build_value` returned **raw Credits** while every verb it competes with is scored in
+   AP-equivalent, so a 300-Credit refund outscored any real play by ~100×.
+   ⚠ **The unit tests asserted the implementation, so code and tests agreed with each other while
+   both contradicted the GDD** — a defect a test written from the code cannot catch by construction.
+3. Even correctly scaled, cancel still won on turns with no other candidate. The GDD's *"rarely
+   clears PASS_THRESHOLD against a concrete positive play"* quietly assumes a positive play exists.
+
+⚠ **Why it surfaced only now:** faults 1 and 2 were latent for months. S8-13 collapsed the AI's
+option set, so on alternate turns cancel became its only move.
+
+★ **The new gate asserts outcomes, not scores.**
+`tests/integration/ai-opponent/ai_plays_a_real_opening_test.gd` drives six real turns and requires
+the AI to still own a structure at the *end* of a turn, field an army, and spend rather than hoard.
+Every prior AI test scored one candidate or drove one turn — **which is exactly why a whole match
+of doing nothing sailed through 1,300 green tests.**
+
+### ⛔ What this changes about the pending verdict
+
+**S8-01 must be re-run on the current build, not on the one already played.** The board the user
+played is not the board that exists now: Build works differently (S8-13), the AI actually plays
+(S8-17), and the keyboard path to a command was dead at the time (S8-12).
+★ **Analysis D is affected most** — Build is the economic action whose *feel* the question is
+about, and it now costs a whole unit rather than a HUD click. The question is unchanged and still
+the sprint's centre; **the answer would simply not have been about this game.**
+
 ## Capacity
 
 - Total days: 10 · Buffer (20%): 2 · **Available: ~8**
-- **Committed: 4.75** (must 2.75 + should 2.0). ★ Deliberately light: **the critical path is
+- **Planned: 4.75** (must 2.75 + should 2.0). ★ Deliberately light: **the critical path is
   gated on one hour of the user's time**, and loading the sprint with agent work is how the
   validation half rolled over six times before.
+- ⚠ **Actual: ~10.5** — 4.75 planned + **5.75 unplanned** (see the section above). The sprint is
+  **~2.5 days over its box**, and the buffer is spent.
+  ★ **The critical path did not slip for it**: S8-01 is gated on the user's hour, not on capacity,
+  and every unplanned story came out of the user playing. ⚠ **But the light plan was the
+  mitigation** for the six-sprint roll-over, and it was quietly abandoned while the roll-over it
+  guarded against is still live.
 
 ## ★ Carried and explicitly NOT in this sprint
 
@@ -121,6 +190,8 @@ New Skirmish from the main menu. ⚠ If the binary is stale, rebuild:
 | **No naive observer is available** | Medium | Medium | Part 2 (Analyses A/C/D) does **not** need one and unblocks the verdict on its own. Run it alone and record part 1 as still-owed rather than blocking on it |
 | **Analysis D comes back negative** | ★ Medium | **Very high** | It would invalidate the Sprint 4 pivot. ⚠ That is the *point* — better found now than after wave 2 is built on it. A PIVOT verdict is a legitimate outcome and the KILL clause is still not engaged |
 | **The verdict is PROCEED but the gate says CONCERNS** | Medium | Low | Expected and fine. The gate names blockers; they become Sprint 9 |
+| ⚠ **The build moved under the pending session** — S8-12/13/17 changed the keyboard path, what Build *is*, and whether the AI plays at all | ✅ **Occurred** | Medium | ★ **S8-01 answers must come from the current binary.** Rebuild before playing. The six questions are unchanged and Analysis D is still the sprint's centre — but Build now costs a whole unit rather than a HUD click, so an answer given on the old build would not have been about this game |
+| ⚠ **Unplanned work displaces the light-plan mitigation** | ✅ **Occurred** — 8 stories, 5.75 days | Medium | ⛔ Recorded above; **`/sprint-plan` still owed.** ★ Note the work was *not* discretionary — every story traces to the user playing, which is the sprint's own critical path doing its job |
 
 ## Definition of Done
 
@@ -130,5 +201,10 @@ New Skirmish from the main menu. ⚠ If the binary is stale, rebuild:
 - [ ] `/gate-check pre-production` run, verdict recorded, blockers named
 - [ ] `production/stage.txt` updated **if** the gate passes
 - [ ] Full suite green, slice boots clean, exported binary boots clean
-- [ ] No unplanned work absorbed without a recorded trade — ★ **the rule Sprints 6 and 7 both
+- [x] ◐ No unplanned work absorbed without a recorded trade — ★ **the rule Sprints 6 and 7 both
       broke. Mechanically: if 3 unplanned stories land, the next action is `/sprint-plan`.**
+      ⚠ **BROKEN, then recorded late.** Eight stories landed (S8-10…S8-17); the threshold was
+      passed on the third and the trade written at the eighth. The record now exists —
+      ⛔ **`/sprint-plan` does not.** Third sprint running.
+- [ ] ⛔ **S8-01 re-run against the CURRENT build** — the game the user played is not the game that
+      exists now (S8-12 keyboard, S8-13 Build-by-Builder, S8-17 an AI that plays)

@@ -13,8 +13,25 @@
 
 Then **New Skirmish** from the main menu. (Or `./redot` to run from the editor — same game.)
 
-⚠ If the binary looks out of date, rebuild it:
-`./redot --headless --export-release "Linux Release" "$PWD/builds/linux/Overclock.x86_64"`
+⛔ **The binary IS out of date — rebuild it before playing.** Updated 2026-08-26:
+```
+./redot --headless --export-release "Linux Release" "$PWD/builds/linux/Overclock.x86_64"
+```
+⚠ From an agent shell, prefix the launch with `DISPLAY=:0` or no window appears.
+
+> ### ⚠ Three things changed since this file was written — the game is not the one you played
+> - **Building works differently.** Build is no longer a HUD button. You make a **Builder** unit,
+>   walk it where you want the structure, and it is **consumed** raising it. The HQ makes only
+>   Builders now; the Barracks makes everything that fights.
+> - **The keyboard works.** Choosing a verb by keyboard did nothing at all before, and the Build
+>   picker was wired to nothing.
+> - **The AI actually plays.** It was demolishing everything it built and ending games owning
+>   nothing but its HQ — you were facing an empty board.
+>
+> ★★ **Question D is the one this affects.** Paying for an economic action now costs a whole unit
+> rather than a click, which is much closer to the "tempo cost" the question is asking about.
+> **The question is unchanged** — but an answer from the old build would not have been about
+> this game.
 
 ---
 
