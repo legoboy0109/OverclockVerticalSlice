@@ -339,6 +339,33 @@ func is_open() -> bool:
 	return visible
 
 
+## Whether one of this menu's rows currently holds keyboard focus — i.e. whether
+## the menu, rather than the board, owns the confirm key right now.
+##
+## ★ [b]The board must ask this before acting on [code]ui_accept[/code].[/b] Godot's
+## [BaseButton] defaults to [constant BaseButton.ACTION_MODE_BUTTON_RELEASE], and on
+## the PRESS half of a keyboard activation it does [b]not[/b] accept the event — it
+## only arms itself and waits for the release. The press therefore travels on to
+## [method Node._unhandled_input] as well. When the board treated that press as its
+## own confirm it re-selected the entity under the cursor, which rebuilt this menu
+## from scratch and freed the very row that was mid-activation; the release then
+## landed on a fresh row that had never seen a press, so [signal BaseButton.pressed]
+## never fired and the verb could not be chosen by keyboard AT ALL.
+##
+## ⚠ That failure was invisible unless the cursor happened to be standing on a
+## selectable owned entity — which is the normal case, because selecting one is how
+## the menu got opened. On an empty tile the re-select failed, nothing was rebuilt,
+## and the row activated correctly. Same keypress, opposite outcome.
+##
+## Direction keys never needed this guard: focus navigation DOES accept the event,
+## so arrows are consumed by the focused row and never reach the board.
+func has_row_focus() -> bool:
+	if not visible:
+		return false
+	var focus: Control = get_viewport().gui_get_focus_owner() if is_inside_tree() else null
+	return focus != null and is_ancestor_of(focus)
+
+
 ## The entity id the open menu belongs to, or -1 when closed. The caller uses this
 ## to tell "the menu is already showing this entity" (leave it alone) from "the
 ## selection moved" (rebuild it).
@@ -404,6 +431,12 @@ func close() -> void:
 	_entity_id = -1
 	if _plate != null:
 		_plate.visible = true
+	# ★ Hand the keyboard back BEFORE the fade, not after it. Hiding a Control
+	# releases its focus, but the fade-out only hides at the END of the tween, so
+	# for FADE_OUT_SEC a row that is visually on its way out was still swallowing
+	# the arrow keys the player needs to steer the cursor onto a target. Choosing a
+	# verb must give the board its cursor back on the same frame.
+	_release_row_focus()
 	if _reduced_motion:
 		visible = false
 		return
@@ -455,6 +488,13 @@ func _build_plate() -> void:
 		_rows_box.add_theme_constant_override("separation", 2)
 		_plate.add_child(_rows_box)
 	_plate.modulate.a = 1.0
+	# ★ Let go of the keyboard BEFORE destroying the rows that hold it. Tearing
+	# down a focused row leaves the viewport's key focus pointing at a freed
+	# object, and Godot goes on routing key events at that dangling pointer and
+	# marking them handled — so `_unhandled_input` stops being called at all and
+	# the BOARD goes deaf. Symptom: the first confirm after a rebuilt menu does
+	# nothing, the next one works. See [method _release_row_focus].
+	_release_row_focus()
 	for child: Node in _rows_box.get_children():
 		child.queue_free()
 		_rows_box.remove_child(child)
@@ -950,6 +990,28 @@ func _focus_first_enabled() -> void:
 ## nothing when every row is disabled — which is a real state (an entity with no
 ## legal action and Wait dropped), and one where leaving focus on the board is the
 ## right outcome rather than an error.
+## Drops keyboard focus if — and only if — this menu is the thing holding it.
+## Guarded so closing a menu can never yank focus off an unrelated control that
+## happens to own it (the HUD's Build/End Turn buttons take focus by their own
+## route, and a close here must leave them alone).
+func _release_row_focus() -> void:
+	if not is_inside_tree():
+		return
+	var viewport: Viewport = get_viewport()
+	var focus: Control = viewport.gui_get_focus_owner()
+	if focus == null:
+		return
+	# ⚠ An INVALID focus owner is the dangerous case, not a harmless one — it means
+	# a focused row was freed without the viewport being told, and every subsequent
+	# key event is delivered to that dead pointer and marked handled. Clear it
+	# through the viewport rather than trying to call a method on a freed object.
+	if not is_instance_valid(focus):
+		viewport.gui_release_focus()
+		return
+	if is_ancestor_of(focus):
+		focus.release_focus()
+
+
 func _focus_first_enabled_in(box: VBoxContainer) -> void:
 	if box == null:
 		return
