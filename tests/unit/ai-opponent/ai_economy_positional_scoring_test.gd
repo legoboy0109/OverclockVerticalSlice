@@ -468,14 +468,39 @@ func test_is_wounded_false_above_retreat_hp_fraction() -> void:
 
 # --- AC-22: cancel_build = rate x build_cost, no AP-cost division -----------
 
-func test_cancel_build_value_is_refund_rate_times_build_cost_no_division() -> void:
+func test_cancel_build_value_is_refund_rate_times_build_cost_in_ap_equivalent() -> void:
+	# ★★ CORRECTED 2026-08-26. This asserted the RAW Credit refund (4.0), which is
+	# what the code did — but `ai-opponent.md` AC-22 specifies
+	# `CANCEL_REFUND_RATE × build_cost × CREDIT_TO_AP_RATE`, and that rate is what
+	# puts a recovered Credit sum on the same AP-equivalent scale as every other
+	# value in the scorer.
+	#
+	# ⚠ Code and test agreed with each other while both contradicted the spec, so
+	# the suite stayed green while the AI cancelled every structure it built — a raw
+	# 300-Credit refund outscored any real play. A test written from the
+	# implementation instead of the specification cannot catch that by construction.
 	# Arrange — a build_cost 9 structure (matches BaseProduction.cancel_refund's
 	# own doc example: 9 -> 4 at the default 50% rate).
 	var value: float = AI._cancel_build_value(9)
 
-	# Assert — BaseProduction.cancel_refund(9) = 9*50/100 = 4 (integer floor).
-	assert_float(value).is_equal_approx(float(BaseProduction.cancel_refund(9)), 0.0001)
-	assert_float(value).is_equal_approx(4.0, 0.0001)
+	# Assert — refund 4 Credits, expressed in AP-equivalent.
+	assert_float(value).is_equal_approx(
+		AI.credits_to_ap(float(BaseProduction.cancel_refund(9))), 0.0001)
+	assert_float(value).is_equal_approx(4.0 * AIBalance.ai.credit_to_ap_rate, 0.0001)
+
+
+func test_cancel_build_value_is_on_the_same_scale_as_the_verbs_it_competes_with() -> void:
+	# The property the raw-Credit bug violated, stated directly: a refund must not
+	# outrank a real play merely by being denominated in the bigger unit. A Barracks
+	# refund is compared against producing the cheapest unit the AI can field.
+	var barracks_refund: float = AI._cancel_build_value(StructureTypes.BARRACKS.build_cost)
+	var produce_a_builder: float = AI.ap_equivalent_cost(
+		UnitTypes.BUILDER.produce_cost, Balance.economy.produce_ap_cost)
+	assert_float(barracks_refund).override_failure_message(
+		"cancelling a Barracks must not be worth more than the entire AP-equivalent " +
+		"cost of fielding a unit — that is what made cancel the AI's best move on " +
+		"every board"
+	).is_less(produce_a_builder * 10.0)
 
 
 func test_action_score_cancel_build_equals_cancel_build_value_directly_no_division() -> void:
@@ -484,14 +509,24 @@ func test_action_score_cancel_build_equals_cancel_build_value_directly_no_divisi
 	var value: float = AI._cancel_build_value(9)
 	var score: float = AI._action_score(value, false)
 
-	# Assert
-	assert_float(score).is_equal_approx(4.0, 0.0001)
+	# Assert — the score IS the value, undivided. The value itself is now in
+	# AP-equivalent (AC-22's CREDIT_TO_AP_RATE leg); what this test pins is the
+	# absence of a division, not the unit.
+	assert_float(score).is_equal_approx(value, 0.0001)
+	assert_float(score).is_equal_approx(
+		AI.credits_to_ap(float(BaseProduction.cancel_refund(9))), 0.0001)
 
 
 func test_score_cancel_build_candidates_finds_under_construction_structure() -> void:
 	# Arrange — an owned, under-construction Economy-Outpost-shaped structure
-	# (build_cost 4 -> refund 4*50/100 = 2).
+	# (build_cost 4 -> refund 4*50/100 = 2), on a player IN DEFICIT.
+	#
+	# ★ The deficit is load-bearing as of 2026-08-26: Cancel Build is enumerated
+	# only as the safety valve `ai-opponent.md` says it is. Without it the AI
+	# demolished a Barracks it had just built on every turn it had nothing else to
+	# do, because any score beats an empty candidate list.
 	var state := _make_state()
+	state.per_player[0].in_deficit = true
 	var structure_type := _make_factory_type(4)
 	var structure := _make_structure(1, 0, structure_type, Vector2i(3, 3), \
 		StructureState.BuildStatus.UNDER_CONSTRUCTION)
@@ -501,13 +536,14 @@ func test_score_cancel_build_candidates_finds_under_construction_structure() -> 
 	var best := AI._Candidate.new()
 	best = AI._score_cancel_build_candidates(state, structure, 0, best)
 
-	# Assert — action_score = 4*50/100 = 2.0 directly (no AP-cost division:
-	# ap_cost recorded is 0, but the SCORE itself is the undivided value).
+	# Assert — the refund (4*50/100 = 2 Credits) undivided, expressed in
+	# AP-equivalent per AC-22. ap_cost recorded is 0, but the SCORE itself is the
+	# undivided value.
 	assert_object(best.action).is_not_null()
 	assert_bool(best.action is CancelBuildAction).is_true()
 	var cancel_action: CancelBuildAction = best.action
 	assert_int(cancel_action.structure_id).is_equal(1)
-	assert_float(best.score).is_equal_approx(2.0, 0.0001)
+	assert_float(best.score).is_equal_approx(AI.credits_to_ap(2.0), 0.0001)
 	assert_int(best.ap_cost).is_equal(0)
 
 
@@ -781,6 +817,7 @@ func test_score_cancel_build_suppressed_after_economy_investment_this_turn() -> 
 	# path (a prior-turn structure stays cancellable) is covered by
 	# test_score_cancel_build_candidates_finds_under_construction_structure.
 	var state := _make_state(60)
+	state.per_player[0].in_deficit = true # cancel is deficit-gated (2026-08-26)
 	var outpost := _make_structure(1, 0, _make_factory_type(), Vector2i(5, 5), StructureState.BuildStatus.UNDER_CONSTRUCTION)
 	_place(state, outpost)
 
