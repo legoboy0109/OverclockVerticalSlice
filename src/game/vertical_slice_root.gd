@@ -522,6 +522,15 @@ func _build_action_menu() -> void:
 	_action_menu.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_action_menu.verb_chosen.connect(_on_menu_verb_chosen)
 	_action_menu.produce_type_chosen.connect(_on_menu_produce_chosen)
+	# ★ 2026-08-25 — THIS CONNECTION DID NOT EXIST, and Build had therefore never
+	# once worked from the UI. `ActionMenu` emitted `build_type_chosen` into a void:
+	# picking a structure from the Build picker closed the list and did nothing, and
+	# the next click merely re-selected whatever was under it.
+	# ⚠ `begin_build_preview()` was covered by tests that CALLED IT DIRECTLY, so the
+	# suite stayed green while the only path a player can take was dead. Same shape
+	# as the `board_cursor_cycle` and `notify_action_applied` dead hooks before it —
+	# a test proves a function works, never that anything invokes it.
+	_action_menu.build_type_chosen.connect(begin_build_preview)
 	_action_menu.dismissed.connect(deselect)
 	# ★ 2026-08-25 — OQ-1 answered. Wait is no longer a deselect: it commits a
 	# WaitAction that marks the entity stood down for the turn, and dismissal still
@@ -885,7 +894,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed(&"ui_right"):
 		move_cursor(Vector2i.RIGHT)
 	elif event.is_action_pressed(&"ui_accept"):
-		commit_at_cursor()
+		# ★ Not ours while the menu holds a focused row — see
+		# [method ActionMenu.has_row_focus] for the whole mechanism. In short: a
+		# Button does not accept the PRESS half of a keyboard activation, so this
+		# branch also saw it, re-selected the entity under the cursor, and rebuilt
+		# the menu out from under the row that was mid-press. The release then had
+		# nothing to activate. Keyboard players could not choose a verb at all.
+		if _action_menu == null or not _action_menu.has_row_focus():
+			commit_at_cursor()
 	elif event.is_action_pressed(&"board_pause"):
 		# Back-out FIRST. Esc means "cancel what I am in" whenever there is something
 		# to cancel, and "pause" only when there is not (action-menu.md decision 1).
