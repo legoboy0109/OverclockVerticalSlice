@@ -116,10 +116,15 @@ const NO_SINGLE_COST: int = -1
 
 ## The verbs [method menu_model] can emit an entry for. [constant Verb.CANCEL_BUILD]
 ## (Story 004) is the destructive-gesture verb for an under-construction owned
-## structure — see [method _cancel_build_entry]. Deliberately excludes Build
-## (CR-5: Build is a player-level command, never part of a selected entity's
-## own menu).
-enum Verb { MOVE, ATTACK, PRODUCE, WAIT, CANCEL_BUILD, DISBAND }
+## structure — see [method _cancel_build_entry].
+##
+## ★ [constant Verb.BUILD] joined this list on 2026-08-25 (user decision). It was
+## deliberately ABSENT before, because CR-5 made Build a player-level command that
+## belonged to no entity — a persistent HUD control, not a menu row. Build now
+## belongs to a Builder unit and consumes it, so it is exactly what this menu is
+## for: a verb of the selected thing. [constant Verb.BUILD] is appended, never
+## inserted, so every existing ordinal is preserved.
+enum Verb { MOVE, ATTACK, PRODUCE, WAIT, CANCEL_BUILD, DISBAND, BUILD }
 
 ## Disablement reason flags (powers of two — see [member VerbEntry.reason]'s
 ## doc comment for why this is a bitmask, not a single code). Each flag names
@@ -141,6 +146,8 @@ enum Reason {
 	NOTHING_BLOCKED = 4096,       ## Disband: nothing is currently blocked that disbanding would relieve — not in deficit and not at population cap — so the row is not offered at all (user decision 2026-08-25; see [method _disband_entry]).
 	NOT_A_UNIT = 2048,            ## Disband: entity is not an own [UnitState] — the verb does not apply to this KIND of thing (structures are never disbanded; UR-7).
 	POPULATION_CAP_REACHED = 1024, ## Population.can_field() returned false — the army is at (or over) its population cap. Mirrors [constant Action.Reason.POPULATION_CAP_REACHED].
+	NOT_A_BUILDER = 8192,         ## Build: the entity is not a unit whose type can build ([member UnitTypeDef.can_build]). A STRUCTURAL "can never apply to this kind of thing", so the row is hidden rather than dimmed (CR-4's structural-vs-situational rule).
+	NO_BUILD_SPACE = 16384,       ## Build: [method BaseProduction.legal_build_tiles_for] is empty — this Builder has no legal tile beside it right now. SITUATIONAL, so the row stays and says so.
 }
 
 
@@ -325,10 +332,27 @@ static func menu_model(state: GameState, entity: EntityState) -> Array[VerbEntry
 	menu.append(_move_entry(state, entity))
 	menu.append(_attack_entry(state, entity))
 	menu.append(_produce_entry(state, entity))
+	menu.append(_build_entry(state, entity))
 	menu.append(VerbEntry.new(Verb.WAIT, true, Reason.NONE))
 	menu.append(_cancel_build_entry(state, entity))
 	menu.append(_disband_entry(state, entity))
 	return menu
+
+
+## The [VerbEntry] for [param verb] in [param menu], or null when the menu has no
+## row for it.
+##
+## ⚠ [b]Use this instead of indexing the menu by the [enum Verb] ordinal.[/b] The
+## returned array happens to be ordered for DISPLAY (destructive verbs last), and
+## that order stopped matching the enum the moment [constant Verb.BUILD] was
+## appended in 2026-08-25 — appending kept every existing ordinal valid but shifted
+## the array positions after Produce. Callers that indexed by ordinal silently read
+## the wrong row's [member VerbEntry.enabled].
+static func entry_for(menu: Array[VerbEntry], verb: int) -> VerbEntry:
+	for entry: VerbEntry in menu:
+		if entry.verb == verb:
+			return entry
+	return null
 
 
 ## Builds the Move [VerbEntry] — see [method menu_model]'s doc comment for the
@@ -461,6 +485,76 @@ static func _produce_entry(state: GameState, entity: EntityState) -> VerbEntry:
 	if reason == Reason.NONE:
 		return VerbEntry.new(Verb.PRODUCE, true, Reason.NONE)
 	return VerbEntry.new(Verb.PRODUCE, false, reason)
+
+
+## Builds the Build [VerbEntry] (user decision 2026-08-25) — the Builder's own verb.
+##
+## [b]Structural vs situational[/b], the rule the action menu is built on (CR-4, as
+## clarified in S8-11): "this kind of thing can never build" is STRUCTURAL and the
+## caller hides the row entirely ([constant Reason.NOT_A_BUILDER]); "you have no
+## room / no money right now" is SITUATIONAL and the row stays, dimmed, saying
+## which. A Trooper should not carry a permanently dead Build row; a Builder with
+## an empty purse should, because that row is what teaches the price.
+##
+## Every conjunct is OR'd in, mirroring Attack's AC-8 multi-reason discipline: a
+## Builder that is both broke AND boxed in names both.
+##
+## Pass-Through Invariant (TR-cmdui-010): every answer comes from an owning
+## system's query — [method BaseProduction.legal_build_tiles_for],
+## [method BaseProduction.effective_build_cost], [method Credits.can_afford],
+## [method AP.can_afford] — and no balance constant is named here.
+static func _build_entry(state: GameState, entity: EntityState) -> VerbEntry:
+	if not (entity is UnitState):
+		return VerbEntry.new(Verb.BUILD, false, Reason.NOT_A_BUILDER)
+	var unit: UnitState = entity
+	if unit.type == null or not unit.type.can_build:
+		return VerbEntry.new(Verb.BUILD, false, Reason.NOT_A_BUILDER)
+
+	var reason: int = Reason.NONE
+
+	if BaseProduction.legal_build_tiles_for(state, unit).is_empty():
+		reason |= Reason.NO_BUILD_SPACE
+
+	# Dual-cost (ADR-0006 pivot): a structure is affordable iff BOTH its Credit main
+	# cost AND the shared AP surcharge are payable. Enabled while ANY buildable
+	# fits — a purse that cannot reach a Research Lab may still reach a Barracks,
+	# and the row must stay live while one choice remains.
+	var ap_affordable: bool = AP.can_afford(state, unit.owner, Balance.economy.build_ap_cost)
+	var any_affordable: bool = false
+	for structure_type: StructureTypeDef in _buildable_types():
+		var credit_cost: int = BaseProduction.effective_build_cost(state, structure_type, unit.owner)
+		if ap_affordable and Credits.can_afford(state, unit.owner, credit_cost):
+			any_affordable = true
+			break
+	if not any_affordable:
+		# Name the binding pool: the AP surcharge is per-action and identical for
+		# every structure, so if THAT is short it is the reason; otherwise no
+		# structure's Credit main cost fits.
+		if not ap_affordable:
+			reason |= Reason.INSUFFICIENT_AP
+		else:
+			reason |= Reason.INSUFFICIENT_CREDITS
+
+	if reason == Reason.NONE:
+		return VerbEntry.new(Verb.BUILD, true, Reason.NONE)
+	return VerbEntry.new(Verb.BUILD, false, reason)
+
+
+## The structure types a Builder may raise.
+##
+## ⚠ Reads the registry rather than taking the caller's roster, because
+## [method menu_model] is a pure model with no roster parameter and the Build row's
+## affordability must not disagree with the picker the row opens. The slice's own
+## roster ([code]VerticalSliceRoot._buildable_roster[/code]) is the authority on
+## what is OFFERED; this is only "is anything at all affordable", so a superset
+## would at worst enable a row whose picker then greys every line — visible and
+## explicable, rather than a row greyed for an invisible reason.
+static func _buildable_types() -> Array[StructureTypeDef]:
+	return [
+		StructureTypes.BARRACKS,
+		StructureTypes.DEFENSIVE_STRUCTURE,
+		StructureTypes.RESEARCH_LAB,
+	] as Array[StructureTypeDef]
 
 
 ## ProduceOption — one row of [method produce_options]' submenu: a single unit
@@ -596,11 +690,17 @@ class BuildOption extends RefCounted:
 ## PURE: one [BuildOption] per type in [param types], for [param player], in the
 ## order given.
 ##
-## [b]Player-level, not entity-level[/b] (CR-5): Build takes no selected entity,
-## which is why it has no [VerbEntry] in [method menu_model] at all and why this
-## takes a player index where [method produce_options] takes a producer. The HUD's
-## persistent Build control is its entry point; this is the model behind that
-## control's type picker.
+## ★ [b]Builder-scoped since 2026-08-25[/b] (user decision). This used to take a
+## PLAYER index, because CR-5 made Build a player-level command with no selected
+## entity — the HUD's persistent Build control was its entry point. Build now
+## belongs to a specific Builder, is raised on a tile beside THAT unit, and
+## consumes it, so the picker must be scoped to the builder doing the work: asking
+## the player-wide question would offer a structure whose only legal tiles sit
+## beside a different builder on the far side of the map.
+##
+## A null or non-building [param builder] yields an empty list — the same
+## "ordinary answer, not an error" contract as
+## [method BaseProduction.legal_build_tiles_for].
 ##
 ## Reuses [constant Reason.NO_DEPLOY_SPACE] for "nowhere legal to put it" rather
 ## than adding a build-specific flag — the two mean the same thing to a player
@@ -609,13 +709,19 @@ class BuildOption extends RefCounted:
 ##
 ## Same Pass-Through discipline as its siblings: every answer comes from
 ## [method BaseProduction.effective_build_cost],
-## [method BaseProduction.legal_build_tiles], [method Credits.can_afford] and
+## [method BaseProduction.legal_build_tiles_for], [method Credits.can_afford] and
 ## [method AP.can_afford]. No balance constant is named here.
-static func build_options(state: GameState, player: int, \
+static func build_options(state: GameState, builder: UnitState, \
 		types: Array[StructureTypeDef]) -> Array[BuildOption]:
 	var options: Array[BuildOption] = []
+	if builder == null or builder.type == null or not builder.type.can_build:
+		return options
+	var player: int = builder.owner
 	var ap_cost: int = Balance.economy.build_ap_cost
 	var ap_affordable: bool = AP.can_afford(state, player, ap_cost)
+	# Hoisted: placement legality does not vary by structure type in the VS, and
+	# recomputing it per row would be the same answer four times.
+	var has_space: bool = not BaseProduction.legal_build_tiles_for(state, builder).is_empty()
 	for type: StructureTypeDef in types:
 		var credit_cost: int = BaseProduction.effective_build_cost(state, type, player)
 		var reason: int = Reason.NONE
@@ -623,7 +729,7 @@ static func build_options(state: GameState, player: int, \
 			reason |= Reason.INSUFFICIENT_AP
 		if not Credits.can_afford(state, player, credit_cost):
 			reason |= Reason.INSUFFICIENT_CREDITS
-		if BaseProduction.legal_build_tiles(state, player, type).is_empty():
+		if not has_space:
 			reason |= Reason.NO_DEPLOY_SPACE
 		options.append(BuildOption.new(
 			type, credit_cost, ap_cost, reason == Reason.NONE, reason

@@ -9,6 +9,10 @@
 ## [code]UnitTypes.SCOUT[/code] etc. as a bare global reference.
 extends Node
 
+## The only thing an HQ produces (user decision 2026-08-25). Defenceless
+## (`attack_range = 0` yields no legal targets at all), and CONSUMED by whatever it
+## builds — so its cost is really a surcharge on every structure in the game.
+const BUILDER: UnitTypeDef = preload("res://data/units/builder.tres")
 const SCOUT: UnitTypeDef = preload("res://data/units/scout.tres")
 const TROOPER: UnitTypeDef = preload("res://data/units/trooper.tres")
 const HEAVY: UnitTypeDef = preload("res://data/units/heavy.tres")

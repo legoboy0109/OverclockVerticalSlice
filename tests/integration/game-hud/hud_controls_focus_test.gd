@@ -45,31 +45,48 @@ func _buttons(controls: HudControlsWidget) -> Array[Button]:
 # ==============================================================================
 
 func test_controls_are_real_buttons_not_drawn_text() -> void:
+	# ⚠ ONE control now, not two. The Build button was removed on 2026-08-25 (user
+	# decision): Build belongs to a selected Builder and consumes it, and a HUD
+	# button has no way to say WHICH Builder it means. End Turn is the only
+	# player-level control left. The claim under test is unchanged — whatever
+	# controls this group holds must be real, focusable Buttons rather than painted
+	# text, which is the defect this suite was written for.
 	var state := _make_state(0)
 	var controls := _make_controls(GameStateReader.new(state), 0)
 	var buttons: Array[Button] = _buttons(controls)
 
 	assert_int(buttons.size()).override_failure_message(
-		"Build and End Turn must be real Buttons — drawn text cannot take focus, " +
+		"End Turn must be a real Button — drawn text cannot take focus, " +
 		"cannot be clicked, and cannot carry the theme's focus StyleBox"
-	).is_equal(2)
+	).is_equal(1)
 	for b: Button in buttons:
 		assert_int(b.focus_mode).is_equal(Control.FOCUS_ALL)
 
 
-func test_focus_traversal_is_wired_between_the_two_controls() -> void:
-	# ADR-0014 §6: traversal via focus_neighbor_*, never hand-rolled arbitration.
-	# Without this a pad can focus one control and never reach the other.
+func test_the_single_control_needs_no_traversal_wiring() -> void:
+	# ⚠ REPLACED the two-control traversal test on 2026-08-25. That test asserted
+	# `focus_neighbor_right`/`_left` linked Build and End Turn (ADR-0014 §6:
+	# traversal via focus_neighbor_*, never hand-rolled arbitration). With the Build
+	# button gone there is nothing to traverse BETWEEN, so the old assertion has no
+	# subject.
+	#
+	# ★ Kept as its inverse rather than deleted, because the thing worth protecting
+	# is unchanged: if a second player-level control is ever added here, it must be
+	# reachable. A bare group with a dangling neighbour path pointing at a button
+	# that no longer exists would resolve to null and strand a gamepad silently.
 	var state := _make_state(0)
 	var controls := _make_controls(GameStateReader.new(state), 0)
 	var buttons: Array[Button] = _buttons(controls)
-	var build: Button = buttons[0]
-	var end_turn: Button = buttons[1]
 
-	# Resolved from the button that owns the path, which is how the engine resolves
-	# it when focus actually moves.
-	assert_object(build.get_node(build.focus_neighbor_right)).is_equal(end_turn)
-	assert_object(end_turn.get_node(end_turn.focus_neighbor_left)).is_equal(build)
+	assert_int(buttons.size()).is_equal(1)
+	var end_turn: Button = buttons[0]
+	for path: NodePath in [end_turn.focus_neighbor_left, end_turn.focus_neighbor_right,
+			end_turn.focus_next, end_turn.focus_previous]:
+		assert_bool(path.is_empty() or end_turn.get_node_or_null(path) != null) \
+			.override_failure_message(
+				"a focus path pointing at a removed control resolves to null and " +
+				"strands a gamepad with nowhere to go"
+			).is_true()
 
 
 # ==============================================================================
@@ -142,13 +159,13 @@ func test_pressing_a_live_button_emits_its_request_signal() -> void:
 	controls._sync_button_state()
 	var buttons: Array[Button] = _buttons(controls)
 
+	# ⚠ End Turn only — the Build button was removed 2026-08-25 (Build is the
+	# selected Builder's verb now), so `build_requested` has no emitter here.
 	var seen: Array[String] = []
-	controls.build_requested.connect(func() -> void: seen.append("build"))
 	controls.end_turn_requested.connect(func() -> void: seen.append("end_turn"))
 
 	buttons[0].pressed.emit()
-	buttons[1].pressed.emit()
-	assert_array(seen).contains(["build", "end_turn"])
+	assert_array(seen).contains(["end_turn"])
 
 
 func test_an_inert_button_press_emits_nothing() -> void:
@@ -160,9 +177,7 @@ func test_an_inert_button_press_emits_nothing() -> void:
 	var buttons: Array[Button] = _buttons(controls)
 
 	var seen: Array[String] = []
-	controls.build_requested.connect(func() -> void: seen.append("build"))
 	controls.end_turn_requested.connect(func() -> void: seen.append("end_turn"))
 
 	buttons[0].pressed.emit()
-	buttons[1].pressed.emit()
 	assert_array(seen).is_empty()

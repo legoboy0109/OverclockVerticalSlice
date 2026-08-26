@@ -1158,8 +1158,23 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 		if not BaseProduction.can_build_more(lookahead, player, structure_type):
 			continue
 
-		var tiles: Array[Vector2i] = BaseProduction.legal_build_tiles(lookahead, player, structure_type)
-		if tiles.is_empty():
+		# ★ 2026-08-25: a structure is raised BY a Builder, on a tile beside THAT
+		# unit, and the Builder is consumed. So the AI must pick a builder, not just
+		# a tile — and without one it cannot build at all, which is the correct
+		# answer rather than a bug. Builders are walked in stable entity-id order
+		# (ADR-0003) and the first with a legal tile wins; a cheaper "best builder"
+		# heuristic is not worth the determinism risk while every builder is
+		# identical.
+		var builder: UnitState = null
+		var tiles: Array[Vector2i] = []
+		for candidate_builder: UnitState in BaseProduction.builders_of(lookahead, player):
+			var builder_tiles: Array[Vector2i] = BaseProduction.legal_build_tiles_for(
+				lookahead, candidate_builder)
+			if not builder_tiles.is_empty():
+				builder = candidate_builder
+				tiles = builder_tiles
+				break
+		if builder == null:
 			continue
 
 		# ★ S6-05: AP-equivalent denominator (see the produce path). _economy_value already
@@ -1174,6 +1189,7 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 			var action := BuildAction.new()
 			action.player = player
 			action.structure_type = structure_type
+			action.builder_id = builder.entity_id
 			action.tile = _best_build_tile(lookahead, player, tiles)
 			best = _Candidate.new(action, score, cost, candidate_entity_id)
 

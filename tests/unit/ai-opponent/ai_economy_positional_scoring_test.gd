@@ -580,6 +580,10 @@ func test_build_enumeration_is_gated_on_a_real_valuation_not_on_identity() -> vo
 	var state := _make_state(30)
 	var hq := _make_structure(1, 0, StructureTypes.HQ, Vector2i(5, 5), StructureState.BuildStatus.COMPLETED)
 	_place(state, hq)
+	# ⚠ A BUILDER on the board is a precondition for ANY build candidate since
+	# 2026-08-25: a structure is raised on a tile beside one and consumes it, so an
+	# AI with no Builder correctly enumerates nothing.
+	_place(state, _make_unit(2, 0, UnitTypes.BUILDER, Vector2i(7, 5)))
 	# Put the army under cap pressure, which is what gives a Barracks its value.
 	for i: int in range(Population.effective_cap(state, 0)):
 		_place(state, _make_unit(200 + i, 0, _make_scout_type(), Vector2i(i, 9)))
@@ -605,6 +609,8 @@ func test_economy_investments_committed_is_a_pure_caller_passed_parameter() -> v
 	var state := _make_state(30)
 	var hq := _make_structure(1, 0, StructureTypes.HQ, Vector2i(5, 5), StructureState.BuildStatus.COMPLETED)
 	_place(state, hq)
+	# ⚠ And a BUILDER, without which there is no build candidate at all (2026-08-25).
+	_place(state, _make_unit(2, 0, UnitTypes.BUILDER, Vector2i(7, 5)))
 	# ★ S6-06: a buildable candidate only exists when one has a real valuation, and the
 	# Barracks earns its value from cap pressure. Without units on the board there is
 	# nothing to enumerate and the cadence gate has nothing to gate.

@@ -23,6 +23,33 @@ func _make_root() -> VerticalSliceRoot:
 	return root
 
 
+## Fields a Builder beside the player's HQ and selects it.
+##
+## ⚠ Required since 2026-08-25 (user decision): Build belongs to a Builder and is
+## placed on a tile beside it, so the picker refuses to open without one. The match
+## starts with two HQs and no units at all.
+func _select_a_builder(root: VerticalSliceRoot) -> UnitState:
+	var state: GameState = root.state()
+	var unit := UnitState.new()
+	unit.entity_id = 90
+	unit.owner = 0
+	unit.position = Vector2i(4, 5)
+	unit.type = UnitTypes.BUILDER
+	unit.current_hp = UnitTypes.BUILDER.hp
+	state.entities_by_id[90] = unit
+	state.grid.place(90, 4, 5)
+	state.per_player[0].current_ap = 20
+	state.per_player[0].current_credits = 5000
+	while root.cursor_tile() != unit.position:
+		var delta: Vector2i = unit.position - root.cursor_tile()
+		if delta.x != 0:
+			root.move_cursor(Vector2i(signi(delta.x), 0))
+		else:
+			root.move_cursor(Vector2i(0, signi(delta.y)))
+	root.select_at_cursor()
+	return unit
+
+
 func _menu(root: VerticalSliceRoot) -> ActionMenu:
 	var stack: Array[Node] = [root]
 	while not stack.is_empty():
@@ -64,6 +91,7 @@ func _press_row(menu: ActionMenu, label: String) -> bool:
 func test_build_picker_lists_the_buildable_roster() -> void:
 	# Arrange
 	var root: VerticalSliceRoot = await _make_root()
+	_select_a_builder(root)
 
 	# Act
 	root.open_build_picker()
@@ -84,6 +112,7 @@ func test_choosing_a_structure_enters_the_build_placement_preview() -> void:
 	# not make: that pressing the row a player presses reaches the preview at all.
 	# Arrange
 	var root: VerticalSliceRoot = await _make_root()
+	_select_a_builder(root)
 	root.open_build_picker()
 	await get_tree().process_frame
 
@@ -104,6 +133,7 @@ func test_choosing_a_structure_enters_the_build_placement_preview() -> void:
 func test_a_structure_can_be_placed_from_the_picker_through_to_the_board() -> void:
 	# Arrange
 	var root: VerticalSliceRoot = await _make_root()
+	_select_a_builder(root)
 	var before: int = root.state().entities().size()
 	root.open_build_picker()
 	await get_tree().process_frame
@@ -118,6 +148,10 @@ func test_a_structure_can_be_placed_from_the_picker_through_to_the_board() -> vo
 	assert_bool(placed).override_failure_message(
 		"confirming on a highlighted build tile must place the structure"
 	).is_true()
-	assert_int(root.state().entities().size()).override_failure_message(
-		"the board gained no entity, so nothing was actually built"
-	).is_equal(before + 1)
+	# The Builder is spent BY the structure, so the count holds: one unit out, one
+	# building in. Checked as an identity swap rather than a bare increment,
+	# because "+1 entity" would also pass if the Builder were left standing.
+	assert_int(root.state().entities().size()).is_equal(before)
+	assert_object(root.state().entities_by_id.get(90)).override_failure_message(
+		"the Builder must be consumed by the structure it raises"
+	).is_null()

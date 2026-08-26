@@ -179,5 +179,7 @@ func test_capacity_value_uses_the_cheapest_producible_unit() -> void:
 	_fill_to(state, 0, Population.effective_cap(state, 0))
 	var cheapest: float = AI._cheapest_producible_cost(state, 0)
 	assert_float(cheapest).is_greater(0.0)
-	# The HQ produces Scout only, so the cheapest producible IS the Scout.
-	assert_float(cheapest).is_equal_approx(float(UnitTypes.SCOUT.produce_cost), 0.0001)
+	# The HQ produces Builder only (2026-08-25), so the cheapest producible IS the
+	# Builder. Reads the roster rather than naming a number, so a re-cost of the
+	# Builder does not silently turn this into a test of nothing.
+	assert_float(cheapest).is_equal_approx(float(UnitTypes.BUILDER.produce_cost), 0.0001)

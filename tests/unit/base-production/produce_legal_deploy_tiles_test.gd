@@ -265,15 +265,17 @@ func test_produce_spends_both_pools_creates_active_unit_on_tile_and_increments_c
 # --- Production (Rule 7): rejection gates ------------------------------------
 
 func test_produce_type_not_in_producible_types_is_rejected_resource_ref_membership() -> void:
-	# Arrange -- the HQ (producible_types == [Scout]) asked to make a Heavy.
+	# Arrange -- the HQ (producible_types == [Builder]) asked to make a Heavy.
 	var state := _make_state()
 	var hq := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.HQ)
 	_place(state, hq)
 	var action := _make_produce_action(hq.entity_id, UnitTypes.HEAVY, Vector2i(6, 5))
 	# Act / Assert -- rejected: Heavy is not a Resource-ref member of HQ's roster.
 	assert_int(BaseProduction.validate_produce(state, action)).is_equal(Action.Reason.NOT_PRODUCIBLE)
-	# Sanity: the HQ *can* make a Scout (positive side of the membership check).
-	var ok_action := _make_produce_action(hq.entity_id, UnitTypes.SCOUT, Vector2i(6, 5))
+	# Sanity: the HQ *can* make a Builder (positive side of the membership check).
+	# ★ Was Scout until 2026-08-25; the HQ is Builder-only now, and the Scout is a
+	# Barracks unit — so Scout would ALSO be rejected here, which is the point.
+	var ok_action := _make_produce_action(hq.entity_id, UnitTypes.BUILDER, Vector2i(6, 5))
 	assert_int(BaseProduction.validate_produce(state, ok_action)).is_equal(Action.Reason.OK)
 
 

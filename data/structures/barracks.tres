@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/units/scout.tres" id="5"]
 [ext_resource type="Resource" path="res://data/units/trooper.tres" id="2"]
 [ext_resource type="Resource" path="res://data/units/heavy.tres" id="3"]
 [ext_resource type="Resource" path="res://data/units/sniper.tres" id="4"]
@@ -16,6 +17,6 @@ upkeep = 100
 build_cost = 600
 build_time = 2
 production_cap = 4
-producible_types = [ExtResource("2"), ExtResource("3"), ExtResource("4")]
+producible_types = [ExtResource("5"), ExtResource("2"), ExtResource("3"), ExtResource("4")]
 defense = 0
 can_counterattack = false

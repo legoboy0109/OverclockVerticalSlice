@@ -92,6 +92,17 @@ func _place_unit(state: GameState, entity_id: int, owner: int, pos: Vector2i) ->
 	return unit
 
 
+## A unit whose type can build. [method CommandFSM.build_options] is scoped to the
+## acting Builder (2026-08-25) rather than to a player, so every Build fixture
+## needs one.
+func _place_builder(state: GameState, entity_id: int, owner: int, pos: Vector2i) -> UnitState:
+	var unit := _place_unit(state, entity_id, owner, pos)
+	var type: UnitTypeDef = _make_unit_type("Builder", 4)
+	type.can_build = true
+	unit.type = type
+	return unit
+
+
 # ==============================================================================
 # produce_options — AC-13
 # ==============================================================================
@@ -245,14 +256,16 @@ func test_an_unfinished_producer_offers_nothing_until_it_completes() -> void:
 
 
 # ==============================================================================
-# build_options — the player-level Build picker (CR-5)
+# build_options — the Builder's Build picker (was player-level under CR-5)
 # ==============================================================================
 
 func test_build_options_costs_and_affordability_are_reported_per_type() -> void:
-	# Arrange — Build takes a PLAYER, not an entity: it is not an action any one
-	# entity performs, which is why menu_model has no Build row at all.
+	# Arrange — ★ Build takes the acting BUILDER, not a player index. It used to take
+	# a player, because CR-5 made Build a player-level command that no entity
+	# performed; since 2026-08-25 a structure is raised on a tile beside a specific
+	# Builder and consumes it, so the picker must be scoped to that unit.
 	var state := _make_state()
-	_place_structure(state, 1, 0, Vector2i(4, 4), _make_structure_type([] as Array[UnitTypeDef]))
+	var builder := _place_builder(state, 1, 0, Vector2i(4, 4))
 	var cheap := StructureTypeDef.new()
 	cheap.display_name = "Cheap"
 	cheap.hp = 10
@@ -268,7 +281,7 @@ func test_build_options_costs_and_affordability_are_reported_per_type() -> void:
 
 	# Act
 	var options: Array[CommandFSM.BuildOption] = CommandFSM.build_options(
-		state, 0, [cheap, dear] as Array[StructureTypeDef]
+		state, builder, [cheap, dear] as Array[StructureTypeDef]
 	)
 
 	# Assert

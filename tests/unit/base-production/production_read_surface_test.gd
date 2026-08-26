@@ -106,12 +106,19 @@ func _make_story_state() -> GameState:
 
 func test_legal_build_tiles_matches_direct_base_production_query() -> void:
 	# Arrange
+	# ⚠ A BUILDER is what makes this non-vacuous now. Until 2026-08-25 the story
+	# state's friendly STRUCTURES supplied the candidate tiles, because Build was a
+	# player-level command whose frontier was every owned entity. Build now belongs
+	# to a Builder unit, so a state without one legally has nowhere to build — and
+	# this test would have passed vacuously in the worst way: comparing empty to
+	# empty while claiming to check a pass-through.
 	var state := _make_story_state()
+	_place(state, _make_unit(90, 0, UnitTypes.BUILDER, Vector2i(8, 8)))
 	var reader := GameStateReader.new(state)
 	# Act
 	var via_reader: Array[Vector2i] = reader.legal_build_tiles(0, StructureTypes.FACTORY)
 	var via_direct: Array[Vector2i] = BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
-	# Assert -- non-vacuous (friendly structures give candidate tiles) and equal.
+	# Assert -- non-vacuous (the Builder gives candidate tiles) and equal.
 	assert_int(via_reader.size()).is_greater(0)
 	assert_array(via_reader).is_equal(via_direct)
 

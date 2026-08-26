@@ -189,8 +189,10 @@ func test_ac4_attack_commit_hp_delta_equals_previewed_damage() -> void:
 
 func test_ac4_build_commit_splits_ap_surcharge_and_credit_main_cost() -> void:
 	var state := _make_state(0)
-	var hq_type := _make_structure_type_for_build()
-	_place_structure(state, 1, 0, Vector2i(5, 5), hq_type)
+	# ⚠ A BUILDER anchors the build now (2026-08-25), not a friendly structure.
+	var builder_type: UnitTypeDef = _make_unit_type()
+	builder_type.can_build = true
+	var builder := _place_unit(state, 1, 0, Vector2i(5, 5), builder_type)
 	state.per_player[0].current_ap = 20
 	state.per_player[0].current_credits = 20  # fund Credits (build main cost, ADR-0006 pivot)
 
@@ -207,6 +209,7 @@ func test_ac4_build_commit_splits_ap_surcharge_and_credit_main_cost() -> void:
 	iface.set_local_player(0)
 	var action := BuildAction.new()
 	action.structure_type = buildable
+	action.builder_id = builder.entity_id
 	action.tile = target_tile
 	var result: ActionResult = iface.commit(state, action)
 
@@ -262,7 +265,7 @@ func test_ac6_insufficient_ap_attack_disabled_with_reason_against_live_ap() -> v
 	state.per_player[0].current_ap = real_cost - 1 # exactly one short.
 
 	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, attacker)
-	var attack_entry: CommandFSM.VerbEntry = menu[CommandFSM.Verb.ATTACK]
+	var attack_entry: CommandFSM.VerbEntry = CommandFSM.entry_for(menu, CommandFSM.Verb.ATTACK)
 
 	assert_bool(attack_entry.enabled).is_false()
 	assert_int(attack_entry.reason & CommandFSM.Reason.INSUFFICIENT_AP).is_equal(CommandFSM.Reason.INSUFFICIENT_AP)
@@ -284,7 +287,7 @@ func test_ac7_already_attacked_disabled_regardless_of_ap_live_state() -> void:
 	assert_bool(Unit.can_attack(attacker)).is_false() # real live-state read.
 
 	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, attacker)
-	var attack_entry: CommandFSM.VerbEntry = menu[CommandFSM.Verb.ATTACK]
+	var attack_entry: CommandFSM.VerbEntry = CommandFSM.entry_for(menu, CommandFSM.Verb.ATTACK)
 
 	assert_bool(attack_entry.enabled).is_false()
 	assert_int(attack_entry.reason).is_equal(CommandFSM.Reason.ALREADY_ATTACKED)
@@ -297,8 +300,10 @@ func test_ac7_already_attacked_disabled_regardless_of_ap_live_state() -> void:
 
 func test_ac16_build_preview_cost_time_affordability_and_legal_tiles() -> void:
 	var state := _make_state(0)
-	var hq_type := _make_structure_type_for_build()
-	_place_structure(state, 1, 0, Vector2i(5, 5), hq_type)
+	# ⚠ A BUILDER anchors the build now (2026-08-25), not a friendly structure.
+	var builder_type: UnitTypeDef = _make_unit_type()
+	builder_type.can_build = true
+	var builder := _place_unit(state, 1, 0, Vector2i(5, 5), builder_type)
 	state.per_player[0].current_ap = 20
 	state.per_player[0].current_credits = 20 # fund the Credit main cost (dual-cost pivot).
 
@@ -322,9 +327,11 @@ func test_ac16_build_preview_three_exclusion_reasons_distinguishable() -> void:
 	# Dual-cost pivot (ADR-0006): Build now has THREE distinguishable exclusion
 	# reasons — insufficient_credits (main cost), insufficient_ap (surcharge), and
 	# no_legal_tile. Each is isolated below.
+	# ⚠ A BUILDER anchors the frontier now (2026-08-25), not a friendly structure.
 	var state := _make_state(0)
-	var hq_type := _make_structure_type_for_build()
-	_place_structure(state, 1, 0, Vector2i(5, 5), hq_type)
+	var builder_type: UnitTypeDef = _make_unit_type()
+	builder_type.can_build = true
+	_place_unit(state, 1, 0, Vector2i(5, 5), builder_type)
 	var buildable := _make_structure_type_for_build(6)
 
 	# Case 1: insufficient AP surcharge ONLY — Credits fully fund the main cost, but
@@ -348,9 +355,8 @@ func test_ac16_build_preview_three_exclusion_reasons_distinguishable() -> void:
 	assert_bool(credits_short.no_legal_tile).is_false()
 
 	# Case 3: no legal tile ONLY — both pools plentiful, but every cardinal
-	# neighbour of the HQ is walled off with IMPASSABLE terrain (never a candidate,
-	# and never itself a friendly entity whose OWN neighbours would reopen the
-	# frontier — legal_build_tiles scans every friendly entity's neighbours).
+	# neighbour of the BUILDER is walled off with IMPASSABLE terrain, so its
+	# frontier is empty and no other unit can reopen one.
 	state.per_player[0].current_ap = 999
 	state.per_player[0].current_credits = 999
 	for n: Vector2i in [Vector2i(5, 4), Vector2i(6, 5), Vector2i(5, 6), Vector2i(4, 5)]:
@@ -389,7 +395,7 @@ func test_ac26_defensive_structure_attack_cost_is_queried_value_not_hardcoded_tw
 	# queried cost, never the unit cost.
 	state.per_player[0].current_ap = queried_cost
 	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, structure)
-	assert_bool(menu[CommandFSM.Verb.ATTACK].enabled).is_true()
+	assert_bool(CommandFSM.entry_for(menu, CommandFSM.Verb.ATTACK).enabled).is_true()
 
 	var ap_before: int = AP.current_ap(state, 0)
 	var iface: CommandInterface = auto_free(CommandInterface.new())

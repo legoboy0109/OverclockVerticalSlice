@@ -206,7 +206,9 @@ func test_produce_at_the_cap_is_rejected_naming_the_population_cap() -> void:
 	var a := ProduceAction.new()
 	a.player = 0
 	a.producer_id = hq.entity_id
-	a.unit_type = UnitTypes.SCOUT
+	# The HQ makes Builders only (2026-08-25) — the cap gate is type-agnostic, so
+	# what matters here is asking for something the producer can actually make.
+	a.unit_type = UnitTypes.BUILDER
 	a.tile = Vector2i(5, 6)
 	assert_int(BaseProduction.validate_produce(state, a)).is_equal(Action.Reason.POPULATION_CAP_REACHED)
 

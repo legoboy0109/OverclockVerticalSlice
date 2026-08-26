@@ -89,6 +89,17 @@ func _place_unit(state: GameState, id: int, owner: int, pos: Vector2i) -> UnitSt
 	return unit
 
 
+## A unit that can build — what the Build picker is scoped to since 2026-08-25.
+## [method CommandFSM.build_options] takes the acting Builder, not a player index,
+## because a structure is raised on a tile beside THAT unit and consumes it.
+func _place_builder(state: GameState, id: int, owner: int, pos: Vector2i) -> UnitState:
+	var unit := _place_unit(state, id, owner, pos)
+	var type: UnitTypeDef = _make_unit_type("Builder")
+	type.can_build = true
+	unit.type = type
+	return unit
+
+
 func _place_producer(state: GameState, id: int, owner: int, pos: Vector2i, \
 		producible: Array[UnitTypeDef]) -> StructureState:
 	var type := StructureTypeDef.new()
@@ -865,11 +876,12 @@ func test_the_build_picker_grows_inward_from_its_hud_corner() -> void:
 	type.hp = 20
 	type.build_cost = 6
 	type.build_time = 2
+	var builder := _place_builder(state, 7, 0, Vector2i(5, 5))
 	var menu := _make_menu()
 	var corner := Vector2(VIEW.x - 16.0, VIEW.y - 90.0)
 
 	menu.open_build_options(
-		CommandFSM.build_options(state, 0, [type] as Array[StructureTypeDef]), corner, 128.0
+		CommandFSM.build_options(state, builder, [type] as Array[StructureTypeDef]), corner, 128.0
 	)
 
 	var plate: Control = menu.get_node_or_null(^"OptionPlate")
@@ -894,12 +906,12 @@ func test_the_build_picker_leaves_no_empty_verb_plate_behind_it() -> void:
 	type.hp = 20
 	type.build_cost = 6
 	type.build_time = 2
-	var unit := _place_unit(state, 1, 0, Vector2i(5, 5))
+	var unit := _place_builder(state, 1, 0, Vector2i(5, 5))
 	var menu := _make_menu()
 
 	menu.open(state, unit, Vector2(400, 400), 128.0) # a verb menu exists first...
 	menu.open_build_options(
-		CommandFSM.build_options(state, 0, [type] as Array[StructureTypeDef]),
+		CommandFSM.build_options(state, unit, [type] as Array[StructureTypeDef]),
 		Vector2(VIEW.x - 16.0, VIEW.y - 90.0), 128.0
 	)
 

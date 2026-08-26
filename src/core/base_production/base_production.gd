@@ -61,8 +61,19 @@ const _CARDINAL_DIRECTIONS: Array[Vector2i] = [
 ## Returns every legal build tile for [param player] building [param structure_type]
 ## (ADR-0017 D3, TR-baseprod-005) — a pure, [b]live[/b] query, never cached
 ## (a destroyed enemy structure frees formerly-excluded tiles on the very next
-## call). Candidate universe = passable, empty, in-bounds neighbours of
-## [param player]'s OWN entities (units AND structures, scanned N->E->S->W),
+## call).
+##
+## ⚠ [b]The candidate universe narrowed on 2026-08-25[/b] (user decision): it used
+## to be the neighbours of every entity the player owned, because Build was a
+## player-level command with no unit behind it. It is now the neighbours of the
+## player's BUILDERS only — see [method legal_build_tiles_for], which is the real
+## rule. This union form answers "could this player build anywhere?", which is what
+## a menu's grey-out and the AI's affordability gate need; it must NOT be used to
+## validate a commit, because it accepts tiles beside a builder other than the one
+## acting. With no living Builder it correctly returns empty.
+##
+## Candidate universe = passable, empty, in-bounds neighbours of
+## [param player]'s own Builders (scanned N->E->S->W),
 ## deduplicated via a transient membership [Dictionary] whose iteration order
 ## is [b]never observed[/b] — only the trailing [code]sort_custom(_by_tile_index)[/code]
 ## call below makes the returned order canonical (ADR-0003/ADR-0009
@@ -83,9 +94,50 @@ const _CARDINAL_DIRECTIONS: Array[Vector2i] = [
 ## (control-manifest Performance Guardrail); safe to recompute every preview
 ## frame.
 static func legal_build_tiles(state: GameState, player: int, _structure_type: StructureTypeDef) -> Array[Vector2i]:
+	return _sorted_build_tiles(state, player, builders_of(state, player))
+
+
+## Every legal build tile for ONE [param builder] — the tiles that unit could
+## actually raise a structure on right now (`base-production.md` CR-5, user
+## decision 2026-08-25).
+##
+## ★ [b]This is the authoritative placement rule[/b]; [method legal_build_tiles] is
+## the union of it across a player's Builders, kept so that "can this player build
+## anything at all?" stays one cheap call for menus and the AI's affordability gate.
+## Commit-time validation always goes through THIS function, because the union
+## would happily accept a tile beside a DIFFERENT builder than the one acting.
+##
+## Returns empty for a null unit or one whose type cannot build
+## ([member UnitTypeDef.can_build]) — an ordinary answer, not an error: most units
+## cannot build, and asking is how the menu learns to grey the row out.
+static func legal_build_tiles_for(state: GameState, builder: UnitState) -> Array[Vector2i]:
+	if builder == null or builder.type == null or not builder.type.can_build:
+		return [] as Array[Vector2i]
+	return _sorted_build_tiles(state, builder.owner, [builder] as Array[UnitState])
+
+
+## Every live [UnitState] of [param player] whose type can build, in stable
+## [member EntityState.entity_id]-ascending order (ADR-0003 determinism).
+static func builders_of(state: GameState, player: int) -> Array[UnitState]:
+	var out: Array[UnitState] = []
+	for e: EntityState in state.entities():
+		if e is UnitState and e.owner == player and e.type != null and e.type.can_build:
+			out.append(e as UnitState)
+	return out
+
+
+## Shared placement core: passable, empty, in-bounds neighbours of [param sources]
+## (scanned N->E->S->W), filtered by [method _clears_enemy_standoff], returned in
+## canonical tile-index order.
+##
+## One implementation, parameterized by which units count as the frontier — never
+## two parallel copies — so the single-builder rule and the player-wide union can
+## never drift apart in what they consider legal.
+static func _sorted_build_tiles(state: GameState, player: int, \
+		sources: Array[UnitState]) -> Array[Vector2i]:
 	var grid: GridState = state.grid
 	var candidates: Dictionary = {} # Vector2i -> true, dedup ONLY — see doc above.
-	for e: EntityState in _friendly_entities(state, player):
+	for e: UnitState in sources:
 		for n: Vector2i in _neighbors_in_fixed_order(e.position):
 			if grid.in_bounds(n.x, n.y) and grid.is_passable(n.x, n.y):
 				candidates[n] = true
@@ -174,9 +226,32 @@ static func validate_build(state: GameState, action: BuildAction) -> int:
 		return Action.Reason.CANT_AFFORD_CREDITS
 	if not AP.can_afford(state, player, Balance.economy.build_ap_cost):
 		return Action.Reason.CANT_AFFORD
-	if not (action.tile in legal_build_tiles(state, player, action.structure_type)):
+	# ★ The acting Builder, checked BEFORE the tile — a missing builder makes the
+	# tile question meaningless, and "you have no builder" is the answer a player
+	# can act on. Validated against the SINGLE-builder tile set, never the
+	# player-wide union, so a tile beside some other builder is correctly refused.
+	var builder: UnitState = builder_for(state, action)
+	if builder == null:
+		return Action.Reason.NOT_A_BUILDER
+	if not (action.tile in legal_build_tiles_for(state, builder)):
 		return Action.Reason.NOT_LEGAL_BUILD_TILE
 	return Action.Reason.OK
+
+
+## The living, owned, build-capable [UnitState] named by [param action], or null
+## when there is not one. Null covers every way the requirement can fail — no id,
+## destroyed since the preview, someone else's, or simply not a Builder — because
+## all four mean the same thing at the point of use.
+static func builder_for(state: GameState, action: BuildAction) -> UnitState:
+	var entity: EntityState = state.entities_by_id.get(action.builder_id)
+	if not (entity is UnitState):
+		return null
+	var unit: UnitState = entity as UnitState
+	if unit.owner != state.active_player:
+		return null
+	if unit.type == null or not unit.type.can_build:
+		return null
+	return unit
 
 
 ## [BuildAction]'s [code]apply()[/code] handler (ADR-0017 D1/D2, ADR-0002,
@@ -245,7 +320,20 @@ static func apply_build(state: GameState, action: BuildAction) -> Array[Event]:
 	evt.structure_type = action.structure_type
 	evt.owner = player
 	evt.tile = action.tile
-	return [evt] as Array[Event]
+
+	# ★ The Builder is CONSUMED by what it raises (user decision 2026-08-25). Done
+	# LAST, after the structure is placed and its event built, so a mid-apply
+	# failure can never leave a player who has paid and lost their Builder with
+	# nothing on the board. The destroy events are appended rather than discarded —
+	# the board renderer and the population counter both learn the unit is gone from
+	# them, and dropping them would leave a ghost sprite standing next to its own
+	# building.
+	var events: Array[Event] = [evt] as Array[Event]
+	var builder: UnitState = builder_for(state, action)
+	if builder != null:
+		for e: Event in state.destroy_entity(builder.entity_id):
+			events.append(e)
+	return events
 
 
 ## The faction-folded AP cost to build [param structure_type] for [param player]

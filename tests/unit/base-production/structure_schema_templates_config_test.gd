@@ -33,9 +33,13 @@ func test_hq_template_matches_stat_table() -> void:
 	assert_int(hq.production_cap).is_equal(2)
 	assert_int(hq.defense).is_equal(2)
 	assert_bool(hq.can_counterattack).is_false()
-	# producible == {Scout} exactly.
+	# ★ producible == {Builder} exactly (user decision 2026-08-25). The HQ used to
+	# make Scouts; the Scout moved to the Barracks and the HQ now makes ONLY the
+	# Builder, which is the sole way any structure gets raised. Pinned as an exact
+	# set, not a `has()`, precisely so re-adding a combat unit here — which would
+	# quietly restore the old "HQ can field an army by itself" opening — fails.
 	assert_int(hq.producible_types.size()).is_equal(1)
-	assert_bool(hq.producible_types.has(UnitTypes.SCOUT)).is_true()
+	assert_bool(hq.producible_types.has(UnitTypes.BUILDER)).is_true()
 
 
 func test_factory_template_matches_stat_table() -> void:
@@ -71,8 +75,12 @@ func test_barracks_template_matches_stat_table() -> void:
 	assert_int(po.build_time).is_equal(2)
 	assert_int(po.production_cap).is_equal(4)
 	assert_int(po.defense).is_equal(0)
-	# producible == {Trooper, Heavy, Sniper} exactly.
-	assert_int(po.producible_types.size()).is_equal(3)
+	# ★ producible == {Scout, Trooper, Heavy, Sniper} exactly. The Scout moved here
+	# from the HQ on 2026-08-25 (user decision) when the HQ became Builder-only, so
+	# the Barracks is now the sole source of every fighting unit in the game — which
+	# is what makes raising one the real opening decision.
+	assert_int(po.producible_types.size()).is_equal(4)
+	assert_bool(po.producible_types.has(UnitTypes.SCOUT)).is_true()
 	assert_bool(po.producible_types.has(UnitTypes.TROOPER)).is_true()
 	assert_bool(po.producible_types.has(UnitTypes.HEAVY)).is_true()
 	assert_bool(po.producible_types.has(UnitTypes.SNIPER)).is_true()
