@@ -1,7 +1,7 @@
 # S8-14 / S8-15 / S8-16 — Builder art evidence
 
 **Captured**: 2026-08-26 · **By**: `/qa-plan sprint` (QA plan Finding 2)
-**Status**: ⛔ **NOT SIGNED OFF** — see "What this is for" below.
+**Status**: ✅ Accent defect **FIXED** (S8-19, re-rendered 2026-08-26) · ⛔ base look **still not signed off**.
 
 ## Sheets
 
@@ -37,9 +37,10 @@ explicit sign-off. ⇒ **The user has still not seen this unit.** These sheets e
   does the work, not the 8 px.
 - **Neutral is achromatic** (0.1% coverage), correct per art-bible §4.2 — neutral means *unowned*.
 
-## ⛔ What they also exposed — see QA plan Finding 3
+## ✅ What they exposed, and how it was fixed — S8-19
 
-`03-builder-vs-roster.png` shows the Builder as **markedly greyer than every other unit**. Measured:
+The first capture of these sheets showed the Builder **markedly greyer than every other unit**, and
+measuring it confirmed a real defect:
 
 | | rush | boom | neutral |
 |---|---:|---:|---:|
@@ -47,27 +48,56 @@ explicit sign-off. ⇒ **The user has still not seen this unit.** These sheets e
 | Trooper | 42.5% | 42.6% | 0.0% |
 | Heavy | 62.7% | 62.0% | 0.0% |
 | Sniper | 43.2% | 43.7% | 0.5% |
-| **Builder** | **22.8%** | **22.9%** | 0.1% |
+| **Builder — was** | ⛔ **22.8%** | ⛔ **22.9%** | 0.1% |
+| ✅ **Builder — now** | **33.9%** | **34.2%** | 0.1% |
 
-**The S8-05 accent gate's owned-faction floor is 30%.** The Builder is **7 points under it**, and
-the roster spread is now **2.75×** against a stated 2.5× ceiling. **It would fail two assertions.**
+**The gate's owned-faction floor is 30%.** The Builder was **7 points under it**, and the roster
+spread was **2.75×** against a 2.5× ceiling — it would have failed two of four assertions.
 
-⛔ **It does not fail, because `accent_coverage_test.gd:21` keeps a hand-written list —
-`["scout", "trooper", "heavy", "sniper"]` — and the Builder is not in it.**
+⛔ **It did not fail, because `accent_coverage_test.gd:21` kept a hand-written list —
+`["scout", "trooper", "heavy", "sniper"]` — and the Builder was not in it.**
 
-★★ **This is exactly the defect S8-14 fixed in the sibling guard, still live in this one.** S8-14
-rewrote the art-coverage and glow-mask guards to enumerate `UnitTypes.ALL`; `accent_coverage_test.gd`
-was written earlier (S8-05) for the same purpose and was not touched. ⚠ **The gate written because
-"the Sniper defect shipped and survived a full art sprint because nothing measured it" does not
-measure the roster's newest unit.**
+★★ **That was S8-14's own finding, still live in the sibling test.** S8-14 rewrote the art-coverage
+and glow-mask guards to enumerate `UnitTypes.ALL` after a transcribed list let the Builder ship as a
+magenta placeholder. `accent_coverage_test.gd` was written earlier (S8-05) **for the same purpose**
+and was never touched. ⇒ **Fixing an anti-pattern where you found it is not fixing it.**
+
+### How it was fixed — art, not threshold
+
+★ The test's own failure message said it: *"Fix the ART, not this threshold: raise saturated
+coverage via `promote_accent.py` and re-derive. Do NOT touch the silhouette."* That is what happened.
+
+`promote_accent.py --target 34` **grows the existing accent regions outward** rather than inventing
+new ones — the artist already decided *where* the accent belongs, dilation only decides how far it
+extends. ⚠ Two earlier approaches (brightest-N pixels, value-banded components) produced correct
+numbers and unusable art — orange speckle and a corduroy artefact. **The silhouette is untouched.**
+
+**Target 34 was chosen by eye against three candidates**, not by picking the smallest passing number:
+
+| Candidate | Shipped | Verdict |
+|---|---:|---|
+| 22.8% (was) | — | ⛔ fails the floor; ownership genuinely weak on a busy board |
+| ✅ **34** | **33.9%** | **Clears the floor by ~4 pts. Grey upper hull still dominates, so "not a soldier" survives. Still the roster's least-coloured unit by 8.6 pts** |
+| 38 | 38.1% | Passes, but the grey mass is visibly shrinking |
+| 42 | 42.7% | ⛔ Reads as a combat unit — level with the Trooper's 42.5%. Fights the design |
+
+★★ **Why not just clear the floor by the minimum:** the brief deliberately says *"grey everywhere
+else"* and *"the silhouette has to say 'not a soldier' before any colour is read"*, so the Builder
+**should** be the least-coloured unit — but ownership still has to read. 33.9% keeps both true.
+⚠ Judged by rendering the candidates side by side at shipped scale on the stage colour, per the
+standing rule: *a correct metric with wrong art is the normal case — if a number is the only check,
+bad art passes.*
+
+✅ **Gate now enumerates `UnitTypes.ALL`** via `EntitySpriteCatalog.type_token`, the same call the
+renderer uses, so it cannot drift from what the game loads. **Verified to have teeth**: raising the
+floor to 40% makes it fail naming *"builder rush … 33.9% … below the 40.0% floor"* and
+*"builder boom … 34.2%"*. Roster spread is now **1.85×**.
 
 ## ⚠ Open, needs the user
 
 1. **Sign off or reject the base look** — never approved.
-2. **The 22.8% question is a DESIGN call, not a bug to patch.** The brief deliberately says *"grey
-   everywhere else"* and *"the silhouette has to say 'not a soldier' before any colour is read"*, so
-   low accent coverage is partly **intended**. But ownership still has to read on a busy board, and
-   22.8% is closer to the Sniper defect (13.3%) than to the roster mean (48.5%).
+2. ✅ **The coverage question is resolved** (S8-19, above) — repaint to 33.9%, user's call
+   2026-08-26. ⚠ **Judge the result**: the sheets here are the post-fix art.
 3. **The S8-15 → S8-16 trade**: the cradle grew the sprite 145 → 157 px, giving back part of S8-15's
    "shorter". ★ Acknowledged in the commit as the chosen point on an opposed trade, and **cheap to
    move**.

@@ -106,9 +106,10 @@ re-proportioned it twice on user feedback given verbally.
 
 ---
 
-## ⛔⛔ FINDING 3 — The accent gate does not cover the Builder, and the Builder would fail it
+## ✅ FINDING 3 — The accent gate did not cover the Builder, and the Builder failed it
 
-**Severity: BLOCKING for the art guard's credibility. Found by capturing Finding 2's evidence.**
+**Severity: was BLOCKING. ✅ RESOLVED 2026-08-26 (S8-19) — art repainted, gate now enumerates.**
+Found by capturing Finding 2's evidence, which is the whole argument for capturing it.
 
 Measured with the gate's own formula (α ≥ 40/255, v ≥ 60/255, s ≥ 0.45):
 
@@ -118,7 +119,8 @@ Measured with the gate's own formula (α ≥ 40/255, v ≥ 60/255, s ≥ 0.45):
 | Trooper | 42.5% | 42.6% | 0.0% |
 | Heavy | 62.7% | 62.0% | 0.0% |
 | Sniper | 43.2% | 43.7% | 0.5% |
-| ⛔ **Builder** | **22.8%** | **22.9%** | 0.1% |
+| ⛔ **Builder — was** | **22.8%** | **22.9%** | 0.1% |
+| ✅ **Builder — now** | **33.9%** | **34.2%** | 0.1% |
 
 `accent_coverage_test.gd` asserts an owned-faction floor of **30.0%** and a roster spread ceiling of
 **2.5×**. The Builder is **7.2 points under the floor**, and including it takes the spread to
@@ -144,22 +146,38 @@ not measure the roster's newest unit.** The next unit added will not be measured
 ★★ **The lesson generalises past both instances: fixing an anti-pattern where you found it is not
 fixing it.** Sprint 8 has now found three lists-that-should-have-been-enumerations and fixed two.
 
-### ⚠ The number is a DESIGN question; the enumeration is not
+### ✅ How it was resolved — the art, not the threshold
 
-**The enumeration is a straight fix** — make it read `UnitTypes.ALL`, like its siblings.
-⛔ **Doing so turns the suite red until the 22.8% is resolved**, and that resolution is the user's:
+**User's call, 2026-08-26: repaint to clear 30%.** The test's own failure message prescribes the
+route — *"Fix the ART, not this threshold: raise saturated coverage via `promote_accent.py` and
+re-derive. Do NOT touch the silhouette."*
 
-- The Builder brief **deliberately** says *"grey everywhere else"* and *"the silhouette has to say
-  'not a soldier' before any colour is read"* — **low accent coverage is partly intended.**
-- But **ownership still has to read on a busy board**, and 22.8% sits closer to the Sniper defect
-  that motivated the gate (13.3%) than to the roster mean (48.5%).
-- ★ The floor was set *"~12 points below the lowest shipping archetype"* — chosen against a roster
-  of **combat** units. A defenceless support unit may legitimately want a different rule.
+`promote_accent.py --target 34` **grows the existing accent regions outward** instead of inventing
+new ones: the artist already decided *where* the accent belongs and dilation only decides how far it
+extends, so the result reads as a bolder version of the same design. ⚠ Two earlier approaches
+recorded in that tool — brightest-N pixels and value-banded components — both **measured correct and
+looked wrong** (orange speckle; a corduroy artefact). **Silhouette untouched.**
 
-**Options (user's call):** repaint the Builder to clear 30% · lower the floor with a stated rationale
-· carve out a support-unit band and assert *that* · accept and record with the gate enumerating all
-types but exempting Builder explicitly (⚠ an exemption list is the same anti-pattern again — if
-taken, it must be a **data flag on the type**, not a name in the test).
+★★ **34 was chosen by eye from rendered candidates, not as the smallest passing number:**
+
+| Candidate | Shipped | Verdict |
+|---|---:|---|
+| was | 22.8% | ⛔ fails the floor |
+| ✅ **34** | **33.9%** | Clears by ~4 pts · grey upper hull still dominates · **still the roster's least-coloured unit by 8.6 pts** |
+| 38 | 38.1% | Passes; grey mass visibly shrinking |
+| 42 | 42.7% | ⛔ reads as a combat unit, level with the Trooper's 42.5% |
+
+⚠ **Why not the minimum that passes:** the brief deliberately wants the Builder greyest — *"the
+silhouette has to say 'not a soldier' before any colour is read"*. But ownership must still read on
+a busy board. **33.9% is the point where both are true**, and it was picked by compositing all four
+at shipped scale on the stage colour — per the standing rule that *a correct metric with wrong art
+is the normal case; if a number is the only check, bad art passes.*
+
+✅ **Gate now enumerates `UnitTypes.ALL`** through `EntitySpriteCatalog.type_token` — the same call
+the renderer uses to build a sprite path, so the gate cannot drift from what the game loads.
+✅ **Verified to have teeth**, per the project's distrust-clean-results rule: raising the floor to
+40% fails naming *"builder rush … 33.9% … below the 40.0% floor"* and *"builder boom … 34.2%"*.
+✅ Roster spread **2.75× → 1.85×**. Suite **1307/1307**.
 
 ---
 
@@ -375,8 +393,8 @@ Run via `/smoke-check sprint` before any QA hand-off:
       analyses anything against them**
 - [x] ⚠ Finding 2 — Builder art evidence captured → `production/qa/evidence/s8-14-builder/`
       ⛔ **sign-off still owed** (the base look was never user-approved)
-- [ ] ⛔ **Finding 3 resolved** — accent gate enumerates `UnitTypes.ALL`, and the Builder's 22.8%
-      is either fixed or deliberately exempted by a **data flag**, never by a name in the test
+- [x] ✅ **Finding 3 resolved** — accent gate enumerates `UnitTypes.ALL`; Builder repainted 22.8% →
+      33.9%; gate verified failing at a raised floor
 - [x] All Logic/Integration stories have passing tests — **1307/1307, 0 orphans**
 - [ ] Smoke check passed (`/smoke-check sprint`), covering items 3–6 above
 - [ ] `REPORT.md` carries a fresh verdict with all five §10 criteria assessed
