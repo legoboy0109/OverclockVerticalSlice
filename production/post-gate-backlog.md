@@ -367,3 +367,41 @@ made it.**
 flag or a dev-only field that sets the budget without a UI. If the real goal is *trying values
 quickly* rather than *shipping a player-facing option*, do that first and let the setup screen wait
 for evidence that players want it.
+
+---
+
+## Research & Tech epic — the system is DECLARED but NOT BUILT
+
+**Raised 2026-08-26 (user): "the research outpost doesn't seem to do anything".**
+★ **Correct, and it is not a bug — the epic was never built.**
+
+`src/core/research/research.gd` says so itself: *"Still a forward declaration, and deliberately so.
+The real Research / Tech epic (ADR-0018) is not built in this corpus."* There is no `ResearchAction`
+class, and `Action.Verb.RESEARCH` exists in the enum but is **never registered with `GameState`**, so
+it cannot be dispatched at all.
+
+⛔ **A player can therefore spend 800 Credits and a Builder on a Research Lab that does nothing**,
+and nothing in the UI says so. That is the most misleading thing in the slice.
+
+### Design status
+
+`design/gdd/research-tech.md` is **898 lines and was previously Approved** — the flat, Lab-based
+version is fully specified. The user's 2026-08-26 asks (HQ-based research, structure and tech
+prerequisites, mutually-exclusive branches) are appended to it as **CR-14, a DRAFT amendment with
+four open decisions**. No code has been written.
+
+★ **Building the branching version once is less work than building the flat version now and widening
+it later** — which is the argument for doing the epic properly rather than patching.
+
+### Interim options, if it is not scheduled soon
+
+⚠ The slice currently offers a purchase that does nothing. Cheapest honest fixes, in order:
+1. **Remove the Research Lab from the buildable roster** until the epic lands. One data change.
+2. **Grey it out with a reason** ("Research is not implemented yet") — the CR-4 situational-row
+   treatment the action menu already has.
+3. Leave it, and accept that a playtester will buy it once and learn nothing.
+
+### Also owed
+**ASSET-013 — a real Research Lab texture.** The current one is placeholder-grade (user, 2026-08-26).
+⚠ Do not commission it before the Lab's role is settled: under CR-14 option A it stops being a
+research *site* and becomes a research *gate*, which is a different building to draw.

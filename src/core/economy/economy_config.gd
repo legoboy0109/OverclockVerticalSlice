@@ -131,8 +131,18 @@ extends Resource
 ## below, NOT cutting this back (that re-creates the idle-army problem).
 ## ⚠ 15 -> 10 on 2026-08-26 (S8-25, user decision), restoring the RATIO the rescale set.
 ## Carryover was 50% of a turn's budget at 15/30; leaving it at 15 against S8-23's new 20
-## made it 75%, a materially different rule about how much tempo can be banked. 10/20 is
-## 50% again — so this is a correction back to the intended proportion, not a new lever.
+## made it 75%. 10/20 is 50% again — a correction back to the intended proportion.
+##
+## ⛔ [b]KNOW WHAT THIS MEANS BEFORE READING `flat_ap_per_turn` AS THE BUDGET.[/b] Turn 1
+## starts at 20; every turn after starts at [b]30[/b] for any player who ended the previous
+## turn with 10+ unspent — which, with a small early army, is most turns. So the shipped
+## economy is [b]20 flat / 30 effective[/b], and the S8-23 cut only bites on turns you
+## spend hard.
+## ★ Raised as a possible defect on 2026-08-26 ("the build still has 30 AP per turn") and
+## [b]KEPT DELIBERATELY[/b] (user decision, same day) once measured. It is not an
+## oversight and should not be "fixed" by a later reader: banking a quiet turn into the
+## next one is the intended rule, and 0 carryover was the offered alternative and was
+## declined.
 @export var ap_carryover_cap: int = 10
 
 ## ★ S7-16 — one-off AP granted to the player who moves FIRST, on their first turn only.

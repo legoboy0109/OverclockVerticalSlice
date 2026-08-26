@@ -896,3 +896,92 @@ Presentation and interaction are owned by GDDs #9 and #10; this system provides 
 | Should there ever be a **hard cap on simultaneous Labs**, or a tech tree with prerequisites? | game-designer | VS = no cap, flat tree. Both are Alpha levers if research proves too spammy or too shallow. |
 | Should **structure `attack`** (Defensive Structure) become research-buffable? | Base & Production (#7) / Combat | Currently OFF (Research buffs units only). Shared Open Question with Base & Production — a turret that scales with tech may be desirable in Alpha. |
 | Should a completed tech be **visible to the opponent** (full transparency) or hidden until first used? | game-designer / UX | VS assumption: visible (readable-board pillar). Confirm in playtest — hidden tech adds mind-games but hurts legibility. |
+
+---
+
+# ⚑⚑ AMENDMENT PROPOSAL — CR-14: research moves to the HQ and the tree branches
+
+> **Raised**: 2026-08-26 (user). **Status**: ⛔ **DRAFT — decisions open, no code written.**
+> **Supersedes**: Core Rules 2–4, the Tech-tree-shape tuning row, and two Open Questions.
+
+## What changed, and why it is not a small edit
+
+The user asked for four things: **research runs from the HQ**, techs are **gated behind owning
+certain structures**, techs are **gated behind other techs**, and some choices are **mutually
+exclusive branches**.
+
+★ **This GDD already anticipated all of it and deliberately said no**, twice:
+
+> *"Tech tree shape — Flat, no prerequisites, all researchable. Widening to a branching/prereq tree
+> is an **Alpha lever**; keeps VS shallow."*
+> *"Should there ever be a hard cap on simultaneous Labs, or a tech tree with prerequisites? —
+> **VS = no cap, flat tree.** Both are Alpha levers if research proves too spammy or too shallow."*
+
+⇒ **This amendment is the user answering that open question**, not a correction. The deferral was
+correct at the time and the reason to reverse it is new: ⛔ **none of this system exists in code.**
+`research.gd` is an explicit forward declaration, there is no `ResearchAction`, and `Verb.RESEARCH`
+is never registered with `GameState`. **A Research Lab is 800 Credits for a building that does
+nothing.** Since the epic must be built from scratch either way, building the flat version first
+and the branching version later is strictly more work than building the branching version once.
+
+## ⛔ The decision the rest of this hangs on: what is the Research Lab FOR?
+
+If research runs from the HQ, the Lab loses its only job. Three coherent answers:
+
+| | The Lab becomes | Consequence |
+|---|---|---|
+| **A** | ★ **A prerequisite structure** — advanced techs require one (or two) standing | ★★ Answers the user's "gated behind certain structures" with a building the game already has, and gives the Lab a *reason* instead of a function. Destroying one becomes a real strategic target: it does not undo completed techs, but it locks the enemy out of the next tier |
+| **B** | **Research capacity** — the HQ researches one tech; each Lab adds a parallel slot | Preserves today's multi-Lab parallelism. ⚠ Re-opens the "Lab-spam has no brake" snowball question this GDD already flags as unresolved |
+| **C** | **Deleted** | Simplest. ⚠ Throws away a built, textured structure and removes the natural home for structure-gating |
+
+**Recommendation: A.** It is the only one that makes the user's two gating asks — structures and
+prior techs — the *same mechanism*, and it converts a dead building into a target worth attacking.
+
+## Proposed tree (concrete, so the shape can be argued with)
+
+Three lines. **Tier 1 needs nothing. Tier 2 needs a Research Lab and its tier-1 parent.**
+
+```
+COMBAT        Attack Tech ──┬─→ ⚔ Penetration   (+1 atk, ignores Cover)     ┐ mutually
+                            └─→ ⚔ Volley        (+1 atk, +1 attack_range)   ┘ exclusive
+
+DEFENCE       Defense Tech ─┬─→ 🛡 Plating      (+2 def)                    ┐ mutually
+                            └─→ 🛡 Field Repair (heal 1/turn when idle)     ┘ exclusive
+
+ECONOMY       Economy Tech ─┬─→ ⚙ Logistics     (−1 AP on produce/build)    ┐ mutually
+                            └─→ ⚙ Foundry       (−25% unit Credit cost)     ┘ exclusive
+```
+
+★ **Why exclusivity sits at tier 2 and not tier 1:** a player must be able to reach *some* of every
+line, or the archetype identity this GDD already establishes ("Economy Tech is the boom's signature,
+Attack/Defense the aggressor's") collapses into one forced opening. The branch is where the
+interesting decision lives; the trunk is where identity lives.
+
+⚠ **Exclusivity is permanent for the match, with no re-spec.** A reversible branch is a menu, not a
+decision — and this GDD's Player Fantasy section is explicit that research is meant to feel like
+commitment.
+
+## What this fixes about the Lab-spam snowball
+
+★ Worth noting because it resolves an Open Question rather than dodging it: under **A**, techs stop
+scaling with Lab *count*. Two Labs unlock the same tier-2 access one Lab does, so **Lab-spam buys
+nothing** — the brake this GDD says it lacks arrives for free as a consequence of the structure gate.
+
+## Open decisions — user's call
+
+1. **Lab's new role** — A, B or C above.
+2. **Does destroying the gating Lab revoke tier-2 access?** ⚠ Proposed: **no** for completed techs
+   (permanence is this GDD's Rule 8 and the player paid), **yes** for starting new ones. That makes
+   the Lab worth defending without ever taking something away that was already earned.
+3. **Faction-specific gating.** The user asked for it; ⚠ `faction-identity.md` has no per-faction
+   structures yet, so this needs either that epic first or a placeholder flag. **Recommend
+   deferring the faction half** and shipping structure + tech prerequisites now.
+4. **Do tier-2 techs cost AP as well as Credits?** Consistent with Rule 3 says yes; the tempo cost is
+   what stops a banked war chest buying the whole tree in one turn.
+
+## Still to write once the above is settled
+
+Formulas for each new tech · Edge Cases (gate destroyed mid-research; both branches somehow
+affordable; tech completing the turn its Lab dies) · Acceptance Criteria · the HQ's research UI ·
+AI scoring for a branching tree (⚠ the AI currently has no tech model at all) ·
+**a new Research Lab texture** (ASSET-013 — the current one is placeholder-grade).
