@@ -59,6 +59,15 @@ func _make_unit_type(hp: int = 10, attack: int = 3, attack_range: int = 1) -> Un
 	return type
 
 
+## A unit type that can raise structures — what Build is anchored to since
+## 2026-08-25 (a structure goes on a tile beside a Builder and consumes it).
+func _make_builder_type() -> UnitTypeDef:
+	var type: UnitTypeDef = _make_unit_type()
+	type.display_name = "TestBuilder"
+	type.can_build = true
+	return type
+
+
 func _make_counter_type(hp: int = 10, attack: int = 3) -> UnitTypeDef:
 	# A throwaway can_counterattack=true DIRECT defender (fresh Resource — every
 	# real VS roster type ships can_counterattack=false).
@@ -149,7 +158,7 @@ func test_post_move_commit_reselects_actor_with_attack_now_enabled() -> void:
 	assert_int(iface.selected_id()).is_equal(mover.entity_id)
 	# …with Attack now enabled (the enemy is in range from (6,5)) — move→attack.
 	var moved := state.entities_by_id[1] as UnitState
-	var attack_entry := CommandFSM.menu_model(state, moved)[CommandFSM.Verb.ATTACK]
+	var attack_entry := CommandFSM.entry_for(CommandFSM.menu_model(state, moved), CommandFSM.Verb.ATTACK)
 	assert_bool(attack_entry.enabled).is_true()
 
 
@@ -183,7 +192,9 @@ func test_attacker_destroyed_by_counter_collapses_to_idle() -> void:
 
 func test_build_commit_lands_on_new_structure_not_prior_selection() -> void:
 	var state := _make_state(0)
-	_place_structure(state, 1, 0, Vector2i(5, 5), _make_buildable_type()) # anchor so tiles are legal.
+	# ⚠ A BUILDER is the anchor now, not a structure (2026-08-25): build tiles are
+	# the neighbours of a unit that can build, and it is consumed by the structure.
+	var builder := _place_unit(state, 1, 0, Vector2i(5, 5), _make_builder_type())
 	state.per_player[0].current_ap = 20
 	state.per_player[0].current_credits = 20 # fund the build's Credit main cost (dual-cost pivot).
 
@@ -197,6 +208,7 @@ func test_build_commit_lands_on_new_structure_not_prior_selection() -> void:
 
 	var action := BuildAction.new()
 	action.structure_type = buildable
+	action.builder_id = builder.entity_id
 	action.tile = target
 	var result: ActionResult = iface.commit(state, action)
 	assert_bool(result.ok).is_true()

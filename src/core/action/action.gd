@@ -89,6 +89,11 @@ enum Reason {
 	# and under-construction instances (S6-03). Distinct from PRODUCTION_CAP_REACHED,
 	# which is a per-producer per-turn unit limit, not a structure-count limit.
 	STRUCTURE_MAX_REACHED,
+	# Build was ordered without a living, owned unit that can build it (user decision
+	# 2026-08-25 — Build belongs to a Builder, not to the player). Covers "no builder
+	# named", "that entity is gone", "it is not yours" and "it is not a Builder"
+	# alike: to a player those are one situation, "you have no builder for this".
+	NOT_A_BUILDER,
 }
 
 ## Which verb this is — the dispatch key [method GameState.apply_action] uses

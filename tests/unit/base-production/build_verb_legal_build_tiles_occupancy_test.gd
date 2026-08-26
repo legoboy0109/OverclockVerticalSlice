@@ -11,13 +11,15 @@
 #     fresh Under-Construction structure is inert for completed_outpost_count;
 #     unaffordable -> rejected, AP/Grid unchanged; tile occupied between
 #     preview and commit -> re-validated and rejected at apply.
-#   Placement (Rule 5): legal (unit-adjacent, standoff clear); structure-
-#     adjacency (unit OR structure satisfies adjacency); standoff == 2
+#   Placement (Rule 5): legal (BUILDER-adjacent, standoff clear); a friendly
+#     structure alone no longer satisfies adjacency (user decision 2026-08-25 —
+#     Build belongs to a Builder unit and consumes it); standoff == 2
 #     excluded (strict > 2); no-adjacency excluded; empty candidate set;
 #     HQ never a candidate; post-placement stability (no re-validation once
 #     placed, even if the adjacent friendly later moves away).
-#   Design-rule toggles: parallel construction (two builds same turn, AP-
-#     gated only); Economy Tech does NOT discount effective_build_cost (flat
+#   Design-rule toggles: parallel construction (two builds same turn — now needs
+#     two Builders, one per structure); Economy Tech does NOT discount
+#     effective_build_cost (flat
 #     4 AP); effective_build_cost == base exactly under Neutral.
 #
 # Injected Grid + AP fixtures (GameStateFactory + a hand-built GridState),
@@ -112,11 +114,15 @@ func _place(state: GameState, entity: EntityState) -> void:
 	state.entities_by_id[entity.entity_id] = entity
 
 
-func _make_build_action(tile: Vector2i, structure_type: StructureTypeDef, player: int) -> BuildAction:
+func _make_build_action(tile: Vector2i, structure_type: StructureTypeDef, player: int, \
+		builder_id: int = 1) -> BuildAction:
 	var action := BuildAction.new()
 	action.player = player
 	action.structure_type = structure_type
 	action.tile = tile
+	# Since 2026-08-25 a build is raised BY a Builder and consumes it, so every
+	# fixture names one — entity 1 by convention in this suite.
+	action.builder_id = builder_id
 	return action
 
 
@@ -158,10 +164,11 @@ func test_under_construction_structure_is_a_legal_target_resolvable_via_entity_a
 
 
 func test_impassable_tile_never_offered_and_build_there_is_rejected() -> void:
-	# Arrange -- friendly unit adjacent to an Impassable tile that would
-	# otherwise be a legal candidate (adjacency ok, no enemy structures).
+	# Arrange -- a BUILDER adjacent to an Impassable tile that would otherwise be a
+	# legal candidate (adjacency ok, no enemy structures). Only a Builder generates
+	# build tiles now, so a Scout here would make the test pass vacuously.
 	var state := _make_state()
-	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
+	var unit := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5))
 	_place(state, unit)
 	state.grid.terrain[state.grid.index(6, 5)] = GridState.Terrain.IMPASSABLE
 	# Act
@@ -176,7 +183,7 @@ func test_impassable_tile_never_offered_and_build_there_is_rejected() -> void:
 func test_occupied_tile_never_offered_and_build_there_is_rejected() -> void:
 	# Arrange -- an otherwise-legal tile is already occupied by another entity.
 	var state := _make_state()
-	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
+	var unit := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5))
 	var occupant := _make_unit(2, 0, UnitTypes.SCOUT, Vector2i(6, 5))
 	_place(state, unit)
 	_place(state, occupant)
@@ -195,7 +202,7 @@ func test_affordable_legal_build_spends_credits_and_ap_surcharge_places_under_co
 	# Arrange -- a friendly unit with an adjacent legal tile, exactly enough
 	# Credits (main cost) and AP (surcharge) via _make_state's defaults.
 	var state := _make_state()
-	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
+	var unit := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5))
 	_place(state, unit)
 	var tile := Vector2i(6, 5)
 	var action := _make_build_action(tile, StructureTypes.FACTORY, 0)
@@ -216,15 +223,35 @@ func test_affordable_legal_build_spends_credits_and_ap_surcharge_places_under_co
 	assert_object(structure.type).is_same(StructureTypes.FACTORY)
 	# Blocks/targets immediately (single atomic apply -- Grid already updated).
 	assert_bool(state.grid.is_passable(tile.x, tile.y)).is_false()
-	# One placement event.
-	assert_int(events.size()).is_equal(1)
+	# The placement event leads.
 	assert_bool(events[0] is StructurePlacedEvent).is_true()
+	# ★ THE BUILDER IS CONSUMED (user decision 2026-08-25). It is gone from the
+	# entity table AND off the grid — checked separately, because an entity removed
+	# from one but not the other is the exact shape of a ghost that still blocks
+	# movement or still draws.
+	assert_object(state.entities_by_id.get(1)).override_failure_message(
+		"the Builder must be spent by the structure it raises"
+	).is_null()
+	assert_bool(state.grid.is_passable(5, 5)).override_failure_message(
+		"the consumed Builder's tile must free up — a corpse left in the grid " +
+		"index blocks movement and pathing forever"
+	).is_true()
+	# Its destruction is REPORTED, not silent: the renderer and the population
+	# counter both learn the unit is gone from these events.
+	var destroyed: bool = false
+	for e: Event in events:
+		if e is UnitDestroyedEvent:
+			destroyed = true
+	assert_bool(destroyed).override_failure_message(
+		"consuming the Builder must emit its destruction, or the sprite is left " +
+		"standing beside the building it became"
+	).is_true()
 
 
 func test_fresh_under_construction_structure_is_inert_for_completed_outpost_count() -> void:
 	# Arrange -- a freshly built Economy Outpost (Under-Construction).
 	var state := _make_state()
-	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
+	var unit := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5))
 	_place(state, unit)
 	var action := _make_build_action(Vector2i(6, 5), StructureTypes.FACTORY, 0)
 	BaseProduction.apply_build(state, action)
@@ -237,7 +264,7 @@ func test_unaffordable_build_credits_short_rejected_credits_and_grid_unchanged()
 	# AP surcharge fully funded so CANT_AFFORD_CREDITS is unambiguously the
 	# Credits gate firing, not the AP gate.
 	var state := _make_state(-1, 3)
-	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
+	var unit := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5))
 	_place(state, unit)
 	var tile := Vector2i(6, 5)
 	var action := _make_build_action(tile, StructureTypes.FACTORY, 0)
@@ -261,7 +288,7 @@ func test_commit_revalidation_rejects_when_tile_becomes_occupied_between_preview
 	# Arrange -- a legal tile at preview time, then occupied by something else
 	# before apply_build() actually commits (simulates a stale preview).
 	var state := _make_state()
-	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
+	var unit := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5))
 	_place(state, unit)
 	var tile := Vector2i(6, 5)
 	var action := _make_build_action(tile, StructureTypes.FACTORY, 0)
@@ -285,7 +312,7 @@ func test_tile_adjacent_to_friendly_unit_and_manhattan_3_from_enemy_structure_is
 	# Arrange -- friendly unit at (5,5); candidate (6,5) is manhattan 1 from it
 	# and manhattan 3 from the nearest enemy structure at (9,5).
 	var state := _make_state()
-	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
+	var unit := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5))
 	var enemy_structure := _make_structure(2, 1, Vector2i(9, 5), StructureTypes.FACTORY)
 	_place(state, unit)
 	_place(state, enemy_structure)
@@ -295,15 +322,35 @@ func test_tile_adjacent_to_friendly_unit_and_manhattan_3_from_enemy_structure_is
 	assert_bool(Vector2i(6, 5) in tiles).is_true()
 
 
-func test_tile_adjacent_to_friendly_structure_not_unit_is_legal() -> void:
-	# Arrange -- friendly STRUCTURE (not unit) at (5,5); no enemy structures at
-	# all, so standoff trivially clears.
+func test_tile_adjacent_to_a_friendly_structure_alone_is_no_longer_legal() -> void:
+	# ★ INVERTED 2026-08-25 (user decision). This test used to assert the opposite —
+	# that a friendly STRUCTURE satisfied adjacency just as a unit did — because
+	# Build was a player-level command and the frontier was every owned entity.
+	# Build now belongs to a Builder unit, so a base with no Builder standing in it
+	# cannot expand at all. Kept and inverted rather than deleted: "structures alone
+	# do not make build tiles" is precisely the rule that changed, and it is the one
+	# most likely to be re-introduced by accident.
+	# Arrange -- friendly STRUCTURE at (5,5), no Builder anywhere, no enemies.
 	var state := _make_state()
 	var friendly_structure := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.FACTORY)
 	_place(state, friendly_structure)
 	# Act
 	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
-	# Assert -- unit OR structure satisfies adjacency.
+	# Assert -- nothing is offered; a structure is not a builder.
+	assert_array(tiles).override_failure_message(
+		"a player with structures but no Builder must have nowhere to build"
+	).is_empty()
+
+
+func test_tile_adjacent_to_a_builder_is_legal_even_with_no_structures() -> void:
+	# The positive half of the rule above: the Builder ALONE is the frontier, and
+	# it does not need a base beside it to raise the first building.
+	# Arrange
+	var state := _make_state()
+	_place(state, _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5)))
+	# Act
+	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
+	# Assert
 	assert_bool(Vector2i(6, 5) in tiles).is_true()
 
 
@@ -314,7 +361,7 @@ func test_tile_at_manhattan_exactly_2_from_enemy_structure_excluded_strict_bound
 	# unit at (6,4), candidate (6,5) is manhattan 1 from the unit and manhattan
 	# EXACTLY 2 from an enemy structure at (6,7).
 	var state := _make_state()
-	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(6, 4))
+	var unit := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(6, 4))
 	var enemy_structure := _make_structure(2, 1, Vector2i(6, 7), StructureTypes.FACTORY)
 	_place(state, unit)
 	_place(state, enemy_structure)
@@ -330,7 +377,7 @@ func test_tile_far_from_enemy_but_not_adjacent_to_any_friendly_excluded() -> voi
 	# Arrange -- friendly unit far away; enemy structures far away too, but the
 	# candidate tile under test has no friendly neighbour at all.
 	var state := _make_state()
-	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(0, 0))
+	var unit := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(0, 0))
 	_place(state, unit)
 	# Act
 	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
@@ -343,7 +390,7 @@ func test_no_tile_satisfies_both_conditions_legal_build_tiles_is_empty() -> void
 	# Arrange -- the player's only unit is completely walled in by enemy
 	# structures within standoff distance on every neighbour.
 	var state := _make_state()
-	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
+	var unit := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5))
 	_place(state, unit)
 	var n_struct := _make_structure(2, 1, Vector2i(5, 4), StructureTypes.FACTORY)
 	var e_struct := _make_structure(3, 1, Vector2i(6, 5), StructureTypes.FACTORY)
@@ -371,7 +418,7 @@ func test_hq_never_offered_as_a_candidate_even_when_adjacent_to_friendly_unit() 
 	# other occupied tile, and that legal_build_tiles never special-cases HQ
 	# identity to re-include it.
 	var state := _make_state()
-	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
+	var unit := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5))
 	var hq := _make_structure(2, 0, Vector2i(6, 5), StructureTypes.HQ, StructureState.BuildStatus.COMPLETED)
 	_place(state, unit)
 	_place(state, hq)
@@ -385,7 +432,7 @@ func test_hq_never_offered_as_a_candidate_even_when_adjacent_to_friendly_unit() 
 func test_structure_placed_adjacent_to_unit_that_later_moves_away_remains_no_reevaluation() -> void:
 	# Arrange -- build a structure adjacent to a friendly unit.
 	var state := _make_state()
-	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
+	var unit := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5))
 	_place(state, unit)
 	var tile := Vector2i(6, 5)
 	var action := _make_build_action(tile, StructureTypes.FACTORY, 0)
@@ -408,25 +455,56 @@ func test_two_builds_same_turn_both_succeed_parallel_construction_ap_gated() -> 
 	# Arrange -- dual-cost pivot: fund BOTH pools for two Economy Outposts --
 	# Credits = 2 * build_cost (4+4=8), AP = 2 * build_ap_cost (2+2=4) -- two
 	# separate friendly-adjacent legal tiles.
+	# ★ TWO Builders now, one per build (user decision 2026-08-25). It used to be one
+	# unit raising both, which is no longer possible at any price: a Builder is spent
+	# by the first structure it raises. The claim under test is unchanged and still
+	# worth pinning — nothing gates a player to ONE build per turn, so with the
+	# Builders and the funds you may raise two.
 	var state := _make_state(Balance.economy.build_ap_cost * 2, StructureTypes.FACTORY.build_cost * 2)
-	var unit := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
-	_place(state, unit)
+	# ⚠ Ids well clear of 0..n: `next_entity_id` starts at 0, so a structure raised
+	# mid-test would otherwise be allocated an id a hand-placed fixture is already
+	# using, and the "was the Builder consumed?" assertions would read the new
+	# BUILDING instead. A test artefact, not a product one — the game allocates every
+	# id from the same counter.
+	_place(state, _make_unit(101, 0, UnitTypes.BUILDER, Vector2i(5, 5)))
+	_place(state, _make_unit(102, 0, UnitTypes.BUILDER, Vector2i(3, 5)))
 	var tile_a := Vector2i(6, 5)
-	var tile_b := Vector2i(4, 5)
-	var action_a := _make_build_action(tile_a, StructureTypes.FACTORY, 0)
+	var tile_b := Vector2i(2, 5)
+	var action_a := _make_build_action(tile_a, StructureTypes.FACTORY, 0, 101)
 	# Act -- first build.
 	assert_int(BaseProduction.validate_build(state, action_a)).is_equal(Action.Reason.OK)
 	BaseProduction.apply_build(state, action_a)
-	# Act -- second build, same turn.
-	var action_b := _make_build_action(tile_b, StructureTypes.FACTORY, 0)
+	# Act -- second build, same turn, by the OTHER Builder.
+	var action_b := _make_build_action(tile_b, StructureTypes.FACTORY, 0, 102)
 	assert_int(BaseProduction.validate_build(state, action_b)).is_equal(Action.Reason.OK)
-	var events_b: Array[Event] = BaseProduction.apply_build(state, action_b)
+	BaseProduction.apply_build(state, action_b)
 	# Assert -- both succeeded; both pools fully spent (Credits 8-4-4=0, AP 4-2-2=0).
-	assert_int(events_b.size()).is_equal(1)
 	assert_object(state.entity_at(tile_a)).is_not_null()
 	assert_object(state.entity_at(tile_b)).is_not_null()
 	assert_int(state.per_player[0].current_credits).is_equal(0)
 	assert_int(state.per_player[0].current_ap).is_equal(0)
+	# Both Builders are spent — two structures cost two Builders, never one.
+	assert_object(state.entities_by_id.get(101)).is_null()
+	assert_object(state.entities_by_id.get(102)).is_null()
+
+
+func test_one_builder_cannot_raise_a_second_structure() -> void:
+	# The other half of "consumed": funds alone are not enough. A player who can
+	# afford two buildings but owns one Builder gets one building.
+	# Arrange -- fully funded for two, but only one Builder on the board.
+	var state := _make_state(Balance.economy.build_ap_cost * 2, StructureTypes.FACTORY.build_cost * 2)
+	_place(state, _make_unit(101, 0, UnitTypes.BUILDER, Vector2i(5, 5)))
+	var first := _make_build_action(Vector2i(6, 5), StructureTypes.FACTORY, 0, 101)
+	assert_int(BaseProduction.validate_build(state, first)).is_equal(Action.Reason.OK)
+	BaseProduction.apply_build(state, first)
+	# Act -- the same Builder is asked for a second structure.
+	var second := _make_build_action(Vector2i(4, 5), StructureTypes.FACTORY, 0, 101)
+	# Assert -- refused, and refused for the RIGHT reason: the builder is gone, not
+	# that the tile is bad or the player is broke.
+	assert_int(BaseProduction.validate_build(state, second)).override_failure_message(
+		"a spent Builder must not be able to build again"
+	).is_equal(Action.Reason.NOT_A_BUILDER)
+	assert_object(state.entity_at(Vector2i(4, 5))).is_null()
 
 
 func test_economy_tech_does_not_discount_effective_build_cost_flat_four() -> void:

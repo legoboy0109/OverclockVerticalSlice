@@ -164,6 +164,7 @@ const VERB_LABELS: Dictionary = {
 	CommandFSM.Verb.WAIT: "Wait",
 	CommandFSM.Verb.CANCEL_BUILD: "Cancel Build",
 	CommandFSM.Verb.DISBAND: "Disband",
+	CommandFSM.Verb.BUILD: "Build",
 }
 
 ## The verbs that DESTROY something for a partial refund, and therefore take the
@@ -193,6 +194,7 @@ const VERB_SHORTCUTS: Dictionary = {
 	CommandFSM.Verb.MOVE: &"board_act",
 	CommandFSM.Verb.ATTACK: &"board_attack",
 	CommandFSM.Verb.PRODUCE: &"board_produce",
+	CommandFSM.Verb.BUILD: &"board_build",
 }
 
 ## Player-facing phrasing per [enum CommandFSM.Reason] flag. Whole strings, never
@@ -217,6 +219,8 @@ const REASON_LABELS: Dictionary = {
 	CommandFSM.Reason.NOTHING_BLOCKED: "nothing to free up",
 	CommandFSM.Reason.INSUFFICIENT_CREDITS: "needs Credits",
 	CommandFSM.Reason.POPULATION_CAP_REACHED: "at pop cap",
+	CommandFSM.Reason.NOT_A_BUILDER: "not a builder",
+	CommandFSM.Reason.NO_BUILD_SPACE: "no room beside it",
 }
 
 ## Player-facing phrasing for an [enum Action.Reason] a validator returned when a
@@ -245,6 +249,7 @@ const COMMIT_REJECTION_LABELS: Dictionary = {
 	Action.Reason.NOT_UNDER_CONSTRUCTION: "nothing to cancel",
 	Action.Reason.GAME_OVER: "the match is over",
 	Action.Reason.NO_SUCH_ENTITY: "that entity is gone",
+	Action.Reason.NOT_A_BUILDER: "no builder for that",
 }
 
 
@@ -264,6 +269,7 @@ static func commit_rejection_text(reason: int) -> String:
 ## "needs AP, no targets" tomorrow because a flag value changed.
 const REASON_ORDER: Array[int] = [
 	CommandFSM.Reason.NOT_A_PRODUCER,
+	CommandFSM.Reason.NOT_A_BUILDER,
 	CommandFSM.Reason.NOT_UNDER_CONSTRUCTION,
 	CommandFSM.Reason.NOT_A_UNIT,
 	CommandFSM.Reason.NOTHING_BLOCKED,
@@ -273,6 +279,7 @@ const REASON_ORDER: Array[int] = [
 	CommandFSM.Reason.NO_TARGETS,
 	CommandFSM.Reason.PRODUCTION_CAP_REACHED,
 	CommandFSM.Reason.NO_DEPLOY_SPACE,
+	CommandFSM.Reason.NO_BUILD_SPACE,
 	CommandFSM.Reason.POPULATION_CAP_REACHED,
 	CommandFSM.Reason.INSUFFICIENT_CREDITS,
 	CommandFSM.Reason.INSUFFICIENT_AP,
@@ -548,9 +555,14 @@ func _fill_rows(model: Array[CommandFSM.VerbEntry], \
 			# here without inventing a figure — those stay bare, and their prices
 			# appear where they become knowable (the tile readout, the submenu).
 			right = _priced(entry.ap_cost, "")
-		elif entry.verb == CommandFSM.Verb.PRODUCE:
+		elif entry.verb == CommandFSM.Verb.PRODUCE or entry.verb == CommandFSM.Verb.BUILD:
 			# ASCII ">" rather than a triangle: the fallback font has no glyph for
 			# one and would draw a tofu box.
+			#
+			# ★ Build carries the same mark as Produce because it now behaves the
+			# same way: neither chooses anything by itself, both open a type list.
+			# Its per-type price lives on those rows, so like Produce it names no
+			# figure here — there is no single "cost of building" to state.
 			right = ">"
 		elif entry.verb == CommandFSM.Verb.WAIT and stood_down:
 			# Wait stays ENABLED when already stood down (CR-4: "Wait — always"), and
@@ -644,6 +656,12 @@ static func _cost_text(credit_cost: int, ap_cost: int, enabled: bool, reason: in
 ## unit, Disband on a structure, Produce on something that produces nothing — which teaches
 ## nothing and would put a dead row on almost every menu in the game.
 ##
+## ★ [constant CommandFSM.Reason.NOT_A_BUILDER] joins them 2026-08-25: a Trooper can never
+## build, so a permanently dead "Build — not a builder" row on every combat unit would be the
+## same defect the NOT_A_PRODUCER entry below was added to fix. ⚠ Note the pairing: a Builder
+## that is merely broke or boxed in keeps a VISIBLE dimmed row reading "needs Credits" or "no
+## room beside it", because those are situational and that row is what teaches the price.
+##
 ## ★ [constant CommandFSM.Reason.NOT_A_PRODUCER] was added 2026-08-26 from a playtest report:
 ## every ordinary unit was carrying a permanent "Produce — not a producer" row. It is structural
 ## in exactly the sense the other two are — no amount of play makes a Trooper a producer — so it
@@ -665,6 +683,7 @@ static func _is_inapplicable(entry: CommandFSM.VerbEntry) -> bool:
 	return (entry.reason & CommandFSM.Reason.NOT_UNDER_CONSTRUCTION) != 0 \
 		or (entry.reason & CommandFSM.Reason.NOT_A_UNIT) != 0 \
 		or (entry.reason & CommandFSM.Reason.NOT_A_PRODUCER) != 0 \
+		or (entry.reason & CommandFSM.Reason.NOT_A_BUILDER) != 0 \
 		or (entry.reason & CommandFSM.Reason.NOTHING_BLOCKED) != 0
 
 

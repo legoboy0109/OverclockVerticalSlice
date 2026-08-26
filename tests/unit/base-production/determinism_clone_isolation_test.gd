@@ -110,11 +110,15 @@ func _place(state: GameState, entity: EntityState) -> void:
 	state.entities_by_id[entity.entity_id] = entity
 
 
-func _make_build_action(structure_type: StructureTypeDef, tile: Vector2i, player: int = 0) -> BuildAction:
+func _make_build_action(structure_type: StructureTypeDef, tile: Vector2i, \
+		builder_id: int = 1, player: int = 0) -> BuildAction:
 	var a := BuildAction.new()
 	a.player = player
 	a.structure_type = structure_type
 	a.tile = tile
+	# Build is raised BY a Builder and consumes it (user decision 2026-08-25), so
+	# an action without one is not a build order at all.
+	a.builder_id = builder_id
 	return a
 
 
@@ -218,9 +222,11 @@ func _has_attacked_of(e: EntityState) -> bool:
 # --- Group 1: cross-clone parity (one per B&P verb) --------------------------
 
 func test_cross_clone_build_yields_field_wise_equal_states() -> void:
-	# Arrange -- a friendly unit gives an adjacent legal build tile; two clones.
+	# Arrange -- a BUILDER gives an adjacent legal build tile; two clones.
+	# ⚠ Must be a Builder, not any friendly unit: since 2026-08-25 only a unit with
+	# `can_build` creates legal build tiles, and it is consumed by the structure.
 	var source := _make_state()
-	_place(source, _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5)))
+	_place(source, _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5)))
 	var a: GameState = source.clone()
 	var b: GameState = source.clone()
 	var action := _make_build_action(StructureTypes.FACTORY, Vector2i(6, 5))
@@ -285,9 +291,9 @@ func test_cross_clone_structure_attack_yields_field_wise_equal_states() -> void:
 # --- Group 2: clone isolation (source never mutated) -------------------------
 
 func test_clone_isolation_build_leaves_source_unchanged() -> void:
-	# Arrange
+	# Arrange -- a Builder, because only a Builder makes a build tile legal.
 	var source := _make_state()
-	_place(source, _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5)))
+	_place(source, _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5)))
 	var snapshot: GameState = source.clone() # pre-action snapshot
 	var c: GameState = source.clone()
 	var action := _make_build_action(StructureTypes.FACTORY, Vector2i(6, 5))

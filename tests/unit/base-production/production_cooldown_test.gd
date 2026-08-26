@@ -58,7 +58,7 @@ func _produce(state: GameState, producer: StructureState, tile: Vector2i) -> Act
 	var a := ProduceAction.new()
 	a.player = producer.owner
 	a.producer_id = producer.entity_id
-	a.unit_type = UnitTypes.SCOUT
+	a.unit_type = UnitTypes.BUILDER
 	a.tile = tile
 	return state.apply_action(a)
 
@@ -97,7 +97,7 @@ func test_a_producer_on_cooldown_is_rejected_naming_the_cooldown() -> void:
 	var a := ProduceAction.new()
 	a.player = 0
 	a.producer_id = hq.entity_id
-	a.unit_type = UnitTypes.SCOUT
+	a.unit_type = UnitTypes.BUILDER
 	a.tile = Vector2i(5, 4)
 	assert_int(BaseProduction.validate_produce(state, a)).is_equal(Action.Reason.PRODUCER_ON_COOLDOWN)
 
@@ -123,7 +123,7 @@ func test_the_cooldown_expires_and_production_resumes() -> void:
 	var a := ProduceAction.new()
 	a.player = 0
 	a.producer_id = hq.entity_id
-	a.unit_type = UnitTypes.SCOUT
+	a.unit_type = UnitTypes.BUILDER
 	a.tile = Vector2i(5, 4)
 	assert_int(BaseProduction.validate_produce(state, a)).is_equal(Action.Reason.OK)
 

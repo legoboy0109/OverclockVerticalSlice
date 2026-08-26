@@ -193,11 +193,14 @@ func _attack(attacker_tile: Vector2i, target_tile: Vector2i, player: int) -> Att
 	return action
 
 
-func _build(structure_type: StructureTypeDef, tile: Vector2i, player: int) -> BuildAction:
+func _build(structure_type: StructureTypeDef, tile: Vector2i, player: int, \
+		builder_id: int = 1) -> BuildAction:
 	var action := BuildAction.new()
 	action.player = player
 	action.structure_type = structure_type
 	action.tile = tile
+	# A build is raised BY a Builder and consumes it (2026-08-25).
+	action.builder_id = builder_id
 	return action
 
 
@@ -232,10 +235,12 @@ func _make_hq(entity_id: int, owner: int, pos: Vector2i, hp: int) -> StructureSt
 
 func test_build_with_exact_credits_and_ap_surcharge_via_apply_action_commits_atomically() -> void:
 	# Arrange -- exactly effective_build_cost Credits (the main cost) and exactly
-	# build_ap_cost AP (the surcharge) for an Economy Outpost, one friendly unit
+	# build_ap_cost AP (the surcharge) for an Economy Outpost, and a BUILDER
 	# adjacent to the target tile so it is in legal_build_tiles.
+	# ⚠ A Scout anchored this until 2026-08-25; only a unit with `can_build` makes a
+	# build tile legal now, and it is consumed by the structure it raises.
 	var state := _make_state(0, 0)
-	var anchor := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(0, 0))
+	var anchor := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(0, 0))
 	_place(state, anchor)
 	var cost: int = BaseProduction.effective_build_cost(state, StructureTypes.FACTORY, 0)
 	state.per_player[0].current_credits = cost
@@ -243,7 +248,7 @@ func test_build_with_exact_credits_and_ap_surcharge_via_apply_action_commits_ato
 	var target_tile := Vector2i(1, 0) # manhattan==1 from the anchor.
 	# Non-vacuous precondition: the tile is actually legal before we act.
 	assert_bool(target_tile in BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)).is_true()
-	var action := _build(StructureTypes.FACTORY, target_tile, 0)
+	var action := _build(StructureTypes.FACTORY, target_tile, 0, anchor.entity_id)
 
 	# Act
 	var result: ActionResult = state.apply_action(action)
@@ -285,7 +290,7 @@ func test_unaffordable_build_credits_short_via_apply_action_rejected_state_uncha
 	var ap_before: int = state.per_player[0].current_ap
 	var occupancy_before: PackedInt32Array = state.grid.occupancy.duplicate()
 	var entity_count_before: int = state.entities_by_id.size()
-	var action := _build(StructureTypes.FACTORY, target_tile, 0)
+	var action := _build(StructureTypes.FACTORY, target_tile, 0, anchor.entity_id)
 
 	# Act
 	var result: ActionResult = state.apply_action(action)
@@ -584,13 +589,15 @@ func test_under_construction_structure_force_destroyed_no_refund() -> void:
 # --- AC-8: live re-legalization ------------------------------------------------
 
 func test_legal_build_tiles_relegalizes_live_after_enemy_structure_destroyed() -> void:
-	# Arrange -- player 0 has a friendly anchor unit at (5,5) so its
-	# neighbours are the candidate frontier. An enemy Defensive Structure at
+	# Arrange -- player 0 has a BUILDER at (5,5) so its neighbours are the candidate
+	# frontier (⚠ only a unit with `can_build` makes build tiles since 2026-08-25;
+	# a Scout here would leave the frontier empty and pass vacuously). An enemy
+	# Defensive Structure at
 	# (2,5) sits exactly manhattan==2 from the friendly-adjacent candidate tile
 	# (4,5), so (4,5) is strictly excluded by the D3 standoff rule (manhattan
 	# <= 2 from any enemy structure, ADR-0017 D3) until that structure dies.
 	var state := _make_state(0)
-	var anchor := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(5, 5))
+	var anchor := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5))
 	_place(state, anchor)
 	var enemy_structure := _make_structure(2, 1, Vector2i(2, 5), StructureTypes.DEFENSIVE_STRUCTURE, StructureState.BuildStatus.COMPLETED)
 	_place(state, enemy_structure)

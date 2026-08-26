@@ -226,53 +226,102 @@ func _move_cursor_to(root: VerticalSliceRoot, target: Vector2i) -> void:
 
 
 # ==============================================================================
-# Build — KEY_B places the selected structure at a legal cursor tile.
+# Build — a selected Builder raises a structure on a tile beside it.
+#
+# ⚠ REWRITTEN 2026-08-25 (user decision). These tests used to drive
+# `request_build_at_cursor()` / `cycle_buildable()` / `selected_buildable()` — a
+# player-level Build that placed a hidden "currently selected" type on any frontier
+# tile with no unit involved. All three are gone: Build belongs to a Builder, is
+# placed beside that unit, and consumes it.
 # ==============================================================================
 
-func test_cycle_buildable_changes_the_selected_type() -> void:
-	# ★ S6-09: the roster's first entry is now the BARRACKS -- the Factory was pulled
-	# because it produces nothing until GROUND_VEHICLE units land in wave 2, and a
+## Puts a Builder on the board beside the player's HQ and selects it. The match
+## opens with two HQs and no units at all, so every build test must field one.
+func _select_a_builder(root: VerticalSliceRoot, tile: Vector2i = Vector2i(4, 5)) -> UnitState:
+	var state: GameState = root.state()
+	_place_unit(state, 90, 0, tile, UnitTypes.BUILDER)
+	_move_cursor_to(root, tile)
+	root.select_at_cursor()
+	return state.entities_by_id[90] as UnitState
+
+
+func test_the_build_roster_still_excludes_the_factory() -> void:
+	# ★ S6-09: the Factory stays out until it can produce something -- a
 	# 1,000-Credit structure that does nothing is a trap rather than a choice.
 	var root := _make_root()
 	var roster: Array[StructureTypeDef] = root._buildable_roster()
 	assert_bool(roster.has(StructureTypes.FACTORY)).override_failure_message(
 		"the Factory must stay out of the build roster until it can produce something"
 	).is_false()
-	assert_object(root.selected_buildable()).is_equal(roster[0])
-	root.cycle_buildable()
-	assert_object(root.selected_buildable()).is_equal(roster[1])
+	assert_bool(roster.has(StructureTypes.BARRACKS)).is_true()
 
 
-func test_build_places_a_structure_at_a_legal_cursor_tile() -> void:
-	var root := _make_root()
-	var state := root.state()
-	state.per_player[0].current_ap = 20 # ensure the outpost is affordable.
-	var type: StructureTypeDef = root.selected_buildable() # BARRACKS (index 0 since S6-09).
-
-	var legal: Array[Vector2i] = GameStateReader.new(state).legal_build_tiles(0, type)
-	assert_bool(legal.is_empty()).is_false()          # there is a legal build tile.
-	var target: Vector2i = legal[0]
-	_move_cursor_to(root, target)
-	assert_vector(root.cursor_tile()).is_equal(target)
-
-	var entities_before: int = state.entities().size()
-	var ap_before: int = state.per_player[0].current_ap
-	assert_bool(root.request_build_at_cursor()).is_true()
-
-	assert_int(state.entities().size()).is_equal(entities_before + 1) # a structure was placed ...
-	assert_int(state.per_player[0].current_ap).is_less(ap_before)      # ... and AP was spent ...
-	assert_object(state.entity_at(target)).is_not_null()               # ... on the target tile.
-
-
-func test_build_refused_on_an_illegal_tile() -> void:
+func test_build_places_a_structure_on_a_tile_beside_the_builder() -> void:
 	var root := _make_root()
 	var state := root.state()
 	state.per_player[0].current_ap = 20
-	# The cursor opens on the local HQ tile — occupied, so not a legal build tile.
-	assert_vector(root.cursor_tile()).is_equal(Vector2i(2, 5))
+	state.per_player[0].current_credits = 5000
+	var builder: UnitState = _select_a_builder(root)
+	var type: StructureTypeDef = StructureTypes.BARRACKS
+
+	var legal: Array[Vector2i] = BaseProduction.legal_build_tiles_for(state, builder)
+	assert_bool(legal.is_empty()).is_false()
+	var target: Vector2i = legal[0]
+
+	root.begin_build_preview(type)
+	_move_cursor_to(root, target)
 	var entities_before: int = state.entities().size()
-	assert_bool(root.request_build_at_cursor()).is_false()
+	var ap_before: int = state.per_player[0].current_ap
+	assert_bool(root.commit_at_cursor()).is_true()
+
+	# A structure was placed on the target tile and AP was spent...
+	assert_object(state.entity_at(target)).is_not_null()
+	assert_int(state.per_player[0].current_ap).is_less(ap_before)
+	# ...and the BUILDER IS GONE, so the entity count is unchanged: one unit spent,
+	# one structure gained.
+	assert_object(state.entities_by_id.get(90)).override_failure_message(
+		"the Builder must be consumed by the structure it raises"
+	).is_null()
+	assert_int(state.entities().size()).is_equal(entities_before)
+
+
+func test_build_refused_on_a_tile_the_builder_is_not_beside() -> void:
+	var root := _make_root()
+	var state := root.state()
+	state.per_player[0].current_ap = 20
+	state.per_player[0].current_credits = 5000
+	var builder: UnitState = _select_a_builder(root)
+	root.begin_build_preview(StructureTypes.BARRACKS)
+
+	# The far side of the board is nowhere near the Builder.
+	var far := Vector2i(9, 1)
+	assert_bool(BaseProduction.legal_build_tiles_for(state, builder).has(far)).is_false()
+	_move_cursor_to(root, far)
+	var entities_before: int = state.entities().size()
+
+	assert_bool(root.commit_at_cursor()).is_false()
 	assert_int(state.entities().size()).is_equal(entities_before) # nothing was built.
+	assert_object(state.entities_by_id.get(90)).override_failure_message(
+		"a refused build must not consume the Builder"
+	).is_not_null()
+
+
+func test_build_is_refused_outright_with_no_builder_selected() -> void:
+	# The rule that replaced the HUD Build button: with no Builder there is no build.
+	var root := _make_root()
+	var state := root.state()
+	state.per_player[0].current_ap = 20
+	state.per_player[0].current_credits = 5000
+	var entities_before: int = state.entities().size()
+
+	assert_bool(root.open_build_picker()).override_failure_message(
+		"the Build picker must refuse to open without a Builder selected"
+	).is_false()
+	root.begin_build_preview(StructureTypes.BARRACKS)
+	assert_int(root.command_interface().fsm_state()).override_failure_message(
+		"no Builder means no build preview at all"
+	).is_not_equal(CommandFSM.State.PREVIEW_BUILD)
+	assert_int(state.entities().size()).is_equal(entities_before)
 
 
 # ==============================================================================
@@ -607,7 +656,8 @@ func test_an_economic_preview_prices_BOTH_pools_at_once() -> void:
 	var state := root.state()
 	state.per_player[0].current_ap = 20
 	state.per_player[0].current_credits = 5000
-	var type: StructureTypeDef = root.selected_buildable()
+	_select_a_builder(root)
+	var type: StructureTypeDef = StructureTypes.BARRACKS
 
 	root.begin_build_preview(type)
 
@@ -651,14 +701,15 @@ func test_the_menu_driven_build_flow_actually_commits_at_the_cursor() -> void:
 	var state := root.state()
 	state.per_player[0].current_ap = 20
 	state.per_player[0].current_credits = 5000
-	var type: StructureTypeDef = root.selected_buildable()
+	var builder: UnitState = _select_a_builder(root)
+	var type: StructureTypeDef = StructureTypes.BARRACKS
 
 	root.begin_build_preview(type)
 	assert_int(root.command_interface().fsm_state()).override_failure_message(
 		"begin_build_preview must put the interface INTO the build preview state"
 	).is_equal(CommandFSM.State.PREVIEW_BUILD)
 
-	var legal: Array[Vector2i] = GameStateReader.new(state).legal_build_tiles(0, type)
+	var legal: Array[Vector2i] = BaseProduction.legal_build_tiles_for(state, builder)
 	assert_bool(legal.is_empty()).is_false()
 	_move_cursor_to(root, legal[0])
 	var before: int = state.entities().size()
@@ -666,7 +717,8 @@ func test_the_menu_driven_build_flow_actually_commits_at_the_cursor() -> void:
 	assert_bool(root.commit_at_cursor()).override_failure_message(
 		"confirming on a highlighted build tile must place the structure"
 	).is_true()
-	assert_int(state.entities().size()).is_equal(before + 1)
+	# One unit spent for one structure, so the entity count holds steady.
+	assert_int(state.entities().size()).is_equal(before)
 	assert_bool(state.entity_at(legal[0]) is StructureState).is_true()
 
 

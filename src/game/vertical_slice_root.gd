@@ -174,6 +174,15 @@ var _pending_produce: UnitTypeDef = null
 ## the same lifetime as [member _pending_produce].
 var _pending_build: StructureTypeDef = null
 
+## [member EntityState.entity_id] of the Builder raising [member _pending_build].
+##
+## ★ Pinned when the type is chosen rather than re-read at commit (user decision
+## 2026-08-25 — Build belongs to a Builder and consumes it). The placement preview
+## closes the menu and the player then moves the cursor around the board; deriving
+## "which builder" from the live selection at commit time would let a selection
+## change in between silently spend the wrong unit.
+var _pending_builder_id: int = -1
+
 ## The legal tiles of the open Produce/Build preview, painted as the
 ## [constant BoardRenderer.OverlayClass.BUILD_DEPLOY_GO_TILE] overlay.
 ##
@@ -206,12 +215,13 @@ var _cursor: BoardCursor = null
 ## match-lifecycle concerns this node owns, and the HUD owns none of them.
 var _pause: PauseMenu = null
 
-## The player's buildable structure roster (also handed to the HUD so its Build
-## affordability set matches). KEY_B places [member _selected_buildable] at the
-## cursor tile; KEY_C cycles which type is selected. (Produce has the symmetric
-## [member _selected_produce_type] / KEY_V pair.)
+## The player's buildable structure roster — the types a Builder may raise, and the
+## list [method open_build_picker] turns into rows.
+##
+## ⚠ There is no "currently selected buildable" any more (2026-08-25): Build opens a
+## type PICKER on the selected Builder, so the type is chosen in the open rather
+## than cycled invisibly with a key.
 var _buildables: Array[StructureTypeDef] = []
-var _selected_buildable: int = 0
 ## The unit type KEY_P will produce; cycled by KEY_V. Tracked by reference (not an
 ## index) so it survives roster changes when a Production Outpost is built. Lazily
 ## resolved by [method selected_produce_type].
@@ -426,21 +436,19 @@ func _build_hud() -> void:
 ## than giving clicks and pad presses their own path.
 ##
 ## ★ Until 2026-08-24 the "Build" and "End Turn" controls were `draw_string` calls:
-## the words were painted and nothing could activate them by any input method.
-## `HudControlsWidget.request_build()` had no caller outside the test suite. They
-## are real [Button]s now, and these two connections are what make them do
-## something — deliberately landing on `request_build_at_cursor()` and
-## `try_end_human_turn()`, the exact entry points [B] and [Tab] already use, so a
-## click, a key and a pad press cannot drift apart in behaviour.
+## the words were painted and nothing could activate them by any input method. They
+## became real [Button]s, and this connection is what makes End Turn do something —
+## deliberately landing on `try_end_human_turn()`, the exact entry point [Tab]
+## already uses, so a click, a key and a pad press cannot drift apart in behaviour.
+##
+## ⚠ Build is no longer here at all (2026-08-25) — see the note in the body.
 func _wire_hud_controls() -> void:
 	var controls: HudControlsWidget = _hud.controls()
 	if controls == null:
 		return
-	# ★ 2026-08-24: Build now opens a TYPE PICKER rather than immediately placing
-	# whatever type happened to be cycled. The [C] cycle key it used to depend on is
-	# gone (action-menu.md decision 2), and "place the hidden current selection" was
-	# never a thing the button could explain anyway.
-	controls.build_requested.connect(open_build_picker)
+	# ⚠ The Build control is GONE (2026-08-25, user decision): Build belongs to a
+	# selected Builder and consumes it, and a HUD button cannot say which Builder it
+	# means. Only End Turn is still a player-level control, so only it is wired.
 	controls.end_turn_requested.connect(func() -> void: try_end_human_turn())
 
 
@@ -715,7 +723,7 @@ func selected_produce_type() -> UnitTypeDef:
 
 
 ## Cycles which unit type [method request_produce_at_cursor] will deploy (the [V]
-## key), mirroring [method cycle_buildable]. A no-op when no producer is owned.
+## key). A no-op when no producer is owned.
 func cycle_produce_type() -> void:
 	var roster: Array[UnitTypeDef] = _produce_roster()
 	if roster.is_empty():
@@ -1130,15 +1138,24 @@ func _on_menu_verb_chosen(verb: int) -> void:
 		CommandFSM.Verb.MOVE:
 			_pending_produce = null
 			_pending_build = null
+			_pending_builder_id = -1
 			_cmd.enter_preview(_state, entity, CommandFSM.State.PREVIEW_MOVE)
 			_refresh_cost_preview()
 			_flash_msg("Move: pick a highlighted tile. Esc to go back.")
 		CommandFSM.Verb.ATTACK:
 			_pending_produce = null
 			_pending_build = null
+			_pending_builder_id = -1
 			_cmd.enter_preview(_state, entity, CommandFSM.State.PREVIEW_ATTACK)
 			_refresh_cost_preview()
 			_flash_msg("Attack: pick a highlighted target. Esc to go back.")
+		CommandFSM.Verb.BUILD:
+			# Build chooses nothing by itself — like Produce, the row opens a TYPE
+			# picker and the chosen type is what enters the placement preview.
+			_pending_produce = null
+			_pending_build = null
+			_pending_builder_id = -1
+			open_build_picker()
 		CommandFSM.Verb.DISBAND:
 			# Reached only on the SECOND press — ActionMenu holds the arm-then-confirm
 			# gate for every destructive verb, so by the time this fires the player
@@ -1166,6 +1183,7 @@ func _on_menu_produce_chosen(unit_type: UnitTypeDef) -> void:
 	if not (entity is StructureState):
 		return
 	_pending_build = null
+	_pending_builder_id = -1
 	_pending_produce = unit_type
 	_cmd.enter_preview(_state, entity, CommandFSM.State.PREVIEW_PRODUCE)
 	_preview_tiles = _reader.legal_deploy_tiles(entity.entity_id, unit_type)
@@ -1181,14 +1199,35 @@ func _on_menu_produce_chosen(unit_type: UnitTypeDef) -> void:
 ##
 ## Anchored to the HUD's Build control rather than to the board: Build has no
 ## selected entity to float beside, so it opens where the player clicked.
-func open_build_picker() -> void:
+func open_build_picker() -> bool:
 	if _action_menu == null or not _cmd.is_input_live(_state) or _buildables.is_empty():
-		return
+		return false
+	var builder: UnitState = selected_builder()
+	if builder == null:
+		_flash_msg("Select a Builder first — only a Builder can raise a structure.")
+		return false
 	_action_menu.open_build_options(
-		CommandFSM.build_options(_state, LOCAL_PLAYER, _buildables),
-		_build_control_anchor(),
+		CommandFSM.build_options(_state, builder, _buildables),
+		_entity_screen_anchor(builder.position),
 		_screen_tile_width()
 	)
+	return true
+
+
+## The currently selected unit if it can build, else null.
+##
+## ★ Build stopped being a player-level command on 2026-08-25 (user decision), so
+## "which builder?" is no longer a question the interface can answer by guessing —
+## it is whichever one the player has selected, and with none selected there is no
+## build to make.
+func selected_builder() -> UnitState:
+	var entity: EntityState = _state.entities_by_id.get(_cmd.selected_id())
+	if not (entity is UnitState):
+		return null
+	var unit: UnitState = entity as UnitState
+	if unit.type == null or not unit.type.can_build:
+		return null
+	return unit
 
 
 ## Screen-space anchor for the Build picker: the TOP-RIGHT corner of the HUD's
@@ -1209,9 +1248,18 @@ func _build_control_anchor() -> Vector2:
 func begin_build_preview(type: StructureTypeDef) -> void:
 	if type == null or not _cmd.is_input_live(_state):
 		return
+	# ★ The acting Builder is pinned HERE, at the moment the type is chosen, and
+	# carried through to the commit. Re-deriving it from the selection at commit
+	# time would be a different question: the placement preview closes the menu, and
+	# a selection that changed underneath would silently build with the wrong unit.
+	var builder: UnitState = selected_builder()
+	if builder == null:
+		_flash_msg("Select a Builder first — only a Builder can raise a structure.")
+		return
+	_pending_builder_id = builder.entity_id
 	_pending_produce = null
 	_pending_build = type
-	_preview_tiles = _reader.legal_build_tiles(LOCAL_PLAYER, type)
+	_preview_tiles = BaseProduction.legal_build_tiles_for(_state, builder)
 	_action_menu.close()
 	# ★ Drive the FSM before painting. Without this the interface stayed in IDLE for
 	# the whole build flow, so commit_at_cursor's match fell through to "select what
@@ -1359,6 +1407,7 @@ func _close_cost_preview() -> void:
 func _clear_placement_preview() -> void:
 	_pending_produce = null
 	_pending_build = null
+	_pending_builder_id = -1
 	if not _preview_tiles.is_empty():
 		_preview_tiles = []
 		if _board != null:
@@ -1537,6 +1586,7 @@ func _commit_build(tile: Vector2i) -> bool:
 		return false
 	var action := BuildAction.new()
 	action.structure_type = _pending_build
+	action.builder_id = _pending_builder_id
 	action.tile = tile # action.player is set by CommandInterface.commit.
 	return _cmd.dispatch_commit(action, _state)
 
@@ -1685,43 +1735,14 @@ func cursor_tile() -> Vector2i:
 	return _cursor.grid_pos if _cursor != null else Vector2i.ZERO
 
 
-## Builds [method selected_buildable] at the cursor tile, routing a [BuildAction]
-## through the [CommandInterface]. A no-op returning false unless it is the human's
-## live turn (HUD gate), the cursor tile is a legal build tile for that type, and
-## the player can afford it — the same conditions [method BaseProduction.validate_build]
-## enforces, pre-checked so this only ever dispatches a build that will commit.
-func request_build_at_cursor() -> bool:
-	if _cursor == null or _buildables.is_empty() or not _cmd.is_input_live(_state):
-		return false # live-gated (same is_input_live check as produce/act).
-	_flash = ""
-	var type: StructureTypeDef = _buildables[_selected_buildable]
-	var tile: Vector2i = _cursor.grid_pos
-	if not _reader.legal_build_tiles(LOCAL_PLAYER, type).has(tile):
-		_flash_msg("Can't build %s here — move the cursor onto an empty tile next to something you own." % type.display_name)
-		return false
-	if not _reader.can_afford_build(LOCAL_PLAYER, type):
-		_flash_msg("Can't afford %s (%d AP) — End Turn to refresh AP." % [type.display_name, BaseProduction.effective_build_cost(_state, type, LOCAL_PLAYER)])
-		return false
-	var action := BuildAction.new()
-	action.structure_type = type
-	action.tile = tile # action.player is set by CommandInterface.commit.
-	return _cmd.dispatch_commit(action, _state)
-
-
-## Cycles which buildable type [method request_build_at_cursor] will place.
-func cycle_buildable() -> void:
-	if _buildables.is_empty():
-		return
-	_selected_buildable = (_selected_buildable + 1) % _buildables.size()
-	_refresh_status() # reflect the newly-selected Build type on the overlay.
-
-
-## The structure type a build would currently place, or [code]null[/code] if the
-## roster is empty.
-func selected_buildable() -> StructureTypeDef:
-	return _buildables[_selected_buildable] if not _buildables.is_empty() else null
-
-
+## ⚠ [b]The player-level build path was REMOVED on 2026-08-25[/b] (user decision).
+## `request_build_at_cursor()`, `cycle_buildable()` and `selected_buildable()` all
+## expressed a Build that belonged to the PLAYER — place a hidden "currently
+## selected" structure type on any frontier tile, with no unit involved. Build now
+## belongs to a selected Builder, is placed beside that unit and consumes it, so
+## none of the three had a coherent meaning left: there is no player-wide build
+## tile, and no hidden type to cycle. The live path is
+## [method open_build_picker] -> [method begin_build_preview] -> [method _commit_build].
 ## Produces the currently-SELECTED unit type ([method selected_produce_type],
 ## cycled by KEY_V) onto the cursor tile, from the first own producer that both
 ## offers that type AND can actually deploy there this turn. Iterates ALL own

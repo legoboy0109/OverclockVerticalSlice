@@ -34,21 +34,16 @@
 class_name HudControlsWidget
 extends HudReactiveControl
 
-## Emitted when the player activates Build — by click, keyboard or gamepad. The
-## widget never acts on it; the owning scene routes it, exactly as it already
-## routes the keyboard path.
-signal build_requested
 ## Emitted when the player activates End Turn, from any input method.
 signal end_turn_requested
 
 ## ★ Real [Button] children since 2026-08-24. These were `draw_string` calls: the
-## HUD rendered the words "Build" and "End Turn" and NOTHING could activate them —
+## HUD rendered the words and NOTHING could activate them —
 ## not a mouse click, not a key, not a pad. `request_build()` had no caller outside
 ## the test suite. ADR-0014 §6 makes interactive Controls the project convention
 ## precisely because a real Control brings click focus, keyboard focus, focus
 ## traversal and the theme's own focus/hover StyleBoxes with it, none of which can
 ## be retrofitted onto drawn text.
-var _build_button: Button = null
 var _end_turn_button: Button = null
 
 ## The non-blocking "you still have things to do" notice above End Turn
@@ -97,29 +92,20 @@ func configure(config: HUDConfig, local_player: int, buildable_types: Array[Stru
 ## keyboard moves between them with the same directions that drive the board — the
 ## engine's own input-consumption order decides which of the two is listening, and
 ## no "who owns this keypress" flag is needed anywhere.
+## ⚠ [b]The Build button was REMOVED on 2026-08-25[/b] (user decision). Build is no
+## longer a player-level command that a persistent HUD control can express: it
+## belongs to a selected Builder, is placed on a tile beside THAT unit, and
+## consumes it. A HUD button has no way to say which Builder it means, and one that
+## silently picked for the player would spend the wrong unit. Build is now a row in
+## the selected Builder's own action menu, where the "which unit" question answers
+## itself. End Turn is the only player-level control left, so this group holds one.
 func _ensure_buttons() -> void:
-	if _build_button != null:
+	if _end_turn_button != null:
 		return
-	_build_button = _make_button("Build", "BuildButton", Vector2(0, 0))
-	_end_turn_button = _make_button("End Turn", "EndTurnButton", Vector2(76, 0))
-	_build_button.pressed.connect(func() -> void:
-		if request_build():
-			build_requested.emit())
+	_end_turn_button = _make_button("End Turn", "EndTurnButton", Vector2(0, 0))
 	_end_turn_button.pressed.connect(func() -> void:
 		if request_end_turn():
 			end_turn_requested.emit())
-	# Linear order in both axes: the two sit side by side, and a player pushing
-	# up/down on a pad expects to stay put rather than fall out of the group.
-	#
-	# ★ RELATIVE sibling paths, not `get_path()`. `configure()` (which calls this)
-	# can run BEFORE the widget enters the scene tree, and `get_path()` on a node
-	# outside the tree does not yield a path that resolves later — the neighbours
-	# silently pointed at nothing and traversal did not work at all. A relative path
-	# is resolved when focus actually moves, so it does not care when it was set.
-	_build_button.focus_neighbor_right = NodePath("../EndTurnButton")
-	_end_turn_button.focus_neighbor_left = NodePath("../BuildButton")
-	_build_button.focus_next = NodePath("../EndTurnButton")
-	_end_turn_button.focus_previous = NodePath("../BuildButton")
 
 	# The idle notice sits ABOVE the two buttons, inside the same panel. Not
 	# focusable and not clickable: it is information about the turn, not a control,
@@ -160,18 +146,18 @@ func _make_button(text: String, node_name: String, at: Vector2) -> Button:
 ## direction press goes to the board cursor (ADR-0014 §2), which is correct and
 ## also means something has to hand focus over deliberately.
 func focus_first() -> bool:
-	if _build_button == null or not controls_live():
+	if _end_turn_button == null or not controls_live():
 		return false
-	_build_button.grab_focus()
+	_end_turn_button.grab_focus()
 	return true
 
 
 ## True while either control holds keyboard/gamepad focus — the owning scene reads
 ## this to know whether the board or the menu is currently being driven.
 func has_menu_focus() -> bool:
-	if _build_button == null:
+	if _end_turn_button == null:
 		return false
-	return _build_button.has_focus() or _end_turn_button.has_focus()
+	return _end_turn_button.has_focus()
 
 
 ## Releases menu focus, handing every direction press back to the board cursor.
@@ -179,8 +165,6 @@ func has_menu_focus() -> bool:
 ## Control method, and shadowing it is a parse error under this project's
 ## warnings-as-errors setting.
 func release_menu_focus() -> void:
-	if _build_button != null and _build_button.has_focus():
-		_build_button.release_focus()
 	if _end_turn_button != null and _end_turn_button.has_focus():
 		_end_turn_button.release_focus()
 
@@ -221,8 +205,12 @@ func controls_live() -> bool:
 		return false
 	return _reader.active_player() == _local_player
 
-## True iff at least one buildable structure type is currently affordable — the
-## Build button is enabled iff this, dimmed-but-present otherwise (AC-16).
+## True iff at least one buildable structure type is currently affordable.
+##
+## ⚠ [b]No longer drives a button[/b] — the Build control was removed on 2026-08-25
+## when Build became a Builder's verb. Kept because affordability is still a real,
+## tested question: the Builder's own Build row greys on the same answer, and this
+## roster-wide "can I afford ANYTHING?" phrasing is the one a menu needs.
 func build_affordable() -> bool:
 	if _reader == null:
 		return false
@@ -231,7 +219,10 @@ func build_affordable() -> bool:
 			return true
 	return false
 
-## True while CAI's build-preview is live (the Build button's pressed/active cue).
+## True while CAI's build-preview is live.
+##
+## ⚠ Was the Build button's pressed/active cue; that button is gone (2026-08-25).
+## Retained as a read-only state question with no renderer of its own today.
 func build_pressed_cue() -> bool:
 	return _cmd != null and _cmd.fsm_state() == CommandFSM.State.PREVIEW_BUILD
 
@@ -241,9 +232,12 @@ func controls_focus_mode() -> int:
 	return Control.FOCUS_ALL if controls_live() else Control.FOCUS_NONE
 
 
-## Build activation. Returns true (opens structure selection — in EITHER
-## affordable/dimmed state, AC-16) iff the controls are live; a hard no-op
-## returning false when inert (AC-18/27) — no apply_action, no state change here.
+## Build activation. Returns true iff the controls are live.
+##
+## ⚠ [b]No longer reachable from this widget[/b] — the Build button was removed on
+## 2026-08-25 (Build is the selected Builder's verb now). Kept as the liveness
+## predicate the slice consults before opening the Builder's type picker, so the
+## "inert during the opponent's turn" rule lives in ONE place.
 func request_build() -> bool:
 	return controls_live()
 
@@ -261,20 +255,13 @@ func request_end_turn() -> bool:
 ## rather than suppressing a focus ring per frame; that is what this does. Without
 ## it a pad could focus End Turn during the opponent's turn and press it.
 func _sync_button_state() -> void:
-	if _build_button == null:
+	if _end_turn_button == null:
 		return
 	var live: bool = controls_live()
-	var mode: int = controls_focus_mode()
-	_build_button.focus_mode = mode
-	_end_turn_button.focus_mode = mode
-	_build_button.disabled = not live
+	_end_turn_button.focus_mode = controls_focus_mode()
 	_end_turn_button.disabled = not live
 	if not live:
 		release_menu_focus() # never leave focus parked on an inert control
-	# Affordability is advisory, not a lock: AC-16 keeps Build openable while
-	# unaffordable so the player can still see WHAT they cannot afford.
-	_build_button.modulate = Color.WHITE if build_affordable() else Color(0.62, 0.62, 0.66)
-	_build_button.button_pressed = build_pressed_cue()
 
 
 func _draw() -> void:

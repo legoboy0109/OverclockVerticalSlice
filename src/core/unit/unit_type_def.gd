@@ -49,3 +49,17 @@ enum TargetingMode { DIRECT, AREA }
 @export var targeting_mode: int = TargetingMode.DIRECT
 @export var min_range: int = 1
 @export var can_counterattack: bool = false
+
+## Whether this unit can raise structures — the Builder trait (`base-production.md`
+## CR-5, user decision 2026-08-25).
+##
+## ★ [b]A data flag, not a type comparison.[/b] Every rule that asks "can this thing
+## build?" reads THIS, never [code]type == UnitTypes.BUILDER[/code], so a second
+## builder-capable unit (a faction variant, an engineering vehicle) is a `.tres` edit
+## rather than a hunt through the codebase for hard-coded identity checks. Same
+## reasoning that made [member counts_toward_cap] per-unit rather than per-class.
+##
+## ⚠ Build is [b]consumptive[/b]: the unit is spent by the structure it raises (see
+## [method BaseProduction.apply_build]). A unit with this set must be costed as part
+## of the price of every building it can put down, not as a unit that survives.
+@export var can_build: bool = false

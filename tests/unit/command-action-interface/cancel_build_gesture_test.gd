@@ -79,8 +79,11 @@ func _config(hold_ms: int) -> InputConfig:
 
 
 func _cancel_entry(state: GameState, entity: EntityState) -> CommandFSM.VerbEntry:
+	# ⚠ Looked up BY VERB, never by enum ordinal. The menu array is ordered for
+	# display, and that order stopped matching the enum when Verb.BUILD was appended
+	# (2026-08-25) — indexing by ordinal quietly returned the Wait row instead.
 	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, entity)
-	return menu[CommandFSM.Verb.CANCEL_BUILD]
+	return CommandFSM.entry_for(menu, CommandFSM.Verb.CANCEL_BUILD)
 
 
 # ==============================================================================

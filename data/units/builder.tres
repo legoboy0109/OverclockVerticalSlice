@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Builder"
+hp = 3
+attack = 0
+attack_range = 0
+move_cost = 1
+soft_move_cap = 3
+upkeep = 50
+produce_cost = 150
+defense = 0
+can_counterattack = false
+can_build = true

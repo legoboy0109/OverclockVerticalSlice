@@ -320,11 +320,37 @@ map** — the base stops being a back-corner bank and becomes a front line you b
    `build_time` of the owner's turns elapse (Rule 6).
 
 5. **Placement rule.** A structure (except the setup-placed HQ) may be placed on any **empty, passable
-   tile** that is **adjacent (`manhattan_distance == 1`) to a friendly unit or friendly structure**
-   *and* **more than 2 tiles (`manhattan_distance > 2`) from every enemy structure**. Tying builds to
+   tile** that is **adjacent (`manhattan_distance == 1`) to the acting Builder** *and* **more than
+   2 tiles (`manhattan_distance > 2`) from every enemy structure**. Tying builds to
    friendly presence means *building forward requires pushing forward*; the enemy-structure standoff
    prevents planting a base on top of the enemy HQ. If no legal tile exists, building that structure is
    unavailable.
+
+   > ### ★ Build belongs to a BUILDER, and the Builder is spent (user decision, 2026-08-25)
+   > Build used to be a **player-level command**: any tile beside *any* entity you owned was legal, no
+   > unit was involved, and the entry point was a persistent HUD button (the old CR-5). It is now a
+   > **verb of a selected Builder unit**, and three things follow from that:
+   >
+   > 1. **Only a Builder makes a tile legal.** A base full of structures with no Builder standing in it
+   >    cannot expand at all. Adjacency is measured to *the Builder performing the build*, never to the
+   >    player's entities at large — otherwise you could raise a building next to a Builder standing
+   >    somewhere else entirely.
+   > 2. **The Builder is CONSUMED by the structure it raises.** Its cost is therefore a permanent
+   >    surcharge on every building in the game, not the price of a unit you keep. Two structures cost
+   >    two Builders; funds alone are never enough.
+   > 3. **Only the HQ produces Builders**, and the Scout moved to the Barracks, so the opening is now
+   >    fixed: make a Builder, walk it out, spend it on a Barracks — *then* you have an army. Losing
+   >    every Builder is recoverable (build another); losing the **HQ** is already a decisive defeat, so
+   >    there is no state where a living player is permanently locked out of building.
+   >
+   > ⚠ **The Builder is defenceless** (`attack_range = 0`, so it has no legal targets at all). It must be
+   > escorted, which is what gives an early rush something to aim at and gives combat units something to
+   > protect. Costed and stated in `data/units/builder.tres`; the trait itself is the data flag
+   > `UnitTypeDef.can_build`, never a type comparison, so a second builder-capable unit is a data edit.
+   >
+   > ⛔ **Unvalidated.** Every consequence above is reasoned, not played. The opening pacing, the price of
+   > a Builder relative to a Barracks, and whether "escort the defenceless unit" is interesting or merely
+   > fiddly are all open until a real session says otherwise.
 
 6. **Build completion is a start-of-turn effect, processed *before* Credit income is added.** At the
    owner's start-of-turn, each of their Under-Construction structures decrements its remaining build
@@ -756,7 +782,8 @@ Dependencies table, which remains the authority.
 | Toggle | VS Value | Notes |
 |--------|----------|-------|
 | Hard structure cap | **OFF** | Closeout-drag is braked by cost/time/quality instead (Core Rule 12). `MAX_OUTPOST_COUNT` is the lever if playtest shows multiple Production Outposts defeat the brake — enable as a Production-Outpost sub-cap first. |
-| Build placement rule | adjacent to friendly unit/structure **and** >2 from enemy structures | Ties expansion to board presence + prevents doorstep bases. Turning off adjacency = teleport-anywhere builds (rejected). |
+| Build placement rule | adjacent to the acting **Builder** **and** >2 from enemy structures | Ties expansion to board presence + prevents doorstep bases. Turning off adjacency = teleport-anywhere builds (rejected). ★ Narrowed from "any friendly unit or structure" 2026-08-25 when Build became a Builder's verb. |
+| Builder consumed on build | yes | Makes every structure cost a unit as well as Credits, so expanding is a felt tempo cost rather than a purchase. Turning this off makes one Builder enough for the whole match. |
 | HQ producible set | {Scout} | Single-type HQ is the quality half of the closeout brake. Widening it weakens the brake and the pressure to build a Production Outpost. |
 | Structure attack research-buff | **OFF** | Research buffs units only; structure `attack` is flat in the VS (Open Question). |
 | Parallel construction | allowed (dual-cost-gated) | No per-turn build-order cap in the VS; flagged as an Open Question (could a windfall spawn many builds in one turn?). *(Pivot 2026-08-05: each build now also spends `BUILD_AP_COST` 2 AP, and AP carries over only to `AP_CARRYOVER_CAP` 5 — so the per-build AP surcharge, not a no-banking rule, is what caps how many builds fit in one turn; Credits themselves bank unbounded.)* |
@@ -866,16 +893,37 @@ Presentation and interaction are owned by GDDs #9 and #10; this system provides 
   attack all treat it as inert (0 contribution).
 
 *Placement (Rule 5):*
-- **GIVEN** an empty passable tile at manhattan 1 from a friendly unit and manhattan 3 from the nearest
-  enemy structure, **THEN** it is in `legal_build_tiles`.
-- **GIVEN** manhattan 1 from a friendly **structure** (not unit) and >2 from all enemy structures,
-  **THEN** legal (unit **or** structure satisfies adjacency).
+- **GIVEN** an empty passable tile at manhattan 1 from a **Builder** and manhattan 3 from the nearest
+  enemy structure, **THEN** it is in that Builder's `legal_build_tiles_for`.
+- ★ **GIVEN** manhattan 1 from a friendly **structure** and no Builder anywhere, **THEN** it is
+  **excluded** — a structure is not a builder. *(This AC was INVERTED on 2026-08-25; it previously
+  asserted the opposite, when Build was a player-level command.)*
+- ★ **GIVEN** two Builders far apart, **THEN** each one's legal tiles hug only itself — a Builder never
+  makes a tile legal beside a different Builder.
+- ★ **GIVEN** a unit whose type cannot build, **THEN** its build-tile set is empty (an ordinary answer,
+  not an error — it is how the menu learns to hide the Build row).
 - **GIVEN** a tile at manhattan **exactly 2** from an enemy structure, **THEN** excluded (`>2` required).
-- **GIVEN** a tile >2 from all enemy structures but not adjacent to any friendly, **THEN** excluded.
+- **GIVEN** a tile >2 from all enemy structures but not adjacent to the acting Builder, **THEN** excluded.
 - **GIVEN** no tile satisfies both conditions, **THEN** `legal_build_tiles` is empty (build unavailable).
 - **GIVEN** the HQ during play, **THEN** it is never in `legal_build_tiles` (setup-placed, exempt).
 - **GIVEN** a structure legally placed adjacent to a friendly unit that **later moves away**, **THEN** it
   remains in place — no post-placement re-validation.
+
+*★ The Builder (added 2026-08-25, user decision):*
+- **GIVEN** a Builder with funds and an open neighbouring tile, **WHEN** it builds, **THEN** the
+  structure is placed **and the Builder is removed** — from the entity table AND from the grid index, so
+  its tile frees up and no ghost is left blocking movement.
+- **GIVEN** that same build, **THEN** the Builder's destruction is **reported as an event**, so the
+  renderer and the population counter both learn it is gone rather than leaving a sprite standing beside
+  the building it became.
+- **GIVEN** a player who can afford two structures but owns **one** Builder, **THEN** they get one
+  structure; the second attempt is refused naming the missing builder, not the money.
+- **GIVEN** an ordinary combat unit is selected, **THEN** it carries **no Build row at all** (structural
+  — hidden, not dimmed).
+- **GIVEN** a Builder that is broke or boxed in, **THEN** the Build row **stays visible and dimmed**,
+  naming which (situational — that row is what teaches the price). Both reasons are named when both fail.
+- **GIVEN** no Builder is selected, **THEN** the Build type picker refuses to open and no build preview
+  is entered.
 
 *Completion advance (Rule 6, pure slice):*
 - **GIVEN** an Under-Construction structure with 2 remaining build-turns, **WHEN** the advance step runs

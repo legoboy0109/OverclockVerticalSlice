@@ -31,9 +31,23 @@ extends Action
 @export var structure_type: StructureTypeDef
 
 ## The tile to place the new structure on. Must be present in
-## [method BaseProduction.legal_build_tiles]'s result set for the active
-## player and [member structure_type] at commit time.
+## [method BaseProduction.legal_build_tiles_for]'s result set for
+## [member builder_id] at commit time.
 @export var tile: Vector2i
+
+## [member EntityState.entity_id] of the [UnitState] raising this structure.
+##
+## ★ [b]Build stopped being a player-level command on 2026-08-25[/b] (user
+## decision). It used to belong to the PLAYER — any frontier tile beside any owned
+## entity was legal, and no unit was involved — which is why this field did not
+## exist. Now a structure is raised by a specific Builder standing beside the tile,
+## and that Builder is CONSUMED by the build.
+##
+## ⚠ Consequence worth stating plainly: with no living Builder a player cannot
+## build at all. That is not a soft-lock, because only the HQ produces Builders and
+## losing the HQ is already a decisive defeat
+## ([constant GameState.VictoryCause.HQ_DESTROYED]).
+@export var builder_id: int = -1
 
 
 func _init() -> void:
