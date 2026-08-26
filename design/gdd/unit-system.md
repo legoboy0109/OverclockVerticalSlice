@@ -506,11 +506,18 @@ whether it has acted this turn. The Command & Action Interface uses this to pres
 **Unit-owned — pure, headless, deterministic (Unit System Logic gate):**
 
 - **GIVEN** each unit type is instantiated, **WHEN** its stats are read, **THEN** they match the
-  table exactly — Scout (hp 3, atk 2, range 1, move 1, cap 4, `produce_cost` **Credits** 2), Trooper
-  (6, 3, 2, 2, 3, 4), Heavy (10, 5, 2, 3, 2, **7**), Sniper (3, 6, 3, 2, 3, 5). *(`produce_cost` values
-  are unchanged by the pivot — only their currency changed, from AP to Credits.)*
+  table exactly — Scout (hp 3, atk 2, range 1, move 1, cap 4, `produce_cost` **Credits 200**,
+  upkeep 100), Trooper (6, 3, 2, 2, 3, **400**, 200), Heavy (10, 5, 2, 3, 2, **700**, 300),
+  Sniper (3, 6, 3, 2, 3, **500**, 200), ★ **Builder (hp 3, atk 0, range 0, move 1, cap 3, 150,
+  upkeep 50, `can_build` true)**.
+  > ⚠ **Corrected 2026-08-26 (S8-18/QA plan) on two counts.** (1) The `produce_cost` figures read
+  > 2 / 4 / 7 / 5 — they predated the **S6-02 ×100 Credit rescale** and were an order of magnitude
+  > out. The old note *"produce_cost values are unchanged by the pivot — only their currency
+  > changed"* was true when written and stopped being true at S6-02. (2) ⛔ **The Builder was
+  > missing entirely** — S8-13 added a fifth unit type and this criterion still named four, so a
+  > tester following it would have filed the roster's newest unit as an extra.
 - **GIVEN** each unit type is instantiated, **WHEN** its `base_defense` field is read, **THEN** it is
-  **0** for all four types (Scout / Trooper / Heavy / Sniper) — the schema default the whole VS roster
+  **0** for **all five types** (Scout / Trooper / Heavy / Sniper / ★ **Builder**) — the schema default the whole VS roster
   ships with, and the value `effective_defense` reads before any Defense-Tech bonus. *(Guards the
   data-default the formula table asserts: a wrong default would silently corrupt every
   `effective_defense` output.)*

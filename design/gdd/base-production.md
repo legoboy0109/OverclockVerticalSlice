@@ -871,10 +871,22 @@ Presentation and interaction are owned by GDDs #9 and #10; this system provides 
 **Pure Logic gate (BLOCKING — fake/injected Grid + AP/Credits):**
 
 *Templates (Rules 1–2):*
-- **GIVEN** each structure template, **THEN** its fields match the table exactly — HQ (hp 40, cap 2,
-  `{Scout}`, def 2, `can_counterattack` false), Economy Outpost (hp 8, cost 4, time 1, cap 0),
-  Production Outpost (hp 14, cost 9, time 2, cap 4, `{Trooper,Heavy,Sniper}`), Defensive Structure
-  (hp 10, cost 6, time 1, atk 4, rng 2, def 1, `can_counterattack` true, `DEFENSIVE_ATTACK_COST` 1).
+- **GIVEN** each structure template, **THEN** its fields match the table exactly — **HQ** (hp 40,
+  cap 2, **`{Builder}`**, def 2, `can_counterattack` false), **Economy Outpost** (hp 8, cost **1000**,
+  time **3**, upkeep **200**, `max_count` **2**, cap 0), **Barracks** (hp 14, cost **600**, time 2,
+  cap 4, **`{Scout, Trooper, Heavy, Sniper}`**), **Defensive Structure** (hp 10, cost **500**, time
+  **2**, atk 4, rng 2, def 1, `can_counterattack` true, `DEFENSIVE_ATTACK_COST` 1), **Research Lab**
+  (hp 12, cost **800**, time 2, cap 0, no producible types).
+  > ⚠ **Corrected 2026-08-26 (S8-18/QA plan).** This bullet had drifted from the shipped roster on
+  > **six** counts and would have failed the correct game: HQ read `{Scout}`, the Barracks was still
+  > named *Production Outpost* and produced `{Trooper,Heavy,Sniper}`, and three costs predated the
+  > **S6-02 ×100 Credit rescale** (cost 4 → 1000, 9 → 600, 6 → 500).
+  > ★★ **The GDD body had all of this right** — the S8-13 Builder decision is written out in full at
+  > *"Build belongs to a BUILDER, and the Builder is spent"*, and the Placement ACs below were even
+  > **inverted** for it. **Only this bullet was left behind.** The part of the doc that describes the
+  > design was current; the part that says how to verify it was not.
+  > ⚠ Pinned by `tests/unit/base-production/structure_schema_templates_config_test.gd`, which is the
+  > **one load-bearing test** for these values — every derived cost assertion in the suite leans on it.
 - **GIVEN** any template read twice, **THEN** identical (immutable — queries never mutate).
 
 *Occupancy (Rule 3):*
@@ -885,8 +897,10 @@ Presentation and interaction are owned by GDDs #9 and #10; this system provides 
 
 *Building (Rule 4):*
 - **GIVEN** ≥ `build_cost` **Credits** and ≥ `BUILD_AP_COST` **AP** and a legal tile, **WHEN**
-  `build(Economy Outpost, tile)`, **THEN** **Credits −4 and AP −2** (both-or-neither — both pools pay or
-  neither does), structure placed Under-Construction, blocks/targets immediately.
+  `build(Economy Outpost, tile)`, **THEN** **Credits −1000 and AP −2** (both-or-neither — both pools
+  pay or neither does), structure placed Under-Construction, blocks/targets immediately.
+  *(⚠ Credit figure corrected 2026-08-26; it predated the S6-02 ×100 rescale. `build_ap_cost` is
+  still **2** and was always correct.)*
 - **GIVEN** ≥ `build_cost` Credits but **< `BUILD_AP_COST` AP** (or the reverse), **WHEN**
   `build(Economy Outpost, tile)`, **THEN** rejected — **neither** pool is charged (both-or-neither).
 - **GIVEN** a fresh Under-Construction structure, **THEN** `completed_outpost_count`, production, and
@@ -898,6 +912,23 @@ Presentation and interaction are owned by GDDs #9 and #10; this system provides 
 - ★ **GIVEN** manhattan 1 from a friendly **structure** and no Builder anywhere, **THEN** it is
   **excluded** — a structure is not a builder. *(This AC was INVERTED on 2026-08-25; it previously
   asserted the opposite, when Build was a player-level command.)*
+
+*Builder consumption (Rule 5b) — ★ added 2026-08-26 (S8-18/QA plan). Both invariants shipped with
+tests in S8-13 but had **no stated acceptance criterion**, so nothing in this document required them:*
+- ⛔ **GIVEN** a legal `build(structure, tile)` by a Builder, **THEN** the Builder is destroyed
+  **after** the structure is placed — never before. ★ **Ordering is the criterion, not a detail:**
+  destroying first means a mid-apply failure leaves a player who has **paid, with no Builder and no
+  building.**
+- ⛔ **GIVEN** a Builder consumed by a build, **THEN** its destruction events are **appended** to the
+  action's event list, never discarded. ★ Otherwise the sprite **stands beside the building it
+  became** and the population counter never learns the unit is gone.
+- **GIVEN** a Builder, **THEN** `attack_range` is **0**, so it has no legal targets at all — Builders
+  are defenceless by data, and must be escorted.
+- **GIVEN** any unit, **THEN** build capability is read from the **`can_build` data flag**, never from
+  a type comparison. *(A second builder-capable unit must be a `.tres` edit and nothing more.)*
+- **GIVEN** a player who has lost every Builder but still holds their HQ, **THEN** they can produce
+  another and are **never locked out of building** — no soft-lock. *(Losing the HQ is already a
+  decisive defeat, so no living player is ever unable to rebuild.)*
 - ★ **GIVEN** two Builders far apart, **THEN** each one's legal tiles hug only itself — a Builder never
   makes a tile legal beside a different Builder.
 - ★ **GIVEN** a unit whose type cannot build, **THEN** its build-tile set is empty (an ordinary answer,
@@ -935,12 +966,20 @@ Presentation and interaction are owned by GDDs #9 and #10; this system provides 
   call (batch).
 
 *Production (Rule 7):*
-- **GIVEN** a Completed Production Outpost (`units_produced_this_turn` 0) with ≥ `produce_cost` **Credits**
+- **GIVEN** a Completed **Barracks** (`units_produced_this_turn` 0) with ≥ `produce_cost` **Credits**
   and ≥ `PRODUCE_AP_COST` **AP**, **WHEN** `produce(Trooper, empty adjacent tile)`, **THEN** **`produce_cost`
   Credits and `PRODUCE_AP_COST` (1) AP spent** (both-or-neither), Trooper created on the tile, counter →1.
 - **GIVEN** ≥ `produce_cost` Credits but **< `PRODUCE_AP_COST` AP** (or the reverse), **WHEN** `produce()`,
   **THEN** rejected — **neither** pool is charged (both-or-neither).
 - **GIVEN** the HQ, **WHEN** `produce(Heavy, …)`, **THEN** rejected (not in `producible_types`).
+- ★ **GIVEN** the HQ, **WHEN** `produce(Scout, …)`, **THEN** **rejected** — the Scout moved to the
+  Barracks at S8-13 and the HQ makes **only Builders**. *(Added 2026-08-26. This is the stronger
+  form of the criterion above: `produce(Heavy)` was always rejected and so proves little, whereas
+  **`produce(Scout)` is the exact case that USED to succeed** — and is therefore the one a future
+  change is most likely to reintroduce by accident. Same reasoning as the inverted Placement AC.)*
+- ★ **GIVEN** the **Barracks**, **WHEN** `produce(Builder, …)`, **THEN** **rejected** — Builders come
+  from the HQ alone, which is what makes the opening (Builder → Barracks → army) a fixed sequence
+  rather than a choice.
 - **GIVEN** a producer at `production_cap`, **WHEN** another `produce()` with Credits **and** AP to spare,
   **THEN** rejected (cap gates independently of both pools).
 - **GIVEN** no empty adjacent tile, **THEN** production blocked, nothing spent from either pool.
