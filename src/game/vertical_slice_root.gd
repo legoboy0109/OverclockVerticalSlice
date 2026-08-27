@@ -822,23 +822,46 @@ func _on_action_applied(result: ActionResult) -> void:
 	_refresh_open_preview() # the board changed under any open range overlay.
 	_refresh_occupant_pick_regions() # entities moved/spawned/died — re-author the click targets.
 	_dispatch_motion(result)
-	# ★ S8-32 (user decision 2026-08-26): the menu CLOSES after a successful action.
+	# ★ S8-32/S8-35 (user decisions 2026-08-26): the menu closes after an action —
+	# EXCEPT after a MOVE, where it re-opens so the unit can attack or wait.
 	#
-	# ⚠ This reverses the 2026-08-24 behaviour, which re-opened it here to satisfy
-	# CR-4's "the menu re-filters for the same entity" (AC-25/AC-12) so a move->attack
-	# chain read as one sequence.
-	# ⚠ COST, stated so it is a known trade and not a surprise: chaining move -> attack
-	# on the same unit now takes a re-select. The menu no longer follows the unit
-	# around after it acts.
-	# ★ The selection itself is untouched — CommandInterface._reselect_after_commit
-	# still decides whether the actor survives with a legal action left, and the unit
-	# stays selected if it does. Only the MENU is dismissed, so the board is readable
-	# immediately after acting instead of having a plate over it.
+	# ⚠ S8-32 first closed it unconditionally, which was too blunt: moving is the one
+	# action that is routinely a SETUP for another. Closing there forced a re-select in
+	# the middle of the game's most common sequence, and CR-4's AC-25/AC-12 ("the menu
+	# re-filters for the same entity, so move->attack is one sequence") existed for
+	# exactly that reason. This keeps the AC where it earns its place and drops it
+	# everywhere it was just a plate over the board.
+	#
+	# ★ Keyed off a UnitMovedEvent in the result rather than off a remembered verb,
+	# because this handler fires for EVERY action including the opponent's — an event
+	# in the payload is self-describing, whereas a "last verb I dispatched" field would
+	# have to be invalidated on the AI's turn and would rot the first time it was not.
+	# ⚠ _open_action_menu already closes when there is no selection, the selection is
+	# not ours, or it is not our live turn — so the AI moving never opens a menu, and a
+	# unit that dies to a counterattack on arrival leaves none hanging.
 	_clear_placement_preview()
 	_close_cost_preview() # the projection just became the real number.
-	if _action_menu != null:
+	if _result_moved_a_unit(result):
+		_open_action_menu()
+	elif _action_menu != null:
 		_action_menu.close()
 	_refresh_status() # AP/affordability/selection may have changed.
+
+
+## True when [param result] contains a unit movement — the one action after which the
+## menu re-opens rather than closing (S8-35).
+##
+## ★ Reads the EVENTS, not a remembered verb. [method _on_action_applied] fires for every
+## action on the board including the opponent's, so a self-describing payload is the only
+## signal that cannot go stale; a "last verb dispatched" field would need invalidating on
+## the AI's turn and would rot the first time somebody forgot.
+func _result_moved_a_unit(result: ActionResult) -> bool:
+	if result == null:
+		return false
+	for e: Variant in result.events:
+		if e is UnitMovedEvent:
+			return true
+	return false
 
 
 ## Step 1 of [method _on_action_applied]: starts the destroyed beat for everything

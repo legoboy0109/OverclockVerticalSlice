@@ -368,6 +368,83 @@ func test_produce_starts_a_build_that_deploys_a_unit_from_the_hq() -> void:
 	assert_bool(state.entity_at(target) is UnitState).is_true() # ... on the target tile.
 
 
+# ==============================================================================
+# S8-32/S8-35 — when the action menu stays up, and when it gets out of the way.
+# ==============================================================================
+
+func test_the_menu_reopens_after_a_move_so_the_unit_can_attack_or_wait() -> void:
+	# ★ Moving is the one action that is routinely a SETUP for another, so the menu
+	# re-filters for the same unit rather than making the player re-select — CR-4's
+	# AC-25/AC-12, kept exactly where it earns its place.
+	var root := _make_root()
+	var state := root.state()
+	# ⚠ Force reduced motion on the menu. ActionMenu.close() only sets `visible = false`
+	# IMMEDIATELY under reduced motion; otherwise it starts a fade tween and hides at the
+	# END of it — and a tween never advances in a headless test, so `is_open()` would
+	# report TRUE for a menu that is on its way out. Without this the close assertion is
+	# unfalsifiable, which is exactly how the first draft of this pair passed against
+	# every possible implementation.
+	root._action_menu.configure(true)
+	state.per_player[0].current_ap = 20
+	_place_unit(state, 20, 0, Vector2i(4, 5))
+	_move_cursor_to(root, Vector2i(4, 5))
+	assert_bool(root.select_at_cursor()).is_true()
+
+	var dest := Vector2i(-1, -1)
+	for r in Movement.reachable(state, state.entities_by_id[20]):
+		if r.tile != Vector2i(4, 5):
+			dest = r.tile
+			break
+	assert_bool(dest != Vector2i(-1, -1)).is_true()
+	_move_cursor_to(root, dest)
+	assert_bool(root.act_at_cursor()).is_true()
+
+	assert_bool(root._action_menu.is_open()).override_failure_message(
+		"The menu closed after a move. Move is the setup action — closing here forces " +
+		"a re-select in the middle of the game's most common sequence."
+	).is_true()
+	assert_int(root._action_menu.entity_id()).is_equal(20)
+
+
+func test_the_menu_closes_after_an_action_that_is_not_a_move() -> void:
+	# ⚠ The other half of the rule, and it must be asserted separately: S8-32 closed the
+	# menu after EVERY action and S8-35 narrowed that to "every action except a move".
+	# Without this, reverting to the old always-reopen behaviour would pass the test above.
+	var root := _make_root()
+	var state := root.state()
+	# ⚠ Force reduced motion on the menu. ActionMenu.close() only sets `visible = false`
+	# IMMEDIATELY under reduced motion; otherwise it starts a fade tween and hides at the
+	# END of it — and a tween never advances in a headless test, so `is_open()` would
+	# report TRUE for a menu that is on its way out. Without this the close assertion is
+	# unfalsifiable, which is exactly how the first draft of this pair passed against
+	# every possible implementation.
+	root._action_menu.configure(true)
+	state.per_player[0].current_ap = 20
+	var hq: StructureState = state.entities_by_id[0] as StructureState
+	var utype: UnitTypeDef = hq.type.producible_types[0]
+	var deploy: Array[Vector2i] = GameStateReader.new(state).legal_deploy_tiles(0, utype)
+	assert_bool(deploy.is_empty()).is_false()
+
+	# ⚠ SELECT THE PRODUCER FIRST, so a menu is actually OPEN going in. A first draft of
+	# this test produced without ever opening one and then asserted it was closed — which
+	# passed no matter what the code did. It was verified vacuous by reverting to the
+	# always-reopen behaviour and watching it still pass.
+	_move_cursor_to(root, hq.position)
+	assert_bool(root.select_at_cursor()).is_true()
+	assert_bool(root._action_menu.is_open()).override_failure_message(
+		"Setup failed: selecting the HQ did not open a menu, so this test would be " +
+		"asserting nothing."
+	).is_true()
+
+	_move_cursor_to(root, deploy[0])
+	assert_bool(root.request_produce_at_cursor()).is_true()
+
+	assert_bool(root._action_menu.is_open()).override_failure_message(
+		"The menu stayed open after a produce. Only a MOVE re-opens it; everything " +
+		"else should hand the board back."
+	).is_false()
+
+
 func test_move_relocates_the_selected_unit() -> void:
 	var root := _make_root()
 	var state := root.state()
