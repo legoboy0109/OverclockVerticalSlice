@@ -127,6 +127,13 @@ func _raw_label(action: StringName, device: Device) -> String:
 			var btn: InputEventJoypadButton = event
 			if _PAD_BUTTON_NAMES.has(btn.button_index):
 				return _PAD_BUTTON_NAMES[btn.button_index]
+		elif device == Device.GAMEPAD and event is InputEventJoypadMotion:
+			# ★ 2026-09-28: the triggers are axes, not buttons (zoom lives on them).
+			var axis: int = (event as InputEventJoypadMotion).axis
+			if axis == JOY_AXIS_TRIGGER_LEFT:
+				return "LT"
+			if axis == JOY_AXIS_TRIGGER_RIGHT:
+				return "RT"
 		elif device == Device.KEYBOARD and event is InputEventKey:
 			var key: InputEventKey = event
 			# physical_keycode first: the bindings are authored physically so the layout matches

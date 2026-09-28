@@ -1,11 +1,13 @@
 [gd_resource type="Resource" script_class="MapDefinition" load_steps=2 format=3]
 ; GENERATED from game-data/Maps/Vertical Slice.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: b36c10f47ac5fc1fae7e2c2dd88aca59ec13ffd96507a3150fec0f26c91b7137
+; source-sha256: 467306ce66df4476d92a16a513bc32b8cb9bb80e36cbd696454ae1385711e7be
 
 [ext_resource type="Script" path="res://src/core/grid/map_definition.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
+display_name = "Vertical Slice"
+description = "The original skirmish board, small and quick. The one every balance number so far was measured on."
 width = 12
 height = 10
 mode = 0

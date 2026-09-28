@@ -1,5 +1,6 @@
 ---
 id: vertical_slice
+description: The original skirmish board, small and quick. The one every balance number so far was measured on.
 ---
 
 The skirmish board. Edit the grid below; spaces between symbols are optional.

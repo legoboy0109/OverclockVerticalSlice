@@ -181,6 +181,11 @@ func _parse_args() -> void:
 			_plain_map = true
 		elif arg.begins_with("--max-rounds="):
 			_max_rounds_override = maxi(0, int(arg.split("=")[1]))
+		elif arg.begins_with("--map="):
+			# ★ Bigger maps: e.g. --map=highlands (a vault map id). Default: the vertical slice.
+			for mp: MapDefinition in Maps.all():
+				if mp.resource_path.get_file().get_basename() == arg.split("=")[1]:
+					VSMap.select(mp)
 		elif arg.begins_with("--factions="):
 			# ★ Faction waves (CR-10): e.g. --factions=solar_federation,democratic_alliance — the
 			# ids are the vault notes' ids. Seat 0 plays the first. Default: Alliance mirror.
@@ -207,6 +212,7 @@ func _parse_args() -> void:
 	if _start_player_override >= 0:
 		print("SIM_START_OVERRIDE,forced_starting_player=%d" % _start_player_override)
 	print("SIM_FACTIONS,%s,%s" % [_factions[0].display_name, _factions[1].display_name])
+	print("SIM_MAP,%s,%dx%d" % [VSMap.data().display_name, VSMap.WIDTH, VSMap.HEIGHT])
 	print("SIM_TERRAIN,cover_tiles=%d,of=%d,plain=%s,max_rounds=%d" % [
 		0 if _plain_map else VSMap.COVER_TILES.size(), VSMap.WIDTH * VSMap.HEIGHT, str(_plain_map),
 		_max_rounds_override if _max_rounds_override > 0 else VerticalSliceRoot.VS_MAX_ROUNDS
@@ -424,7 +430,7 @@ func _build_match(favoured: int, handicap: int, variant: int) -> GameState:
 				var tile := Vector2i(own_hq.x + off.x * dir, own_hq.y + off.y)
 				if not state.grid.in_bounds(tile.x, tile.y):
 					continue
-				if state.grid.occupant_at(tile.x, tile.y) != GridState.EMPTY_OCCUPANT:
+				if not state.grid.is_passable(tile.x, tile.y):   # occupied OR blocked ground (bigger maps)
 					continue
 				var seed_unit := UnitState.new()
 				seed_unit.entity_id = BONUS_ID_BASE + 900 + player
@@ -439,7 +445,7 @@ func _build_match(favoured: int, handicap: int, variant: int) -> GameState:
 		var tile: Vector2i = _bonus_tile(hq_of[favoured], i, variant)
 		if not state.grid.in_bounds(tile.x, tile.y):
 			continue
-		if state.grid.occupant_at(tile.x, tile.y) != GridState.EMPTY_OCCUPANT:
+		if not state.grid.is_passable(tile.x, tile.y):   # occupied OR blocked ground (bigger maps)
 			continue
 		var u := UnitState.new()
 		u.entity_id = BONUS_ID_BASE + favoured * 50 + i

@@ -52,7 +52,14 @@ const DATA_PATH: String = "res://data/maps/vertical_slice.tres"
 static var _data: MapDefinition = null
 
 
-## The generated map resource (see the vault note named in its header).
+## ★ 2026-09-28 (bigger maps): VSMap is now "the CURRENT map" — whichever one the skirmish setup
+## screen selected (default: the vertical-slice board). Every reader (the slice, MatchSetup, the
+## simulator, the tools) goes through here, so selecting a map changes all of them at once.
+static func select(map: MapDefinition) -> void:
+	_data = map
+
+
+## The current map (see the vault note named in its header).
 static func data() -> MapDefinition:
 	if _data == null:
 		_data = load(DATA_PATH) as MapDefinition
@@ -84,9 +91,15 @@ static var HQ_B: Vector2i:
 ## ★ Single-sourced here on purpose: [VerticalSliceRoot] and `tools/simulate_matches.gd`
 ## both seed this, and the simulator exists to mirror the slice. A hand-copied tile rule
 ## in two files is exactly the drift that produced the S7-15 placement-bias confound.
-static func starting_builder_tile(hq_tile: Vector2i) -> Vector2i:
-	var behind: int = -1 if hq_tile.x >= WIDTH / 2 else 1
-	return Vector2i(hq_tile.x - behind, hq_tile.y)
+static func starting_builder_tile(hq_tile: Vector2i, enemy_hq: Vector2i = Vector2i(-1, -1)) -> Vector2i:
+	# ★ Bigger maps: "behind" = one step AWAY from the enemy HQ along whichever axis separates
+	# them most, so it holds for top-vs-bottom maps too, not only left-vs-right.
+	if enemy_hq == Vector2i(-1, -1):
+		enemy_hq = HQ_B if hq_tile == HQ_A else HQ_A
+	var d: Vector2i = hq_tile - enemy_hq
+	if absi(d.x) >= absi(d.y):
+		return hq_tile + Vector2i(signi(d.x), 0)
+	return hq_tile + Vector2i(0, signi(d.y))
 
 
 ## Minimum Manhattan distance any cover tile must keep from either HQ. Equal to
@@ -118,6 +131,7 @@ static func _cover_tiles() -> Array[Vector2i]:
 ## can A/B against every batch recorded before cover existed; nothing that ships passes true.
 static func build(plain: bool = false) -> MapDefinition:
 	var map := MapDefinition.new()
+	map.display_name = data().display_name
 	map.width = WIDTH
 	map.height = HEIGHT
 	map.mode = MapDefinition.Mode.AUTHORED

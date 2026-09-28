@@ -25,6 +25,8 @@ var factions: Array[FactionDef] = []
 var ap_per_turn: int = 20
 var round_limit: int = 80
 var first_mover: int = FirstMover.PLAYER
+## The board (2026-09-28: bigger maps). Null = the default vertical-slice map.
+var map: MapDefinition = null
 
 
 ## Settings with nothing chosen: the first playable faction for both seats and the game's own
@@ -35,6 +37,7 @@ static func defaults() -> MatchSettings:
 	m.factions = [first, first]
 	m.ap_per_turn = Balance.base_economy.flat_ap_per_turn
 	m.round_limit = VerticalSliceRoot.VS_MAX_ROUNDS
+	m.map = Maps.all()[0]
 	return m
 
 
@@ -63,6 +66,7 @@ func save() -> Error:
 	cfg.set_value("match", "ap_per_turn", ap_per_turn)
 	cfg.set_value("match", "round_limit", round_limit)
 	cfg.set_value("match", "first_mover", first_mover)
+	cfg.set_value("match", "map", map.resource_path if map != null else "")
 	return cfg.save(PATH)
 
 
@@ -84,4 +88,8 @@ static func load_saved() -> MatchSettings:
 	m.ap_per_turn = clampi(int(cfg.get_value("match", "ap_per_turn", m.ap_per_turn)), AP_MIN, AP_MAX)
 	m.round_limit = clampi(int(cfg.get_value("match", "round_limit", m.round_limit)), ROUNDS_MIN, ROUNDS_MAX)
 	m.first_mover = clampi(int(cfg.get_value("match", "first_mover", m.first_mover)), 0, 2)
+	var map_path: String = str(cfg.get_value("match", "map", ""))
+	for mp: MapDefinition in Maps.all():
+		if mp.resource_path == map_path:
+			m.map = mp
 	return m

@@ -45,6 +45,11 @@ const MIN_DIM: int = 8
 const MAX_DIM: int = 24
 
 ## Board width in tiles. Must be in [code][MIN_DIM, MAX_DIM][/code].
+## ★ 2026-09-28 (multiple maps): shown in the skirmish setup screen's map picker. Generated from
+## the vault note's title and `description`.
+@export var display_name: String
+@export_multiline var description: String
+
 @export var width: int
 
 ## Board height in tiles. Must be in [code][MIN_DIM, MAX_DIM][/code].

@@ -49,10 +49,14 @@ extends Node2D
 # ★ S7-11: aliases onto [VSMap], which is the single authored definition. Kept as names
 # here because ~a dozen call sites read them; redefining the VALUES here is what would let
 # the slice and the match simulator drift apart.
-static var MAP_WIDTH: int = VSMap.WIDTH
-static var MAP_HEIGHT: int = VSMap.HEIGHT
-static var HQ_A: Vector2i = VSMap.HQ_A
-static var HQ_B: Vector2i = VSMap.HQ_B
+static var MAP_WIDTH: int:
+	get: return VSMap.WIDTH   # live: the map is chosen per match (2026-09-28)
+static var MAP_HEIGHT: int:
+	get: return VSMap.HEIGHT
+static var HQ_A: Vector2i:
+	get: return VSMap.HQ_A
+static var HQ_B: Vector2i:
+	get: return VSMap.HQ_B
 
 ## The human player is 0; the AI is player 1 (VS 1v1, ADR-0011).
 const LOCAL_PLAYER: int = 0
@@ -131,6 +135,12 @@ const CAMERA_SIDE_MARGIN_PX: float = 24.0
 const CAMERA_FIT_MARGIN: float = 0.95
 const CAMERA_ZOOM_MAX: float = 3.0
 const CAMERA_ZOOM_STEP: float = 1.12
+
+## ★ Bigger maps (2026-09-28). The tile size the original 12x10 board shows at when it fits
+## the screen — the size the S5-03 legibility gate was measured at, 1280x720, tighter than the
+## Deck. A larger map opens zoomed to THIS, centred on your HQ, rather than shrunk to fit;
+## zoom out (wheel, -, LT) to see the whole board.
+const LEGIBLE_REFERENCE_SIZE: Vector2i = Vector2i(12, 10)
 
 ## Horizontal screen margin the status plate must leave free on EACH side, in
 ## pixels — the columns the bottom corner HUD panels own.
@@ -279,6 +289,7 @@ func _build_match() -> void:
 	# MatchSetup the simulator and diagnostic tools use — see its header for why that matters.
 	var settings: MatchSettings = MatchSettings.active()
 	Balance.apply_match(settings.ap_per_turn)
+	VSMap.select(settings.map)   # ★ the chosen board; every map reader follows it
 	var map: MapDefinition = VSMap.build()
 	_state = MatchSetup.build(map, settings.factions, settings.starting_player(),
 		settings.round_limit, [AI_PLAYER])
@@ -346,11 +357,30 @@ func _build_board_and_camera() -> void:
 func _fit_camera_to_board() -> void:
 	if _board == null or _camera == null:
 		return
+	var fit: Array = _fit_zoom_for(Vector2i(MAP_WIDTH, MAP_HEIGHT))
+	var fit_zoom: float = fit[0]
+	var board_center: Vector2 = fit[1]
+	_camera_fit_zoom = fit_zoom
+	var legible: float = minf(_fit_zoom_for(LEGIBLE_REFERENCE_SIZE)[0], CAMERA_ZOOM_MAX)
+	var safe_offset := Vector2(0.0, (CAMERA_HUD_TOP_MARGIN_PX - CAMERA_HUD_BOTTOM_MARGIN_PX) * 0.5)
+	if legible > fit_zoom:
+		# A board bigger than the reference: open at the legible tile size, on our own HQ.
+		_camera.zoom = Vector2(legible, legible)
+		_camera.position = _board.grid_to_screen(HQ_A if LOCAL_PLAYER == 0 else HQ_B) - safe_offset / legible
+	else:
+		_camera.zoom = Vector2(fit_zoom, fit_zoom)
+		# Offset so the board centers within the safe band (top/bottom margins differ).
+		_camera.position = board_center - safe_offset / fit_zoom
+
+
+## The zoom that frames a [param dims]-tile board in the viewport minus the HUD bands, and that
+## board's centre — [fit_zoom, centre]. Used for the real board and for the legibility reference.
+func _fit_zoom_for(dims: Vector2i) -> Array:
 	var corners: Array[Vector2] = [
 		_board.grid_to_screen(Vector2i(0, 0)),
-		_board.grid_to_screen(Vector2i(MAP_WIDTH - 1, 0)),
-		_board.grid_to_screen(Vector2i(0, MAP_HEIGHT - 1)),
-		_board.grid_to_screen(Vector2i(MAP_WIDTH - 1, MAP_HEIGHT - 1)),
+		_board.grid_to_screen(Vector2i(dims.x - 1, 0)),
+		_board.grid_to_screen(Vector2i(0, dims.y - 1)),
+		_board.grid_to_screen(Vector2i(dims.x - 1, dims.y - 1)),
 	]
 	var min_p: Vector2 = corners[0]
 	var max_p: Vector2 = corners[0]
@@ -362,17 +392,10 @@ func _fit_camera_to_board() -> void:
 	min_p -= pad
 	max_p += pad
 	var board_size: Vector2 = max_p - min_p
-	var board_center: Vector2 = (min_p + max_p) * 0.5
-
 	var vp: Vector2 = get_viewport_rect().size
 	var safe_w: float = maxf(1.0, vp.x - 2.0 * CAMERA_SIDE_MARGIN_PX)
 	var safe_h: float = maxf(1.0, vp.y - CAMERA_HUD_TOP_MARGIN_PX - CAMERA_HUD_BOTTOM_MARGIN_PX)
-	var fit: float = minf(safe_w / board_size.x, safe_h / board_size.y) * CAMERA_FIT_MARGIN
-	_camera_fit_zoom = fit
-	_camera.zoom = Vector2(fit, fit)
-	# Offset so the board centers within the safe band (top/bottom margins differ).
-	var safe_offset := Vector2(0.0, (CAMERA_HUD_TOP_MARGIN_PX - CAMERA_HUD_BOTTOM_MARGIN_PX) * 0.5)
-	_camera.position = board_center - safe_offset / fit
+	return [minf(safe_w / board_size.x, safe_h / board_size.y) * CAMERA_FIT_MARGIN, (min_p + max_p) * 0.5]
 
 
 ## Multiplies the camera zoom by [param factor], clamped between the whole-board fit
@@ -382,6 +405,7 @@ func _zoom_camera(factor: float) -> void:
 		return
 	var z: float = clampf(_camera.zoom.x * factor, _camera_fit_zoom, CAMERA_ZOOM_MAX)
 	_camera.zoom = Vector2(z, z)
+	_keep_cursor_in_view()   # zooming in must never lose the cursor off-screen
 
 
 ## Pans the camera just enough to keep the board cursor inside the central ~70% of
@@ -663,6 +687,7 @@ func _legend_text() -> String:
 		[&"ui_up", "cursor"], [&"ui_accept", "confirm"], [&"ui_cancel", "back"],
 		[&"board_build", "build"], [&"board_end_turn", "end turn"],
 		[&"board_cursor_cycle", "jump cursor"],
+		[&"board_zoom_in", "zoom in"], [&"board_zoom_out", "zoom out"],
 	]:
 		var label: String = InputGlyphs.label_for(pair[0])
 		if label != "":
@@ -1003,6 +1028,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		toggle_menu_focus()
 	elif event.is_action_pressed(&"board_cursor_cycle"):
 		jump_cursor()
+	# ★ 2026-09-28: keyboard (+/-) and pad (RT/LT) zoom — bigger maps made mouse-wheel-only zoom
+	# a dead end on the Steam Deck.
+	elif event.is_action_pressed(&"board_zoom_in"):
+		_zoom_camera(CAMERA_ZOOM_STEP)
+	elif event.is_action_pressed(&"board_zoom_out"):
+		_zoom_camera(1.0 / CAMERA_ZOOM_STEP)
 	elif event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			_zoom_camera(CAMERA_ZOOM_STEP)      # wheel up: zoom in
