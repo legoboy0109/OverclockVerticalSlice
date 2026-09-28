@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Heavy.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 734af34feed719397f070447e3e485eaa3a3118045c641d3737baf0f4eb42a84
+; source-sha256: 6c26137b69ff90162feb6e8fce5ca1e0da345bdd34f65cc7a32d4dcbe38588bd
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -23,3 +23,9 @@ can_counterattack = false
 can_build = false
 targeting_mode = 0
 min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = 2
+resist_incendiary = 0
+area_shape = 0
+area_length = 4

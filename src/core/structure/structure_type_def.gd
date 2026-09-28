@@ -69,6 +69,16 @@ extends Resource
 ## which filters on this. (It used to be four hand-kept lists that had to agree.)
 @export var buildable: bool = false
 
+## What kind of damage this deals (damage-types.md DT-1). KINETIC is neutral — every unit
+## that existed before damage types is KINETIC, which is what keeps their matchups unchanged.
+@export var damage_type: int = UnitTypeDef.DamageType.KINETIC
+
+## Flat damage adjustments by incoming type (DT-3/DT-4): subtracted in the damage formula, so
+## positive resists and NEGATIVE is "weak to". Band [-3, +3], enforced by the vault converter.
+@export var resist_kinetic: int = 0
+@export var resist_emf: int = 0
+@export var resist_incendiary: int = 0
+
 ## Unit classes this structure can fire on (unit-classes.md UC-4), for a structure that
 ## attacks at all. Same meaning as [member UnitTypeDef.can_target].
 @export var can_target: Array[int] = [UnitTypeDef.UnitClass.INFANTRY, UnitTypeDef.UnitClass.GROUND_VEHICLE]

@@ -58,6 +58,8 @@ class Field:
     target: str = ""          # for link/links: the vault folder the link must point into
     choices: dict = field(default_factory=dict)   # for enum: label -> int
     help: str = ""
+    lo: int | None = None     # inclusive bounds for int fields, checked at build time
+    hi: int | None = None
 
 
 @dataclass
@@ -72,6 +74,23 @@ class Kind:
 
 TARGETING = {"direct": 0, "area": 1}
 UNIT_CLASS = {"infantry": 0, "ground_vehicle": 1, "air": 2}
+DAMAGE_TYPE = {"kinetic": 0, "emf": 1, "incendiary": 2}
+AREA_SHAPE = {"single": 0, "burst": 1, "line": 2}
+RES_LO, RES_HI = -3, 3        # damage-types.md RESISTANCE_MIN/MAX — outside it, types become hard counters
+
+
+def damage_fields(with_area: bool) -> list:
+    out = [
+        Field("damage_type", "enum", "kinetic", choices=DAMAGE_TYPE, help="kinetic | emf | incendiary"),
+        Field("resist_kinetic", "int", 0, lo=RES_LO, hi=RES_HI, help="Subtracted from incoming damage; negative = weak to"),
+        # None = the class default (DT-9b): machines -2 (EMF is the anti-armour type), infantry +2.
+        Field("resist_emf", "int", None, lo=RES_LO, hi=RES_HI, help="Blank = class default (machines -2, infantry +2)"),
+        Field("resist_incendiary", "int", 0, lo=RES_LO, hi=RES_HI),
+    ]
+    if with_area:
+        out += [Field("area_shape", "enum", "single", choices=AREA_SHAPE, help="single | burst | line"),
+                Field("area_length", "int", 4, lo=1, hi=8, help="Tiles, for line attacks")]
+    return out
 
 KINDS: dict[str, Kind] = {
     "Units": Kind("Units", "units", "res://src/core/unit/unit_type_def.gd", "UnitTypeDef", [
@@ -92,7 +111,7 @@ KINDS: dict[str, Kind] = {
         Field("can_build", "bool", False),
         Field("targeting_mode", "enum", "direct", choices=TARGETING),
         Field("min_range", "int", 1),
-    ]),
+    ] + damage_fields(True)),
     "Structures": Kind("Structures", "structures", "res://src/core/structure/structure_type_def.gd",
                        "StructureTypeDef", [
         Field("buildable", "bool", False, help="Can a Builder raise it?"),
@@ -112,7 +131,7 @@ KINDS: dict[str, Kind] = {
         Field("can_target", "enums", ["infantry", "ground_vehicle"], choices=UNIT_CLASS),
         Field("targeting_mode", "enum", "direct", choices=TARGETING),
         Field("min_range", "int", 1),
-    ]),
+    ] + damage_fields(False)),
     "Techs": Kind("Techs", "techs", "res://src/core/research/tech_def.gd", "TechDef", [
         Field("description", "str", "", help="Shown in the research picker"),
         Field("tier", "int", 1),
@@ -242,9 +261,16 @@ def validate(note: Note, index: dict) -> dict:
         value = props[f.name] if present else f.default
         key = RENAMES.get((note.kind, f.name), f.name)
         w = f"{where} `{f.name}`"
+        if f.name == "resist_emf" and value is None:
+            # DT-9b: machines are EMF-vulnerable, flesh is EMF-resistant, unless overridden.
+            is_infantry = note.kind != "Units" or str(props.get("unit_class", "infantry")).lower() == "infantry"
+            value = 0 if note.kind == "Structures" else (2 if is_infantry else -2)
         if f.kind == "int":
             if isinstance(value, bool) or not isinstance(value, int):
                 raise VaultError(f"{w}: expected a whole number, got {value!r}")
+            if (f.lo is not None and value < f.lo) or (f.hi is not None and value > f.hi):
+                raise VaultError(f"{w}: {value} is outside the allowed {f.lo} to {f.hi}"
+                                 + (f" ({f.help})" if f.help else ""))
             out[key] = value
         elif f.kind == "bool":
             if not isinstance(value, bool):

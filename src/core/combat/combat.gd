@@ -66,11 +66,16 @@ extends RefCounted
 static func damage(state: GameState, attacker: EntityState, defender: EntityState) -> int:
 	# UC-2: Cover protects infantry only.
 	var cover: int = CombatBalance.combat.cover_dr if (defender is UnitState and Unit.benefits_from_cover(defender) and state.grid.is_cover(defender.position.x, defender.position.y)) else 0
+	var dtype: int = attacker.type.damage_type
+	# DT-6: fire burns people out of cover.
+	if dtype == UnitTypeDef.DamageType.INCENDIARY:
+		cover = 0
 	# ★ CR-14 Penetration: a UNIT attacker whose owner holds it ignores Cover entirely.
 	if attacker is UnitState and Research.ignores_cover(state, attacker.owner):
 		cover = 0
 	var def: int = Unit.effective_defense(state, defender) if defender is UnitState else defender.type.defense
-	return max(CombatBalance.combat.min_damage, _effective_attack_for(state, attacker) - cover - def)
+	# DT-3: resistance is ONE additive term; MIN_DAMAGE still floors every landed hit (DT-5).
+	return max(CombatBalance.combat.min_damage, _effective_attack_for(state, attacker) - cover - def - resistance(defender, dtype))
 
 
 ## The attack value [method damage] charges against [param attacker]: the
@@ -110,7 +115,64 @@ static func _effective_attack_for(state: GameState, attacker: EntityState) -> in
 ## [code]CombatConfig[/code] directly (Pass-Through Invariant, ADR-0015 §4).
 ## O(1).
 static func attack_cost_for(attacker: EntityState) -> int:
-	return BaseProduction.defensive_attack_cost() if attacker is StructureState else CombatBalance.combat.attack_cost
+	if attacker is StructureState:
+		return BaseProduction.defensive_attack_cost()
+	var cost: int = CombatBalance.combat.attack_cost
+	if attacker.type.area_shape != UnitTypeDef.AreaShape.SINGLE:
+		cost += CombatBalance.combat.area_ap_surcharge
+	return cost
+
+
+## [param defender]'s resistance to damage type [param dtype] (DT-2): its type's flat value,
+## 0 when absent, negative for "weak to".
+static func resistance(defender: EntityState, dtype: int) -> int:
+	match dtype:
+		UnitTypeDef.DamageType.EMF:
+			return defender.type.resist_emf
+		UnitTypeDef.DamageType.INCENDIARY:
+			return defender.type.resist_incendiary
+	return defender.type.resist_kinetic
+
+
+## The tiles an attack by [param attacker] from [param from_tile] at [param target_tile]
+## covers (DT-7), on-board only (a burst at the edge, a line running off it, truncate).
+## [br]• SINGLE — the target. [br]• BURST — the target and its 4 orthogonal neighbours.
+## [br]• LINE — [member UnitTypeDef.area_length] tiles starting beside the attacker, along
+##   the axis toward the target (its dominant axis when the target is off-axis), plus the
+##   target itself if the run misses it — the primary target is always hit.
+static func area_tiles(state: GameState, attacker: EntityState, from_tile: Vector2i, target_tile: Vector2i) -> Array[Vector2i]:
+	var out: Array[Vector2i] = [target_tile]
+	var shape: int = attacker.type.area_shape if attacker is UnitState else UnitTypeDef.AreaShape.SINGLE
+	if shape == UnitTypeDef.AreaShape.BURST:
+		for d: Vector2i in _CARDINAL_DIRECTIONS:
+			var t: Vector2i = target_tile + d
+			if state.grid.in_bounds(t.x, t.y):
+				out.append(t)
+	elif shape == UnitTypeDef.AreaShape.LINE:
+		var delta: Vector2i = target_tile - from_tile
+		var dir: Vector2i = Vector2i(signi(delta.x), 0) if absi(delta.x) >= absi(delta.y) else Vector2i(0, signi(delta.y))
+		for step: int in range(1, attacker.type.area_length + 1):
+			var t: Vector2i = from_tile + dir * step
+			if not state.grid.in_bounds(t.x, t.y):
+				break
+			if not out.has(t):
+				out.append(t)
+	return out
+
+
+## Everything an attack damages (DT-8): every entity on [method area_tiles] the attacker is
+## able to target by class — friend or foe, never the attacker itself — in fixed row-major
+## order (DT-9). A bomber's blast does not hit aircraft it could not have targeted.
+static func area_victims(state: GameState, attacker: EntityState, from_tile: Vector2i, target_tile: Vector2i) -> Array[EntityState]:
+	var out: Array[EntityState] = []
+	var tiles: Array[Vector2i] = area_tiles(state, attacker, from_tile, target_tile)
+	tiles.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return a.y < b.y or (a.y == b.y and a.x < b.x))
+	for t: Vector2i in tiles:
+		var e: EntityState = state.entity_at(t)
+		if e == null or e == attacker or not can_target(attacker, e):
+			continue
+		out.append(e)
+	return out
 
 
 ## Pure preview of the damage an attack would deal (ADR-0010, TR-combat-006):
@@ -537,13 +599,22 @@ static func apply(state: GameState, action: AttackAction) -> Array[Event]:
 	# set would keep the entity dim and skipped while it still had a turn left.
 	attacker.stood_down = false
 	var events: Array[Event] = []
-	var dmg: int = damage(state, attacker, target)
-	_apply_damage_to(target, dmg)   # polymorphic: unit OR structure defender
-	# The blow is announced BEFORE any death it causes (ADR-0004 ordering): a
-	# consumer replaying events in order sees the hit land, then the kill.
-	events.append(DamageEvent.new(attacker.entity_id, target.entity_id, dmg))
-	if target.current_hp <= 0:
-		events.append_array(state.destroy_entity(target.entity_id))
+	# ★ DT-8/DT-9: an area attack damages every victim, computed ALL before ANY is applied
+	# and applied in row-major order, so no target's death changes another's damage. A
+	# SINGLE attack is the one-victim case of the same loop.
+	var victims: Array[EntityState] = area_victims(state, attacker, action.attacker_tile, action.target_tile)
+	var dmgs: Array[int] = []
+	for v: EntityState in victims:
+		dmgs.append(damage(state, attacker, v))
+	for i: int in victims.size():
+		_apply_damage_to(victims[i], dmgs[i])   # polymorphic: unit OR structure defender
+		# The blow is announced BEFORE any death it causes (ADR-0004 ordering).
+		events.append(DamageEvent.new(attacker.entity_id, victims[i].entity_id, dmgs[i]))
+	for v: EntityState in victims:
+		if v.current_hp <= 0:
+			events.append_array(state.destroy_entity(v.entity_id))
+	# Only the PRIMARY target may counter (damage-types.md edge case): three free counters
+	# for one burst would make area weapons strictly bad.
 	# Story 006: conditional single counter — fires iff the defender survived
 	# the primary hit, its type opts into can_counterattack, and the original
 	# attacker is a legal target under the DEFENDER's own targeting profile.

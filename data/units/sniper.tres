@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Sniper.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 7c3cad54398228b7748292afede6bff19c5d683085214fc912e1c44e6ee1a2c0
+; source-sha256: 68763e50784fdf95100c71dcab697b4e484b632d7bd16247555f5dfb022dbfec
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -23,3 +23,9 @@ can_counterattack = false
 can_build = false
 targeting_mode = 0
 min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = 2
+resist_incendiary = 0
+area_shape = 0
+area_length = 4

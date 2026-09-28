@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=4 format=3]
 ; GENERATED from game-data/Structures/Factory.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: b3848f96136921f920cae57018ef77c4c478bb34b52027de0b73c9759412c9ee
+; source-sha256: aaa4b5ff2922dd9abf2a9d12696a97dadc57ee1183b9c86cca35c6e7af212331
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/tank.tres" id="2"]
@@ -26,3 +26,7 @@ can_research = false
 can_target = Array[int]([0, 1])
 targeting_mode = 0
 min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = 0
+resist_incendiary = 0

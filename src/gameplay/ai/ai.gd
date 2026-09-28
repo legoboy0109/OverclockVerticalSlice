@@ -809,8 +809,25 @@ static func _consider_attack(lookahead: GameState, attacker: EntityState, target
 	var hp_removed: int = mini(Combat.preview_damage(lookahead, attacker, target), _current_hp_of(target))
 	var is_kill: bool = hp_removed >= _current_hp_of(target)
 	var value: float = _combat_value(hp_removed, is_kill, target)
+	# ★ Damage types DT-8: an area attack hits everything in its shape, friends included.
+	# Add what the splash does to other enemies and SUBTRACT what it does to our own — the
+	# placement decision the design wants, and what stops the AI bombing its own line.
+	# ⚠ Friendly harm is kept SEPARATE and taken off after _action_score: a kill's lethal
+	# floor would otherwise erase it, and a kill that also wipes out two of our own Heavies
+	# would score exactly like a clean one (measured — that is what the test caught).
+	var friendly_harm: float = 0.0
+	if attacker is UnitState and attacker.type.area_shape != UnitTypeDef.AreaShape.SINGLE:
+		for v: EntityState in Combat.area_victims(lookahead, attacker, from_tile, target_tile):
+			if v == target:
+				continue
+			var splash: int = mini(Combat.damage(lookahead, attacker, v), _current_hp_of(v))
+			var splash_value: float = _combat_value(splash, splash >= _current_hp_of(v), v)
+			if v.owner != attacker.owner:
+				value += splash_value
+			else:
+				friendly_harm += splash_value
 	var base_score: float = value / float(ap_cost)
-	var score: float = _action_score(base_score, is_kill)
+	var score: float = _action_score(base_score, is_kill) - friendly_harm / float(ap_cost)
 
 	var take: bool = _is_better(score, ap_cost, attacker.entity_id, best.score, best.ap_cost, best.entity_id)
 	if not take and best.action != null \

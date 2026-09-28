@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Trooper.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 0a2f117277faec62e39584283181264d88ef595603db37d4f1149e1d438d9a2f
+; source-sha256: d089508c18796e9530cb035cc09200df4cf4a02f18a84916a824cc78591bf8ee
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -23,3 +23,9 @@ can_counterattack = false
 can_build = false
 targeting_mode = 0
 min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = 2
+resist_incendiary = 0
+area_shape = 0
+area_length = 4

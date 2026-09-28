@@ -21,6 +21,10 @@ can_target:
 - ground_vehicle
 targeting_mode: direct
 min_range: 1
+damage_type: kinetic
+resist_kinetic: 0
+resist_emf: 0
+resist_incendiary: 0
 ---
 
 ## Notes
