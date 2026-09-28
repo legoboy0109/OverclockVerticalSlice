@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Fighter.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 4ecfb9d3cba5cddc32a03afb9dc7b92c3d17dd5b7e936239c5f005010c2f1a3b
+; source-sha256: 5d709efec691afc077a3ce418876f0b2f011f7266cbf21ee318d9758e2fe7f28
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -23,3 +23,9 @@ can_counterattack = false
 can_build = false
 targeting_mode = 0
 min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = -2
+resist_incendiary = 0
+area_shape = 0
+area_length = 4

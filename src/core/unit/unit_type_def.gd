@@ -25,12 +25,37 @@ enum TargetingMode { DIRECT, AREA }
 ## meets terrain, whether Cover protects it, and who can shoot it — see [Unit] for the rules.
 enum UnitClass { INFANTRY, GROUND_VEHICLE, AIR }
 
+## Damage types, closed set (damage-types.md DT-1).
+enum DamageType { KINETIC, EMF, INCENDIARY }
+
+## Area-of-effect shapes, closed set (DT-7). SINGLE is the default and hits only the target.
+enum AreaShape { SINGLE, BURST, LINE }
+
 ## This unit's class (UC-1). Immutable for the life of the unit (UC-8).
 @export var unit_class: int = UnitClass.INFANTRY
 
 ## The classes this unit can attack (UC-4). Structures count as ground targets: they are
 ## attackable by anything that can target INFANTRY or GROUND_VEHICLE. Empty = unarmed.
 @export var can_target: Array[int] = [UnitClass.INFANTRY, UnitClass.GROUND_VEHICLE]
+
+## What kind of damage this deals (damage-types.md DT-1). KINETIC is neutral — every unit
+## that existed before damage types is KINETIC, which is what keeps their matchups unchanged.
+@export var damage_type: int = UnitTypeDef.DamageType.KINETIC
+
+## Flat damage adjustments by incoming type (DT-3/DT-4): subtracted in the damage formula, so
+## positive resists and NEGATIVE is "weak to". Band [-3, +3], enforced by the vault converter.
+@export var resist_kinetic: int = 0
+@export var resist_emf: int = 0
+@export var resist_incendiary: int = 0
+
+## Area shape (DT-7): SINGLE, BURST (target + its 4 neighbours) or LINE (a straight run of
+## [member area_length] tiles from beside the attacker, through the target). Area damage hits
+## friendlies too (DT-8), costs [member CombatConfig.area_ap_surcharge] extra AP, and only
+## the primary target may counterattack.
+@export var area_shape: int = AreaShape.SINGLE
+
+## Tiles a LINE attack covers (DT-7). Ignored by other shapes.
+@export var area_length: int = 4
 
 @export var display_name: String
 @export var hp: int

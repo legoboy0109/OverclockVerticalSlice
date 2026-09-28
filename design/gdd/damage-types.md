@@ -1,5 +1,5 @@
 # Damage Types
-
+> **Status**: **IMPLEMENTED 2026-09-28** (from the DRAFT of 2026-08-24). DTOQ-1/3 decided as recommended; see `design/decision-log.md` § Damage types.
 > **Status**: **DRAFT** (2026-08-24) — Tier 1 of the faction corpus v2.
 > **Author**: user (direction) + agents · **System #**: 18 (new)
 > **Owning GDD for**: damage type tags, per-type resistance, and area-of-effect shapes

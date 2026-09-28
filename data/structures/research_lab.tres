@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Structures/Research Lab.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: c1921a5492cca4b0aaa6e0bc1e463a1cda5c760f6bfb324804950b9b2d517fdc
+; source-sha256: 88c7c192085271b28381b5b31ef8b4212f53dd3322d09fa253d63be23b942524
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 
@@ -24,3 +24,7 @@ can_research = false
 can_target = Array[int]([0, 1])
 targeting_mode = 0
 min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = 0
+resist_incendiary = 0

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Bomber.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 8cda3d30ce81a67b359aed0a76e536b874f8020aee2fdc1e269ce9c9c50e8a55
+; source-sha256: 342fbdf08768fe4b87221e349f0b57f45cb792d251f211ff31f1ef90e481b207
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -23,3 +23,9 @@ can_counterattack = false
 can_build = false
 targeting_mode = 0
 min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = -2
+resist_incendiary = 0
+area_shape = 1
+area_length = 4

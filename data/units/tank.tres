@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Tank.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 964b5a98e2e717a659153381cde0b913c5a98e3342ff7fe158cbd2faeb995320
+; source-sha256: 3820d5c939bbbed6ed15105d49cda950e4feffbe262fb7b14b61f614b495e5a2
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -23,3 +23,9 @@ can_counterattack = false
 can_build = false
 targeting_mode = 0
 min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = -2
+resist_incendiary = 2
+area_shape = 0
+area_length = 4

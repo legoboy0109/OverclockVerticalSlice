@@ -59,3 +59,22 @@ Each entry: **the call** · why · how to reverse it.
   upkeep. That is an economy question: vehicles may simply be too expensive for this economy.
 - **The AI builds Factories it then doesn't use** — its build scoring values a Factory's throughput
   without checking it could afford what the Factory makes.
+
+## Damage types (`design/gdd/damage-types.md`)
+
+- **DTOQ-1 — three types (kinetic, EMF, incendiary)**, as the draft recommended. No fourth type.
+- **DTOQ-3 — EMF is a damage tilt, not a stun.** Status effects are a much larger system.
+- **Splash only hits what the attacker could target** — a Bomber's blast doesn't damage aircraft.
+  The draft didn't say; this keeps the class rules consistent.
+- **LINE attacks start beside the attacker and run along the dominant axis toward the target**,
+  always including the target. No shipped unit uses LINE yet.
+- **Artillery and Bomber are BURST** (from the Alliance roster); the Tank resists incendiary +2.
+  Every machine is EMF −2, every infantry EMF +2 (DT-9b). Nothing in the game deals EMF or
+  incendiary yet — those arrive with the factions.
+- **Structures have resistances (all 0) and a damage type, but never area attacks.**
+- **The AI weighs splash:** damage to other enemies adds value; damage to its own units is taken
+  off *after* its kill bonus (otherwise a kill that also wiped out its own units scored like a
+  clean one — a test caught this).
+- ⚠ **Not built:** the area preview telegraph and the friendly-fire warning before commit
+  (AC-13, advisory), and showing a unit's damage type/resistances in the HUD. The attack preview
+  number already includes resistance.

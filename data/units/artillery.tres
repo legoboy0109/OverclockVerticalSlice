@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Artillery.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: b5cbd9861526fc78be66f9918bc2489172f79b8a0b9073a7e35585ad6837548f
+; source-sha256: fb90168be55fe9e840c3da37d5a581a686f10d363f0b013377d370bd317f2f73
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -23,3 +23,9 @@ can_counterattack = false
 can_build = false
 targeting_mode = 1
 min_range = 2
+damage_type = 0
+resist_kinetic = 0
+resist_emf = -2
+resist_incendiary = 0
+area_shape = 1
+area_length = 4

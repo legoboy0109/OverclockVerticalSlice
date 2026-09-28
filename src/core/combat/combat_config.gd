@@ -32,3 +32,7 @@ extends Resource
 
 ## AP cost to perform a unit attack (consumed starting Story 004).
 @export var attack_cost: int = 2
+
+## Extra AP an area attack costs on top of [member attack_cost] (damage-types.md
+## AREA_AP_SURCHARGE): hitting several tiles for the price of one is not a decision.
+@export var area_ap_surcharge: int = 1
