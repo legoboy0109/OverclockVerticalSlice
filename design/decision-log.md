@@ -126,3 +126,28 @@ Each entry: **the call** · why · how to reverse it.
 - **Merit from Demolish counts** (it is combat); from Self Destruct it doesn't (the unit is gone).
 - ⚠ **Not built: showing rank on the board (PVOQ-3).** Nothing promotes yet; build with the Empire.
   The HUD reader already reports `rank`.
+
+## Faction framework v2 + setup screen (`faction-identity.md`, `factions/democratic-alliance.md`)
+
+User decisions (2026-09-28): **colour = which player** (OQ-11); **factions in waves, Alliance first**
+(OQ-12); **setup screen with faction picker + AP per turn, round limit, who moves first**.
+
+- **A faction owns its HQ, its buildable structures and its tech tree** (D5/D6); its units are
+  whatever those produce (D1 derived, not listed — one less list to drift). Empty lists fall back to
+  the shared content, which is what Neutral does, so every older test still means what it meant.
+- **Built MOD domains: infantry cap (D3), base income (D4), upkeep rate % (D9).** Not yet built:
+  per-structure cost/time deltas (D5-mod), starting loadout beyond the free Builder (D7), ability
+  access beyond "what the faction's units carry" (D8 is satisfied by roster ownership).
+- **A player can only build their own faction's structures** — enforced in the rules, not just the menu.
+- **Rush and Boom are no longer factions**; they are the two seat colour palettes (orange = you,
+  cyan = opponent). Neutral stays as the test/default faction.
+- **One `MatchSetup` builds every match** — the game, the simulator and the diagnostic tools.
+  Factions are set before the first turn, so its income already includes faction modifiers.
+- **Match AP is applied to a per-match copy of the economy config**, never the shipped one.
+- **Random first move is decided at setup**, not by the rules (determinism applies to play).
+- **Setup choices are remembered** in `user://match.cfg`; tests never read it.
+- **Alliance deviations from its GDD, kept:** Barracks hp 14 (doc 12), Research Lab hp 12 (doc 10),
+  the CR-14 tech tree (doc: Economy I–III), and the **Defensive Structure is not "manned"** (doc AC-6/7
+  want it to need a pilot — structures with pilots is new machinery; deferred).
+- ⚠ **Not built:** a faction emblem on units (the design's replacement for faction-by-colour), and
+  the per-faction comparison sheets (CR-10 — a design-review gate, due as each faction is added).

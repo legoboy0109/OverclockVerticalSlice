@@ -45,12 +45,14 @@ func test_boots_a_live_match_with_board_hud_and_ai() -> void:
 	assert_int(state.active_player).is_equal(0) # the human starts.
 	assert_int(state.match_status).is_equal(GameState.MatchStatus.IN_PROGRESS)
 	assert_bool(state.per_player[1].is_ai_controlled).is_true()
-	# Ownership-by-hue precondition (S4-02/S4-03): the two sides pin to DISTINCT
-	# factions (Rush vs Boom), not a Neutral mirror — both empty-delta so VS parity
-	# still holds. Distinctness is what lets the renderer color ownership by hue.
-	assert_object(state.per_player[0].faction).is_same(Factions.RUSH)
-	assert_object(state.per_player[1].faction).is_same(Factions.BOOM)
-	assert_bool(state.per_player[0].faction == state.per_player[1].faction).is_false()
+	# ★ Faction v2 (2026-09-28): both seats play a real, playable faction — from the
+	# skirmish setup screen's saved choice, the Alliance by default. Ownership no longer
+	# comes from the faction at all: colour means which PLAYER (seat palettes), so a mirror
+	# match reads exactly as clearly as a cross-faction one.
+	assert_bool(state.per_player[0].faction.playable).is_true()
+	assert_bool(state.per_player[1].faction.playable).is_true()
+	assert_int(Factions.SEAT_PALETTES.size()).is_equal(2)
+	assert_bool(Factions.SEAT_PALETTES[0] == Factions.SEAT_PALETTES[1]).is_false()
 
 	# Two HQs and two starting Builders — one behind each HQ (S8-29). Nothing else yet:
 	# the human hasn't acted and no AI turn has run.

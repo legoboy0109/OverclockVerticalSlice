@@ -12,6 +12,33 @@ extends Resource
 ## One-line player-facing description.
 @export_multiline var description: String
 
+## ★ Faction framework v2 (faction-identity.md CR-2, built 2026-09-28). A faction OWNS its
+## content (D1/D5/D6): its HQ, the structures its Builders may raise and its tech tree. Its units
+## follow from what those structures produce, so there is no separate unit list to keep in step.
+## Anything left empty falls back to the shared base content — which is what Neutral (the test
+## and default faction) does, and why every pre-v2 test still means what it meant.
+
+## Offered in the faction picker. Neutral and the two seat-colour palettes are not.
+@export var playable: bool = false
+
+## This faction's HQ type (it decides what the HQ produces — the faction's Builder). Null = the
+## shared HQ.
+@export var hq: StructureTypeDef = null
+
+## Structures this faction's Builders may raise (D5). Empty = the shared buildable roster.
+@export var structures: Array[StructureTypeDef] = []
+
+## This faction's tech tree (D6). Empty = the shared tree.
+@export var techs: Array[TechDef] = []
+
+## MOD domains (CR-4: folded in at the owning system's read site, never written into base data).
+## D3 — added to the base infantry cap.
+@export var infantry_cap_delta: int = 0
+## D4 — added to base Credit income per turn.
+@export var base_income_delta: int = 0
+## D9 — percent added to total upkeep (e.g. 20 = +20%). Floored so upkeep never goes negative.
+@export var upkeep_pct_delta: int = 0
+
 ## This faction's units earn merit and rank up (promotion-veterancy.md PV-8: the Holy Cosmic
 ## Empire only, in the current design). Off for everyone else, so all merit logic is inert.
 @export var promotes: bool = false

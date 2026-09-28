@@ -393,30 +393,15 @@ func _build_match(favoured: int, handicap: int, variant: int) -> GameState:
 	var starting_player: int = (variant % 2) if handicap == 0 else 0
 	if _start_player_override >= 0:
 		starting_player = _start_player_override
-	var state: GameState = GameState.start_match(map, starting_player)
-	# Mirror the slice: the round cap is armed there, so simulating without it would
-	# measure a configuration that no longer ships.
-	state.max_rounds = _max_rounds_override if _max_rounds_override > 0 \
+	# ★ 2026-09-28: the SAME MatchSetup the slice uses (faction HQs, starting Builders, round
+	# cap), so the board simulated is the board that ships. Both seats play the baseline
+	# faction — a mirror is what this harness measures — and the economy is the shipped one.
+	Balance.reset()
+	var max_rounds: int = _max_rounds_override if _max_rounds_override > 0 \
 		else VerticalSliceRoot.VS_MAX_ROUNDS
-	state.per_player[0].faction = Factions.RUSH
-	state.per_player[1].faction = Factions.BOOM
-	state.per_player[0].is_ai_controlled = true
-	state.per_player[1].is_ai_controlled = true
-
-	for player: int in map.hq_tiles.size():
-		var s := StructureState.new()
-		s.entity_id = player
-		s.owner = player
-		s.position = map.hq_tiles[player]
-		s.type = StructureTypes.HQ
-		s.current_hp = StructureTypes.HQ.hp
-		s.build_status = StructureState.BuildStatus.COMPLETED
-		state.entities_by_id[s.entity_id] = s
-
-	# ★ S8-29: one free Builder behind each HQ, via the SHARED routine the slice uses.
-	# This file's header demands it mirror the slice; hand-copying the placement here is
-	# the S7-15 confound waiting to happen again.
-	VerticalSliceRoot.seed_starting_builders(state, map.hq_tiles)
+	var state: GameState = MatchSetup.build(map,
+		[Factions.DEMOCRATIC_ALLIANCE, Factions.DEMOCRATIC_ALLIANCE] as Array[FactionDef],
+		starting_player, max_rounds, [0, 1])
 
 	# ★ S5-04 mirror seeding: BOTH players get the same unit at mirrored tiles, so
 	# the position differs between variants while staying exactly fair.

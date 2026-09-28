@@ -1,6 +1,6 @@
 # Faction — Democratic Alliance of Planets
 
-> **Status**: **DRAFT** (2026-08-24) — Tier 2 of the faction corpus v2. **The balance baseline.**
+> **Status**: **IMPLEMENTED 2026-09-28** — the first playable faction and the balance baseline. Deviations recorded in `design/decision-log.md`.
 > **Name**: ★ TBD (user, 2026-08-24: *"Final Names TBD"*). Flavour: Warhawk Social Democracy.
 > **Author**: user (direction) + agents · **Framework**: `faction-identity.md` v2
 >

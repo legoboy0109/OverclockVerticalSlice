@@ -21,3 +21,22 @@ extends RefCounted
 const NEUTRAL: FactionDef = preload("res://data/factions/neutral.tres")
 const RUSH: FactionDef = preload("res://data/factions/rush.tres")
 const BOOM: FactionDef = preload("res://data/factions/boom.tres")
+# ★ Faction framework v2 (2026-09-28). Added wave by wave (user decision: Alliance first).
+const DEMOCRATIC_ALLIANCE: FactionDef = preload("res://data/factions/democratic_alliance.tres")
+
+## Every faction, in picker order. ⚠ Rush and Boom are no longer factions in play — they are the
+## two SEAT colour palettes (user decision 2026-09-28: colour means which player, not faction).
+const ALL: Array[FactionDef] = [DEMOCRATIC_ALLIANCE, NEUTRAL, RUSH, BOOM]
+
+## The seat colour palettes: seat 0 orange, seat 1 cyan, whatever faction each seat plays.
+const SEAT_PALETTES: Array[FactionDef] = [RUSH, BOOM]
+
+
+## The factions the picker offers. A function, not a static var: reading a resource's fields
+## at class-load time can run before the resource's script is attached (see VSMap).
+static func playable() -> Array[FactionDef]:
+	var out: Array[FactionDef] = []
+	for f: FactionDef in ALL:
+		if f.playable:
+			out.append(f)
+	return out

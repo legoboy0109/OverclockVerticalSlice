@@ -1292,7 +1292,7 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 	var player: int = lookahead.active_player
 	var cap_reached: bool = economy_investments_committed >= AIBalance.ai.max_economy_investments_per_turn
 
-	for structure_type: StructureTypeDef in _BUILDABLE_STRUCTURE_TYPES:
+	for structure_type: StructureTypeDef in Faction.buildable(lookahead, player):   # its faction's roster (D5)
 		# ★★ S6-06: gate on "can we actually VALUE this?", not on identity.
 		#
 		# This read `if structure_type != StructureTypes.ECONOMY_OUTPOST: continue`, and the

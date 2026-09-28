@@ -73,7 +73,8 @@ static func total_upkeep(state: GameState, player: int) -> int:
 			if st.build_status != StructureState.BuildStatus.COMPLETED:
 				continue
 			total += st.type.upkeep
-	return total
+	# D9: a faction's upkeep rate, folded here and nowhere else (CR-4). Floored at 0.
+	return maxi(0, total * (100 + Faction.upkeep_pct_delta(state, player)) / 100)
 
 
 ## [param player]'s [b]net[/b] Credit income: gross income minus total upkeep.

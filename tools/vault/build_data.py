@@ -162,6 +162,13 @@ KINDS: dict[str, Kind] = {
     ]),
     "Factions": Kind("Factions", "factions", "res://src/core/faction/faction_def.gd", "FactionDef", [
         Field("description", "str", ""),
+        Field("playable", "bool", False, help="Offered in the faction picker"),
+        Field("hq", "link", None, target="Structures", help="This faction's HQ; blank = the shared HQ"),
+        Field("structures", "links", [], target="Structures", help="What its Builders may raise; empty = shared roster"),
+        Field("techs", "links", [], target="Techs", help="Its tech tree; empty = shared tree"),
+        Field("infantry_cap_delta", "int", 0, lo=-4, hi=6, help="Added to the base infantry cap"),
+        Field("base_income_delta", "int", 0, lo=-500, hi=1000, help="Added to base Credit income per turn"),
+        Field("upkeep_pct_delta", "int", 0, lo=-50, hi=100, help="Percent added to all upkeep"),
         Field("unit_changes", "deltas", []),
         Field("promotes", "bool", False, help="Units earn merit and rank up (Empire only, for now)"),
         Field("rank_requires_support", "bool", False, help="Ranks drop without a support structure"),
@@ -313,6 +320,8 @@ def validate(note: Note, index: dict) -> dict:
             if not isinstance(value, list) or any(str(v).lower() not in f.choices for v in value):
                 raise VaultError(f"{w}: expected a list drawn from {sorted(f.choices)}, got {value!r}")
             out[key] = ("ints", [f.choices[str(v).lower()] for v in value])
+        elif f.kind == "link":
+            out[key] = ("links1", resolve(link_target(value, w), f.target, index, w) if value else None)
         elif f.kind == "links":
             if value is None:
                 value = []
@@ -417,6 +426,9 @@ def render(note: Note, index: dict) -> str:
                 lines.append(f"{key} = Array[int]([{', '.join(map(str, value[1]))}])")
             elif value[0] == "group":
                 lines.append(f'{key} = &{gd_str(value[1])}')
+            elif value[0] == "links1":
+                if value[1] is not None:
+                    lines.append(f'{key} = ExtResource("{ext_id("Resource", res_path(value[1]))}")')
             elif value[0] == "links":
                 refs = [f'ExtResource("{ext_id("Resource", res_path(n))}")' for n in value[1]]
                 lines.append(f"{key} = [{', '.join(refs)}]")

@@ -274,41 +274,14 @@ func _ready() -> void:
 # --- Build steps -------------------------------------------------------------
 
 func _build_match() -> void:
-	# ★ S7-11: the map is authored ONCE in VSMap and shared by the slice, the match
-	# simulator and both diagnostic tools. It used to be hand-built in all four, which
-	# agreed only for as long as every tile was Plain — see VSMap's header.
+	# ★ 2026-09-28 (faction framework v2 + match settings): the match is whatever the player
+	# chose on the skirmish setup screen (remembered between runs), built by the SAME
+	# MatchSetup the simulator and diagnostic tools use — see its header for why that matters.
+	var settings: MatchSettings = MatchSettings.active()
+	Balance.apply_match(settings.ap_per_turn)
 	var map: MapDefinition = VSMap.build()
-
-	_state = GameState.start_match(map, LOCAL_PLAYER)
-	# Faction / AI assignment is a direct Setup-phase field write (no
-	# faction-assignment verb exists yet; the "lock" is a future-verb convention,
-	# ADR-0012). The two sides are pinned to RUSH/BOOM so ownership reads by hue
-	# (art-bible §4.2 / S4-02); both carry empty unit_deltas, so this is exact VS
-	# parity — mechanically identical to Neutral, distinct only in identity/hue.
-	# Arm the round cap so a match can actually end (see VS_MAX_ROUNDS). The tiebreak
-	# machinery already existed and is tested; the slice simply never set this.
-	_state.max_rounds = VS_MAX_ROUNDS
-	_state.per_player[LOCAL_PLAYER].faction = Factions.RUSH
-	_state.per_player[AI_PLAYER].faction = Factions.BOOM
-	_state.per_player[AI_PLAYER].is_ai_controlled = true
-
-	# start_match places HQs as bare EntityState stubs (its own doc flags that
-	# real entity typing is a "later story"). Finish the setup here: promote each
-	# to a completed StructureState carrying the real StructureTypes.HQ identity,
-	# so the AI scoring, glyph layer, and combat all see a proper HQ (is_hq(),
-	# type, hp). Same entity_id/owner/position, so grid occupancy is untouched.
-	for player: int in map.hq_tiles.size():
-		var hq := StructureState.new()
-		hq.entity_id = player # start_match allocates HQ ids 0/1 = player index.
-		hq.owner = player
-		hq.position = map.hq_tiles[player]
-		hq.type = StructureTypes.HQ
-		hq.current_hp = StructureTypes.HQ.hp
-		hq.build_status = StructureState.BuildStatus.COMPLETED
-		_state.entities_by_id[hq.entity_id] = hq
-
-	seed_starting_builders(_state, map.hq_tiles)
-
+	_state = MatchSetup.build(map, settings.factions, settings.starting_player(),
+		settings.round_limit, [AI_PLAYER])
 	_reader = GameStateReader.new(_state)
 
 
@@ -323,21 +296,8 @@ func _build_match() -> void:
 ## variant could legitimately have no room behind an HQ, and a missing free Builder is
 ## a slower opening, not a broken match.
 static func seed_starting_builders(state: GameState, hq_tiles: Array[Vector2i]) -> void:
-	for player: int in hq_tiles.size():
-		var tile: Vector2i = VSMap.starting_builder_tile(hq_tiles[player])
-		if not state.grid.in_bounds(tile.x, tile.y):
-			continue
-		if not state.grid.is_passable(tile.x, tile.y):
-			continue
-		var unit := UnitState.new()
-		unit.entity_id = state.next_entity_id
-		unit.owner = player
-		unit.position = tile
-		unit.type = UnitTypes.BUILDER
-		unit.current_hp = UnitTypes.BUILDER.hp
-		state.entities_by_id[unit.entity_id] = unit
-		state.next_entity_id += 1
-		state.grid.place(unit.entity_id, tile.x, tile.y)
+	# Moved to MatchSetup (2026-09-28); kept as a pass-through for existing callers.
+	MatchSetup.seed_starting_builders(state, hq_tiles)
 
 
 func _build_board_and_camera() -> void:
@@ -347,10 +307,9 @@ func _build_board_and_camera() -> void:
 	# feed into the same occupant layer. Story 002's placeholder fixtures and this
 	# scene's own _draw marker diamonds are both gone — this is the real art.
 	_board.paint_terrain(_state.grid)
-	_feed = EntitySpriteFeed.new(_board, [
-		_state.per_player[LOCAL_PLAYER].faction,
-		_state.per_player[AI_PLAYER].faction,
-	])
+	# ★ Colour means WHICH PLAYER, not which faction (user decision 2026-09-28): seat 0 draws
+	# orange, seat 1 cyan, whatever each plays — the measured colourblind-safe pair (OQ-11).
+	_feed = EntitySpriteFeed.new(_board, Factions.SEAT_PALETTES)
 	# ★ PER-UNIT actionability (user decision, 2026-08-21), replacing the army-wide
 	# "does this player have any AP" read that art bible §8.5/§2.6 specified
 	# literally. An actor is lit while its owner can still afford SOMETHING for it,
@@ -509,7 +468,8 @@ func _wire_hud_controls() -> void:
 func _buildable_roster() -> Array[StructureTypeDef]:
 	# ★ 2026-09-28: decided by data (each structure's vault `buildable` box). This was a
 	# hand-kept list, copied three more times, that had to agree — see StructureTypes.BUILDABLE.
-	return StructureTypes.BUILDABLE.duplicate()
+	# ★ Faction v2: the local player's faction decides what they can build (D5).
+	return Faction.buildable(_state, LOCAL_PLAYER).duplicate() if _state != null else StructureTypes.BUILDABLE.duplicate()
 
 
 # --- Status / legend overlay (screen space; provisional scene glue) ----------
@@ -657,7 +617,7 @@ func _refresh_status() -> void:
 	if _state != null and _state.match_status == GameState.MatchStatus.GAME_OVER:
 		var who: String = "You win" if _state.winner == LOCAL_PLAYER else "You lose"
 		var how: String = "opponent HQ destroyed" if _hq_destroyed() \
-			else "round limit reached (%d) - decided on unit count" % VS_MAX_ROUNDS
+			else "round limit reached (%d) - decided on unit count" % _state.max_rounds
 		_status_label.text = ">> MATCH OVER - %s (%s)" % [who, how]
 		_layout_status()
 		return
