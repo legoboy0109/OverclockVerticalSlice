@@ -213,3 +213,58 @@ extends Resource
 ## the 15 GDD-named scoring knobs, but lives on the same tuning surface per
 ## ADR-0011 §6.
 @export var commit_pacing_sec: float = 0.35
+
+
+# --- CR-14 research re-enable (2026-09-28) ---------------------------------
+# The knobs below back [method AI._score_research_candidates]'s per-tech marginal-value
+# models for the CR-14 tier-2 effects that have no GDD `research_value` precedent
+# (Attack/Defense/Economy Tech already had one; see `ai-opponent.md` §`research_value`).
+# Each is a stated assumption in the same spirit as `attacks_landed_per_turn_estimate` —
+# this AI has no lookahead into future board composition, so these convert a permanent,
+# situational effect into a flat per-turn rate.
+
+## Volley's `attack_range_bonus` is folded into an attack-bonus-equivalent before reusing
+## [method AI._attack_defense_tech_marginal_value]'s HP_PER_AP/ATTACKS_LANDED_PER_TURN_
+## ESTIMATE conversion. A range point trades reach for damage, not damage for damage, so
+## it is valued as a FRACTION of one flat attack point, never the full point.
+@export var range_bonus_attack_equivalent: float = 0.5
+
+## Assumed fraction of the AI's landed attacks that would otherwise have been reduced by
+## [member CombatConfig.cover_dr] — what Penetration's Cover-ignore is worth per attack,
+## fed through the same HP_PER_AP/ATTACKS_LANDED_PER_TURN_ESTIMATE conversion as Attack
+## Tech. This AI has no target-composition lookahead (whether the NEXT enemy it fights
+## happens to be in Cover), so this is a stated assumption, not a measured rate.
+@export var penetration_cover_uptime_estimate: float = 0.35
+
+## Assumed fraction of the AI's units that are idle (start-of-turn eligible for Field
+## Repair's heal) on a given turn. [b]Deliberately low[/b]: this AI is built to always
+## advance, attack or retreat when it legally can ([member cover_tile_discount]'s doc —
+## "this AI does not stay put"), so a unit is idle only when it had no legal move at
+## all. A low default keeps Field Repair from being valued as though the whole army
+## held position.
+@export var field_repair_idle_uptime_estimate: float = 0.15
+
+## Assumed Produce commits per turn once a producer is available — converts Logistics'
+## `produce_ap_discount` (already AP-native, no `credit_to_ap_rate`) and Foundry's
+## `produce_cost_discount_pct` (Credit-native, converted via `credit_to_ap_rate`) from a
+## per-action saving into a per-turn rate. Mirrors `attacks_landed_per_turn_estimate`'s
+## role for the combat techs.
+@export var produce_actions_per_turn_estimate: float = 1.0
+
+## The Build sibling of [member produce_actions_per_turn_estimate], sized much lower:
+## builds are far rarer than produces, gated both by the shared economy cadence cap
+## ([member max_economy_investments_per_turn]) and by each structure's own low
+## `max_count` (1-3). Backs Logistics' `build_ap_discount` leg only.
+@export var build_actions_per_turn_estimate: float = 0.25
+
+## Multiplier on a Research Lab's build value against the best tier-2 tech it would
+## unlock ([method AI._lab_value]).
+##
+## ★ 1.0, measured 2026-09-28. The first value (0.4) reasoned that the Lab "only buys
+## eligibility". The batch showed the result: the Lab scored ~0.03 against a
+## [member pass_threshold] of 0.15, so across 30 AI-vs-AI games NO side ever built one and
+## tier 2 never happened. The discount double-counted — the tech's own Credits, AP and
+## research time are charged by the research scorer when it is researched, and the Lab is
+## the ONLY route to it, so its worth is what it unlocks. Army production is protected
+## by the build scorer's ordinary ratio competition (a Barracks scores ~1.1), not by this.
+@export var lab_unlock_value_discount: float = 1.0
