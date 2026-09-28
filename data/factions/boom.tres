@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="FactionDef" load_steps=3 format=3]
 ; GENERATED from game-data/Factions/Boom.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: ed1cc8893d300853b36a2da0cf43533360aa9249b0a04caa67e8a449802cbf2d
+; source-sha256: 1cb67641f72b1ad8053c8ca5e01c3e94fee7a0536e4a9f9163321fe65def6952
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Script" path="res://src/core/faction/faction_unit_delta.gd" id="2"]
@@ -10,3 +10,6 @@ script = ExtResource("1")
 display_name = "Boom"
 description = "Placeholder archetype (player 2's colour in the slice). No modifiers yet."
 unit_deltas = []
+promotes = false
+rank_requires_support = false
+rank_support_structures = []

@@ -355,6 +355,9 @@ func start_turn(player: int) -> Array:
 		elif e is StructureState:
 			Structure.reset_turn_flags(e)
 
+	# 2b. ★ Promotion PV-7: a faction whose ranks need support loses a rank per turn without it.
+	Promotion.start_of_turn(self, player)
+
 	# 3. Advance build + research timers (commutative order; both before step 4).
 	events.append_array(BaseProduction.advance_build_timers(self, player))
 	events.append_array(Research.advance_research_timers(self, player))

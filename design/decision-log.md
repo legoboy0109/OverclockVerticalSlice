@@ -112,3 +112,17 @@ Each entry: **the call** · why · how to reverse it.
   average 63 turns (was 68) — Repair did not stall matches (ABOQ-3's worry).
 - The AI still rarely fields vehicles (3 Transports, 1 crewing across 30 games) — the economy
   finding under Unit classes stands.
+
+## Promotion & veterancy (`promotion-veterancy.md`)
+
+- **Built as general machinery, switched on per faction** (`promotes` in the faction's vault note).
+  No shipped faction promotes — PV-8 says the Holy Cosmic Empire only, and it doesn't exist yet —
+  so the system is inert in play today and proven by tests with a test faction.
+- **PV-9 / UOQ-3 — rank does not change upkeep**, per the resolved PVOQ-4.
+- **PVOQ-2 — per-unit stats:** rank lives on the unit; one `Unit.effective_max_hp` now replaces every
+  read of a unit's max hp (healing, repair, Field Repair, the AI, the HUD reader). No ADR written.
+- **A faction whose ranks need support cannot promote while unsupported** (PV-7 only described
+  losing rank; promoting during it would undo the drop).
+- **Merit from Demolish counts** (it is combat); from Self Destruct it doesn't (the unit is gone).
+- ⚠ **Not built: showing rank on the board (PVOQ-3).** Nothing promotes yet; build with the Empire.
+  The HUD reader already reports `rank`.

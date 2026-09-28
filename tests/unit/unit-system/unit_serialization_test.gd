@@ -58,6 +58,8 @@ const KNOWN_FIELDS: Array[String] = [
 	# lookahead that dropped them would see an empty vehicle.
 	"ability_used_this_turn", "cooldowns", "uses", "fortify", "turn_ended",
 	"disembarked_this_turn", "embarked_this_turn", "pilot", "cargo",
+	# ★ Promotion — a lookahead that lost rank would misprice every veteran.
+	"merit", "rank",
 ]
 
 

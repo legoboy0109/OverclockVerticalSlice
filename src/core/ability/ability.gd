@@ -133,7 +133,7 @@ static func validate(state: GameState, action: UseAbilityAction) -> int:
 		&"repair":
 			if not (target is UnitState) or target.owner != unit.owner or target == unit:
 				return Action.Reason.ILLEGAL_TARGET
-			if (target as UnitState).current_hp >= (target as UnitState).type.hp:
+			if (target as UnitState).current_hp >= Unit.effective_max_hp(target as UnitState):
 				return Action.Reason.ILLEGAL_TARGET   # repairing a full unit is a trap, not a choice
 			return Action.Reason.OK
 		&"fortify", &"self_destruct":
@@ -255,6 +255,8 @@ static func apply(state: GameState, action: UseAbilityAction) -> Array[Event]:
 			events.append(DamageEvent.new(unit.entity_id, s.entity_id, dmg))
 			if s.current_hp <= 0:
 				events.append_array(state.destroy_entity(s.entity_id))
+			Promotion.award_hit(state, unit, s)   # demolition is combat (PV-1)
+			Promotion.apply_rank(state, unit)
 			return events
 		&"self_destruct":
 			return _self_destruct(state, unit, ability, used)

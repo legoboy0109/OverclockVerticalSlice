@@ -308,7 +308,7 @@ static func apply_idle_healing(state: GameState, player: int) -> Array:
 		if not (e is UnitState) or e.owner != player:
 			continue
 		var unit: UnitState = e
-		if unit.has_attacked or unit.tiles_moved_this_turn > 0 or unit.current_hp >= unit.type.hp:
+		if unit.has_attacked or unit.tiles_moved_this_turn > 0 or unit.current_hp >= Unit.effective_max_hp(unit):
 			continue
 		var before: int = unit.current_hp
 		Unit.apply_hp_delta(unit, amount)

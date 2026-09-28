@@ -99,3 +99,10 @@ extends EntityState
 ## and their own state; they die with the transport (TP-4).
 @export var cargo: Array[UnitState] = []
 
+## ★ Promotion (promotion-veterancy.md). Merit earned in combat (PV-1) — kept even if rank is
+## lost to PV-7, so restoring support lets the unit re-promote.
+@export var merit: int = 0
+
+## Current rank 0..3 (PV-2). Travels with the unit, including when it is captured.
+@export var rank: int = 0
+

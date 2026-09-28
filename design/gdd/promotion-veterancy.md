@@ -1,6 +1,6 @@
 # Promotion & Veterancy
 
-> **Status**: **DRAFT** (2026-08-24) — Tier 1 of the faction corpus v2.
+> **Status**: **IMPLEMENTED 2026-09-28** as machinery gated per faction; no shipped faction promotes yet (PV-8). Rank display deferred. See `design/decision-log.md`.
 > **Author**: user (direction) + agents · **System #**: 21 (new)
 > **Owning GDD for**: field promotion, rank effects, and rank loss
 >

@@ -163,6 +163,9 @@ KINDS: dict[str, Kind] = {
     "Factions": Kind("Factions", "factions", "res://src/core/faction/faction_def.gd", "FactionDef", [
         Field("description", "str", ""),
         Field("unit_changes", "deltas", []),
+        Field("promotes", "bool", False, help="Units earn merit and rank up (Empire only, for now)"),
+        Field("rank_requires_support", "bool", False, help="Ranks drop without a support structure"),
+        Field("rank_support_structures", "links", [], target="Structures"),
     ]),
     "Abilities": Kind("Abilities", "abilities", "res://src/core/ability/ability_def.gd", "AbilityDef", [
         Field("description", "str", ""),

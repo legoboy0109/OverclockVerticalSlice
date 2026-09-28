@@ -2,6 +2,9 @@
 id: neutral
 description: No modifiers — the baseline every faction is measured against.
 unit_changes: []
+promotes: false
+rank_requires_support: false
+rank_support_structures: []
 ---
 
 ## Notes
