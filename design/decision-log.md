@@ -172,3 +172,17 @@ User decisions (2026-09-28): **colour = which player** (OQ-11); **factions in wa
   19 Pilots, 4 transports and **no Medics, Volunteers or Lance Teams** — so Solar's specialist
   identity is untested; and the harness's handicap cells hand out Alliance Troopers to both seats.
   A symmetric-policy AI cannot measure faction skill ceilings anyway (see `.agent/notes.md`).
+
+## Faction wave 3 — Independents (`factions/independents.md`)
+
+- **Built as designed** with its own Barracks (2 allowed, 900 each), Factory (1) and Airfield (the
+  Buzzard); the shared Research Lab and Defensive Structure. The Buzzard is an aircraft that needs a
+  pilot (the design says so; TP-5a only mandates it for ground vehicles).
+- **Economy Tier III denial is moot** — CR-14 removed tiers II and III.
+- ⚠ **The Marksman ships without SPOT** (deferred). Placeholder art borrowed from base units.
+
+### Findings to review
+- **Independents vs Alliance, 60 AI games: the Alliance won 51 (85%)**, in ~31 turns. The design
+  intends a poor, small army that wins by stealing vehicles — **the AI built 1 Pirate in 60 games and
+  captured nothing**, so it plays the Independents as a weak generic army. Either the faction is
+  too weak on paper, or (more likely) the AI can't play its identity. Worth your eyes before tuning.

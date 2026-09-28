@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=7 format=3]
+; GENERATED from game-data/Structures/Independents Barracks.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 7f501f9cc8954aea5ed3e26b3b7c50d4810e484f491642cd6e908645518aa8b2
+
+[ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/units/partisan.tres" id="2"]
+[ext_resource type="Resource" path="res://data/units/pirate.tres" id="3"]
+[ext_resource type="Resource" path="res://data/units/saboteur.tres" id="4"]
+[ext_resource type="Resource" path="res://data/units/marksman.tres" id="5"]
+[ext_resource type="Resource" path="res://data/units/missile_team.tres" id="6"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Independents Barracks"
+buildable = false
+art_id = &"barracks"
+hp = 12
+build_cost = 900
+build_time = 2
+upkeep = 100
+max_count = 2
+cap_bonus = 2
+production_cap = 4
+producible_types = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")]
+attack = 0
+attack_range = 0
+defense = 0
+can_counterattack = false
+can_research = false
+can_target = Array[int]([0, 1])
+targeting_mode = 0
+min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = 0
+resist_incendiary = 0

@@ -1,6 +1,6 @@
 # Faction — Independents
 
-> **Status**: **DRAFT** (2026-08-24) — Tier 2 of the faction corpus v2.
+> **Status**: **IMPLEMENTED 2026-09-28** (faction wave 3) — SPOT deferred; placeholder art borrowed. See `design/decision-log.md`.
 > **Name**: ★ TBD. Flavour: Revolutionary Rebels.
 > **Author**: user (direction) + agents · **Baseline**: `factions/democratic-alliance.md` (CR-10)
 >

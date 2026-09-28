@@ -24,10 +24,11 @@ const BOOM: FactionDef = preload("res://data/factions/boom.tres")
 # ★ Faction framework v2 (2026-09-28). Added wave by wave (user decision: Alliance first).
 const DEMOCRATIC_ALLIANCE: FactionDef = preload("res://data/factions/democratic_alliance.tres")
 const SOLAR_FEDERATION: FactionDef = preload("res://data/factions/solar_federation.tres")
+const INDEPENDENTS: FactionDef = preload("res://data/factions/independents.tres")
 
 ## Every faction, in picker order. ⚠ Rush and Boom are no longer factions in play — they are the
 ## two SEAT colour palettes (user decision 2026-09-28: colour means which player, not faction).
-const ALL: Array[FactionDef] = [DEMOCRATIC_ALLIANCE, SOLAR_FEDERATION, NEUTRAL, RUSH, BOOM]
+const ALL: Array[FactionDef] = [DEMOCRATIC_ALLIANCE, SOLAR_FEDERATION, INDEPENDENTS, NEUTRAL, RUSH, BOOM]
 
 ## The seat colour palettes: seat 0 orange, seat 1 cyan, whatever faction each seat plays.
 const SEAT_PALETTES: Array[FactionDef] = [RUSH, BOOM]
