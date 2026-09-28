@@ -261,3 +261,31 @@ User decisions (2026-09-28): **colour = which player** (OQ-11); **factions in wa
 ⇒ **These measure the AI, not the factions.** The single most valuable next step for faction
 balance is a **faction-aware AI** (OQ-15) — it at least needs to value a unit by what it can hit
 in the current matchup, and to use each faction's signature tools.
+
+## Faction-aware AI (OQ-15) — first pass, 2026-09-28
+
+- **The AI values a unit by what it can hit in this matchup**, not by its price alone: a
+  multiplier of 0.25 + 1.25 × (share of the enemy's worth it can target, weighted by how much of
+  their hp one hit takes, after defence and resistance). Builders keep their flat value; unarmed
+  transports sit at the floor (the AI has no plan for carrying troops — at a flat value it bought
+  89 Haulers).
+- **Pilots are wanted while the AI owns an empty vehicle** (+1.5 on a pilot-capable unit).
+- **Crew-targeting attacks are valued as what they do** (kill the pilot, leave a vehicle to steal),
+  and a unit that can Capture walks toward empty enemy ground vehicles.
+- Knobs in `AIConfig`: `matchup_floor`, `matchup_scale`, `crew_need_bonus`.
+
+### Results — faction wins vs the Alliance, 60 AI games each (both seats)
+
+| Faction | Before | After | Note |
+|---|---:|---:|---|
+| Solar Federation | 21 | **10** | now crews its Gun Trucks — but 4-hp Citizens die to one Sniper shot, and the Alliance AI now builds Snipers. ⚠ **Likely a real balance signal** |
+| Independents | 9 | **23** | Pirate/crew play and better unit choice |
+| Machinist's Union | 7 | **18** | builds its Batteries now |
+| Galactic Protectorate | 12 | **18** | stopped mass-buying anti-armour against infantry |
+| Holy Cosmic Empire | 29 | **28** | unchanged |
+| **Total** | 78/300 | **97/300** | Alliance mirror still healthy: 29/30 HQ kills, avg 55 turns |
+
+⇒ Better, still Alliance-favoured. Two things remain unknowable from this harness: whether the
+Alliance is simply the strongest roster (its design is "complete"), and how much is the AI still
+not playing specialists (Solar's Medics/Volunteers, the Independents' Saboteurs) or transports.
+A human playing each faction is the next real measurement.
