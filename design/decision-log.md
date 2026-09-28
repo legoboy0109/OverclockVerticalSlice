@@ -124,8 +124,10 @@ Each entry: **the call** · why · how to reverse it.
 - **A faction whose ranks need support cannot promote while unsupported** (PV-7 only described
   losing rank; promoting during it would undo the drop).
 - **Merit from Demolish counts** (it is combat); from Self Destruct it doesn't (the unit is gone).
-- ⚠ **Not built: showing rank on the board (PVOQ-3).** Nothing promotes yet; build with the Empire.
-  The HUD reader already reports `rank`.
+- ✅ **Rank on the board (PVOQ-3), built 2026-09-28:** 1–3 gold chevrons on a dark plate at the
+  tile's lower-right corner, drawn with the units so it layers correctly. Gold, not a faction colour
+  (colour means which player). Units have no ownership decal to put a pip on, so it is its own badge.
+  Preview: `production/qa/evidence/rank-badges/mockup-composite.png` (a composite, not a screenshot).
 
 ## Faction framework v2 + setup screen (`faction-identity.md`, `factions/democratic-alliance.md`)
 
@@ -239,8 +241,7 @@ User decisions (2026-09-28): **colour = which player** (OQ-11); **factions in wa
   Cathedral (my call — the design gives no structure gate).
 - **Empire vehicles and aircraft survive on defence** (3 / 2 / 2) rather than hit points; aircraft
   need pilots ("no autonomous units").
-- ⚠ **Rank is not shown on the board** (PVOQ-3). Now that a faction promotes, this matters: you
-  cannot see which of your Levies is a Champion. Next UI item worth doing.
+- ✅ Rank is shown on the board (see Promotion above).
 - ⚠ Confessor ships without SPOT. Placeholder art borrowed.
 
 ### Findings to review
