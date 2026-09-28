@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="TechDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Economy Tech"
+description = "+500 Credits of income every turn."
+tier = 1
+research_cost = 1000
+research_time = 3
+ap_surcharge = -1
+economy_tier_bonus = 1

@@ -71,6 +71,11 @@ CombatBalance="*res://src/core/combat/combat_balance.gd"
 ; StructureTypes.HQ/ECONOMY_OUTPOST/... as a bare global reference.
 StructureTypes="*res://src/core/structure/structure_types.gd"
 
+; ★ 2026-09-28 (CR-14). Thin, logic-free registry Autoload (ADR-0007), mirroring
+; UnitTypes/StructureTypes. Preloads every TechDef preset once at boot; Techs.ALL is
+; the stable order the research picker, legal_research_targets and the AI walk.
+Techs="*res://src/core/research/techs.gd"
+
 ; Thin, logic-free config Autoload (ADR-0017 D6), a sibling of Balance/
 ; UnitBalance/CombatBalance. Loads the BaseProductionConfig tuning resource
 ; once at boot; Base & Production (and cross-system readers like Combat's

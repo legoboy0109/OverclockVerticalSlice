@@ -41,16 +41,21 @@ extends Resource
 ## refund ([code]Credits.credit[/code]). Never negative.
 @export var current_credits: int = 0
 
-## One-time permanent unlock flag. Sole writer: Research (later stories); once
-## true, never reset to false.
-@export var has_attack_tech: bool = false
-
-## One-time permanent unlock flag. Sole writer: Research (later stories); once
-## true, never reset to false.
-@export var has_defense_tech: bool = false
+## Every tech this player has completed, in completion order (CR-14, 2026-09-28).
+## Sole writer: [method Research.advance_research_timers]. Append-only — a completed
+## tech is never lost, even if the structure that gated it is destroyed (Rule 8).
+##
+## Holds the shared [code]Techs[/code] presets by identity (never copies), so
+## [code]tech in completed_techs[/code] survives [method GameState.clone].
+##
+## [b]Replaced the [code]has_attack_tech[/code] / [code]has_defense_tech[/code]
+## booleans[/b] (ADR-0018 D1): one flag per tech could not scale to a 9-tech tree
+## whose effects are summed data. Read it through [Research]'s queries, not directly.
+@export var completed_techs: Array[TechDef] = []
 
 ## Count of completed economy research tiers (0..EconomyConfig.max_economy_tier).
-## Sole writer: Research. Monotonic — tiers are never lost once completed.
+## Sole writer: Research, on completing a tech with [member TechDef.economy_tier_bonus]
+## (under CR-14 only Economy Tech has one, so the reachable ceiling is tier 1). Monotonic — tiers are never lost once completed.
 ##
 ## [b]Replaced the `has_economy_tech` boolean on 2026-08-24[/b] when Credit income
 ## was re-based off the (now deleted) Economy Outpost curve onto a finite,

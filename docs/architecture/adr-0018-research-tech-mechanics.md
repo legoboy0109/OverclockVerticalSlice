@@ -1,5 +1,16 @@
 # ADR-0018: Research & Tech Mechanics — Tech Unlocks, Per-Lab Research State, and Selection
 
+
+> ⚑ **Amended 2026-09-28 by CR-14** (`design/gdd/research-tech.md`, end of file). Superseded here:
+> **D1** — the three named bool flags became `PlayerState.completed_techs: Array[TechDef]`, with effects
+> as summed `TechDef` fields (Alternative 1, originally rejected for a fixed 3-tech tree, is now the
+> right call for 9 techs with branches). **D2** — research state lives on the researching structure
+> (the HQ, `StructureTypeDef.can_research`), not a Lab; the Lab is a prerequisite gate
+> (`TechDef.required_structures`). **D4** — `legal_research_targets(state, player)` takes a player.
+> **D6** — no Lab-destroyed hook: completed and in-progress research survive losing the Lab.
+> New verb `CANCEL_RESEARCH`; new `Action.Reason`s for each gate. D3 (derived status) and D5 (dual cost,
+> 50% Credit refund, AP never refunded) hold unchanged.
+
 ## Status
 Accepted
 

@@ -61,6 +61,11 @@ signal produce_type_chosen(unit_type: UnitTypeDef)
 ## a producer (CR-5) — the caller routes them into different flows.
 signal build_type_chosen(structure_type: StructureTypeDef)
 
+## Emitted when the player activates an enabled row of the Research submenu
+## (CR-14). This — not [signal verb_chosen] — is the Research commitment, mirroring
+## [signal produce_type_chosen]: a research order without a tech is not an order.
+signal research_tech_chosen(tech: TechDef)
+
 ## Emitted when the player backs out of the TOP-LEVEL menu (submenu back-out is
 ## handled internally and never reaches the caller). The caller deselects.
 signal dismissed()
@@ -144,6 +149,7 @@ const SUBMENU_FADE_SEC: float = 0.12
 const CONFIRM_LABELS: Dictionary = {
 	CommandFSM.Verb.CANCEL_BUILD: "Confirm cancel",
 	CommandFSM.Verb.DISBAND: "Confirm disband",
+	CommandFSM.Verb.CANCEL_RESEARCH: "Confirm cancel",
 }
 
 ## Kept for the tests and callers that name it directly; the map above is the
@@ -165,6 +171,8 @@ const VERB_LABELS: Dictionary = {
 	CommandFSM.Verb.CANCEL_BUILD: "Cancel Build",
 	CommandFSM.Verb.DISBAND: "Disband",
 	CommandFSM.Verb.BUILD: "Build",
+	CommandFSM.Verb.RESEARCH: "Research",
+	CommandFSM.Verb.CANCEL_RESEARCH: "Cancel Research",
 }
 
 ## The verbs that DESTROY something for a partial refund, and therefore take the
@@ -179,6 +187,7 @@ const VERB_LABELS: Dictionary = {
 const DESTRUCTIVE_VERBS: Array[int] = [
 	CommandFSM.Verb.CANCEL_BUILD,
 	CommandFSM.Verb.DISBAND,
+	CommandFSM.Verb.CANCEL_RESEARCH,
 ]
 ## Verb -> the InputMap action that also triggers it directly, skipping the menu.
 ##
@@ -221,6 +230,10 @@ const REASON_LABELS: Dictionary = {
 	CommandFSM.Reason.POPULATION_CAP_REACHED: "at pop cap",
 	CommandFSM.Reason.NOT_A_BUILDER: "not a builder",
 	CommandFSM.Reason.NO_BUILD_SPACE: "no room beside it",
+	CommandFSM.Reason.NOT_A_RESEARCHER: "not a researcher",
+	CommandFSM.Reason.RESEARCH_BUSY: "researching already",
+	CommandFSM.Reason.NOTHING_RESEARCHABLE: "nothing to research",
+	CommandFSM.Reason.NOTHING_IN_RESEARCH: "nothing to cancel",
 }
 
 ## Player-facing phrasing for an [enum Action.Reason] a validator returned when a
@@ -250,6 +263,15 @@ const COMMIT_REJECTION_LABELS: Dictionary = {
 	Action.Reason.GAME_OVER: "the match is over",
 	Action.Reason.NO_SUCH_ENTITY: "that entity is gone",
 	Action.Reason.NOT_A_BUILDER: "no builder for that",
+	# ★ CR-14 (2026-09-28) research reasons.
+	Action.Reason.ALREADY_RESEARCHED: "already researched",
+	Action.Reason.RESEARCH_IN_PROGRESS: "already researching",
+	Action.Reason.PREREQUISITE_MISSING: "prerequisite missing",
+	Action.Reason.REQUIRES_STRUCTURE: "needs a Research Lab",
+	Action.Reason.TECH_EXCLUDED: "that branch is locked",
+	Action.Reason.TECH_FACTION_RESTRICTED: "not available to your faction",
+	Action.Reason.NOTHING_IN_RESEARCH: "nothing to cancel",
+	Action.Reason.IN_DEFICIT: "in deficit",
 }
 
 
@@ -270,7 +292,9 @@ static func commit_rejection_text(reason: int) -> String:
 const REASON_ORDER: Array[int] = [
 	CommandFSM.Reason.NOT_A_PRODUCER,
 	CommandFSM.Reason.NOT_A_BUILDER,
+	CommandFSM.Reason.NOT_A_RESEARCHER,
 	CommandFSM.Reason.NOT_UNDER_CONSTRUCTION,
+	CommandFSM.Reason.NOTHING_IN_RESEARCH,
 	CommandFSM.Reason.NOT_A_UNIT,
 	CommandFSM.Reason.NOTHING_BLOCKED,
 	CommandFSM.Reason.NOT_COMPLETED,
@@ -280,6 +304,8 @@ const REASON_ORDER: Array[int] = [
 	CommandFSM.Reason.PRODUCTION_CAP_REACHED,
 	CommandFSM.Reason.NO_DEPLOY_SPACE,
 	CommandFSM.Reason.NO_BUILD_SPACE,
+	CommandFSM.Reason.RESEARCH_BUSY,
+	CommandFSM.Reason.NOTHING_RESEARCHABLE,
 	CommandFSM.Reason.POPULATION_CAP_REACHED,
 	CommandFSM.Reason.INSUFFICIENT_CREDITS,
 	CommandFSM.Reason.INSUFFICIENT_AP,
@@ -323,6 +349,13 @@ var _fade: Tween = null
 ## Only [constant CommandFSM.Verb.CANCEL_BUILD] ever arms. See
 ## [method _on_verb_row_pressed].
 var _armed_verb: int = -1
+
+## ★ CR-14: what the Research row opens and what its rows say, captured at [method open]
+## from the same state the verb rows were built from — so the submenu can never show a
+## different world from the row that opened it.
+var _research_options: Array[CommandFSM.ResearchOption] = []
+var _research_status: String = ""
+var _research_refund: String = ""
 
 
 func _init() -> void:
@@ -404,6 +437,11 @@ func open(state: GameState, entity: EntityState, anchor_screen: Vector2, \
 	_tile_width_px = tile_width_px
 	_close_submenu()
 	_build_plate()
+	_research_options = CommandFSM.research_options(state, entity)
+	_research_status = CommandFSM.research_status_text(entity)
+	_research_refund = ""
+	if entity is StructureState and (entity as StructureState).research_target != null:
+		_research_refund = "+%d CR back" % CommandFSM.cancel_research_preview(state, entity)
 	_fill_rows(
 		CommandFSM.menu_model(state, entity),
 		CommandFSM.produce_options(state, entity),
@@ -545,9 +583,7 @@ func _fill_rows(model: Array[CommandFSM.VerbEntry], \
 		if not entry.enabled and _is_inapplicable(entry):
 			continue
 		var right: String = ""
-		if not entry.enabled:
-			right = _priced(entry.ap_cost, reason_text(entry.reason))
-		elif entry.verb == CommandFSM.Verb.ATTACK:
+		if entry.verb == CommandFSM.Verb.ATTACK and entry.enabled:
 			# ★ 2026-08-25 (OQ-2). Attack is the one verb whose price is a single
 			# number known before any preview opens, and it is the number the player
 			# is weighing when they choose between hitting something and moving.
@@ -555,7 +591,17 @@ func _fill_rows(model: Array[CommandFSM.VerbEntry], \
 			# here without inventing a figure — those stay bare, and their prices
 			# appear where they become knowable (the tile readout, the submenu).
 			right = _priced(entry.ap_cost, "")
-		elif entry.verb == CommandFSM.Verb.PRODUCE or entry.verb == CommandFSM.Verb.BUILD:
+		elif entry.verb == CommandFSM.Verb.RESEARCH and not entry.enabled \
+				and not _research_status.is_empty():
+			# Busy is the one research state worth naming precisely: WHAT is being
+			# researched and WHEN it lands is the question a player selecting their HQ has.
+			right = _research_status
+		elif entry.verb == CommandFSM.Verb.CANCEL_RESEARCH and entry.enabled:
+			right = _research_refund # see the refund before either press, like Cancel Build
+		elif not entry.enabled:
+			right = _priced(entry.ap_cost, reason_text(entry.reason))
+		elif entry.verb == CommandFSM.Verb.PRODUCE or entry.verb == CommandFSM.Verb.BUILD \
+				or entry.verb == CommandFSM.Verb.RESEARCH:
 			# ASCII ">" rather than a triangle: the fallback font has no glyph for
 			# one and would draw a tofu box.
 			#
@@ -681,6 +727,8 @@ static func _cost_text(credit_cost: int, ap_cost: int, enabled: bool, reason: in
 ## `design/ux/action-menu.md` OQ-3, including its discoverability consequence.
 static func _is_inapplicable(entry: CommandFSM.VerbEntry) -> bool:
 	return (entry.reason & CommandFSM.Reason.NOT_UNDER_CONSTRUCTION) != 0 \
+		or (entry.reason & CommandFSM.Reason.NOT_A_RESEARCHER) != 0 \
+		or (entry.reason & CommandFSM.Reason.NOTHING_IN_RESEARCH) != 0 \
 		or (entry.reason & CommandFSM.Reason.NOT_A_UNIT) != 0 \
 		or (entry.reason & CommandFSM.Reason.NOT_A_PRODUCER) != 0 \
 		or (entry.reason & CommandFSM.Reason.NOT_A_BUILDER) != 0 \
@@ -835,6 +883,54 @@ func _open_submenu(options: Array[CommandFSM.ProduceOption]) -> void:
 ## Uses the submenu plate rather than the verb plate so that opening the Build
 ## picker never disturbs an action menu the player may already have open on
 ## something else.
+## ★ CR-14: the research picker — every tech in [code]Techs.ALL[/code] order, so the
+## tree reads the same way every time and a locked tech is SEEN, with why, rather than
+## missing. The description rides on the label: there is no detail pane, and a player
+## choosing between Penetration and Volley needs to know what each does before the pick
+## that locks the other out for the match.
+func _open_research_submenu() -> void:
+	var items: Array[Dictionary] = []
+	for option: CommandFSM.ResearchOption in _research_options:
+		items.append({
+			"label": "%s - %s" % [option.tech.display_name, option.tech.description],
+			"right": research_option_text(option),
+			"enabled": option.enabled,
+			"is_reason": not option.enabled,
+			"on_press": _on_research_row_pressed.bind(option.tech),
+		})
+	_build_submenu(items)
+
+
+## The right-hand text of one research row: the price when it can be started, otherwise
+## the single most useful thing to know about why not. Static so it is testable.
+static func research_option_text(option: CommandFSM.ResearchOption) -> String:
+	var price: String = "%d CR + %d AP · %d turn%s" % [
+		option.credit_cost, option.ap_cost, option.turns, "" if option.turns == 1 else "s"]
+	match option.reason:
+		Action.Reason.OK:
+			return price
+		Action.Reason.ALREADY_RESEARCHED:
+			return "Researched"
+		Action.Reason.RESEARCH_IN_PROGRESS:
+			return "Researching - %d turn%s" % [option.turns_remaining_elsewhere,
+				"" if option.turns_remaining_elsewhere == 1 else "s"]
+		Action.Reason.PREREQUISITE_MISSING:
+			return "Needs %s" % (option.blocking_tech.display_name if option.blocking_tech else "an earlier tech")
+		Action.Reason.REQUIRES_STRUCTURE:
+			return "Needs a %s" % (option.blocking_structure.display_name if option.blocking_structure else "structure")
+		Action.Reason.TECH_EXCLUDED:
+			return "Locked - you chose %s" % (option.blocking_sibling.display_name if option.blocking_sibling else "the other")
+		Action.Reason.TECH_FACTION_RESTRICTED:
+			return "Not available to your faction"
+		Action.Reason.CANT_AFFORD_CREDITS:
+			return "%s  needs Credits" % price
+		Action.Reason.CANT_AFFORD:
+			return "%s  needs AP" % price
+		Action.Reason.IN_DEFICIT:
+			return "%s  in deficit" % price
+	return price
+
+
 func open_build_options(options: Array[CommandFSM.BuildOption], \
 		anchor_screen: Vector2, tile_width_px: float) -> void:
 	_anchor = anchor_screen
@@ -1047,7 +1143,10 @@ func _on_verb_row_pressed(verb: int, produce_options: Array[CommandFSM.ProduceOp
 			# Produce chooses nothing by itself — a produce order without a type is
 			# not an order. The row opens the submenu and the SUBMENU commits.
 			_open_submenu(produce_options)
-		CommandFSM.Verb.CANCEL_BUILD, CommandFSM.Verb.DISBAND:
+		CommandFSM.Verb.RESEARCH:
+			# Same shape as Produce: the row chooses nothing, the tech list commits.
+			_open_research_submenu()
+		CommandFSM.Verb.CANCEL_BUILD, CommandFSM.Verb.DISBAND, CommandFSM.Verb.CANCEL_RESEARCH:
 			# ★ Two presses, not one (`design/ux/action-menu.md` decision 5).
 			#
 			# `interaction-patterns.md`'s [i]Hold-to-Confirm Refund[/i] governs this
@@ -1152,6 +1251,11 @@ func _on_produce_row_pressed(unit_type: UnitTypeDef) -> void:
 
 
 ## A Build picker row was activated.
+func _on_research_row_pressed(tech: TechDef) -> void:
+	close()
+	research_tech_chosen.emit(tech)
+
+
 func _on_build_row_pressed(structure_type: StructureTypeDef) -> void:
 	close()
 	build_type_chosen.emit(structure_type)

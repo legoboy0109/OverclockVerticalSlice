@@ -44,7 +44,7 @@ extends RefCounted
 ## ⚠ APPENDED ONLY, never inserted — CommandFSM and several callers index this by
 ## ordinal, and renumbering an existing verb silently rewires every one of them.
 ## (S8-13 learned this when appending BUILD; CANCEL_PRODUCTION follows the rule.)
-enum Verb { MOVE, ATTACK, BUILD, PRODUCE, RESEARCH, CANCEL_BUILD, END_TURN, DISBAND, WAIT, CANCEL_PRODUCTION }
+enum Verb { MOVE, ATTACK, BUILD, PRODUCE, RESEARCH, CANCEL_BUILD, END_TURN, DISBAND, WAIT, CANCEL_PRODUCTION, CANCEL_RESEARCH }
 
 ## Every rejection cause [method GameState.apply_action] can return, plus
 ## [constant Reason.OK] for a passing [code]validate()[/code]. Deliberately an
@@ -98,6 +98,22 @@ enum Reason {
 	# named", "that entity is gone", "it is not yours" and "it is not a Builder"
 	# alike: to a player those are one situation, "you have no builder for this".
 	NOT_A_BUILDER,
+	# ★ CR-14 research gates (2026-09-28), appended to preserve ordinals. Each names a
+	# DIFFERENT fix a player could make, which is why they are not one "can't research".
+	# The tech is already completed — permanent, never re-researchable.
+	ALREADY_RESEARCHED,
+	# The researcher already has a tech in progress (one at a time).
+	RESEARCH_IN_PROGRESS,
+	# A tech this one requires is not completed yet.
+	PREREQUISITE_MISSING,
+	# The player owns no COMPLETED structure this tech requires (the Research Lab gate).
+	REQUIRES_STRUCTURE,
+	# A tech sharing this one's exclusive group is completed or under research.
+	TECH_EXCLUDED,
+	# The player's faction may not research this tech.
+	TECH_FACTION_RESTRICTED,
+	# Cancel Research on a researcher with nothing in progress.
+	NOTHING_IN_RESEARCH,
 }
 
 ## Which verb this is — the dispatch key [method GameState.apply_action] uses

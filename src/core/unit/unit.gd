@@ -81,42 +81,20 @@ static func apply_hp_delta(unit: UnitState, delta: int) -> void:
 	unit.current_hp = clampi(unit.current_hp + delta, 0, unit.type.hp)
 
 
-## The attack value Combat uses (ADR-0010's forward-declared Unit-owned
-## contract, TR-unit-006): [param unit]'s base attack (from its
-## [UnitTypeDef]) plus the flat Attack-Tech bonus when the unit's owner holds
-## Attack Tech. Computed [b]live[/b] every call — never baked at construction —
-## so an already-built unit reflects its owner researching Attack Tech mid-match
-## (Research tech-unlock flags are permanent, ADR-0018).
-##
-## The bonus [b]magnitude[/b] is Research-owned and read at call time via the
-## forward-declared [method Research.attack_tech_bonus] (mirroring
-## [method Research.economy_tech_income_bonus], ADR-0006/0018) — never hardcoded
-## in Unit code (control-manifest). The [i]gate[/i] is read directly from
-## [member PlayerState.has_attack_tech] (ADR-0001, sole-writer Research). O(1).
-##
-## Scope: typed to [UnitState] for the VS unit roster (Story 004). Combat may
-## widen the contract to [EntityState] for a Defensive Structure's attack during
-## Combat-epic wiring; deferred here (no structure uses Attack Tech in the VS).
+## The attack value Combat uses (ADR-0010, TR-unit-006): [param unit]'s base attack
+## plus the summed [member TechDef.attack_bonus] of every tech its owner has completed
+## ([method Research.attack_bonus]). Computed [b]live[/b] every call — never baked — so
+## an already-built unit reflects a tech completing mid-match (Rule 8).
 static func effective_attack(state: GameState, unit: UnitState) -> int:
-	var bonus: int = Research.attack_tech_bonus() if state.per_player[unit.owner].has_attack_tech else 0
-	return unit.type.attack + bonus
+	return unit.type.attack + Research.attack_bonus(state, unit.owner)
 
 
 ## The defense value Combat's damage formula subtracts (ADR-0010's
-## `defense(defender)` term, TR-unit-006/007): [param unit]'s base defense (from
-## its [UnitTypeDef], 0 across the whole VS roster) plus the flat Defense-Tech
-## bonus when the unit's owner holds Defense Tech. Computed [b]live[/b] every
-## call (Research flags are permanent, ADR-0018).
-##
-## Independent of [method effective_attack]: the [member PlayerState.has_defense_tech]
-## gate and the Defense-Tech magnitude never touch Attack Tech's flag/bonus, and
-## vice-versa — the two tech folds share this class but read disjoint state. The
-## Defense-Tech [b]magnitude[/b] is read at call time from the forward-declared
-## [method Research.defense_tech_bonus] (mirroring [method effective_attack]'s
-## Research seam) — never hardcoded in Unit code. O(1).
+## `defense(defender)` term): [param unit]'s base defense plus
+## [method Research.defense_bonus] (Defense Tech, and Plating on top). Live, like
+## [method effective_attack].
 static func effective_defense(state: GameState, unit: UnitState) -> int:
-	var bonus: int = Research.defense_tech_bonus() if state.per_player[unit.owner].has_defense_tech else 0
-	return unit.type.defense + bonus
+	return unit.type.defense + Research.defense_bonus(state, unit.owner)
 
 
 ## The AP cost to produce a unit of [param unit_type] for [param player]
@@ -136,7 +114,34 @@ static func effective_defense(state: GameState, unit: UnitState) -> int:
 ## faction-identity-locked per ADR-0012 CR-6 (this story does not touch them).
 static func effective_produce_cost(state: GameState, unit_type: UnitTypeDef, player: int) -> int:
 	var d: FactionUnitDelta = Faction.unit_delta(state.faction_of(player), unit_type)
-	return maxi(1, unit_type.produce_cost + (d.cost_delta if d else 0))
+	var cost: int = unit_type.produce_cost + (d.cost_delta if d else 0)
+	# ★ CR-14 Foundry: a percent off AFTER the faction delta, integer-floored — the
+	# discount applies to what this player actually pays, not the catalogue price.
+	cost = cost * (100 - Research.produce_cost_discount_pct(state, player)) / 100
+	return maxi(1, cost)
+
+
+## The attack range [param entity] fires at (CR-14): its template range, plus
+## [method Research.attack_range_bonus] for a UNIT that can already attack at range.
+## Structures never get the bonus (research buffs units only, as for attack/defense),
+## and a unit with range 0 — the Builder — stays at 0: Volley extends reach, it does
+## not arm a unit that has no weapon.
+##
+## ★ The single read site for range. Combat's targeting, the AI's reach estimates and
+## the HUD all go through here, so what the board highlights, what the AI plans for
+## and what Combat accepts can never disagree.
+static func effective_attack_range(state: GameState, entity: EntityState) -> int:
+	if entity is UnitState:
+		return effective_type_attack_range(state, entity.type, entity.owner)
+	return entity.type.attack_range
+
+
+## [method effective_attack_range] for a unit TYPE [param player] would field — for
+## callers reasoning about a unit that does not exist yet (the AI's deploy scoring).
+static func effective_type_attack_range(state: GameState, unit_type: UnitTypeDef, player: int) -> int:
+	if unit_type.attack_range > 0:
+		return unit_type.attack_range + Research.attack_range_bonus(state, player)
+	return unit_type.attack_range
 
 
 ## The AP cost to move [param unit_type] one tile for [param player]

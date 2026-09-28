@@ -180,6 +180,10 @@
 >   vulnerable to tech base disruption"* thesis now has teeth for everyone, and the Empire's version
 >   must be made distinct from the baseline vulnerability rather than identical to it.
 > - `/design-review` + `/propagate-design-change` owed once the corpus settles.
+>
+> ⚑ **CR-14 (2026-09-28, user decision):** tiers II and III were replaced by a pick-one tier-2 branch
+> (Logistics / Foundry — `research-tech.md`). **Only tier I is reachable, so the ceiling is now
+> 1,500.** The hard-ceiling argument above is unchanged; the ceiling is simply lower.
 
 ---
 

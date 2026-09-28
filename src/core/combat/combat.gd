@@ -65,6 +65,9 @@ extends RefCounted
 ## re-opening this function.
 static func damage(state: GameState, attacker: EntityState, defender: EntityState) -> int:
 	var cover: int = CombatBalance.combat.cover_dr if (defender is UnitState and state.grid.is_cover(defender.position.x, defender.position.y)) else 0
+	# ★ CR-14 Penetration: a UNIT attacker whose owner holds it ignores Cover entirely.
+	if attacker is UnitState and Research.ignores_cover(state, attacker.owner):
+		cover = 0
 	var def: int = Unit.effective_defense(state, defender) if defender is UnitState else defender.type.defense
 	return max(CombatBalance.combat.min_damage, _effective_attack_for(state, attacker) - cover - def)
 
@@ -209,7 +212,7 @@ class _WalkResult extends RefCounted:
 ## O([code]attack_range[/code]) — one direction, each step O(1) grid/entity
 ## lookups (control-manifest Performance Guardrail).
 static func _walk_direction(state: GameState, attacker: EntityState, origin: Vector2i, direction: Vector2i) -> _WalkResult:
-	var attack_range: int = attacker.type.attack_range
+	var attack_range: int = Unit.effective_attack_range(state, attacker) # CR-14 Volley
 	for step: int in range(1, attack_range + 1):
 		var tile: Vector2i = origin + direction * step
 		if state.grid.terrain_at(tile.x, tile.y) == GridState.Terrain.IMPASSABLE:
@@ -335,7 +338,7 @@ static func _area_targets_from(state: GameState, attacker: EntityState, from_til
 		push_error("AREA unit has min_range > attack_range: entity_id=%d" % attacker.entity_id)
 		return results
 	var min_range: int = attacker.type.min_range
-	var attack_range: int = attacker.type.attack_range
+	var attack_range: int = Unit.effective_attack_range(state, attacker) # CR-14 Volley
 	for y: int in range(from_tile.y - attack_range, from_tile.y + attack_range + 1):
 		for x: int in range(from_tile.x - attack_range, from_tile.x + attack_range + 1):
 			var occupant_id: int = state.grid.occupant_at(x, y)

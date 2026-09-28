@@ -124,7 +124,13 @@ const NO_SINGLE_COST: int = -1
 ## belongs to a Builder unit and consumes it, so it is exactly what this menu is
 ## for: a verb of the selected thing. [constant Verb.BUILD] is appended, never
 ## inserted, so every existing ordinal is preserved.
-enum Verb { MOVE, ATTACK, PRODUCE, WAIT, CANCEL_BUILD, DISBAND, BUILD }
+##
+## ★ [constant Verb.RESEARCH]/[constant Verb.CANCEL_RESEARCH] joined 2026-09-28
+## (CR-14): research now runs at the HQ, a selectable [StructureState], so it is a
+## verb of the selected thing exactly like Produce/Build — never a HUD control.
+## Appended at the end, never inserted, for the same ordinal-stability reason as
+## [constant Verb.BUILD].
+enum Verb { MOVE, ATTACK, PRODUCE, WAIT, CANCEL_BUILD, DISBAND, BUILD, RESEARCH, CANCEL_RESEARCH }
 
 ## Disablement reason flags (powers of two — see [member VerbEntry.reason]'s
 ## doc comment for why this is a bitmask, not a single code). Each flag names
@@ -148,6 +154,11 @@ enum Reason {
 	POPULATION_CAP_REACHED = 1024, ## Population.can_field() returned false — the army is at (or over) its population cap. Mirrors [constant Action.Reason.POPULATION_CAP_REACHED].
 	NOT_A_BUILDER = 8192,         ## Build: the entity is not a unit whose type can build ([member UnitTypeDef.can_build]). A STRUCTURAL "can never apply to this kind of thing", so the row is hidden rather than dimmed (CR-4's structural-vs-situational rule).
 	NO_BUILD_SPACE = 16384,       ## Build: [method BaseProduction.legal_build_tiles_for] is empty — this Builder has no legal tile beside it right now. SITUATIONAL, so the row stays and says so.
+	# ★ CR-14 (2026-09-28) research flags, appended to preserve every existing bit value.
+	NOT_A_RESEARCHER = 32768,     ## Research: the entity is not a structure whose type can research ([member StructureTypeDef.can_research]). STRUCTURAL — hidden, not dimmed (mirrors NOT_A_PRODUCER/NOT_A_BUILDER).
+	RESEARCH_BUSY = 65536,        ## Research: this researcher already has a tech in progress (one at a time, CR-14 Rule 3). SITUATIONAL — [method ActionMenu] shows what and how long instead of this generic label.
+	NOTHING_RESEARCHABLE = 131072, ## Research: [method Research.legal_research_targets] is empty for this player right now — every tech is already researched, excluded, or gated. SITUATIONAL.
+	NOTHING_IN_RESEARCH = 262144,  ## Cancel Research: this researcher has no [member StructureState.research_target] to cancel. STRUCTURAL for the row's purposes — hidden, mirrors NOT_UNDER_CONSTRUCTION.
 }
 
 
@@ -355,8 +366,10 @@ static func menu_model(state: GameState, entity: EntityState) -> Array[VerbEntry
 	menu.append(_attack_entry(state, entity))
 	menu.append(_produce_entry(state, entity))
 	menu.append(_build_entry(state, entity))
+	menu.append(_research_entry(state, entity))
 	menu.append(_wait_entry(entity))
 	menu.append(_cancel_build_entry(state, entity))
+	menu.append(_cancel_research_entry(state, entity))
 	menu.append(_disband_entry(state, entity))
 	return menu
 
@@ -488,7 +501,7 @@ static func _produce_entry(state: GameState, entity: EntityState) -> VerbEntry:
 
 	# Dual-cost (ADR-0006 pivot): a unit is affordable iff BOTH its Credit main cost
 	# AND the shared AP surcharge (produce_ap_cost) are payable.
-	var ap_surcharge_affordable: bool = AP.can_afford(state, producer.owner, Balance.economy.produce_ap_cost)
+	var ap_surcharge_affordable: bool = AP.can_afford(state, producer.owner, BaseProduction.effective_produce_ap_cost(state, producer.owner))
 	var cheapest_affordable: bool = false
 	for unit_type: UnitTypeDef in producer.type.producible_types:
 		var credit_cost: int = Unit.effective_produce_cost(state, unit_type, producer.owner)
@@ -541,7 +554,7 @@ static func _build_entry(state: GameState, entity: EntityState) -> VerbEntry:
 	# cost AND the shared AP surcharge are payable. Enabled while ANY buildable
 	# fits — a purse that cannot reach a Research Lab may still reach a Barracks,
 	# and the row must stay live while one choice remains.
-	var ap_affordable: bool = AP.can_afford(state, unit.owner, Balance.economy.build_ap_cost)
+	var ap_affordable: bool = AP.can_afford(state, unit.owner, BaseProduction.effective_build_ap_cost(state, unit.owner))
 	var any_affordable: bool = false
 	for structure_type: StructureTypeDef in _buildable_types():
 		var credit_cost: int = BaseProduction.effective_build_cost(state, structure_type, unit.owner)
@@ -562,6 +575,77 @@ static func _build_entry(state: GameState, entity: EntityState) -> VerbEntry:
 	return VerbEntry.new(Verb.BUILD, false, reason)
 
 
+## Builds the Research [VerbEntry] (CR-14) — the HQ's own verb. Only meaningful
+## for a completed, IDLE structure whose type can research
+## ([member StructureTypeDef.can_research]); everything else is either
+## STRUCTURAL (hidden: [constant Reason.NOT_A_RESEARCHER]) or SITUATIONAL
+## (dimmed, visible): still building ([constant Reason.NOT_COMPLETED]), already
+## researching something ([constant Reason.RESEARCH_BUSY] — [method ActionMenu]
+## quotes what and how long via [method research_status_text] rather than this
+## generic label), nothing the tree currently allows
+## ([constant Reason.NOTHING_RESEARCHABLE]), or nothing affordable
+## ([constant Reason.INSUFFICIENT_CREDITS]/[constant Reason.INSUFFICIENT_AP],
+## naming the binding pool exactly like Produce/Build).
+##
+## Pass-Through Invariant: every tree/afford answer comes from
+## [method Research.legal_research_targets], [method Research.effective_research_cost],
+## [method Research.effective_research_ap_surcharge], [method Credits.can_afford],
+## [method AP.can_afford] — no balance constant is named here.
+static func _research_entry(state: GameState, entity: EntityState) -> VerbEntry:
+	if not (entity is StructureState):
+		return VerbEntry.new(Verb.RESEARCH, false, Reason.NOT_A_RESEARCHER)
+	var researcher: StructureState = entity
+	if researcher.type == null or not researcher.type.can_research:
+		return VerbEntry.new(Verb.RESEARCH, false, Reason.NOT_A_RESEARCHER)
+	if researcher.build_status != StructureState.BuildStatus.COMPLETED:
+		return VerbEntry.new(Verb.RESEARCH, false, Reason.NOT_COMPLETED)
+	if researcher.research_target != null:
+		return VerbEntry.new(Verb.RESEARCH, false, Reason.RESEARCH_BUSY)
+
+	var player: int = researcher.owner
+	var legal: Array[TechDef] = Research.legal_research_targets(state, player)
+	if legal.is_empty():
+		return VerbEntry.new(Verb.RESEARCH, false, Reason.NOTHING_RESEARCHABLE)
+
+	# Dual-cost (CR-14, mirrors Produce/Build): enabled while ANY legal tech is
+	# fully affordable. Each tech may carry its own ap_surcharge (unlike Produce/
+	# Build's single shared surcharge), so both flags are tracked across the
+	# whole legal set before naming the binding pool.
+	var any_affordable: bool = false
+	var any_ap_affordable: bool = false
+	for tech: TechDef in legal:
+		var ap_cost: int = Research.effective_research_ap_surcharge(state, tech, player)
+		var ap_ok: bool = AP.can_afford(state, player, ap_cost)
+		if ap_ok:
+			any_ap_affordable = true
+		if ap_ok and Credits.can_afford(state, player, Research.effective_research_cost(state, tech, player)):
+			any_affordable = true
+			break
+	if any_affordable:
+		return VerbEntry.new(Verb.RESEARCH, true, Reason.NONE)
+	if not any_ap_affordable:
+		return VerbEntry.new(Verb.RESEARCH, false, Reason.INSUFFICIENT_AP)
+	return VerbEntry.new(Verb.RESEARCH, false, Reason.INSUFFICIENT_CREDITS)
+
+
+## The right-hand status text for a researcher currently mid-research —
+## [code]""[/code] for anything else (no [member StructureState.research_target],
+## or not a [StructureState] at all). A direct field read, not a query call: CR-14
+## already exposes [member StructureState.research_target]/
+## [member StructureState.research_turns_remaining] as public state, exactly like
+## [method _is_stood_down] reads [member UnitState.stood_down] directly.
+static func research_status_text(entity: EntityState) -> String:
+	if not (entity is StructureState):
+		return ""
+	var structure: StructureState = entity
+	if structure.research_target == null:
+		return ""
+	var turns: int = structure.research_turns_remaining
+	return "Researching %s - %d turn%s" % [
+		structure.research_target.display_name, turns, "" if turns == 1 else "s"
+	]
+
+
 ## The structure types a Builder may raise.
 ##
 ## ⚠ Reads the registry rather than taking the caller's roster, because
@@ -574,16 +658,9 @@ static func _build_entry(state: GameState, entity: EntityState) -> VerbEntry:
 static func _buildable_types() -> Array[StructureTypeDef]:
 	return [
 		StructureTypes.BARRACKS,
-	# ⛔ The RESEARCH LAB is deliberately absent (S8-34, 2026-08-26) — the SAME reasoning
-	# S6-09 applied to the Factory, and for a starker reason. The Research & Tech epic
-	# (ADR-0018) is NOT BUILT: `research.gd` is an explicit forward declaration, there is
-	# no ResearchAction, and Action.Verb.RESEARCH is never registered with GameState, so
-	# it cannot be dispatched at all. A Lab is 800 Credits and a consumed Builder for a
-	# building that does NOTHING, with nothing in the UI saying so.
-	# ★ Restore this entry in the same change that makes research work — see CR-14 in
-	# `design/gdd/research-tech.md` and the epic in `post-gate-backlog.md`.
-	# ⚠ The type itself stays in StructureTypes.ALL on purpose: the art-coverage guards
-	# enumerate ALL, and dropping it there would silently stop guarding its sprites.
+	# ★ The RESEARCH LAB was removed by S8-34 while research did not exist, and restored
+	# 2026-09-28 (CR-14): it is now the gate for every tier-2 tech.
+		StructureTypes.RESEARCH_LAB,
 		StructureTypes.DEFENSIVE_STRUCTURE,
 	] as Array[StructureTypeDef]
 
@@ -673,7 +750,7 @@ static func produce_options(state: GameState, entity: EntityState) -> Array[Prod
 	# The AP surcharge is per-ACTION, not per-type (ADR-0006), so it is also a
 	# shared gate — but it is folded in per row below so each row's reason mask is
 	# self-contained and readable on its own.
-	var ap_cost: int = Balance.economy.produce_ap_cost
+	var ap_cost: int = BaseProduction.effective_produce_ap_cost(state, producer.owner)
 	var ap_affordable: bool = AP.can_afford(state, producer.owner, ap_cost)
 
 	for unit_type: UnitTypeDef in producer.type.producible_types:
@@ -689,6 +766,196 @@ static func produce_options(state: GameState, entity: EntityState) -> Array[Prod
 			unit_type, credit_cost, ap_cost, reason == Reason.NONE, reason
 		))
 	return options
+
+
+## ResearchOption — one row of [method research_options]' per-tech submenu: a
+## single [TechDef] a researcher could start, with its dual cost, its research
+## time, and why it is (or is not) startable right now.
+##
+## Inner class of [CommandFSM] for the same reason [ProduceOption]/[BuildOption]
+## are — external references use the [code]CommandFSM.ResearchOption[/code] prefix.
+##
+## [b]Carries an [enum Action.Reason], not a [enum CommandFSM.Reason] bitmask[/b] —
+## deliberately, unlike [ProduceOption]/[BuildOption]. CR-14's tree gates
+## ([method Research.availability]) are already a single first-failing-gate
+## [enum Action.Reason] code, the exact enum [ActionMenu]'s
+## [constant ActionMenu.COMMIT_REJECTION_LABELS] already speaks for a rejected
+## commit — reusing it here means a tech's row and a rejected commit for that same
+## tech say the same thing, never two vocabularies for one cause (mirrors the
+## reasoning in [method ActionMenu.commit_rejection_text]'s own doc comment).
+## [constant Action.Reason.OK] iff [member enabled].
+class ResearchOption extends RefCounted:
+	## The tech this row would start.
+	var tech: TechDef
+	## Credits the research would cost, from [method Research.effective_research_cost].
+	var credit_cost: int
+	## AP the research would cost, from [method Research.effective_research_ap_surcharge].
+	var ap_cost: int
+	## Owner-turns the research would take, from [method Research.effective_research_time].
+	var turns: int
+	## True iff this tech is startable right now.
+	var enabled: bool
+	## Why not, as an [enum Action.Reason] — [constant Action.Reason.OK] iff [member enabled].
+	var reason: int
+	## The specific prerequisite tech still missing, set only when
+	## [member reason] is [constant Action.Reason.PREREQUISITE_MISSING]. Lets the
+	## picker name it ("Needs Attack Tech") instead of a generic label.
+	var blocking_tech: TechDef = null
+	## The specific sibling tech that closed this one's [member TechDef.exclusive_group],
+	## set only when [member reason] is [constant Action.Reason.TECH_EXCLUDED].
+	var blocking_sibling: TechDef = null
+	## The specific required structure type still missing a COMPLETED instance,
+	## set only when [member reason] is [constant Action.Reason.REQUIRES_STRUCTURE].
+	var blocking_structure: StructureTypeDef = null
+	## Owner-turns remaining on the OTHER researcher this tech is in progress at,
+	## set only when [member reason] is [constant Action.Reason.RESEARCH_IN_PROGRESS]
+	## for a tech under research somewhere other than the selected researcher
+	## (which [method research_options] never returns rows for while busy — see
+	## its own doc comment). [code]-1[/code] when not applicable.
+	var turns_remaining_elsewhere: int = -1
+
+	func _init(t: TechDef, cc: int, ac: int, tn: int, e: bool, r: int, \
+			bt: TechDef = null, bs: TechDef = null, bstruct: StructureTypeDef = null, \
+			tre: int = -1) -> void:
+		tech = t
+		credit_cost = cc
+		ap_cost = ac
+		turns = tn
+		enabled = e
+		reason = r
+		blocking_tech = bt
+		blocking_sibling = bs
+		blocking_structure = bstruct
+		turns_remaining_elsewhere = tre
+
+
+## PURE: the per-tech submenu behind [constant Verb.RESEARCH] — one
+## [ResearchOption] for every tech in [code]Techs.ALL[/code] order (mirrors
+## [method produce_options]' per-type walk).
+##
+## [b]Returns an EMPTY array[/b] for anything that is not an owned, completed,
+## IDLE researcher — the same "ordinary answer, not an error" contract
+## [method produce_options] documents. [b]Idle[/b] is part of that guard (unlike
+## Produce, which has no busy concept): [method _research_entry] already gates the
+## top-level row on [constant Reason.RESEARCH_BUSY], so by the time a caller opens
+## this submenu the researcher is always idle — a tech's OWN
+## [constant Action.Reason.RESEARCH_IN_PROGRESS] here therefore only ever means
+## "in progress at a DIFFERENT researcher this player owns" (CR-14 Rule 4 permits
+## parallel Labs on different techs), for which [member ResearchOption.turns_remaining_elsewhere]
+## is filled in.
+##
+## Pass-Through Invariant: every gate comes from [method Research.availability]
+## (the tree-only query its own doc comment names as "the research picker uses
+## this to say WHY a tech is locked"), layered with [method Credits.can_afford]/
+## [method AP.can_afford] against [method Research.effective_research_cost]/
+## [method Research.effective_research_ap_surcharge]/[method Research.effective_research_time]
+## — never a locally-held balance constant, and never [method Research.validate_research]
+## (which would also fold in [constant Action.Reason.IN_DEFICIT], a gate Produce's
+## and Build's own menu rows deliberately do not pre-check either — see the story
+## notes; deficit still surfaces on an actual rejected commit via
+## [signal CommandInterface.commit_rejected]).
+##
+## O(techs) plus each tech's own O(1) gate/afford queries.
+static func research_options(state: GameState, entity: EntityState) -> Array[ResearchOption]:
+	var options: Array[ResearchOption] = []
+	if not (entity is StructureState):
+		return options
+	var researcher: StructureState = entity
+	if researcher.type == null or not researcher.type.can_research:
+		return options
+	if researcher.build_status != StructureState.BuildStatus.COMPLETED:
+		return options
+	if researcher.research_target != null:
+		return options
+	var player: int = researcher.owner
+
+	for tech: TechDef in Techs.ALL:
+		var gate: int = Research.availability(state, player, tech)
+		var credit_cost: int = Research.effective_research_cost(state, tech, player)
+		var ap_cost: int = Research.effective_research_ap_surcharge(state, tech, player)
+		var turns: int = Research.effective_research_time(state, tech, player)
+		var reason: int = gate
+		if reason == Action.Reason.OK:
+			if not Credits.can_afford(state, player, credit_cost):
+				reason = Action.Reason.CANT_AFFORD_CREDITS
+			elif not AP.can_afford(state, player, ap_cost):
+				reason = Action.Reason.CANT_AFFORD
+
+		var blocking_tech: TechDef = null
+		var blocking_sibling: TechDef = null
+		var blocking_structure: StructureTypeDef = null
+		var turns_remaining_elsewhere: int = -1
+		match reason:
+			Action.Reason.PREREQUISITE_MISSING:
+				blocking_tech = _first_missing_prereq(state, player, tech)
+			Action.Reason.TECH_EXCLUDED:
+				blocking_sibling = _exclusive_sibling(state, player, tech)
+			Action.Reason.REQUIRES_STRUCTURE:
+				blocking_structure = _first_missing_structure(state, player, tech)
+			Action.Reason.RESEARCH_IN_PROGRESS:
+				turns_remaining_elsewhere = _turns_remaining_elsewhere(state, player, tech)
+
+		options.append(ResearchOption.new(
+			tech, credit_cost, ap_cost, turns, reason == Action.Reason.OK, reason,
+			blocking_tech, blocking_sibling, blocking_structure, turns_remaining_elsewhere
+		))
+	return options
+
+
+## The first prerequisite of [param tech] [param player] has not completed, or
+## [code]null[/code] if every prerequisite is met (never called in that case —
+## only reached when [method Research.availability] already returned
+## [constant Action.Reason.PREREQUISITE_MISSING]).
+static func _first_missing_prereq(state: GameState, player: int, tech: TechDef) -> TechDef:
+	for prereq: TechDef in tech.prerequisites:
+		if not Research.has_tech(state, player, prereq):
+			return prereq
+	return null
+
+
+## The sibling tech in [param tech]'s [member TechDef.exclusive_group] that
+## [param player] has completed or is researching, closing this branch —
+## mirrors [method Research._is_excluded]'s own scan, reproduced here (not
+## called) because [Research] exposes no public "which one" query and this file
+## must not modify [code]research.gd[/code] for a display-only need.
+static func _exclusive_sibling(state: GameState, player: int, tech: TechDef) -> TechDef:
+	if tech.exclusive_group == &"":
+		return null
+	for other: TechDef in Techs.ALL:
+		if other == tech or other.exclusive_group != tech.exclusive_group:
+			continue
+		if Research.has_tech(state, player, other) or Research.is_under_research(state, player, other):
+			return other
+	return null
+
+
+## The first structure type [param tech] requires that [param player] does not
+## own a COMPLETED instance of — mirrors [method Research._owns_completed] for
+## the same reason [method _exclusive_sibling] does.
+static func _first_missing_structure(state: GameState, player: int, tech: TechDef) -> StructureTypeDef:
+	for structure_type: StructureTypeDef in tech.required_structures:
+		if not _owns_completed_structure(state, player, structure_type):
+			return structure_type
+	return null
+
+
+static func _owns_completed_structure(state: GameState, player: int, structure_type: StructureTypeDef) -> bool:
+	for e: EntityState in state.entities():
+		if e is StructureState and e.owner == player and e.type == structure_type \
+				and e.build_status == StructureState.BuildStatus.COMPLETED:
+			return true
+	return false
+
+
+## Owner-turns remaining on whichever OTHER structure [param player] owns is
+## currently researching [param tech] — [code]-1[/code] if none is found
+## (defensive; [method research_options] only calls this after
+## [method Research.is_under_research] already confirmed one exists).
+static func _turns_remaining_elsewhere(state: GameState, player: int, tech: TechDef) -> int:
+	for e: EntityState in state.entities():
+		if e is StructureState and e.owner == player and (e as StructureState).research_target == tech:
+			return (e as StructureState).research_turns_remaining
+	return -1
 
 
 ## BuildOption — one row of [method build_options]' player-level Build picker.
@@ -748,7 +1015,7 @@ static func build_options(state: GameState, builder: UnitState, \
 	if builder == null or builder.type == null or not builder.type.can_build:
 		return options
 	var player: int = builder.owner
-	var ap_cost: int = Balance.economy.build_ap_cost
+	var ap_cost: int = BaseProduction.effective_build_ap_cost(state, player)
 	var ap_affordable: bool = AP.can_afford(state, player, ap_cost)
 	# Hoisted: placement legality does not vary by structure type in the VS, and
 	# recomputing it per row would be the same answer four times.
@@ -787,6 +1054,28 @@ static func _cancel_build_entry(state: GameState, entity: EntityState) -> VerbEn
 	if structure.owner != state.active_player:
 		return VerbEntry.new(Verb.CANCEL_BUILD, false, Reason.NOT_UNDER_CONSTRUCTION)
 	return VerbEntry.new(Verb.CANCEL_BUILD, true, Reason.NONE)
+
+
+## Builds the Cancel Research [VerbEntry] (CR-14) — the Hold-to-Confirm Refund
+## sibling of [method _cancel_build_entry]: abandoning in-progress research loses
+## the majority of its spent Credits for a partial refund (Rule 7), exactly the
+## same "destroys committed progress for a partial refund" shape Cancel Build's
+## two-press arm-then-confirm gate exists for ([ActionMenu]'s
+## [constant ActionMenu.DESTRUCTIVE_VERBS] carries [constant Verb.CANCEL_RESEARCH]
+## for that reason). Enabled iff [param entity] is an OWNED [StructureState] with
+## a non-null [member StructureState.research_target]; anything else (a unit, an
+## idle or non-owned structure) is disabled with [constant Reason.NOTHING_IN_RESEARCH]
+## — a single reason, never a bitmask, mirroring [method _cancel_build_entry]'s own
+## one-gate rule.
+static func _cancel_research_entry(state: GameState, entity: EntityState) -> VerbEntry:
+	if not (entity is StructureState):
+		return VerbEntry.new(Verb.CANCEL_RESEARCH, false, Reason.NOTHING_IN_RESEARCH)
+	var structure: StructureState = entity
+	if structure.research_target == null:
+		return VerbEntry.new(Verb.CANCEL_RESEARCH, false, Reason.NOTHING_IN_RESEARCH)
+	if structure.owner != state.active_player:
+		return VerbEntry.new(Verb.CANCEL_RESEARCH, false, Reason.NOTHING_IN_RESEARCH)
+	return VerbEntry.new(Verb.CANCEL_RESEARCH, true, Reason.NONE)
 
 
 ## Builds the Disband [VerbEntry] (`design/ux/action-menu.md` OQ-3).
@@ -883,6 +1172,16 @@ static func disband_preview(unit: UnitState) -> int:
 static func cancel_build_preview(state: GameState, structure: StructureState) -> int:
 	var cost: int = BaseProduction.effective_build_cost(state, structure.type, structure.owner)
 	return BaseProduction.cancel_refund(cost)
+
+
+## PURE: the Credit refund preview for cancelling [param structure]'s in-progress
+## research (CR-14 Rule 7) — the research sibling of [method cancel_build_preview].
+## Reaches the value ONLY via [method Research.cancel_refund] (Pass-Through
+## Invariant): never a locally-held refund-rate constant. Safe to call only when
+## [param structure] has a non-null [member StructureState.research_target] (the
+## same precondition [method _cancel_research_entry] already gates the row on).
+static func cancel_research_preview(state: GameState, structure: StructureState) -> int:
+	return Research.cancel_refund(state, structure.research_target, structure.owner)
 
 
 ## PURE display derivation D-1 (ADR-0015 §1, TR-cmdui-014, AC-5): the AP
@@ -989,5 +1288,5 @@ static func build_preview(state: GameState, player: int, structure_type: Structu
 	# AND the AP surcharge (build_ap_cost) are payable; both are surfaced separately so
 	# the picker can name the binding pool.
 	var credits_afford: bool = Credits.can_afford(state, player, cost)
-	var ap_afford: bool = AP.can_afford(state, player, Balance.economy.build_ap_cost)
+	var ap_afford: bool = AP.can_afford(state, player, BaseProduction.effective_build_ap_cost(state, player))
 	return BuildEntry.new(structure_type, cost, time, tiles, credits_afford, ap_afford)

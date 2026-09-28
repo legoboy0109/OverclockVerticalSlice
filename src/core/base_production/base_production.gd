@@ -224,7 +224,7 @@ static func validate_build(state: GameState, action: BuildAction) -> int:
 		return Action.Reason.STRUCTURE_MAX_REACHED
 	if not Credits.can_afford(state, player, cost):
 		return Action.Reason.CANT_AFFORD_CREDITS
-	if not AP.can_afford(state, player, Balance.economy.build_ap_cost):
+	if not AP.can_afford(state, player, effective_build_ap_cost(state, player)):
 		return Action.Reason.CANT_AFFORD
 	# ★ The acting Builder, checked BEFORE the tile — a missing builder makes the
 	# tile question meaningless, and "you have no builder" is the answer a player
@@ -293,7 +293,7 @@ static func apply_build(state: GameState, action: BuildAction) -> Array[Event]:
 	# above, so neither leg can fail here — ADR-0002 validate-before-mutate).
 	var cost: int = effective_build_cost(state, action.structure_type, player)
 	Credits.spend(state, player, cost)                       # Credit main cost
-	AP.spend(state, player, Balance.economy.build_ap_cost)   # AP surcharge
+	AP.spend(state, player, effective_build_ap_cost(state, player))   # AP surcharge
 
 	var structure := StructureState.new()
 	structure.entity_id = state.next_entity_id
@@ -347,6 +347,23 @@ static func apply_build(state: GameState, action: BuildAction) -> Array[Event]:
 ## story's scope (Faction epic).
 static func effective_build_cost(_state: GameState, structure_type: StructureTypeDef, _player: int) -> int:
 	return structure_type.build_cost
+
+
+## The AP surcharge a Produce costs [param player]: the base
+## [member EconomyConfig.produce_ap_cost] less [method Research.produce_ap_discount]
+## (CR-14 Logistics), floored at 0. The Credit cost still prices the verb, so a 0 AP
+## surcharge is not an unpriced action (Faction CR-3).
+##
+## ★ The ONLY place the produce AP cost is read. validate, apply, the menu, the cost
+## preview and the AI all call this — a site reading the raw config would quote one
+## price and charge another the moment Logistics completes.
+static func effective_produce_ap_cost(state: GameState, player: int) -> int:
+	return maxi(0, Balance.economy.produce_ap_cost - Research.produce_ap_discount(state, player))
+
+
+## The Build sibling of [method effective_produce_ap_cost] — same rule, same reason.
+static func effective_build_ap_cost(state: GameState, player: int) -> int:
+	return maxi(0, Balance.economy.build_ap_cost - Research.build_ap_discount(state, player))
 
 
 ## The faction-folded number of owner-turns [param structure_type] takes to
@@ -789,7 +806,7 @@ static func validate_produce(state: GameState, action: ProduceAction) -> int:
 		return Action.Reason.IN_DEFICIT
 	if not Credits.can_afford(state, player, cost):
 		return Action.Reason.CANT_AFFORD_CREDITS
-	if not AP.can_afford(state, player, Balance.economy.produce_ap_cost):
+	if not AP.can_afford(state, player, effective_produce_ap_cost(state, player)):
 		return Action.Reason.CANT_AFFORD
 	if not (action.tile in legal_deploy_tiles(state, producer, action.unit_type)):
 		return Action.Reason.NOT_LEGAL_DEPLOY_TILE
@@ -831,7 +848,7 @@ static func apply_produce(state: GameState, action: ProduceAction) -> Array[Even
 	# Dual-cost spend, both-or-neither (validate_produce re-checked BOTH pools above).
 	var cost: int = Unit.effective_produce_cost(state, action.unit_type, player)
 	Credits.spend(state, player, cost)                          # Credit main cost
-	AP.spend(state, player, Balance.economy.produce_ap_cost)    # AP surcharge
+	AP.spend(state, player, effective_produce_ap_cost(state, player))    # AP surcharge
 
 	# ★ S8-28: production is no longer instant. The commit STARTS a build; the unit is
 	# placed by advance_build_timers when the timer reaches zero. Costs are spent HERE,

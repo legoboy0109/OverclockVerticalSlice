@@ -91,11 +91,8 @@
 # registered Action.Verb.ATTACK -- no new registration is needed here).
 #
 # No RNG, no time-dependent asserts, no file I/O; each test builds its own
-# isolated state; Research.reset() runs before/after every test so no
-# leaked stubbed tech term crosses into another suite sharing the same
-# process (mirrors tests/unit/base-production/*_test.gd's isolation
-# convention), even though this suite never itself sets a Research stub
-# value. Naming follows tests/README.md:
+# isolated state (Research holds no static state since CR-14, so there is
+# nothing to reset between tests). Naming follows tests/README.md:
 # [system]_[feature]_test.gd + test_[scenario]_[expected].
 extends GdUnitTestSuite
 
@@ -116,14 +113,6 @@ func _completed_factory_count(state: GameState, player: int) -> int:
 
 
 const GRID_SIZE: int = 8
-
-
-func before_test() -> void:
-	Research.reset()
-
-
-func after_test() -> void:
-	Research.reset()
 
 
 # --- Fixture builders (mirrors combat_apply_action_integration_test.gd) ------

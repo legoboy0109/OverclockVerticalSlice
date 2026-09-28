@@ -901,7 +901,7 @@ Presentation and interaction are owned by GDDs #9 and #10; this system provides 
 
 # ⚑⚑ AMENDMENT PROPOSAL — CR-14: research moves to the HQ and the tree branches
 
-> **Raised**: 2026-08-26 (user). **Status**: ⛔ **DRAFT — decisions open, no code written.**
+> **Raised**: 2026-08-26 (user). **Status**: ✅ **Decisions made 2026-09-28 — implementation in progress.**
 > **Supersedes**: Core Rules 2–4, the Tech-tree-shape tuning row, and two Open Questions.
 
 ## What changed, and why it is not a small edit
@@ -939,6 +939,8 @@ prior techs — the *same mechanism*, and it converts a dead building into a tar
 
 ## Proposed tree (concrete, so the shape can be argued with)
 
+> ⚠ **Superseded by "Final tree (as built)" below** — kept as the record of what was proposed.
+
 Three lines. **Tier 1 needs nothing. Tier 2 needs a Research Lab and its tier-1 parent.**
 
 ```
@@ -967,21 +969,83 @@ commitment.
 scaling with Lab *count*. Two Labs unlock the same tier-2 access one Lab does, so **Lab-spam buys
 nothing** — the brake this GDD says it lacks arrives for free as a consequence of the structure gate.
 
-## Open decisions — user's call
+## ✅ Decisions — user, 2026-09-28
 
-1. **Lab's new role** — A, B or C above.
-2. **Does destroying the gating Lab revoke tier-2 access?** ⚠ Proposed: **no** for completed techs
-   (permanence is this GDD's Rule 8 and the player paid), **yes** for starting new ones. That makes
-   the Lab worth defending without ever taking something away that was already earned.
-3. **Faction-specific gating.** The user asked for it; ⚠ `faction-identity.md` has no per-faction
-   structures yet, so this needs either that epic first or a placeholder flag. **Recommend
-   deferring the faction half** and shipping structure + tech prerequisites now.
-4. **Do tier-2 techs cost AP as well as Credits?** Consistent with Rule 3 says yes; the tempo cost is
-   what stops a banked war chest buying the whole tree in one turn.
+1. **Lab's new role → A, a prerequisite structure.** Tier-2 techs require the researcher to own at
+   least one *completed* Research Lab. Lab count beyond one grants nothing.
+2. **Destroying the gating Lab → completed techs are kept; new tier-2 research is blocked** until a
+   Lab stands again. Permanence (Rule 8) holds for anything already paid for.
+3. **Faction gating → placeholder flag now** (against the recommendation to defer). Each tech carries
+   an optional faction restriction; empty means every faction may research it. No shipped tech uses
+   it yet — it exists so faction-specific techs are a data change, not a code change, once
+   `faction-identity.md` gains per-faction content.
+4. **Tier-2 techs cost AP as well as Credits** — the same shape as tier 1 (Rule 3).
 
-## Still to write once the above is settled
+## ✅ Economy line — user, 2026-09-28
 
-Formulas for each new tech · Edge Cases (gate destroyed mid-research; both branches somehow
-affordable; tech completing the turn its Lab dies) · Acceptance Criteria · the HQ's research UI ·
-AI scoring for a branching tree (⚠ the AI currently has no tech model at all) ·
-**a new Research Lab texture** (ASSET-013 — the current one is placeholder-grade).
+The economy was re-based on a 3-tier research ladder (S6-01, `ap-economy.md`) after this amendment
+was drafted. **User decision: the branch REPLACES tiers II and III.** Economy Tech (tier I, +500
+Credits/turn) is the trunk; Logistics / Foundry is the pick-one branch. ⇒ **The reachable income
+ceiling drops from 2,500 to 1,500.** `EconomyConfig.max_economy_tier` (3) and `econ_tier_costs` are
+left in place but only tier 1 is reachable; the finite-tree hard ceiling (`ap-economy.md` §"Why this
+matters") still holds — it is simply lower.
+
+## Final tree (as built)
+
+Research runs at the **HQ**, one tech at a time. Tier 1 needs nothing. Tier 2 needs a **completed**
+Research Lab and its tier-1 parent, costs **1,500 Credits + 2 AP, 3 turns**, and each pair is
+**pick one, permanent for the match**.
+
+| Line | Tier 1 (no Lab) | Tier 2 — pick one |
+|---|---|---|
+| Combat | **Attack Tech** — +1 attack, all units · 1,000 CR + 1 AP · 3 turns | **Penetration** — unit attacks ignore Cover · **Volley** — +1 attack range (units with range ≥ 1 only) |
+| Defence | **Defense Tech** — +1 defense · 1,000 CR + 1 AP · 4 turns | **Plating** — +1 more defense (+2 total) · **Field Repair** — units that neither moved nor attacked last turn heal 1 HP at the owner's start of turn |
+| Economy | **Economy Tech** — +1 economy tier (+500 CR/turn) · 1,000 CR + 1 AP · 3 turns | **Logistics** — Produce and Build cost 1 less AP (floor 0) · **Foundry** — units cost 25% fewer Credits (floor 1) |
+
+Data: `data/techs/*.tres` (`TechDef`), registry `Techs.ALL`. Effects are TechDef fields summed over
+a player's `completed_techs` and read live at a single site each (see Formulas).
+
+## Formulas (CR-14)
+
+| Effect | Formula | Read site |
+|---|---|---|
+| Attack | `effective_attack = base_attack + Σ attack_bonus` | `Unit.effective_attack` |
+| Defense | `effective_defense = base_defense + Σ defense_bonus` | `Unit.effective_defense` |
+| Range | `effective_range = base_range + Σ attack_range_bonus` if `base_range > 0`, else `base_range`; structures never | `Unit.effective_attack_range` |
+| Cover | `cover = 0` if the attacker is a unit whose owner holds any `ignores_cover` tech, else `cover_dr` on Cover | `Combat.damage` |
+| Heal | at owner start-of-turn, before flag reset: idle damaged unit gains `min(Σ idle_heal, max_hp − hp)` | `Research.apply_idle_healing` |
+| Produce AP | `max(0, produce_ap_cost − Σ produce_ap_discount)` (1 → 0) | `BaseProduction.effective_produce_ap_cost` |
+| Build AP | `max(0, build_ap_cost − Σ build_ap_discount)` (2 → 1) | `BaseProduction.effective_build_ap_cost` |
+| Unit price | `max(1, floor((base + faction_delta) × (100 − clamp(Σ discount_pct, 0, 100)) / 100))` — e.g. Trooper 400 → 300 | `Unit.effective_produce_cost` |
+| Income | Economy Tech adds its `economy_tier_bonus` to `economy_tier` on completion; income = `1,000 + 500 × tier` | `Credits.credit_income_breakdown` |
+| Cancel refund | `floor(research_cost × cancel_refund_pct / 100)` Credits (50%); AP never refunded | `Research.cancel_refund` |
+
+## Edge cases (CR-14)
+
+- **Lab destroyed while tier-2 research is in progress** → research **continues** and completes.
+  Only *starting* tier-2 is blocked. (Default chosen during implementation, consistent with decision 2:
+  the player paid, nothing already paid for is taken away. Reversible.)
+- **Lab under construction** → does not satisfy the gate. **Opponent's Lab** → does not count.
+  **A second Lab** → unlocks nothing more.
+- **Cancelling a tier-2 branch before it completes** frees its pair again — only completing or being
+  mid-research commits the choice.
+- **HQ destroyed mid-research** → research is lost with it (the match is over anyway).
+- **Logistics on a 1-AP produce** → Produce costs 0 AP. Still priced in Credits, so not an unpriced verb
+  (Faction CR-3).
+- **Field Repair on a unit deployed this start-of-turn** → not healed; it has not had an idle turn yet.
+- **Faction-restricted tech** (`allowed_factions` non-empty) → locked for other factions with its own
+  reason. No shipped tech uses it.
+
+## Acceptance criteria (CR-14)
+
+Pinned by `tests/unit/research/research_tree_test.gd` and `research_effects_test.gd`:
+the HQ researches tier 1 with no Lab; a Lab cannot research; one tech at a time; both pools spent
+upfront, neither on rejection; tier 2 rejects without the parent and without a completed owned Lab;
+completing or researching one branch locks its pair, cancelling frees it; completion after exactly
+`research_time` owner-turns and only on the owner's turns; Economy Tech pays the turn it completes;
+cancel refunds 50% Credits and 0 AP; losing the Lab keeps completed and in-progress techs but blocks new
+tier-2; clone keeps tech identity; each shipped effect changes its measured outcome at its read site.
+
+## Still open
+
+**A new Research Lab texture** (ASSET-013) — it is now a research *gate*, so the brief should say so.

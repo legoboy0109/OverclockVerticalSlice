@@ -157,8 +157,8 @@ func test_value_falls_as_headroom_shrinks_not_rises_with_pressure() -> void:
 
 func test_structures_granting_no_cap_are_still_worth_zero() -> void:
 	# ★ Correct today, not a gap: the Factory produces ground vehicles (none exist until
-	# wave 2) and research is not implemented. Both gain value through this same function
-	# when they gain something to be worth.
+	# wave 2). The Research Lab is worth something only once it would unlock a tier-2 tech
+	# (CR-14) — this player holds no tier-1 parent, so it unlocks nothing yet.
 	var state := _state()
 	_add_hq(state, 0, Vector2i(5, 5))
 	_fill_to(state, 0, Population.effective_cap(state, 0))

@@ -36,10 +36,6 @@ func _completed_factory_count(state: GameState, player: int) -> int:
 
 
 
-func before_test() -> void:
-	Research.reset()
-
-
 # Places n alive, owned, Completed Economy Outpost StructureStates directly
 # into state.entities_by_id at unique, deterministic tiles (no grid in play —
 # Credits.credit_income()/_completed_factory_count() never touch

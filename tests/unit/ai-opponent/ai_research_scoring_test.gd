@@ -1,0 +1,197 @@
+# CR-14 (2026-09-28): the AI researches.
+#
+# Before CR-14, _score_research_candidates was a stub and the AI valued a Research Lab
+# at 0, so it could never research and never reach tier 2. These pin the behaviour that
+# replaced it, including the two failure modes that have bitten this AI before:
+#   • a candidate apply_action would reject → the driver's reject loop stalls the turn;
+#   • a cancel-for-refund loop (S8-17: the AI once demolished everything it built).
+#
+# Naming follows tests/README.md: [system]_[feature]_test.gd + test_[scenario]_[expected].
+extends GdUnitTestSuite
+
+const GRID_SIZE: int = 16
+
+
+func _make_grid() -> GridState:
+	var grid := GridState.new()
+	grid.width = GRID_SIZE
+	grid.height = GRID_SIZE
+	grid.terrain = PackedByteArray()
+	grid.terrain.resize(GRID_SIZE * GRID_SIZE)
+	grid.terrain.fill(GridState.Terrain.PLAIN)
+	grid.occupancy = PackedInt32Array()
+	grid.occupancy.resize(GRID_SIZE * GRID_SIZE)
+	grid.occupancy.fill(GridState.EMPTY_OCCUPANT)
+	return grid
+
+
+func _state() -> GameState:
+	var state := GameStateFactory.make_state(2, 0)
+	state.grid = _make_grid()
+	for i: int in state.per_player.size():
+		state.per_player[i].faction = Factions.NEUTRAL
+		state.per_player[i].current_ap = 20
+		state.per_player[i].current_credits = 5000
+	return state
+
+
+func _structure(state: GameState, player: int, pos: Vector2i, type: StructureTypeDef) -> StructureState:
+	var st := StructureState.new()
+	st.entity_id = state.next_entity_id
+	st.owner = player
+	st.position = pos
+	st.type = type
+	st.current_hp = type.hp
+	st.build_status = StructureState.BuildStatus.COMPLETED
+	state.entities_by_id[st.entity_id] = st
+	state.grid.place(st.entity_id, pos.x, pos.y)
+	state.next_entity_id += 1
+	return st
+
+
+func _unit(state: GameState, player: int, pos: Vector2i, type: UnitTypeDef) -> UnitState:
+	var u := UnitState.new()
+	u.entity_id = state.next_entity_id
+	u.owner = player
+	u.position = pos
+	u.type = type
+	u.current_hp = type.hp
+	state.entities_by_id[u.entity_id] = u
+	state.grid.place(u.entity_id, pos.x, pos.y)
+	state.next_entity_id += 1
+	return u
+
+
+func _score(state: GameState, hq: StructureState, committed: int = 0) -> AI._Candidate:
+	return AI._score_research_candidates(state, hq, committed, AI._Candidate.new())
+
+
+# --- Proposes research, and only legal research ----------------------------------
+
+func test_an_idle_hq_with_funds_proposes_a_research_action() -> void:
+	var state := _state()
+	var hq := _structure(state, 0, Vector2i(2, 2), StructureTypes.HQ)
+	var best := _score(state, hq)
+	assert_bool(best.action is ResearchAction).is_true()
+	var action: ResearchAction = best.action
+	assert_int(Research.validate_research(state, action)).is_equal(Action.Reason.OK)
+
+
+func test_every_tech_the_ai_values_is_positive() -> void:
+	# A tech scored at 0 is a tech the AI will never research. With a ranged unit and a
+	# producer on the board, every shipped effect has something to act on.
+	var state := _state()
+	_structure(state, 0, Vector2i(2, 2), StructureTypes.HQ)
+	_structure(state, 0, Vector2i(4, 2), StructureTypes.BARRACKS)
+	_unit(state, 0, Vector2i(6, 6), UnitTypes.TROOPER)
+	for tech: TechDef in Techs.ALL:
+		assert_float(AI._tech_research_value(state, 0, tech)).override_failure_message(
+			"The AI values %s at 0 — it will never research it." % tech.display_name
+		).is_greater(0.0)
+
+
+func test_no_candidate_when_nothing_is_affordable() -> void:
+	var state := _state()
+	var hq := _structure(state, 0, Vector2i(2, 2), StructureTypes.HQ)
+	assert_object(_score(state, hq).action).override_failure_message(
+		"Fixture: nothing proposed even with funds.").is_not_null()
+	state.per_player[0].current_credits = 0
+	assert_object(_score(state, hq).action).is_null()
+
+
+func test_no_candidate_while_research_is_in_progress() -> void:
+	var state := _state()
+	var hq := _structure(state, 0, Vector2i(2, 2), StructureTypes.HQ)
+	assert_object(_score(state, hq).action).is_not_null()
+	hq.research_target = Techs.ATTACK_I
+	hq.research_turns_remaining = 2
+	assert_object(_score(state, hq).action).is_null()
+
+
+func test_research_shares_the_economy_cadence_cap() -> void:
+	var state := _state()
+	var hq := _structure(state, 0, Vector2i(2, 2), StructureTypes.HQ)
+	assert_object(_score(state, hq).action).is_not_null()
+	assert_object(_score(state, hq, AIBalance.ai.max_economy_investments_per_turn).action).is_null()
+
+
+func test_never_proposes_the_other_half_of_a_chosen_branch() -> void:
+	var state := _state()
+	var hq := _structure(state, 0, Vector2i(2, 2), StructureTypes.HQ)
+	_structure(state, 0, Vector2i(4, 2), StructureTypes.RESEARCH_LAB)
+	for t: TechDef in [Techs.ATTACK_I, Techs.DEFENSE_I, Techs.ECONOMY_I, Techs.PENETRATION, Techs.PLATING]:
+		GameStateFactory.grant_tech(state, 0, t)
+	# Only Logistics / Foundry remain legal; Volley and Field Repair are locked out.
+	var best := _score(state, hq)
+	assert_bool(best.action is ResearchAction).is_true()
+	var tech: TechDef = (best.action as ResearchAction).tech
+	assert_bool(tech == Techs.LOGISTICS or tech == Techs.FOUNDRY).override_failure_message(
+		"AI proposed %s." % tech.display_name).is_true()
+
+
+func test_choose_action_never_cancels_research() -> void:
+	# S8-17: never give the AI a cancel-for-refund loop. Research in progress, plenty
+	# of money: whatever it picks, it is not a CancelResearchAction.
+	var state := _state()
+	var hq := _structure(state, 0, Vector2i(2, 2), StructureTypes.HQ)
+	_structure(state, 1, Vector2i(13, 13), StructureTypes.HQ)
+	hq.research_target = Techs.ATTACK_I
+	hq.research_turns_remaining = 3
+	var action: Action = AI.choose_action(state, 0)
+	assert_bool(action is CancelResearchAction).is_false()
+
+
+# --- The Lab --------------------------------------------------------------------
+
+func test_a_lab_is_worthless_before_it_would_unlock_anything() -> void:
+	var state := _state()
+	_structure(state, 0, Vector2i(2, 2), StructureTypes.HQ)
+	assert_float(AI._economy_value(state, 0, StructureTypes.RESEARCH_LAB)).is_equal_approx(0.0, 0.0001)
+
+
+func test_a_lab_is_worth_something_once_a_tier_one_parent_is_held() -> void:
+	var state := _state()
+	_structure(state, 0, Vector2i(2, 2), StructureTypes.HQ)
+	GameStateFactory.grant_tech(state, 0, Techs.ATTACK_I)
+	assert_float(AI._economy_value(state, 0, StructureTypes.RESEARCH_LAB)).is_greater(0.0)
+
+
+func test_a_lab_counts_a_parent_that_is_still_being_researched() -> void:
+	var state := _state()
+	var hq := _structure(state, 0, Vector2i(2, 2), StructureTypes.HQ)
+	hq.research_target = Techs.DEFENSE_I
+	hq.research_turns_remaining = 2
+	assert_float(AI._economy_value(state, 0, StructureTypes.RESEARCH_LAB)).is_greater(0.0)
+
+
+func test_a_second_lab_is_worthless() -> void:
+	var state := _state()
+	_structure(state, 0, Vector2i(2, 2), StructureTypes.HQ)
+	_structure(state, 0, Vector2i(4, 2), StructureTypes.RESEARCH_LAB)
+	GameStateFactory.grant_tech(state, 0, Techs.ATTACK_I)
+	assert_float(AI._economy_value(state, 0, StructureTypes.RESEARCH_LAB)).is_equal_approx(0.0, 0.0001)
+
+
+func test_lab_valuation_does_not_touch_the_real_state() -> void:
+	var state := _state()
+	var hq := _structure(state, 0, Vector2i(2, 2), StructureTypes.HQ)
+	hq.research_target = Techs.DEFENSE_I
+	hq.research_turns_remaining = 2
+	var entity_count: int = state.entities_by_id.size()
+	AI._economy_value(state, 0, StructureTypes.RESEARCH_LAB)
+	assert_int(state.entities_by_id.size()).is_equal(entity_count)
+	assert_array(state.per_player[0].completed_techs).is_empty()
+
+
+# --- Determinism (ADR-0003) -------------------------------------------------------
+
+func test_same_state_same_choice_and_on_a_clone() -> void:
+	var state := _state()
+	var hq := _structure(state, 0, Vector2i(2, 2), StructureTypes.HQ)
+	_unit(state, 0, Vector2i(6, 6), UnitTypes.TROOPER)
+	var a: ResearchAction = _score(state, hq).action
+	var b: ResearchAction = _score(state, hq).action
+	var copy := state.clone()
+	var c: ResearchAction = AI._score_research_candidates(copy, copy.entities_by_id[hq.entity_id], 0, AI._Candidate.new()).action
+	assert_object(b.tech).is_same(a.tech)
+	assert_object(c.tech).is_same(a.tech)

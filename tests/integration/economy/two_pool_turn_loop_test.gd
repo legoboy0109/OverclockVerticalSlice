@@ -19,8 +19,10 @@
 # except modelling "how much AP the player left unspent this turn", which existing
 # turn_sequencing tests also do). Every expected value is derived from
 # Balance.economy's live fields, never a bare literal. Deterministic: no RNG, no
-# wall-clock, no file I/O; Research is reset each test so the econ_tech income term
-# is a clean 0 and the banked totals are exact multiples of the outpost income.
+# wall-clock, no file I/O; no fixture in this suite grants a tech or places a
+# research_target, so economy_tier stays a clean 0 (Research holds no static
+# state to reset, CR-14) and the banked totals are exact multiples of the
+# outpost income.
 #
 # Gridless: completed_outpost_count / credit_income read entities_by_id, not the
 # grid (mirrors turn_sequencing_test's fixture discipline), so no GridState is
@@ -45,14 +47,6 @@ func _completed_factory_count(state: GameState, player: int) -> int:
 			count += 1
 	return count
 
-
-
-func before_test() -> void:
-	Research.reset()
-
-
-func after_test() -> void:
-	Research.reset()
 
 
 # A gridless 2-player state, both pinned to Factions.NEUTRAL (credit_income's

@@ -96,6 +96,16 @@ enum BuildStatus { UNDER_CONSTRUCTION, COMPLETED }
 
 @export var units_produced_this_turn: int = 0
 
+## The tech this structure is researching, or [code]null[/code] when idle (CR-14:
+## research runs from the HQ — any structure whose [member StructureTypeDef.can_research]
+## is set). A shared [code]Techs[/code] preset by identity, same contract as
+## [member producing_type]. Research and production are independent: the HQ can do both.
+@export var research_target: TechDef = null
+
+## Owner-turns left until [member research_target] completes. Decremented once per
+## owner-turn by [method Research.advance_research_timers]. Meaningless while idle.
+@export var research_turns_remaining: int = 0
+
 ## Whether this structure has already fired this turn — the Defensive
 ## Structure only (Rule 8); `false`/unused on every other structure type.
 ## Reset to `false` at the owner's start-of-turn (ADR-0008 step 2).

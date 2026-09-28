@@ -511,16 +511,10 @@ func _buildable_roster() -> Array[StructureTypeDef]:
 	# unproductive structure 0 -- so this only ever affected the human.
 	return [
 		StructureTypes.BARRACKS,
-	# ⛔ The RESEARCH LAB is deliberately absent (S8-34, 2026-08-26) — the SAME reasoning
-	# S6-09 applied to the Factory, and for a starker reason. The Research & Tech epic
-	# (ADR-0018) is NOT BUILT: `research.gd` is an explicit forward declaration, there is
-	# no ResearchAction, and Action.Verb.RESEARCH is never registered with GameState, so
-	# it cannot be dispatched at all. A Lab is 800 Credits and a consumed Builder for a
-	# building that does NOTHING, with nothing in the UI saying so.
-	# ★ Restore this entry in the same change that makes research work — see CR-14 in
-	# `design/gdd/research-tech.md` and the epic in `post-gate-backlog.md`.
-	# ⚠ The type itself stays in StructureTypes.ALL on purpose: the art-coverage guards
-	# enumerate ALL, and dropping it there would silently stop guarding its sprites.
+		# ★ Restored 2026-09-28 (CR-14). Removed by S8-34 because research did not
+		# exist; it does now, and the Lab is the GATE for every tier-2 tech — research
+		# itself runs at the HQ.
+		StructureTypes.RESEARCH_LAB,
 		StructureTypes.DEFENSIVE_STRUCTURE,
 	]
 
@@ -585,6 +579,10 @@ func _build_action_menu() -> void:
 	_action_menu.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_action_menu.verb_chosen.connect(_on_menu_verb_chosen)
 	_action_menu.produce_type_chosen.connect(_on_menu_produce_chosen)
+	# ★ CR-14. Wired here, in the same place as its siblings, and pinned by a test that
+	# goes THROUGH the signal — the S8-12 lesson below is why a picker whose choice is
+	# emitted into a void can pass every direct-call test and still do nothing.
+	_action_menu.research_tech_chosen.connect(_on_menu_research_chosen)
 	# ★ 2026-08-25 — THIS CONNECTION DID NOT EXIST, and Build had therefore never
 	# once worked from the UI. `ActionMenu` emitted `build_type_chosen` into a void:
 	# picking a structure from the Build picker closed the list and did nothing, and
@@ -673,6 +671,11 @@ func _refresh_status() -> void:
 
 	if _flash != "":
 		lines.append("(!) " + _flash) # what the last action did, or why it did nothing.
+
+	# ★ CR-14: research in progress is otherwise visible only by selecting the HQ.
+	var hq: StructureState = Research.researcher(_state, LOCAL_PLAYER) if _state != null else null
+	if hq != null and hq.research_target != null:
+		lines.append(CommandFSM.research_status_text(hq))
 
 	# ★ 2026-08-24 — the legend used to name ELEVEN bindings across two lines, plus
 	# a "Build [B]: <type> - <cost> ... [C] cycle" line and a Produce twin, because
@@ -822,6 +825,7 @@ func _on_action_applied(result: ActionResult) -> void:
 	_refresh_open_preview() # the board changed under any open range overlay.
 	_refresh_occupant_pick_regions() # entities moved/spawned/died — re-author the click targets.
 	_dispatch_motion(result)
+	_announce_research(result)
 	# ★ S8-32/S8-35 (user decisions 2026-08-26): the menu closes after an action —
 	# EXCEPT after a MOVE, where it re-opens so the unit can attack or wait.
 	#
@@ -846,6 +850,25 @@ func _on_action_applied(result: ActionResult) -> void:
 	elif _action_menu != null:
 		_action_menu.close()
 	_refresh_status() # AP/affordability/selection may have changed.
+
+
+## ★ CR-14: names research as it starts, stops and lands. Completion arrives inside the
+## END TURN result (start_turn runs as part of it), so it is announced here, not on any
+## research action. The opponent's completions are announced too — the GDD's
+## readable-board assumption is that finished tech is visible to both sides.
+func _announce_research(result: ActionResult) -> void:
+	if result == null:
+		return
+	for e: Variant in result.events:
+		if e is ResearchStartedEvent and e.owner == LOCAL_PLAYER:
+			_flash_msg("Research started: %s (%d turns)." % [e.tech.display_name, e.turns_remaining])
+		elif e is ResearchCancelledEvent and e.owner == LOCAL_PLAYER:
+			_flash_msg("Research cancelled: %s (+%d CR back)." % [e.tech.display_name, e.refund])
+		elif e is TechCompletedEvent:
+			if e.owner == LOCAL_PLAYER:
+				_flash_msg("Research complete: %s - %s" % [e.tech.display_name, e.tech.description])
+			else:
+				_flash_msg("Enemy completed research: %s." % e.tech.display_name)
 
 
 ## True when [param result] contains a unit movement — the one action after which the
@@ -1248,6 +1271,11 @@ func _on_menu_verb_chosen(verb: int) -> void:
 			var disband := DisbandAction.new()
 			disband.entity_id = entity.entity_id # action.player set by commit.
 			_cmd.dispatch_commit(disband, _state)
+		CommandFSM.Verb.CANCEL_RESEARCH:
+			# Second press of the arm-then-confirm gate, like Disband above.
+			var cancel_research := CancelResearchAction.new()
+			cancel_research.researcher_id = entity.entity_id # action.player set by commit.
+			_cmd.dispatch_commit(cancel_research, _state)
 		CommandFSM.Verb.CANCEL_BUILD:
 			# ★ Committed directly rather than through Story 004's timed hold.
 			# That hold exists to stop a BARE KEYPRESS destroying a structure by
@@ -1258,6 +1286,18 @@ func _on_menu_verb_chosen(verb: int) -> void:
 			var cancel := CancelBuildAction.new()
 			cancel.structure_tile = entity.position
 			_cmd.dispatch_commit(cancel, _state)
+
+
+## ★ CR-14: commits research at the selected HQ. Unlike Produce there is no second step
+## — a tech has no tile — so the choice from the picker IS the order.
+func _on_menu_research_chosen(tech: TechDef) -> void:
+	var entity: EntityState = _state.entities_by_id.get(_cmd.selected_id())
+	if not (entity is StructureState):
+		return
+	var action := ResearchAction.new()
+	action.researcher_id = entity.entity_id # action.player set by commit.
+	action.tech = tech
+	_cmd.dispatch_commit(action, _state)
 
 
 ## Routes a chosen produce TYPE into the deploy-tile preview. The type is held in
@@ -1357,7 +1397,7 @@ func begin_build_preview(type: StructureTypeDef) -> void:
 	_refresh_cost_preview()
 	var cost: int = BaseProduction.effective_build_cost(_state, type, LOCAL_PLAYER)
 	_flash_msg("Build %s (%d CR + %d AP): pick a highlighted tile. Esc to go back." % [
-		type.display_name, cost, Balance.economy.build_ap_cost
+		type.display_name, cost, BaseProduction.effective_build_ap_cost(_state, LOCAL_PLAYER)
 	])
 
 
@@ -1442,7 +1482,7 @@ func _refresh_cost_preview() -> void:
 				_close_cost_preview()
 				return
 			_show_dual_preview(
-				Balance.economy.produce_ap_cost,
+				BaseProduction.effective_produce_ap_cost(_state, LOCAL_PLAYER),
 				Unit.effective_produce_cost(_state, _pending_produce, LOCAL_PLAYER)
 			)
 		CommandFSM.State.PREVIEW_BUILD:
@@ -1450,7 +1490,7 @@ func _refresh_cost_preview() -> void:
 				_close_cost_preview()
 				return
 			_show_dual_preview(
-				Balance.economy.build_ap_cost,
+				BaseProduction.effective_build_ap_cost(_state, LOCAL_PLAYER),
 				BaseProduction.effective_build_cost(_state, _pending_build, LOCAL_PLAYER)
 			)
 		_:

@@ -59,6 +59,11 @@ extends Resource
 @export var defense: int = 0
 @export var can_counterattack: bool = false
 
+## Whether this structure type runs research (CR-14, 2026-09-28: the HQ, not the Lab).
+## The Research Lab is instead a GATE — tier-2 techs list it in
+## [member TechDef.required_structures].
+@export var can_research: bool = false
+
 ## Combat targeting profile for this structure as an attacker (the Defensive
 ## Structure is the only VS structure that fires). Mirrors
 ## [member UnitTypeDef.targeting_mode] — AREA is dormant in the VS roster.

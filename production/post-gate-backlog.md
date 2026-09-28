@@ -370,36 +370,19 @@ for evidence that players want it.
 
 ---
 
-## Research & Tech epic — the system is DECLARED but NOT BUILT
+## Research & Tech epic — ✅ BUILT 2026-09-28 (CR-14, branch `feat/research-tree`)
 
-**Raised 2026-08-26 (user): "the research outpost doesn't seem to do anything".**
-★ **Correct, and it is not a bug — the epic was never built.**
+Research runs at the HQ; 9 techs (3 tier-1, 3 pick-one tier-2 pairs gated on a Research Lab); the
+AI researches and builds Labs; the HQ menu has Research / Cancel Research; the Lab is buildable
+again. Design: `design/gdd/research-tech.md` (CR-14 sections at the end).
 
-`src/core/research/research.gd` says so itself: *"Still a forward declaration, and deliberately so.
-The real Research / Tech epic (ADR-0018) is not built in this corpus."* There is no `ResearchAction`
-class, and `Action.Verb.RESEARCH` exists in the enum but is **never registered with `GameState`**, so
-it cannot be dispatched at all.
-
-⛔ **A player can therefore spend 800 Credits and a Builder on a Research Lab that does nothing**,
-and nothing in the UI says so. That is the most misleading thing in the slice.
-
-### Design status
-
-`design/gdd/research-tech.md` is **898 lines and was previously Approved** — the flat, Lab-based
-version is fully specified. The user's 2026-08-26 asks (HQ-based research, structure and tech
-prerequisites, mutually-exclusive branches) are appended to it as **CR-14, a DRAFT amendment with
-four open decisions**. No code has been written.
-
-★ **Building the branching version once is less work than building the flat version now and widening
-it later** — which is the argument for doing the epic properly rather than patching.
-
-### Interim options, if it is not scheduled soon
-
-⚠ The slice currently offers a purchase that does nothing. Cheapest honest fixes, in order:
-1. **Remove the Research Lab from the buildable roster** until the epic lands. One data change.
-2. **Grey it out with a reason** ("Research is not implemented yet") — the CR-4 situational-row
-   treatment the action menu already has.
-3. Leave it, and accept that a playtester will buy it once and learn nothing.
+### Open from the build
+- ⚠ **Tier 2 is rarely worth it by the AI's own value model** — in a 30-game batch the AI built 6
+  Labs and researched one tier-2 tech. Most tier-2 techs score below the AI's pass threshold at
+  1,500 CR + 2 AP. Either the tier-2 prices/effects are weak, or the AI's estimates are; a play
+  session is the way to tell which.
+- **Visual check owed** — `tools/CaptureResearch.tscn` needs a display; no screenshot exists yet.
+- Faction-restriction flag has no user until factions gain per-faction content.
 
 ### Also owed
 **ASSET-013 — a real Research Lab texture.** The current one is placeholder-grade (user, 2026-08-26).

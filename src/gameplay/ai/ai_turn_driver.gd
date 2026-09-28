@@ -140,10 +140,10 @@ func run_ai_turn(state: GameState) -> void:
 ## True iff [param action] counts toward the cadence cap
 ## [method AI.choose_action] gates on (ADR-0011 §1/§6, CR-5): a
 ## [BuildAction] targeting [constant StructureTypes.FACTORY], or a
-## research-start action ([constant Action.Verb.RESEARCH] — forward-declared;
-## the Research epic is not implemented in this corpus, so this branch is
-## unreachable today but kept per ADR-0011 §3's literal loop shape, ready the
-## instant a research-start verb exists).
+## research-start action ([constant Action.Verb.RESEARCH] — CR-14 re-enabled
+## [method AI._score_research_candidates], so this branch is live: every
+## [ResearchAction] the AI commits counts toward the same per-turn cadence cap
+## as a Factory build).
 static func _is_economy_or_research(action: Action) -> bool:
 	if action.verb == Action.Verb.RESEARCH:
 		return true

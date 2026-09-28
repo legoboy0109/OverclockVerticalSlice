@@ -15,17 +15,14 @@
 # base-formula ACs, and in-memory UnitTypeDef.new() instances (mirroring
 # move_action_test.gd's _make_type pattern) wherever a specific defense value
 # not present on the VS roster is needed (e.g. a defense-2 unit defender).
-# effective_attack fixtures are injected via Research.set_attack_tech_bonus()
-# (tests/helpers/stubs/research_stub.gd), never re-derived from base + bonus.
+# effective_attack fixtures are injected via
+# GameStateFactory.grant_tech(state, player, GameStateFactory.make_tech(bonus))
+# (CR-14, 2026-09-28), never re-derived from base + bonus.
 #
 # Naming follows tests/README.md: [system]_[feature]_test.gd + test_[scenario]_[expected].
 extends GdUnitTestSuite
 
 const GRID_SIZE: int = 8
-
-
-func before_test() -> void:
-	Research.reset() # clears any injected tech bonus (isolation rule)
 
 
 # --- Fixture builders --------------------------------------------------------
@@ -198,12 +195,11 @@ func test_cover_and_defense_stack_additively_not_max_or_min() -> void:
 
 func test_researched_trooper_effective_attack_fixture_used_not_base() -> void:
 	# Arrange — a researched Trooper's effective_attack fixture is injected as
-	# 4 (not the base 3) via Research.set_attack_tech_bonus(); damage must
-	# reflect 4.
-	Research.set_attack_tech_bonus(1)
+	# 4 (not the base 3) via a granted tech (GameStateFactory.make_tech(1));
+	# damage must reflect 4.
 	var state := _make_state()
 	var trooper := _make_unit(1, 0, UnitTypes.TROOPER, Vector2i(0, 0))
-	state.per_player[0].has_attack_tech = true
+	GameStateFactory.grant_tech(state, 0, GameStateFactory.make_tech(1))
 	var defender_type := _make_unit_type(0, 0)
 	var defender := _make_unit(2, 1, defender_type, Vector2i(1, 0))
 	# Act / Assert — effective_attack = base 3 + injected 1 = 4, never

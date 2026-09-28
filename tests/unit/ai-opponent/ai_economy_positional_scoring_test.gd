@@ -667,12 +667,11 @@ func test_economy_investments_committed_is_a_pure_caller_passed_parameter() -> v
 		assert_bool(at_cap_build.structure_type == StructureTypes.BARRACKS).is_false()
 
 
-# --- Edge: research stub returns no candidates, no error -------------------
+# --- Edge: a non-researcher yields no research candidates, no error ---------
 
 func test_score_research_candidates_returns_unchanged_best_no_error() -> void:
-	# Arrange — any state; the enumeration source (Research.legal_research_
-	# targets) does not exist yet, so this must be a pure no-op regardless of
-	# board contents.
+	# Arrange — a completed structure whose type cannot research (CR-14: only the
+	# HQ researches; a Lab is a gate). The scorer must be a pure no-op for it.
 	var state := _make_state()
 	var lab_type := StructureTypeDef.new()
 	lab_type.display_name = "TestLab"
@@ -687,8 +686,7 @@ func test_score_research_candidates_returns_unchanged_best_no_error() -> void:
 	# Act
 	var best := AI._score_research_candidates(state, lab, 0, seed_candidate)
 
-	# Assert — identical object/state back out; no candidate produced, no
-	# crash/error (documented gap, not a silent wrong value).
+	# Assert — identical object back out; no candidate produced, no crash.
 	assert_object(best).is_same(seed_candidate)
 	assert_object(best.action).is_null()
 

@@ -19,16 +19,10 @@
 ## the file, since [Event] subclasses already live in
 ## [code]src/core/event/[/code] regardless of owning system.
 ##
-## Deliberately minimal today: no fields beyond what [Event] already
-## provides. This story does not invent a [code]TechDef[/code] schema
-## (ADR-0007, not yet implemented) — the stub
-## [code]Research.advance_research_timers[/code] only needs a concrete,
-## instantiable type to append.
-##
-## Usage:
-## [codeblock]
-## # inside Research.advance_research_timers()'s eventual real body:
-## events.append(TechCompletedEvent.new())
-## [/codeblock]
+## [b]Reconciled 2026-09-28 (CR-14):[/b] the epic landed and gave it the fields the
+## note above anticipated — who completed what.
 class_name TechCompletedEvent
 extends Event
+
+@export var owner: int = -1
+@export var tech: TechDef

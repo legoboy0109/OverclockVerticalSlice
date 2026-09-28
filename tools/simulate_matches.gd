@@ -248,6 +248,15 @@ func _play(game: int, favoured: int, handicap: int, variant: int) -> void:
 	print("SIM_END,%d,%d,%d,%d,%d,%d,%d" % [
 		game, favoured, handicap, variant, turn, state.winner, capped
 	])
+	# ★ CR-14: what each side researched, whether it raised a Lab, and HOW the game ended
+	# (win_reason distinguishes an HQ kill from the round-cap tiebreak — SIM_END's `capped`
+	# cannot, since the round cap ends games long before MAX_TURNS).
+	for p: int in state.per_player.size():
+		var names := PackedStringArray()
+		for t: TechDef in state.per_player[p].completed_techs:
+			names.append(t.display_name)
+		print("SIM_RESEARCH,%d,%d,%d,%d,%s" % [game, p, state.win_reason,
+			BaseProduction.structure_count(state, p, StructureTypes.RESEARCH_LAB), "|".join(names)])
 
 
 ## The shipped AI turn loop with the pacing timer removed — otherwise identical to

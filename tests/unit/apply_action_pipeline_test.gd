@@ -12,20 +12,19 @@
 # per-instance data, per ADR-0002). Production code now registers END_TURN
 # (GS-003), MOVE (ADR-0009), ATTACK (ADR-0010), and BUILD/PRODUCE/CANCEL_BUILD
 # (Base & Production Stories 002/004/005) in _ensure_dispatch_registered — so
-# Action.Verb.RESEARCH is the ONLY enum verb still unregistered (Research is its
-# own later epic). Both throwaway-handler tests here therefore share RESEARCH:
-# one registers a CANT_AFFORD stub on it to exercise pipeline-generic
-# affordability atomicity (asserting RESEARCH absent up front and unregistering
-# in cleanup so nothing leaks under any load order — GdUnit4 runs cases
-# sequentially, so the register/unregister lifecycle keeps them isolated), and a
-# separate test dispatches bare RESEARCH to check the unknown-verb rejection
-# path. When the Research epic lands and registers RESEARCH, its story must
-# re-treat these (no enum verb will remain free — switch to a bare -1 verb or a
-# save-and-restore of a registered handler). The "dispatch via enum, not
+# since CR-14 (2026-09-28) EVERY enum verb is registered, RESEARCH included. The
+# throwaway-handler tests here therefore use SCRATCH_VERB, an ordinal outside the
+# enum that production can never register. ⚠ They used to borrow RESEARCH and
+# unregister it on cleanup — which, once Research landed, deleted the REAL handler
+# for every later test in the process (_dispatch_registered stays true, so nothing
+# re-registers it). The "dispatch via enum, not
 # get_class()" regression test routes a real EndTurnAction rather than a stub.
 #
 # Naming follows tests/README.md: [system]_[feature]_test.gd + test_[scenario]_[expected].
 extends GdUnitTestSuite
+
+## An ordinal no Action.Verb uses — safe to register and unregister freely.
+const SCRATCH_VERB: int = 1000
 
 
 # Builds a minimal populated GameState: 2 players, an empty entities map, no
@@ -60,25 +59,20 @@ func test_insufficient_ap_action_rejected_with_zero_state_change() -> void:
 	# Arrange — register a throwaway verb whose validate() always reports
 	# CANT_AFFORD, and whose apply() would mutate AP if ever (wrongly)
 	# reached — proving the pipeline never calls apply() after a rejection.
-	# Uses Verb.RESEARCH: the only enum verb still unregistered (Research is a
-	# later epic), borrowed as a scratch handler. The unknown-verb-rejection
-	# test below also reads RESEARCH (unregistered), but this test fully
-	# unregisters it in cleanup, so the two never observe each other's state —
-	# GdUnit4 runs cases sequentially.
+	# Uses SCRATCH_VERB (see the header) and unregisters it in cleanup.
 	var state := _make_state(2, 0)
 	state.per_player[0].current_ap = 2
-	# Precondition — Verb.RESEARCH must start unregistered (no leak from any prior
-	# test); this test owns its lifecycle and cleans up via unregister_verb.
-	assert_bool(GameState._validators.has(Action.Verb.RESEARCH)).is_false()
+	# Precondition — SCRATCH_VERB must start unregistered (no leak from a prior test).
+	assert_bool(GameState._validators.has(SCRATCH_VERB)).is_false()
 	GameState.register_verb(
-		Action.Verb.RESEARCH,
+		SCRATCH_VERB,
 		func(_s: GameState, _a: Action) -> int: return Action.Reason.CANT_AFFORD,
 		func(s: GameState, _a: Action) -> Array:
 			s.per_player[0].current_ap = 0  # would prove atomicity broken if ever called
 			return []
 	)
 	var action := Action.new()
-	action.verb = Action.Verb.RESEARCH
+	action.verb = SCRATCH_VERB
 	action.player = 0
 	# Act
 	var result: ActionResult = state.apply_action(action)
@@ -88,10 +82,9 @@ func test_insufficient_ap_action_rejected_with_zero_state_change() -> void:
 	assert_array(result.events).is_empty()
 	assert_int(state.per_player[0].current_ap).is_equal(2)
 	assert_int(state.entities_by_id.size()).is_equal(0)
-	# Cleanup — fully remove the throwaway RESEARCH handler so it cannot leak
-	# into any later test in the process (incl. the unknown-verb test above/below).
-	GameState.unregister_verb(Action.Verb.RESEARCH)
-	assert_bool(GameState._validators.has(Action.Verb.RESEARCH)).is_false()
+	# Cleanup — remove the throwaway handler so it cannot leak into a later test.
+	GameState.unregister_verb(SCRATCH_VERB)
+	assert_bool(GameState._validators.has(SCRATCH_VERB)).is_false()
 
 
 # --- Dispatch-safety: unregistered verb / bare Action -> clean UNKNOWN_VERB reject --
@@ -100,13 +93,12 @@ func test_insufficient_ap_action_rejected_with_zero_state_change() -> void:
 # fail loud-but-safe with a clean ActionResult, never crash the caller.
 
 func test_action_with_unregistered_verb_rejected_with_unknown_verb() -> void:
-	# Arrange — Verb.RESEARCH is never registered (Research's own verb handler
-	# is a separate, later epic); Verb.ATTACK is no longer usable for this
-	# fixture as of Combat Resolution Story 004, which registers it for real.
+	# Arrange — SCRATCH_VERB is never registered by production (every enum verb is,
+	# since CR-14), so it stands in for "a verb with no handler".
 	var state := _make_state(2, 0)
-	assert_bool(GameState._validators.has(Action.Verb.RESEARCH)).is_false()
+	assert_bool(GameState._validators.has(SCRATCH_VERB)).is_false()
 	var action := Action.new()
-	action.verb = Action.Verb.RESEARCH
+	action.verb = SCRATCH_VERB
 	action.player = 0
 	# Act
 	var result: ActionResult = state.apply_action(action)

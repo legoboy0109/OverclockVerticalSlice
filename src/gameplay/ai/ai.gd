@@ -25,8 +25,10 @@
 ## [code]Movement.reachable[/code], [code]Combat.legal_targets/
 ## legal_targets_from/preview_damage[/code], [code]AP.can_afford/current_ap/
 ## income[/code], [code]BaseProduction.legal_build_tiles/legal_deploy_tiles/
-## [code]Research.legal_research_targets[/code]
-## (stubbed empty — Research epic not built), [code]GridState.
+## [code]Research.legal_research_targets/researcher/has_tech/is_under_research/
+## availability/validate_research/effective_research_cost/effective_research_ap_surcharge[/code]
+## (CR-14: research runs at the HQ; see [method _score_research_candidates]),
+## [code]GridState.
 ## manhattan_distance/terrain_at/occupant_at[/code] — plus public typed fields
 ## on entities already returned by those calls. This is a static-analysis /
 ## code-review boundary (AC-5/AC-6b per ADR-0011 §5); the CI lint enforcing it
@@ -637,7 +639,7 @@ static func _nearest_threatening_enemy(state: GameState, unit: UnitState) -> _Th
 	for e: EntityState in state.entities():
 		if e.owner == unit.owner:
 			continue
-		var reach: int = _threat_reach_of(e)
+		var reach: int = _threat_reach_of(state, e)
 		var dist: int = state.grid.manhattan_distance(unit.position, e.position)
 		if dist > reach:
 			continue
@@ -675,7 +677,7 @@ static func _deploy_tile_is_lethal(lookahead: GameState, owner: int, \
 	for e: EntityState in lookahead.entities():
 		if e.owner == owner:
 			continue
-		if lookahead.grid.manhattan_distance(tile, e.position) > _threat_reach_of(e):
+		if lookahead.grid.manhattan_distance(tile, e.position) > _threat_reach_of(lookahead, e):
 			continue
 		if Combat.preview_damage(lookahead, e, probe) >= unit_type.hp:
 			return true
@@ -688,12 +690,11 @@ static func _deploy_tile_is_lethal(lookahead: GameState, owner: int, \
 ## [code]attack_range[/code] (structures never move — mirrors
 ## [method _sets_up_attack_next_turn]'s identical reach rule from the
 ## defender's perspective).
-static func _threat_reach_of(entity: EntityState) -> int:
+static func _threat_reach_of(state: GameState, entity: EntityState) -> int:
 	if entity is UnitState:
 		var u: UnitState = entity
-		return u.type.soft_move_cap + u.type.attack_range
-	var s: StructureState = entity
-	return s.type.attack_range
+		return u.type.soft_move_cap + Unit.effective_attack_range(state, u)
+	return Unit.effective_attack_range(state, entity)
 
 
 ## Manhattan distance from [param from_tile] to the [b]nearest live enemy
@@ -742,7 +743,7 @@ static func _enemy_hq(state: GameState, owner: int) -> StructureState:
 ## [method GridState.manhattan_distance] — no [method Movement.reachable] call
 ## against a hypothetical future turn.
 static func _sets_up_attack_next_turn(state: GameState, unit: UnitState, dest: Vector2i) -> bool:
-	var reach: int = unit.type.soft_move_cap + unit.type.attack_range
+	var reach: int = unit.type.soft_move_cap + Unit.effective_attack_range(state, unit)
 	for e: EntityState in state.entities():
 		if e.owner == unit.owner:
 			continue
@@ -999,7 +1000,7 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 		# value/cost denominator (== ap_equiv_cost at CREDIT_TO_AP_RATE=1); the full
 		# two-currency scoring is deferred to the AI CREDIT_TO_AP_RATE rework.
 		if not Credits.can_afford(lookahead, producer.owner, cost) \
-				or not AP.can_afford(lookahead, producer.owner, Balance.economy.produce_ap_cost):
+				or not AP.can_afford(lookahead, producer.owner, BaseProduction.effective_produce_ap_cost(lookahead, producer.owner)):
 			continue
 		# ★ S6-05: mirror the gates apply_action enforces, so the driver never generates a
 		# candidate that will be rejected on commit (CR-4 -- the AI pays the same costs and
@@ -1022,7 +1023,7 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 				value *= AIBalance.ai.deploy_into_death_penalty
 			# ★ Denominator uses LIFETIME cost, not the purchase price -- otherwise the AI
 			# under-prices every unit and over-builds into the deficit lock.
-			var denom: float = float(Balance.economy.produce_ap_cost) \
+			var denom: float = float(BaseProduction.effective_produce_ap_cost(lookahead, producer.owner)) \
 				+ credits_to_ap(lifetime_credit_cost(unit_type))
 			var score: float = _action_score(value / denom, false)
 			var take: bool = _is_better(score, cost, producer.entity_id, \
@@ -1089,7 +1090,7 @@ static func _reachability_multiplier(lookahead: GameState, owner: int, deploy_ti
 		else:
 			enemies.append(e)
 
-	var own_reach: int = unit_type.attack_range + unit_type.soft_move_cap
+	var own_reach: int = Unit.effective_type_attack_range(lookahead, unit_type, owner) + unit_type.soft_move_cap
 	for enemy: EntityState in enemies:
 		if lookahead.grid.manhattan_distance(deploy_tile, enemy.position) <= own_reach:
 			return _REACHABILITY_MULTIPLIER_REACHABLE
@@ -1098,12 +1099,12 @@ static func _reachability_multiplier(lookahead: GameState, owner: int, deploy_ti
 		if not (friendly is UnitState):
 			continue
 		var friendly_unit: UnitState = friendly
-		var friendly_reach: int = friendly_unit.type.attack_range + friendly_unit.type.soft_move_cap
+		var friendly_reach: int = Unit.effective_attack_range(lookahead, friendly_unit) + friendly_unit.type.soft_move_cap
 		for enemy: EntityState in enemies:
 			if not (enemy is UnitState):
 				continue
 			var enemy_unit: UnitState = enemy
-			var enemy_reach: int = enemy_unit.type.attack_range + enemy_unit.type.soft_move_cap
+			var enemy_reach: int = Unit.effective_attack_range(lookahead, enemy_unit) + enemy_unit.type.soft_move_cap
 			var dist: int = lookahead.grid.manhattan_distance(friendly_unit.position, enemy_unit.position)
 			if dist <= friendly_reach or dist <= enemy_reach:
 				return _REACHABILITY_MULTIPLIER_IN_CONTACT
@@ -1180,8 +1181,10 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 		#
 		# Gating on a positive valuation keeps the original guard's intent exactly — a type
 		# with no model still scores 0 and is still skipped — while letting any type that
-		# gains a real valuation participate automatically. The Research Lab and Defensive
-		# Structure remain excluded today because they genuinely have no model yet.
+		# gains a real valuation participate automatically. ★ CR-14 (2026-09-28): the
+		# Research Lab now has a model too (_lab_value, dispatched from _economy_value) —
+		# the value of the best tier-2 tech it would unlock, discounted. Defensive
+		# Structure remains excluded today because it genuinely has no model yet.
 		var prospective_value: float = _economy_value(lookahead, player, structure_type)
 		if prospective_value <= 0.0:
 			continue
@@ -1196,7 +1199,7 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 		# value/cost denominator (== ap_equiv_cost at CREDIT_TO_AP_RATE=1); the full
 		# two-currency scoring is deferred to the AI CREDIT_TO_AP_RATE rework.
 		if not Credits.can_afford(lookahead, player, cost) \
-				or not AP.can_afford(lookahead, player, Balance.economy.build_ap_cost):
+				or not AP.can_afford(lookahead, player, BaseProduction.effective_build_ap_cost(lookahead, player)):
 			continue
 		# ★ S6-05: mirror validate_build's gates (see the produce path).
 		if lookahead.per_player[player].in_deficit:
@@ -1228,7 +1231,7 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 		# scores 0 today. The conversion is here so that when research actions gain an
 		# economy_value it lands on the same scale as everything else.
 		var value: float = prospective_value
-		var denom: float = ap_equivalent_cost(cost, Balance.economy.build_ap_cost)
+		var denom: float = ap_equivalent_cost(cost, BaseProduction.effective_build_ap_cost(lookahead, player))
 		var score: float = _action_score(value / denom, false)
 		var candidate_entity_id: int = _lowest_owned_entity_id(lookahead, player)
 		if _is_better(score, cost, candidate_entity_id, best.score, best.ap_cost, best.entity_id):
@@ -1346,6 +1349,12 @@ static func _cheapest_producible_cost(lookahead: GameState, player: int) -> floa
 ## note) — the dominant-strategy guardrail is [param economy_investments_committed]'s
 ## cadence cap in the caller, never a valuation ceiling here.
 static func _economy_value(lookahead: GameState, player: int, structure_type: StructureTypeDef) -> float:
+	# ★ CR-14 (2026-09-28): the Research Lab has its own dedicated model (see
+	# _lab_value's doc) -- it has no cap_bonus and produces nothing, so falling through
+	# to _capacity_value below would always return 0 and the AI would never build one.
+	if structure_type == StructureTypes.RESEARCH_LAB:
+		return _lab_value(lookahead, player)
+
 	# ★ S6-06 (2026-08-24): CAPACITY value — the term whose absence caused the gate failure.
 	#
 	# S6-01 zeroed this function with reasoning that was right about INCOME and wrong about
@@ -1399,33 +1408,257 @@ static func _lowest_owned_entity_id(lookahead: GameState, player: int) -> int:
 	return 0
 
 
-## Per-Lab research candidate enumeration (ADR-0011 §2). [b]Story 004 scope
-## note (deferred integration point, flagged per this story's Implementation
-## Notes — surfaced explicitly, not silently skipped):[/b] the
-## [code]research_value[/code] MATH below ([method _research_value]) is fully
-## implemented per the GDD Formulas section and is ready to enumerate the
-## instant Research/Tech lands, but the enumeration [b]source[/b] this helper
-## would walk — [code]Research.legal_research_targets(state, lab)[/code] — does
-## not exist yet (the Research/Tech epic is not implemented in this corpus).
-## This helper therefore [b]always returns [param best] unchanged[/b], the
-## same documented-stub contract Story 002 shipped, so [method choose_action]
-## never enumerates a research candidate today (Edge case: "returns no
-## candidates without error"). Re-enable point: once
-## [code]Research.legal_research_targets[/code] exists, replace this body with
-## a loop mirroring [method _score_build_and_economy_candidates]'s cadence-cap
-## gate (exclude every candidate once [param economy_investments_committed] >=
-## [code]AIBalance.ai.max_economy_investments_per_turn[/code], per CR-5 —
-## research counts toward the same cadence cap as economy builds) around
-## [method _research_value] / [method _action_score].
-static func _score_research_candidates(_lookahead: GameState, _entity: EntityState, \
-		_economy_investments_committed: int, best: _Candidate) -> _Candidate:
+## Per-player research candidate enumeration (ADR-0011 §2, CR-14 re-enable).
+## [param entity] is unused — like [method _score_build_and_economy_candidates],
+## the candidate universe is player-scoped ([method Research.legal_research_targets]),
+## not per-entity — kept in the signature only to match every other per-verb
+## helper's uniform shape the streaming [method choose_action] scan calls.
+##
+## Contributes nothing if the player has no completed researcher ([method
+## Research.researcher] — CR-14: any structure with [code]can_research[/code], in
+## practice the HQ) or that researcher is already busy ([code]research_target != null[/code]
+## — mirrors every other verb's "don't re-propose a busy producer" gate, TR-ai-005's
+## reject-loop discipline). Cadence-capped exactly like an economy build (CR-5: research
+## counts toward the SAME [code]max_economy_investments_per_turn[/code] cap as a Factory
+## build, enforced by [code]AITurnDriver._is_economy_or_research[/code] on the commit
+## side) — excluded from enumeration entirely once the cap is reached, never merely
+## down-scored, matching [method _score_build_and_economy_candidates]'s own gate shape.
+##
+## Walks [method Research.legal_research_targets] (tree-legal, NOT affordability-filtered
+## per its own contract) and re-validates every tech via [method Research.validate_research]
+## before scoring — the full gate, including the dual-cost afford check and
+## [code]in_deficit[/code] — so an unaffordable or otherwise-illegal tech never reaches
+## the running-best comparison and [b]choose_action never proposes a candidate
+## [code]apply_action[/code] would reject[/b] (TR-ai-005; a reject would otherwise spin
+## [code]AITurnDriver[/code]'s bounded reject-continue loop). [b]Never[/b] considers
+## [code]CancelResearchAction[/code] (S8-17: a cancel-for-refund loop is out of scope for
+## this verb, same discipline as cancel-build's own safety-valve-only gate).
+##
+## [method Research.legal_research_targets] already enforces the tree's own exclusivity
+## ([member TechDef.exclusive_group]) — once either branch of a pick-one pair is completed
+## or under research, [method Research.availability] excludes the other, so this loop
+## never has to reason about exclusivity itself; it only has to skip a tech that fails
+## [method Research.validate_research]'s remaining (affordability/busy) gates.
+static func _score_research_candidates(lookahead: GameState, entity: EntityState, \
+		economy_investments_committed: int, best: _Candidate) -> _Candidate:
+	# choose_action calls every scorer once per owned entity; research belongs to the
+	# researcher alone, so any other entity would just re-score the same candidates.
+	if not (entity is StructureState) or not (entity as StructureState).type.can_research:
+		return best
+	var player: int = lookahead.active_player
+	var lab: StructureState = Research.researcher(lookahead, player)
+	if lab == null or lab != entity or lab.research_target != null:
+		return best
+	if economy_investments_committed >= AIBalance.ai.max_economy_investments_per_turn:
+		return best
+
+	for tech: TechDef in Research.legal_research_targets(lookahead, player):
+		var action := ResearchAction.new()
+		action.player = player
+		action.researcher_id = lab.entity_id
+		action.tech = tech
+		if Research.validate_research(lookahead, action) != Action.Reason.OK:
+			continue
+
+		var cost: int = Research.effective_research_cost(lookahead, tech, player)
+		var ap_surcharge: int = Research.effective_research_ap_surcharge(lookahead, tech, player)
+		var value: float = _tech_research_value(lookahead, player, tech)
+		var denom: float = ap_equivalent_cost(cost, ap_surcharge)
+		var score: float = _action_score(value / denom, false)
+		if _is_better(score, cost, lab.entity_id, best.score, best.ap_cost, best.entity_id):
+			best = _Candidate.new(action, score, cost, lab.entity_id)
+
 	return best
 
 
-## `research_value(tech)` (GDD Formulas, AC-17/AC-17a/AC-17b) — implemented now
-## per spec so it is ready the instant [method _score_research_candidates] is
-## re-enabled (this story's documented deferred integration point), even
-## though nothing calls this function yet (Research/Tech is not implemented).
+## Sums [method _research_value] over every effect [param tech] carries (CR-14: effects
+## are data, so a tech can in principle carry more than one nonzero field, even though
+## none of the nine shipped techs currently do) — the dispatch point [method
+## _score_research_candidates] calls once per tech. Every permanent army-wide effect
+## (attack/defense/range/cover-ignore/heal/AP-discounts/cost-discount — everything except
+## Economy Tech) uses [member AIConfig.tech_value_horizon], the SAME horizon [method
+## _attack_defense_tech_marginal_value]'s GDD precedent already established for a
+## permanent buff that pays out for the rest of the match; Economy Tech alone uses
+## [member AIConfig.economy_horizon] (an income projection, matching [method _economy_value]'s
+## own horizon) per the GDD's [code]research_value[/code] formula note.
+static func _tech_research_value(lookahead: GameState, player: int, tech: TechDef) -> float:
+	var horizon: int = AIBalance.ai.tech_value_horizon
+	var total: float = 0.0
+	if tech.attack_bonus != 0:
+		total += _research_value(tech.research_time, horizon, \
+			_attack_defense_tech_marginal_value(float(tech.attack_bonus)))
+	if tech.defense_bonus != 0:
+		total += _research_value(tech.research_time, horizon, \
+			_attack_defense_tech_marginal_value(float(tech.defense_bonus)))
+	if tech.attack_range_bonus != 0:
+		total += _research_value(tech.research_time, horizon, \
+			_range_tech_marginal_value(lookahead, player, tech))
+	if tech.ignores_cover:
+		total += _research_value(tech.research_time, horizon, _penetration_tech_marginal_value())
+	if tech.idle_heal != 0:
+		total += _research_value(tech.research_time, horizon, _field_repair_tech_marginal_value(tech))
+	if tech.produce_ap_discount != 0 or tech.build_ap_discount != 0:
+		total += _research_value(tech.research_time, horizon, _logistics_tech_marginal_value(tech))
+	if tech.produce_cost_discount_pct != 0:
+		total += _research_value(tech.research_time, horizon, \
+			_foundry_tech_marginal_value(lookahead, player, tech))
+	if tech.economy_tier_bonus != 0:
+		total += _research_value(tech.research_time, AIBalance.ai.economy_horizon, \
+			credits_to_ap(_economy_tech_marginal_value(Balance.economy.econ_tier_bonus, 0, 0)))
+	return total
+
+
+## Volley's marginal value (CR-14): [member TechDef.attack_range_bonus] benefits only a
+## unit that can [i]already[/i] attack at range >= 1 ([method Unit.effective_attack_range]'s
+## own gate — a range-0 Builder never gains reach). Reuses [method
+## _attack_defense_tech_marginal_value]'s HP_PER_AP/ATTACKS_LANDED_PER_TURN_ESTIMATE
+## conversion by first folding the range bonus into an attack-bonus-equivalent via
+## [member AIConfig.range_bonus_attack_equivalent] — a range point trades reach for
+## damage, not damage for damage, so it is valued as a FRACTION of one flat attack point.
+##
+## Zero if [param player] owns no live ranged unit AND has no COMPLETED producer that
+## could build one ([method _has_ranged_unit_or_producer]) — a range bonus with nothing
+## on the board or in the immediate pipeline to carry it is worth nothing yet, the same
+## "you cannot use slots you are not allowed to fill" discipline [method _capacity_value]
+## already applies to population headroom.
+static func _range_tech_marginal_value(lookahead: GameState, player: int, tech: TechDef) -> float:
+	if not _has_ranged_unit_or_producer(lookahead, player):
+		return 0.0
+	return _attack_defense_tech_marginal_value( \
+		float(tech.attack_range_bonus) * AIBalance.ai.range_bonus_attack_equivalent)
+
+
+## True iff [param player] owns a live unit that already attacks at range
+## ([method Unit.effective_attack_range] > 0) OR owns a COMPLETED producer whose
+## [member StructureTypeDef.producible_types] includes a ranged [UnitTypeDef] — the
+## "current asset OR near-term pipeline" test [method _range_tech_marginal_value] needs
+## so Volley is not permanently valued at 0 purely because the AI's army happens to be
+## all-melee at the instant it becomes legal to research.
+static func _has_ranged_unit_or_producer(lookahead: GameState, player: int) -> bool:
+	for e: EntityState in lookahead.entities():
+		if e.owner == player and e is UnitState and Unit.effective_attack_range(lookahead, e) > 0:
+			return true
+	for e: EntityState in lookahead.entities():
+		if e.owner != player or not (e is StructureState):
+			continue
+		var st: StructureState = e
+		if st.build_status != StructureState.BuildStatus.COMPLETED:
+			continue
+		for unit_type: UnitTypeDef in st.type.producible_types:
+			if unit_type.attack_range > 0:
+				return true
+	return false
+
+
+## Penetration's marginal value (CR-14): ignoring Cover recovers [member CombatConfig.
+## cover_dr] damage on every landed attack that would otherwise have been reduced by it.
+## [member AIConfig.penetration_cover_uptime_estimate] is a stated assumption for how
+## often that is true — this AI has no target-composition lookahead (whether the NEXT
+## enemy it fights happens to be standing in Cover) — mirroring how [member
+## AIConfig.attacks_landed_per_turn_estimate] is itself a stated assumption for
+## Attack/Defense Tech, reused via the same [method _attack_defense_tech_marginal_value]
+## conversion. State-independent (unlike [method _range_tech_marginal_value]): recovering
+## a fixed damage-reduction term is worth the same in the abstract regardless of the
+## board's current Cover layout.
+static func _penetration_tech_marginal_value() -> float:
+	return _attack_defense_tech_marginal_value( \
+		float(CombatBalance.combat.cover_dr) * AIBalance.ai.penetration_cover_uptime_estimate)
+
+
+## Field Repair's marginal value (CR-14): [member TechDef.idle_heal] HP restored to each
+## unit that neither moved nor attacked last turn ([method Research.apply_idle_healing]),
+## converted through [member AIConfig.hp_per_ap] — the same HP<->AP exchange rate every
+## other combat term on this scale uses — and discounted by [member AIConfig.
+## field_repair_idle_uptime_estimate]: this AI is built to always advance, attack or
+## retreat when it legally can ([member AIConfig.cover_tile_discount]'s doc: "this AI
+## does not stay put"), so a unit sits idle only when it had no legal move at all. A low
+## default keeps Field Repair from being valued as though the whole army held position.
+static func _field_repair_tech_marginal_value(tech: TechDef) -> float:
+	return float(tech.idle_heal) / AIBalance.ai.hp_per_ap * AIBalance.ai.field_repair_idle_uptime_estimate
+
+
+## Logistics' marginal value (CR-14): AP is already the native scoring scale, so — unlike
+## every other new effect here — [b]no [method credits_to_ap] conversion applies[/b]:
+## [member TechDef.produce_ap_discount]/[member TechDef.build_ap_discount] are AP savings
+## directly. Each leg is weighted by its OWN assumed per-turn cadence ([member
+## AIConfig.produce_actions_per_turn_estimate]/[member AIConfig.build_actions_per_turn_estimate])
+## rather than one shared figure, because builds are far rarer than produces — gated both
+## by the shared economy cadence cap and by each structure's own low [member
+## StructureTypeDef.max_count].
+static func _logistics_tech_marginal_value(tech: TechDef) -> float:
+	return float(tech.produce_ap_discount) * AIBalance.ai.produce_actions_per_turn_estimate \
+		+ float(tech.build_ap_discount) * AIBalance.ai.build_actions_per_turn_estimate
+
+
+## Foundry's marginal value (CR-14): [member TechDef.produce_cost_discount_pct] percent
+## off [method _cheapest_producible_cost] — the same "floor on what a slot/unit is worth"
+## figure [method _capacity_value] already anchors to — at the same assumed produce
+## cadence Logistics' produce leg uses ([member AIConfig.produce_actions_per_turn_estimate]),
+## converted via [method credits_to_ap] since this saving IS Credit-denominated (unlike
+## Logistics' AP discounts). Zero if [param player] has no completed producer yet —
+## nothing to discount — mirroring [method _cheapest_producible_cost]'s own contract.
+static func _foundry_tech_marginal_value(lookahead: GameState, player: int, tech: TechDef) -> float:
+	var typical_cost: float = _cheapest_producible_cost(lookahead, player)
+	if typical_cost <= 0.0:
+		return 0.0
+	var savings_per_action: float = typical_cost * float(tech.produce_cost_discount_pct) / 100.0
+	return credits_to_ap(savings_per_action * AIBalance.ai.produce_actions_per_turn_estimate)
+
+
+## The Research Lab's build value (CR-14, "the Lab problem" — a Lab has no
+## [member StructureTypeDef.cap_bonus] and produces nothing, so [method _capacity_value]
+## alone always values it at 0 and the AI would never build one, never reach tier 2):
+## the (discounted) [method _tech_research_value] of the BEST tier-2 tech the player
+## would become eligible to start once the Lab completes — [i]eligibility[/i] meaning
+## every OTHER gate on that tech already holds (its tier-1 parent completed, or itself
+## already under research — "has the parent, or is close to it", task scope) and it is
+## not excluded by its [member TechDef.exclusive_group] sibling.
+##
+## ★ Reuses the REAL gate, [method Research.legal_research_targets], against a throwaway
+## [method GameState.clone] with a phantom completed Lab (and every currently-in-progress
+## tech treated as already complete, for the "close to" case) rather than hand-copying
+## [Research]'s prerequisite/exclusion logic a second time here — the clone is discarded,
+## never [method GameState.apply_action]'d (ADR-0011 §1's "never applies" discipline).
+##
+## Zero once [param player] already owns a Research Lab, any build status ([member
+## StructureTypeDef.max_count] is 1, so [method BaseProduction.can_build_more] would
+## already reject a second one on the enumeration side — checked explicitly here too
+## since this function is also called directly by tests and doesn't otherwise re-derive
+## that gate). [member AIConfig.lab_unlock_value_discount] deliberately shrinks the result
+## well below the unlocked tech's own eventual value — the Lab only buys ELIGIBILITY, not
+## the tech itself (a second Credit+AP spend and [code]research_time[/code] turns still
+## stand between "built" and "completed") — sized modest so it never crowds out army
+## production (task scope: "must not crowd out army production").
+static func _lab_value(lookahead: GameState, player: int) -> float:
+	if BaseProduction.structure_count(lookahead, player, StructureTypes.RESEARCH_LAB) > 0:
+		return 0.0
+
+	var probe: GameState = lookahead.clone()
+	var phantom_lab := StructureState.new()
+	phantom_lab.entity_id = -999999 # Off the real id sequence; probe is discarded, never applied.
+	phantom_lab.owner = player
+	phantom_lab.type = StructureTypes.RESEARCH_LAB
+	phantom_lab.current_hp = StructureTypes.RESEARCH_LAB.hp
+	phantom_lab.build_status = StructureState.BuildStatus.COMPLETED
+	probe.entities_by_id[phantom_lab.entity_id] = phantom_lab
+	for e: EntityState in probe.entities():
+		if e.owner == player and e is StructureState:
+			var s: StructureState = e
+			if s.research_target != null and not Research.has_tech(probe, player, s.research_target):
+				probe.per_player[player].completed_techs.append(s.research_target)
+
+	var best: float = 0.0
+	for tech: TechDef in Research.legal_research_targets(probe, player):
+		if not (StructureTypes.RESEARCH_LAB in tech.required_structures):
+			continue
+		var value: float = _tech_research_value(lookahead, player, tech)
+		if value > best:
+			best = value
+	return best * AIBalance.ai.lab_unlock_value_discount
+
+
+## `research_value(tech)` (GDD Formulas, AC-17/AC-17a/AC-17b) — CR-14 re-enabled:
+## called by [method _tech_research_value], once per nonzero effect a tech carries.
 ##
 ## `Σ_{t=research_time+1}^{horizon} marginal_tech_value × ECONOMY_DECAY^t`,
 ## where [param horizon] is [code]AIBalance.ai.tech_value_horizon[/code] for
