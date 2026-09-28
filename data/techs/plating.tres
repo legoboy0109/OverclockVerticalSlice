@@ -28,3 +28,5 @@ produce_ap_discount = 0
 build_ap_discount = 0
 produce_cost_discount_pct = 0
 frees_pilots = []
+vehicle_attack_bonus = 0
+vehicle_defense_bonus = 0

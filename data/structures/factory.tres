@@ -12,6 +12,7 @@ script = ExtResource("1")
 display_name = "Factory"
 buildable = true
 art_id = &""
+counts_as = []
 hp = 14
 build_cost = 1000
 build_time = 3

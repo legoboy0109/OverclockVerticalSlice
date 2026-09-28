@@ -12,9 +12,9 @@ UNIT_DEFAULTS = {"unit_class": "infantry", "can_target": ["infantry", "ground_ve
     "min_range": 1, "damage_type": "kinetic", "resist_kinetic": 0, "resist_emf": None, "resist_incendiary": 0,
     "area_shape": "single", "area_length": 4, "abilities": [], "can_pilot": False, "requires_pilot": False,
     "transport_capacity": 0, "transport_accepts": [], "transport_size": 1, "targets_crew": False,
-    "crew_bonus_attack": 0, "crew_bonus_move_cost": 0, "art_id": ""}
+    "crew_bonus_attack": 0, "crew_bonus_move_cost": 0, "starting_merit": 0, "art_id": ""}
 
-STRUCT_DEFAULTS = {"buildable": False, "art_id": "", "hp": 10, "build_cost": 500, "build_time": 2, "upkeep": 100,
+STRUCT_DEFAULTS = {"buildable": False, "art_id": "", "counts_as": [], "hp": 10, "build_cost": 500, "build_time": 2, "upkeep": 100,
     "max_count": 1, "cap_bonus": 0, "production_cap": 0, "produces": [], "attack": 0, "attack_range": 0,
     "defense": 0, "can_counterattack": False, "can_research": False, "can_target": ["infantry", "ground_vehicle"],
     "targeting_mode": "direct", "min_range": 1, "damage_type": "kinetic", "resist_kinetic": 0, "resist_emf": 0,

@@ -41,6 +41,11 @@ const PROTECTORATE_BARRACKS: StructureTypeDef = preload("res://data/structures/p
 const PROTECTORATE_FACTORY: StructureTypeDef = preload("res://data/structures/protectorate_factory.tres")
 const PROTECTORATE_AIRFIELD: StructureTypeDef = preload("res://data/structures/protectorate_airfield.tres")
 const PROTECTORATE_DEFENCE: StructureTypeDef = preload("res://data/structures/protectorate_defence.tres")
+# ★ Holy Cosmic Empire (faction wave 6).
+const EMPIRE_BARRACKS: StructureTypeDef = preload("res://data/structures/empire_barracks.tres")
+const EMPIRE_FACTORY: StructureTypeDef = preload("res://data/structures/empire_factory.tres")
+const EMPIRE_AIRFIELD: StructureTypeDef = preload("res://data/structures/empire_airfield.tres")
+const CATHEDRAL: StructureTypeDef = preload("res://data/structures/cathedral.tres")
 
 ## ★ Every structure type in the roster, in declaration order. See
 ## [constant UnitTypes.ALL] for why this exists — a coverage guard that keeps its
@@ -49,7 +54,8 @@ const ALL: Array[StructureTypeDef] = [HQ, FACTORY, BARRACKS, DEFENSIVE_STRUCTURE
 	SOLAR_BARRACKS, SOLAR_FACTORY, SOLAR_AIRFIELD, DEFENCE_NODE,
 	INDEPENDENTS_BARRACKS, INDEPENDENTS_FACTORY, INDEPENDENTS_AIRFIELD,
 	UNION_BARRACKS, UNION_FACTORY, UNION_AIRFIELD, BULWARK,
-	PROTECTORATE_BARRACKS, PROTECTORATE_FACTORY, PROTECTORATE_AIRFIELD, PROTECTORATE_DEFENCE]
+	PROTECTORATE_BARRACKS, PROTECTORATE_FACTORY, PROTECTORATE_AIRFIELD, PROTECTORATE_DEFENCE,
+	EMPIRE_BARRACKS, EMPIRE_FACTORY, EMPIRE_AIRFIELD, CATHEDRAL]
 
 ## Every structure a Builder may raise, in [constant ALL] order — decided by each type's
 ## [member StructureTypeDef.buildable] (the vault's `buildable` checkbox). The single source

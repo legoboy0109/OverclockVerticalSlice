@@ -274,3 +274,9 @@ extends Resource
 ## makes it a unit. 0.5 puts crewing a Tank (~7 AP-equivalent per AP) well above a routine
 ## move, so the AI crews before it wanders — without letting it outrank a kill on its HQ.
 @export var crew_vehicle_value_fraction: float = 0.5
+
+## Fraction of its build price a promoting faction's AI adds to a rank-support structure it
+## lacks (PV-7: without one, every veteran drops a rank a turn). 1.0 makes building it worth
+## what it costs — measured: at 0 the Empire AI never built a Cathedral in 60 games, so
+## promotion, the faction's whole identity, did almost nothing.
+@export var rank_support_value_fraction: float = 1.0

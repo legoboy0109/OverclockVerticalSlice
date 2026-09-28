@@ -13,6 +13,7 @@ script = ExtResource("1")
 display_name = "Protectorate Barracks"
 buildable = false
 art_id = &"barracks"
+counts_as = []
 hp = 12
 build_cost = 600
 build_time = 2

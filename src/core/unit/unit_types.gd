@@ -67,6 +67,16 @@ const CINDER_TANK: UnitTypeDef = preload("res://data/units/cinder_tank.tres")
 const STRAFER: UnitTypeDef = preload("res://data/units/strafer.tres")
 const AUTONOMOUS_LIFTER: UnitTypeDef = preload("res://data/units/autonomous_lifter.tres")
 const TALON: UnitTypeDef = preload("res://data/units/talon.tres")
+# ★ Holy Cosmic Empire (faction wave 6).
+const LEVY: UnitTypeDef = preload("res://data/units/levy.tres")
+const KNIGHT: UnitTypeDef = preload("res://data/units/knight.tres")
+const CONFESSOR: UnitTypeDef = preload("res://data/units/confessor.tres")
+const INQUISITOR: UnitTypeDef = preload("res://data/units/inquisitor.tres")
+const AEGIS_WALKER: UnitTypeDef = preload("res://data/units/aegis_walker.tres")
+const CATHEDRAL_TANK: UnitTypeDef = preload("res://data/units/cathedral_tank.tres")
+const RELIQUARY: UnitTypeDef = preload("res://data/units/reliquary.tres")
+const SERAPH: UnitTypeDef = preload("res://data/units/seraph.tres")
+const DOMINION: UnitTypeDef = preload("res://data/units/dominion.tres")
 
 ## ★ Every unit type in the roster, in declaration order.
 ##
@@ -80,4 +90,5 @@ const ALL: Array[UnitTypeDef] = [BUILDER, SCOUT, TROOPER, HEAVY, SNIPER, TANK, A
 	CITIZEN_TROOPER, PILOT, MEDIC, VOLUNTEER, LANCE_TEAM, GUN_TRUCK, ARMOURED_TRANSPORT, INTERCEPTOR, GUNSHIP, PARATROOPER_TRANSPORT,
 	PARTISAN, PIRATE, SABOTEUR, MARKSMAN, MISSILE_TEAM, TECHNICAL, SCRAP_TANK, BUZZARD,
 	MACHINIST, FOREMAN, GUARD, WALKER, SIEGE_MECH, HAULER, LANCER, BATTERY, SKYWORKS_GUNSHIP, SKYWORKS_INTERCEPTOR,
-	SERVITOR, DEMOLITIONS_SPECIALIST, LANCE_SPECIALIST, SUPPORT_SPECIALIST, SENTINEL_MECH, BREAKER_MECH, LANCE_TANK, CINDER_TANK, STRAFER, AUTONOMOUS_LIFTER, TALON]
+	SERVITOR, DEMOLITIONS_SPECIALIST, LANCE_SPECIALIST, SUPPORT_SPECIALIST, SENTINEL_MECH, BREAKER_MECH, LANCE_TANK, CINDER_TANK, STRAFER, AUTONOMOUS_LIFTER, TALON,
+	LEVY, KNIGHT, CONFESSOR, INQUISITOR, AEGIS_WALKER, CATHEDRAL_TANK, RELIQUARY, SERAPH, DOMINION]

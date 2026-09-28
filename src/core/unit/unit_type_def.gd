@@ -86,6 +86,10 @@ enum AreaShape { SINGLE, BURST, LINE }
 ## faster). The result never drops below [constant Unit.MIN_MOVE_COST].
 @export var crew_bonus_move_cost: int = 0
 
+## Merit a unit of this type is produced with (the Holy Cosmic Empire's Knight enters at rank 1).
+## Only meaningful for a faction that promotes; uses the existing merit machinery, no new rule.
+@export var starting_merit: int = 0
+
 ## Borrow another type's sprites (its id) until this one has its own art — a faction's
 ## variant of a shared building, or a new unit awaiting art. Empty = its own id.
 ## ⚠ Placeholder: two types sharing art look identical on the board.

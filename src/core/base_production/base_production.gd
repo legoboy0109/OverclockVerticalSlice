@@ -428,7 +428,11 @@ static func _complete_production(state: GameState, producer: StructureState) -> 
 	unit.position = tile
 	unit.type = unit_type
 	unit.current_hp = unit_type.hp
+	# A type that enters already promoted (the Empire's Knight): starting merit, then whatever
+	# rank it earns — through the ordinary merit machinery, inert for factions that do not promote.
+	unit.merit = unit_type.starting_merit
 	state.entities_by_id[unit.entity_id] = unit
+	Promotion.apply_rank(state, unit)
 	state.next_entity_id += 1
 	var placed: bool = state.grid.place(unit.entity_id, tile.x, tile.y)
 	assert(placed, "BaseProduction._complete_production: Grid.place failed on a tile legal_deploy_tiles accepted — legal_deploy_tiles/Grid desync.")

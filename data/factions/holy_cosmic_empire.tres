@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="FactionDef" load_steps=20 format=3]
+; GENERATED from game-data/Factions/Holy Cosmic Empire.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 82261610802a27a7b85bbd36947ee74dc0b03dce1d45b25560f95a4294b6f950
+
+[ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/structures/empire_barracks.tres" id="2"]
+[ext_resource type="Resource" path="res://data/structures/empire_factory.tres" id="3"]
+[ext_resource type="Resource" path="res://data/structures/empire_airfield.tres" id="4"]
+[ext_resource type="Resource" path="res://data/structures/cathedral.tres" id="5"]
+[ext_resource type="Resource" path="res://data/structures/defensive_structure.tres" id="6"]
+[ext_resource type="Resource" path="res://data/techs/attack_1.tres" id="7"]
+[ext_resource type="Resource" path="res://data/techs/defense_1.tres" id="8"]
+[ext_resource type="Resource" path="res://data/techs/economy_1.tres" id="9"]
+[ext_resource type="Resource" path="res://data/techs/penetration.tres" id="10"]
+[ext_resource type="Resource" path="res://data/techs/volley.tres" id="11"]
+[ext_resource type="Resource" path="res://data/techs/plating.tres" id="12"]
+[ext_resource type="Resource" path="res://data/techs/field_repair.tres" id="13"]
+[ext_resource type="Resource" path="res://data/techs/logistics.tres" id="14"]
+[ext_resource type="Resource" path="res://data/techs/foundry.tres" id="15"]
+[ext_resource type="Resource" path="res://data/techs/doctrine_1.tres" id="16"]
+[ext_resource type="Resource" path="res://data/techs/doctrine_2.tres" id="17"]
+[ext_resource type="Resource" path="res://data/techs/doctrine_3.tres" id="18"]
+[ext_resource type="Script" path="res://src/core/faction/faction_unit_delta.gd" id="19"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Holy Cosmic Empire"
+description = "A hierarchy that grows stronger with every battle — and falls apart if its Cathedral does."
+playable = true
+structures = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")]
+techs = [ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18")]
+infantry_cap_delta = 0
+base_income_delta = 0
+econ_tier_bonus_delta = 0
+upkeep_pct_delta = 0
+unit_deltas = []
+promotes = true
+rank_requires_support = true
+rank_support_structures = [ExtResource("5")]

@@ -13,6 +13,7 @@ script = ExtResource("1")
 display_name = "Barracks"
 buildable = true
 art_id = &""
+counts_as = []
 hp = 14
 build_cost = 600
 build_time = 2

@@ -227,3 +227,37 @@ User decisions (2026-09-28): **colour = which player** (OQ-11); **factions in wa
 - **Protectorate vs Alliance: Alliance 48/60.** Clearest case yet of the AI problem: it built
   **89 Lance Specialists** — anti-armour troops that cannot shoot infantry — against a mostly-infantry
   army. The AI values a unit by its price without asking what it can hit.
+
+## Faction wave 6 — Holy Cosmic Empire (`factions/holy-cosmic-empire.md`)
+
+- **The only faction that promotes** (`promotes`, with the Cathedral as rank support — PV-7).
+  Knights are produced with 6 starting merit (rank 1).
+- **The Cathedral is the Empire's Research Lab**: its own structure (900, 12 hp) that **counts as a
+  Research Lab** (`counts_as`), so it gates tier-2 research like one. General machinery — any
+  faction's variant building can stand in for a shared one.
+- **Doctrine I→II→III**: strictly sequential, ground-vehicle-only attack/defence; gated on the
+  Cathedral (my call — the design gives no structure gate).
+- **Empire vehicles and aircraft survive on defence** (3 / 2 / 2) rather than hit points; aircraft
+  need pilots ("no autonomous units").
+- ⚠ **Rank is not shown on the board** (PVOQ-3). Now that a faction promotes, this matters: you
+  cannot see which of your Levies is a Champion. Next UI item worth doing.
+- ⚠ Confessor ships without SPOT. Placeholder art borrowed.
+
+### Findings to review
+- **Empire vs Alliance: Empire 29 / Alliance 31** — the closest matchup — **after** teaching the AI
+  to build its Cathedral. Before, it never built one (the AI only knew the building literally named
+  "Research Lab"), so every veteran lost a rank a turn and the Empire won 25/60.
+
+## The six factions — where things stand (2026-09-28)
+
+| Faction | Wins vs Alliance (60 AI games) | Main reason |
+|---|---:|---|
+| Solar Federation | 21 | AI never fields its specialists |
+| Independents | 9 | AI never steals (1 Pirate built) |
+| Machinist's Union | 7 | AI can't afford its vehicles |
+| Galactic Protectorate | 12 | AI buys anti-armour troops against infantry |
+| Holy Cosmic Empire | 29 | closest to even |
+
+⇒ **These measure the AI, not the factions.** The single most valuable next step for faction
+balance is a **faction-aware AI** (OQ-15) — it at least needs to value a unit by what it can hit
+in the current matchup, and to use each faction's signature tools.

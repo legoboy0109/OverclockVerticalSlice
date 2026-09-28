@@ -1,6 +1,6 @@
 # Faction — Holy Cosmic Empire
 
-> **Status**: **DRAFT** (2026-08-24) — Tier 2 of the faction corpus v2. **The last of the six.**
+> **Status**: **IMPLEMENTED 2026-09-28** (faction wave 6) — rank display and SPOT deferred; placeholder art. See `design/decision-log.md`.
 > **Name**: ★ TBD. Flavour: Theocratic Monarchy.
 > **Author**: user (direction) + agents · **Baseline**: `factions/democratic-alliance.md` (CR-10)
 >

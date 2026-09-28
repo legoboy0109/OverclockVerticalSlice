@@ -179,7 +179,8 @@ static func set_rank(unit: UnitState, new_rank: int) -> void:
 static func effective_attack(state: GameState, unit: UnitState) -> int:
 	# TP-5d: a trained pilot improves the vehicle it crews, only while it is aboard.
 	var crew: int = unit.pilot.type.crew_bonus_attack if unit.pilot != null else 0
-	return unit.type.attack + Research.attack_bonus(state, unit.owner) + _rank_value(CombatBalance.combat.rank_attack, unit.rank) + crew
+	var doctrine: int = Research.vehicle_attack_bonus(state, unit.owner) if unit.type.unit_class == UnitTypeDef.UnitClass.GROUND_VEHICLE else 0
+	return unit.type.attack + Research.attack_bonus(state, unit.owner) + _rank_value(CombatBalance.combat.rank_attack, unit.rank) + crew + doctrine
 
 
 ## The defense value Combat's damage formula subtracts (ADR-0010's
@@ -187,7 +188,8 @@ static func effective_attack(state: GameState, unit: UnitState) -> int:
 ## [method Research.defense_bonus] (Defense Tech, and Plating on top). Live, like
 ## [method effective_attack].
 static func effective_defense(state: GameState, unit: UnitState) -> int:
-	return unit.type.defense + Research.defense_bonus(state, unit.owner) + unit.fortify
+	var doctrine: int = Research.vehicle_defense_bonus(state, unit.owner) if unit.type.unit_class == UnitTypeDef.UnitClass.GROUND_VEHICLE else 0
+	return unit.type.defense + Research.defense_bonus(state, unit.owner) + unit.fortify + doctrine
 
 
 ## The AP cost to produce a unit of [param unit_type] for [param player]

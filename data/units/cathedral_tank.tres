@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
+; GENERATED from game-data/Units/Cathedral Tank.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 18fb93d0e0e3a95dd2b5a994a911929e73a8b521ec9c93f1da1f399d4a48032d
+
+[ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Cathedral Tank"
+unit_class = 1
+can_target = Array[int]([0, 1])
+hp = 22
+attack = 6
+attack_range = 2
+defense = 3
+move_cost = 2
+soft_move_cap = 3
+produce_cost = 1900
+production_turns = 2
+upkeep = 600
+counts_toward_cap = false
+can_counterattack = false
+can_build = false
+targeting_mode = 0
+min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = -2
+resist_incendiary = 0
+area_shape = 0
+area_length = 4
+abilities = []
+can_pilot = false
+requires_pilot = true
+transport_capacity = 0
+transport_accepts = Array[int]([])
+transport_size = 3
+targets_crew = false
+crew_bonus_attack = 0
+starting_merit = 0
+crew_bonus_move_cost = 0
+art_id = &"tank"

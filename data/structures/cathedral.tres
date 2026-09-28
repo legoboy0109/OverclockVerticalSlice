@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=3 format=3]
+; GENERATED from game-data/Structures/Cathedral.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 9d81cf8a8fcdfe1abc8eb7e6760201a71438428ab447ba51b6d1c516141136b2
+
+[ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/structures/research_lab.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Cathedral"
+buildable = false
+art_id = &"research_lab"
+counts_as = [ExtResource("2")]
+hp = 12
+build_cost = 900
+build_time = 2
+upkeep = 200
+max_count = 1
+cap_bonus = 0
+production_cap = 0
+producible_types = []
+attack = 0
+attack_range = 0
+defense = 0
+can_counterattack = false
+can_research = false
+can_target = Array[int]([0, 1])
+targeting_mode = 0
+min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = 0
+resist_incendiary = 0

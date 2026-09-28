@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=5 format=3]
+; GENERATED from game-data/Structures/Empire Factory.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 003a0bca412e2b36975eb54dd51c3af512e493c271259f7b764cc441e3996612
+
+[ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/units/aegis_walker.tres" id="2"]
+[ext_resource type="Resource" path="res://data/units/cathedral_tank.tres" id="3"]
+[ext_resource type="Resource" path="res://data/units/reliquary.tres" id="4"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Empire Factory"
+buildable = false
+art_id = &"factory"
+counts_as = []
+hp = 14
+build_cost = 1000
+build_time = 3
+upkeep = 200
+max_count = 2
+cap_bonus = 0
+production_cap = 1
+producible_types = [ExtResource("2"), ExtResource("3"), ExtResource("4")]
+attack = 0
+attack_range = 0
+defense = 0
+can_counterattack = false
+can_research = false
+can_target = Array[int]([0, 1])
+targeting_mode = 0
+min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = 0
+resist_incendiary = 0

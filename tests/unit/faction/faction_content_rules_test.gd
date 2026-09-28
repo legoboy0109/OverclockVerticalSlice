@@ -59,7 +59,9 @@ func test_every_tier_two_gate_is_buildable_by_that_faction() -> void:
 		var own: Array[StructureTypeDef] = _all_structures(f)
 		for t: TechDef in _techs(f):
 			for gate: StructureTypeDef in t.required_structures:
-				assert_bool(own.has(gate)).override_failure_message(
+				# A structure that counts as the gate (the Empire's Cathedral for a Research Lab) satisfies it.
+				var met: bool = own.has(gate) or own.any(func(s: StructureTypeDef) -> bool: return gate in s.counts_as)
+				assert_bool(met).override_failure_message(
 					"%s's %s needs a %s it cannot build." % [f.display_name, t.display_name, gate.display_name]).is_true()
 
 

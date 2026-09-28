@@ -123,6 +123,21 @@ static func attack_bonus(state: GameState, player: int) -> int:
 	return total
 
 
+## Summed ground-vehicle-only bonuses (Doctrine); folded by [Unit] for ground vehicles only.
+static func vehicle_attack_bonus(state: GameState, player: int) -> int:
+	var total: int = 0
+	for t: TechDef in state.per_player[player].completed_techs:
+		total += t.vehicle_attack_bonus
+	return total
+
+
+static func vehicle_defense_bonus(state: GameState, player: int) -> int:
+	var total: int = 0
+	for t: TechDef in state.per_player[player].completed_techs:
+		total += t.vehicle_defense_bonus
+	return total
+
+
 static func defense_bonus(state: GameState, player: int) -> int:
 	var total: int = 0
 	for t: TechDef in state.per_player[player].completed_techs:
@@ -378,7 +393,8 @@ static func _is_excluded(state: GameState, player: int, tech: TechDef) -> bool:
 
 static func _owns_completed(state: GameState, player: int, structure_type: StructureTypeDef) -> bool:
 	for e: EntityState in state.entities():
-		if e is StructureState and e.owner == player and e.type == structure_type \
+		if e is StructureState and e.owner == player \
+				and (e.type == structure_type or structure_type in e.type.counts_as) \
 				and e.build_status == StructureState.BuildStatus.COMPLETED:
 			return true
 	return false

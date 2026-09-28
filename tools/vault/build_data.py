@@ -120,6 +120,7 @@ KINDS: dict[str, Kind] = {
         Field("transport_size", "int", 1, lo=1, hi=6, help="Slots this unit takes as a passenger"),
         Field("targets_crew", "bool", False, help="Its attacks hit a vehicle's pilot, not the vehicle"),
         Field("crew_bonus_attack", "int", 0, lo=-1, hi=1, help="Attack it adds to a vehicle it pilots (TP-5d: at most +1)"),
+        Field("starting_merit", "int", 0, lo=0, hi=40, help="Merit it is produced with (a promoting faction's veterans)"),
         Field("crew_bonus_move_cost", "int", 0, lo=-1, hi=0, help="Move cost it takes off a vehicle it pilots (TP-5d: at most -1)"),
         Field("art_id", "group", "", help="Borrow another unit's sprites (its id) until this has art"),
     ]),
@@ -127,6 +128,7 @@ KINDS: dict[str, Kind] = {
                        "StructureTypeDef", [
         Field("buildable", "bool", False, help="In the SHARED roster (factions with their own list ignore it)"),
         Field("art_id", "group", "", help="Borrow another structure's sprites (its id) until this has art"),
+        Field("counts_as", "links", [], target="Structures", help="Stands in for these types when a rule asks (e.g. a faction's Research Lab)"),
         Field("hp", "int", required=True),
         Field("build_cost", "int", required=True, help="Credits"),
         Field("build_time", "int", required=True, help="Owner-turns"),
@@ -164,6 +166,8 @@ KINDS: dict[str, Kind] = {
         Field("build_ap_discount", "int", 0),
         Field("produce_cost_discount_pct", "int", 0),
         Field("frees_pilots", "links", [], target="Units", help="Unit types that stop needing a pilot"),
+        Field("vehicle_attack_bonus", "int", 0, help="Attack added to ground vehicles only"),
+        Field("vehicle_defense_bonus", "int", 0, help="Defence added to ground vehicles only"),
     ]),
     "Factions": Kind("Factions", "factions", "res://src/core/faction/faction_def.gd", "FactionDef", [
         Field("description", "str", ""),

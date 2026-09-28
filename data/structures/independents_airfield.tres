@@ -10,6 +10,7 @@ script = ExtResource("1")
 display_name = "Independents Airfield"
 buildable = false
 art_id = &"airfield"
+counts_as = []
 hp = 12
 build_cost = 1200
 build_time = 3
