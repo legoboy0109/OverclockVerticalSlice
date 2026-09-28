@@ -1,5 +1,9 @@
 ---
 id: scout
+unit_class: infantry
+can_target:
+- infantry
+- ground_vehicle
 hp: 3
 attack: 2
 attack_range: 1

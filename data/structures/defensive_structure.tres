@@ -1,12 +1,13 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Structures/Defensive Structure.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: b6a3e1501165eaa859a771688fdd53b3fe6ce1126940590abf57b254a37a8ded
+; source-sha256: e09dfced7e75fa3373a3b973dd2145c96988aa2a838a0c32da9897ff39f3ce68
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
 display_name = "Defensive Structure"
+buildable = true
 hp = 10
 build_cost = 500
 build_time = 2
@@ -20,5 +21,6 @@ attack_range = 2
 defense = 1
 can_counterattack = true
 can_research = false
+can_target = Array[int]([0, 1])
 targeting_mode = 0
 min_range = 1

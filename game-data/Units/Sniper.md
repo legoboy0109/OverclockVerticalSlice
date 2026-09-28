@@ -1,5 +1,9 @@
 ---
 id: sniper
+unit_class: infantry
+can_target:
+- infantry
+- ground_vehicle
 hp: 3
 attack: 6
 attack_range: 3

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=6 format=3]
 ; GENERATED from game-data/Structures/Barracks.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: d211fc5e2e6486ec94603f259bb44fbb9ada260a2017a117b6f3e44f7f7fc028
+; source-sha256: e27d61c03a2cfcf17efb01ebf55f890ba5a69ccafccd023ed54e8b886b7c0773
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/scout.tres" id="2"]
@@ -11,6 +11,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Barracks"
+buildable = true
 hp = 14
 build_cost = 600
 build_time = 2
@@ -24,5 +25,6 @@ attack_range = 0
 defense = 0
 can_counterattack = false
 can_research = false
+can_target = Array[int]([0, 1])
 targeting_mode = 0
 min_range = 1

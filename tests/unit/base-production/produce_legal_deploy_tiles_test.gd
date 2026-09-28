@@ -415,7 +415,7 @@ func test_produce_commit_revalidation_rejects_when_deploy_tile_occupied_between_
 func test_effective_production_cap_base_zero_stays_zero_no_producer_via_faction() -> void:
 	# Arrange -- an Economy Outpost (base production_cap 0, a non-producer).
 	var state := _make_state()
-	var econ := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.FACTORY)
+	var econ := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.RESEARCH_LAB) # the non-producer since the Factory gained vehicles (2026-09-28)
 	_place(state, econ)
 	# Act / Assert -- base 0 stays 0 (early-return branch); a non-producer is
 	# never promoted into a producer by any faction delta.
@@ -461,7 +461,7 @@ func test_produce_from_non_producer_with_empty_producible_types_is_rejected() ->
 	# unit type (distinct from the HQ "wrong type" case). NOT_PRODUCIBLE fires
 	# before the cap gate (gate order: Completed -> producible -> cap).
 	var state := _make_state(100)
-	var econ := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.FACTORY)
+	var econ := _make_structure(1, 0, Vector2i(5, 5), StructureTypes.RESEARCH_LAB) # the non-producer since the Factory gained vehicles (2026-09-28)
 	_place(state, econ)
 	var action := _make_produce_action(econ.entity_id, UnitTypes.TROOPER, Vector2i(6, 5))
 	# Act / Assert

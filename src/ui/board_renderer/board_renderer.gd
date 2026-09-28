@@ -116,6 +116,12 @@ const TILE_LAYER_SCALE: float = 1.0 / TEXTURE_SCALE
 ## are separate objects, so the id spaces never collide.
 const FLOOR_SOURCE_ID: int = 0
 
+## ★ 2026-09-28 (Unit Classes): Rough ground is the floor tile drawn darker and browner, as a
+## tinted ALTERNATIVE of the floor cell. ⚠ Placeholder — there is no rough-terrain art yet.
+## Darker as well as warmer, so it still separates from plain floor in grayscale.
+const ROUGH_TINT: Color = Color(0.62, 0.46, 0.32)
+var _rough_alternative: int = -1
+
 ## The plain-floor texture, reused as the floor cell under Cover tiles too
 ## (assets/art/README.md §8.8: cover's floor IS the plain floor; there is no
 ## separate cover floor art).
@@ -567,6 +573,8 @@ func _build_floor_tile_source() -> void:
 	source.texture = load(FLOOR_TEXTURE_PATH)
 	source.texture_region_size = TILE_TEXTURE_SIZE
 	source.create_tile(Vector2i.ZERO)
+	_rough_alternative = source.create_alternative_tile(Vector2i.ZERO)
+	source.get_tile_data(Vector2i.ZERO, _rough_alternative).modulate = ROUGH_TINT
 	floor_layer.tile_set.add_source(source, FLOOR_SOURCE_ID)
 
 
@@ -594,7 +602,8 @@ func paint_terrain(grid: GridState) -> void:
 			var terrain: int = grid.terrain_at(x, y)
 			if terrain == GridState.Terrain.IMPASSABLE:
 				continue
-			floor_layer.set_cell(cell_for(Vector2i(x, y)), FLOOR_SOURCE_ID, Vector2i.ZERO)
+			var alt: int = _rough_alternative if terrain == GridState.Terrain.ROUGH and _rough_alternative >= 0 else 0
+			floor_layer.set_cell(cell_for(Vector2i(x, y)), FLOOR_SOURCE_ID, Vector2i.ZERO, alt)
 			if terrain == GridState.Terrain.COVER:
 				_add_cover_prop(Vector2i(x, y))
 

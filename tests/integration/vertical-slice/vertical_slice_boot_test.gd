@@ -261,14 +261,14 @@ func _select_a_builder(root: VerticalSliceRoot, tile: Vector2i = Vector2i(4, 5))
 	return state.entities_by_id[90] as UnitState
 
 
-func test_the_build_roster_still_excludes_the_factory() -> void:
-	# ★ S6-09: the Factory stays out until it can produce something -- a
-	# 1,000-Credit structure that does nothing is a trap rather than a choice.
+func test_the_build_roster_offers_the_factory_now_it_builds_vehicles() -> void:
+	# ★ S6-09 kept the Factory out while it produced nothing. 2026-09-28 (Unit Classes)
+	# gave it the ground vehicles, so it is offered — and the generic guard in
+	# buildable_roster_test.gd keeps any future inert structure out.
 	var root := _make_root()
 	var roster: Array[StructureTypeDef] = root._buildable_roster()
-	assert_bool(roster.has(StructureTypes.FACTORY)).override_failure_message(
-		"the Factory must stay out of the build roster until it can produce something"
-	).is_false()
+	assert_bool(roster.has(StructureTypes.FACTORY)).is_true()
+	assert_bool(roster.has(StructureTypes.AIRFIELD)).is_true()
 	assert_bool(roster.has(StructureTypes.BARRACKS)).is_true()
 
 

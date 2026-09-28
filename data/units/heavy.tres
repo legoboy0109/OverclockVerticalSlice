@@ -1,12 +1,14 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Heavy.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: c855de441512377a4eb8002e22eb1a0642bf43edccf4759ebe9b1c030bee7b1e
+; source-sha256: 734af34feed719397f070447e3e485eaa3a3118045c641d3737baf0f4eb42a84
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
 display_name = "Heavy"
+unit_class = 0
+can_target = Array[int]([0, 1])
 hp = 10
 attack = 5
 attack_range = 2

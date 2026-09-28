@@ -195,14 +195,17 @@ func test_economy_value_tier1_outpost_strictly_greater_than_tier2_outpost() -> v
 
 	var state_tier2 := _make_state()
 	for i in range(4):
-		var outpost := _make_structure(100 + i, 0, StructureTypes.FACTORY, \
+		var outpost := _make_structure(100 + i, 0, StructureTypes.DEFENSIVE_STRUCTURE, \
 			Vector2i(i, 0), StructureState.BuildStatus.COMPLETED)
 		_place(state_tier2, outpost)
 
 	# Act
-	var value_tier1: float = AI._economy_value(state_tier1, 0, StructureTypes.FACTORY)
-	var value_tier2: float = AI._economy_value(state_tier2, 0, StructureTypes.FACTORY)
+	var value_tier1: float = AI._economy_value(state_tier1, 0, StructureTypes.DEFENSIVE_STRUCTURE)
+	var value_tier2: float = AI._economy_value(state_tier2, 0, StructureTypes.DEFENSIVE_STRUCTURE)
 
+	# ⚠ 2026-09-28: was the FACTORY, which now produces vehicles and so is rightly worth
+	# something. The regression this pins — no outpost-count-sensitive income term — is
+	# about count, so it now uses a structure that produces nothing.
 	# Assert — tier-1 (~7.06) strictly greater than tier-2 (~3.53); no
 	# flattening to an identical capped score.
 	# ★ S6-01 (2026-08-24): AC-16's tier-1-beats-tier-2 contrast tested the

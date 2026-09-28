@@ -118,6 +118,16 @@ static func type_token(display_name: String) -> String:
 ## A [param delta] with no screen-x component (pure-diagonal travel, or no travel)
 ## returns [param previous_facing] — facing never flips arbitrarily on a move that
 ## carries no left/right information.
+## The art token for a type definition: its data file's name — the vault note's `id` — so a
+## unit or structure can be RENAMED in the vault without its sprites disappearing
+## (2026-09-28; this used to be keyed by display name). A definition built in code, with no
+## file behind it, falls back to [method type_token] of its display name.
+static func type_token_for(def: Resource) -> String:
+	if def.resource_path != "" and def.resource_path.ends_with(".tres"):
+		return def.resource_path.get_file().get_basename()
+	return type_token(def.get("display_name"))
+
+
 static func facing_for_delta(delta: Vector2i, previous_facing: String) -> String:
 	var screen_dx: int = delta.x - delta.y
 	if screen_dx > 0:
@@ -161,12 +171,12 @@ static func texture_path(entity: EntityState, faction: FactionDef, facing: Strin
 		var unit_type: UnitTypeDef = (entity as UnitState).type
 		if unit_type == null:
 			return ""
-		var archetype: String = type_token(unit_type.display_name)
+		var archetype: String = type_token_for(unit_type)
 		return "%sunit_%s_%s_%s_%s_01.png" % [UNITS_DIR, archetype, faction_str, facing, state]
 	if entity is StructureState:
 		var struct_type: StructureTypeDef = (entity as StructureState).type
 		if struct_type == null:
 			return ""
-		var struct_name: String = type_token(struct_type.display_name)
+		var struct_name: String = type_token_for(struct_type)
 		return "%sstruct_%s_%s_%s.png" % [STRUCTURES_DIR, struct_name, faction_str, state]
 	return ""

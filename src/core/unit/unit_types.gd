@@ -17,6 +17,12 @@ const SCOUT: UnitTypeDef = preload("res://data/units/scout.tres")
 const TROOPER: UnitTypeDef = preload("res://data/units/trooper.tres")
 const HEAVY: UnitTypeDef = preload("res://data/units/heavy.tres")
 const SNIPER: UnitTypeDef = preload("res://data/units/sniper.tres")
+# ★ 2026-09-28, Unit Classes: the baseline roster's vehicles (Factory) and aircraft (Airfield).
+const TANK: UnitTypeDef = preload("res://data/units/tank.tres")
+const ARTILLERY: UnitTypeDef = preload("res://data/units/artillery.tres")
+const FIGHTER: UnitTypeDef = preload("res://data/units/fighter.tres")
+const BOMBER: UnitTypeDef = preload("res://data/units/bomber.tres")
+const HELICOPTER: UnitTypeDef = preload("res://data/units/helicopter.tres")
 
 ## ★ Every unit type in the roster, in declaration order.
 ##
@@ -26,4 +32,4 @@ const SNIPER: UnitTypeDef = preload("res://data/units/sniper.tres")
 ## shipped with no sprite and the suite stayed green, which is precisely the failure
 ## that list was written to prevent. Adding a `.tres` to this registry now
 ## automatically extends the guard.
-const ALL: Array[UnitTypeDef] = [BUILDER, SCOUT, TROOPER, HEAVY, SNIPER]
+const ALL: Array[UnitTypeDef] = [BUILDER, SCOUT, TROOPER, HEAVY, SNIPER, TANK, ARTILLERY, FIGHTER, BOMBER, HELICOPTER]

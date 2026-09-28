@@ -52,11 +52,24 @@ func test_the_research_lab_is_offered_because_it_gates_tier_two() -> void:
 			).is_true()
 
 
-func test_the_factory_is_not_offered_while_it_produces_nothing() -> void:
-	assert_bool(_slice_roster().has(StructureTypes.FACTORY)).override_failure_message(
-		"The Factory is offered again, but its producible_types is still empty — it " +
-		"costs 1,000 Credits and 200 upkeep a turn to produce nothing."
-	).is_false()
+func test_every_buildable_structure_does_something() -> void:
+	# ★ The general form of S6-09 (Factory) and S8-34 (Research Lab): both were offered
+	# while they did nothing, and a player paid a Builder for an inert building. Now the
+	# roster is data (the vault's `buildable` box), so this guards every future structure.
+	var gates: Array = []
+	for tech: TechDef in Techs.ALL:
+		gates.append_array(tech.required_structures)
+	for type: StructureTypeDef in _slice_roster():
+		var useful: bool = not type.producible_types.is_empty() or type.cap_bonus > 0 \
+			or type.attack > 0 or type.can_research or gates.has(type)
+		assert_bool(useful).override_failure_message(
+			"%s is buildable but produces nothing, grants no cap, gates no tech and cannot " % type.display_name +
+			"attack — a player would pay a Builder for a building that does nothing."
+		).is_true()
+
+
+func test_the_hq_is_never_buildable() -> void:
+	assert_bool(_slice_roster().has(StructureTypes.HQ)).is_false()
 
 
 func test_the_roster_still_offers_something_to_build() -> void:

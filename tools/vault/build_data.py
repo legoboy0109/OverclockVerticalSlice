@@ -71,9 +71,13 @@ class Kind:
 
 
 TARGETING = {"direct": 0, "area": 1}
+UNIT_CLASS = {"infantry": 0, "ground_vehicle": 1, "air": 2}
 
 KINDS: dict[str, Kind] = {
     "Units": Kind("Units", "units", "res://src/core/unit/unit_type_def.gd", "UnitTypeDef", [
+        Field("unit_class", "enum", "infantry", choices=UNIT_CLASS, help="infantry | ground_vehicle | air"),
+        Field("can_target", "enums", ["infantry", "ground_vehicle"], choices=UNIT_CLASS,
+              help="Classes it can attack; structures count as ground targets. [] = unarmed"),
         Field("hp", "int", required=True, help="Hit points"),
         Field("attack", "int", required=True),
         Field("attack_range", "int", required=True, help="0 = cannot attack"),
@@ -91,6 +95,7 @@ KINDS: dict[str, Kind] = {
     ]),
     "Structures": Kind("Structures", "structures", "res://src/core/structure/structure_type_def.gd",
                        "StructureTypeDef", [
+        Field("buildable", "bool", False, help="Can a Builder raise it?"),
         Field("hp", "int", required=True),
         Field("build_cost", "int", required=True, help="Credits"),
         Field("build_time", "int", required=True, help="Owner-turns"),
@@ -104,6 +109,7 @@ KINDS: dict[str, Kind] = {
         Field("defense", "int", 0),
         Field("can_counterattack", "bool", False),
         Field("can_research", "bool", False),
+        Field("can_target", "enums", ["infantry", "ground_vehicle"], choices=UNIT_CLASS),
         Field("targeting_mode", "enum", "direct", choices=TARGETING),
         Field("min_range", "int", 1),
     ]),
@@ -144,7 +150,7 @@ RENAMES = {
     ("Factions", "unit_changes"): "unit_deltas",
 }
 
-MAP_LEGEND = {".": 0, "c": 1, "#": 2, "A": 0, "B": 0}   # GridState.Terrain PLAIN/COVER/IMPASSABLE
+MAP_LEGEND = {".": 0, "c": 1, "#": 2, "r": 3, "A": 0, "B": 0}   # GridState.Terrain PLAIN/COVER/IMPASSABLE/ROUGH
 MAP_MIN, MAP_MAX = 8, 24
 
 
@@ -255,6 +261,12 @@ def validate(note: Note, index: dict) -> dict:
             if str(value).lower() not in f.choices:
                 raise VaultError(f"{w}: must be one of {sorted(f.choices)}, got {value!r}")
             out[key] = f.choices[str(value).lower()]
+        elif f.kind == "enums":
+            if value is None:
+                value = []
+            if not isinstance(value, list) or any(str(v).lower() not in f.choices for v in value):
+                raise VaultError(f"{w}: expected a list drawn from {sorted(f.choices)}, got {value!r}")
+            out[key] = ("ints", [f.choices[str(v).lower()] for v in value])
         elif f.kind == "links":
             if value is None:
                 value = []
@@ -299,7 +311,7 @@ def parse_map(note: Note) -> dict:
         for x, ch in enumerate(row):
             if ch not in MAP_LEGEND:
                 raise VaultError(f"{where}: unknown map symbol {ch!r} at column {x + 1}, row {y + 1} "
-                                 f"— use . (open), c (cover), # (blocked), A/B (HQs)")
+                                 f"— use . (open), c (cover), r (rough), # (blocked), A/B (HQs)")
             terrain.append(MAP_LEGEND[ch])
             if ch in "AB":
                 if ch in hqs:
@@ -353,6 +365,8 @@ def render(note: Note, index: dict) -> str:
                 lines.append(f"{key} = {value}")
             elif isinstance(value, str):
                 lines.append(f"{key} = {gd_str(value)}")
+            elif value[0] == "ints":
+                lines.append(f"{key} = Array[int]([{', '.join(map(str, value[1]))}])")
             elif value[0] == "group":
                 lines.append(f'{key} = &{gd_str(value[1])}')
             elif value[0] == "links":

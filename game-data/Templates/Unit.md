@@ -1,5 +1,7 @@
 ---
 id: new_id
+unit_class: infantry
+can_target: [infantry, ground_vehicle]
 hp: 0
 attack: 0
 attack_range: 0

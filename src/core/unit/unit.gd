@@ -130,6 +130,24 @@ static func effective_produce_cost(state: GameState, unit_type: UnitTypeDef, pla
 ## ★ The single read site for range. Combat's targeting, the AI's reach estimates and
 ## the HUD all go through here, so what the board highlights, what the AI plans for
 ## and what Combat accepts can never disagree.
+## Whether a unit of [param unit_type] may enter or stop on terrain [param terrain]
+## (unit-classes.md UC-2). Impassable stops everyone who walks or drives; Rough stops
+## ground vehicles. Air may FLY OVER anything ([method Movement] handles that) but, like
+## everyone, may not stop on Impassable ground — the grid never holds an occupant there.
+static func can_stand_on(unit_type: UnitTypeDef, terrain: int) -> bool:
+	if terrain == GridState.Terrain.IMPASSABLE:
+		return false
+	if terrain == GridState.Terrain.ROUGH and unit_type.unit_class == UnitTypeDef.UnitClass.GROUND_VEHICLE:
+		return false
+	return true
+
+
+## Whether Cover protects [param unit] (UC-2): infantry only. Vehicles and aircraft
+## gain nothing from standing on a Cover tile.
+static func benefits_from_cover(unit: UnitState) -> bool:
+	return unit.type.unit_class == UnitTypeDef.UnitClass.INFANTRY
+
+
 static func effective_attack_range(state: GameState, entity: EntityState) -> int:
 	if entity is UnitState:
 		return effective_type_attack_range(state, entity.type, entity.owner)

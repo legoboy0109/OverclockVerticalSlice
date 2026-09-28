@@ -177,22 +177,7 @@ func attach_interface(cmd: Object) -> void:
 
 
 func _default_buildable_types() -> Array[StructureTypeDef]:
-	# ★ The FACTORY is deliberately absent (S6-09, 2026-08-24). Its design role is to
-	# produce GROUND_VEHICLE units, and those are wave 2 -- `unit-classes.md` is not
-	# implemented. Today the Factory produces nothing (`producible_types = []`), grants
-	# no income (that moved to research in S6-01), and costs 1,000 Credits plus 200
-	# upkeep every turn. Offering it is offering the player a button that can only make
-	# their position worse, and the corrected stats make the trap more expensive, not
-	# less. Restore this entry in the same change that gives the Factory something to
-	# build. The AI already skips it on its own -- its value gate scores an
-	# unproductive structure 0 -- so this only ever affected the human.
-	return [
-		StructureTypes.BARRACKS,
-	# ★ The RESEARCH LAB was removed by S8-34 while research did not exist, and restored
-	# 2026-09-28 (CR-14): it is now the gate for every tier-2 tech.
-		StructureTypes.RESEARCH_LAB,
-		StructureTypes.DEFENSIVE_STRUCTURE,
-	]
+	return StructureTypes.BUILDABLE.duplicate()
 
 
 func _on_action_applied(_result: ActionResult) -> void:

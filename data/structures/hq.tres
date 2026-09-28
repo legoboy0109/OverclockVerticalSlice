@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Structures/HQ.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: eb13a72dd8c505e0608e8c2f8c4181910d2db834d8c58943c5cba78126d42240
+; source-sha256: d7864daa2b4679e31000e8fdb5ec4ee8046eb7f02ceb0a176ff1972b54bb86f7
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/builder.tres" id="2"]
@@ -8,6 +8,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "HQ"
+buildable = false
 hp = 40
 build_cost = 0
 build_time = 0
@@ -21,5 +22,6 @@ attack_range = 0
 defense = 2
 can_counterattack = false
 can_research = true
+can_target = Array[int]([0, 1])
 targeting_mode = 0
 min_range = 1

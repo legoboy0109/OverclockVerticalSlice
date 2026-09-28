@@ -65,14 +65,14 @@ func test_every_vs_type_now_has_a_shipped_glow_mask() -> void:
 	for type: UnitTypeDef in UnitTypes.ALL:
 		for facing: String in ["e", "w"]:
 			var path := "res://assets/art/units/unit_%s_%s_idle_01_glow.png" % [
-				type.display_name.to_lower(), facing
+				EntitySpriteCatalog.type_token_for(type), facing
 			]
 			assert_bool(ResourceLoader.exists(path)).override_failure_message(
 				"missing glow mask: %s" % path
 			).is_true()
 	for type: StructureTypeDef in StructureTypes.ALL:
 		var path := "res://assets/art/structures/struct_%s_idle_glow.png" % \
-			type.display_name.to_lower().replace(" ", "_")
+			EntitySpriteCatalog.type_token_for(type)
 		assert_bool(ResourceLoader.exists(path)).override_failure_message(
 			"missing glow mask: %s" % path
 		).is_true()

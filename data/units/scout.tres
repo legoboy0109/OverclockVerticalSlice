@@ -1,12 +1,14 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Scout.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 97b308cebbb5f5c63b949ce3cf5f34755aed35897f07d336193e23d39bdeffdc
+; source-sha256: 5b17ec106bf324fbfbf8dbc99377b31c57fcda71b6772f0ec2ee864fc47dccc0
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
 display_name = "Scout"
+unit_class = 0
+can_target = Array[int]([0, 1])
 hp = 3
 attack = 2
 attack_range = 1

@@ -156,7 +156,7 @@ static func mask_path(entity: EntityState, facing: String) -> String:
 		var unit_type: UnitTypeDef = (entity as UnitState).type
 		if unit_type == null:
 			return ""
-		var archetype: String = EntitySpriteCatalog.type_token(unit_type.display_name)
+		var archetype: String = EntitySpriteCatalog.type_token_for(unit_type)
 		return "%sunit_%s_%s_idle_01%s.png" % [
 			EntitySpriteCatalog.UNITS_DIR, archetype, facing, MASK_SUFFIX
 		]
@@ -164,7 +164,7 @@ static func mask_path(entity: EntityState, facing: String) -> String:
 		var struct_type: StructureTypeDef = (entity as StructureState).type
 		if struct_type == null:
 			return ""
-		var struct_name: String = EntitySpriteCatalog.type_token(struct_type.display_name)
+		var struct_name: String = EntitySpriteCatalog.type_token_for(struct_type)
 		return "%sstruct_%s_idle%s.png" % [
 			EntitySpriteCatalog.STRUCTURES_DIR, struct_name, MASK_SUFFIX
 		]

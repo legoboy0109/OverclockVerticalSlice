@@ -37,7 +37,11 @@ extends Resource
 
 ## One terrain type per tile. Values are stored as bytes in [member terrain].
 ## PLAIN and COVER are passable; IMPASSABLE blocks movement and line-of-fire.
-enum Terrain { PLAIN = 0, COVER = 1, IMPASSABLE = 2 }
+## ★ ROUGH (2026-09-28, unit-classes.md UCOQ-2): "difficult" ground. Infantry and air cross
+## it normally; ground vehicles cannot enter it at all (UC-2) — it is the anti-vehicle wall
+## that infantry walk through. Passable for occupancy purposes; the vehicle block is applied
+## by [method Unit.can_stand_on], not here, because it depends on who is moving.
+enum Terrain { PLAIN = 0, COVER = 1, IMPASSABLE = 2, ROUGH = 3 }
 
 ## Sentinel value used by [method occupant_at] for "no occupant" and for
 ## out-of-bounds occupant queries.
