@@ -186,3 +186,24 @@ User decisions (2026-09-28): **colour = which player** (OQ-11); **factions in wa
   intends a poor, small army that wins by stealing vehicles — **the AI built 1 Pirate in 60 games and
   captured nothing**, so it plays the Independents as a weak generic army. Either the faction is
   too weak on paper, or (more likely) the AI can't play its identity. Worth your eyes before tuning.
+
+## Faction wave 4 — Machinist's Union (`factions/machinists-union.md`)
+
+- **Built as designed**: Machinist (crew bonus +1 attack AND −1 move cost), Foreman, Guard; Walker,
+  Siege Mech, Hauler, Lancer (EMF), Battery (area, min range 2); two crewed aircraft; Union
+  Barracks (2), Factory (3, 16 hp), Airfield, and the crewless Bulwark (attack 5, 14 hp, 4 allowed).
+- **Crew move bonus built** (`crew_bonus_move_cost`), floored so movement is never free.
+- **Its "compounding arc" is compressed by CR-14:** designed for three economy tiers (700 → 2,800);
+  with one tier it runs 700 → 1,600 vs the Alliance's 1,000 → 1,500 — it still overtakes, sooner
+  and by less. Worth revisiting if more economy tiers come back.
+- **The Bulwark has defence 1** (the Alliance Defensive Structure's value; the design table omits it).
+
+### ★ Findings to review — the AI cannot play the non-baseline factions
+- **Union vs Alliance: Alliance 53/60.** The AI built 4 Union vehicles in 60 games (the Union's
+  whole identity) and fought with Machinists and Foremen.
+- **This is the third faction in a row** (Solar 21/60, Independents 9/60, Union 7/60 wins) losing
+  for the same reason: the AI values units by cost and plays every faction like the Alliance —
+  it never builds specialists, never steals, rarely affords vehicles. `faction-identity.md` OQ-15
+  already names this: *"the AI cannot play six different armies with one set of weights."*
+  ⇒ **Faction-aware AI is the prerequisite for any faction balance judgement.** Until then these
+  win rates measure the AI, not the factions.

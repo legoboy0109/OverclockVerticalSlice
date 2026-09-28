@@ -31,13 +31,19 @@ const DEFENCE_NODE: StructureTypeDef = preload("res://data/structures/autonomous
 const INDEPENDENTS_BARRACKS: StructureTypeDef = preload("res://data/structures/independents_barracks.tres")
 const INDEPENDENTS_FACTORY: StructureTypeDef = preload("res://data/structures/independents_factory.tres")
 const INDEPENDENTS_AIRFIELD: StructureTypeDef = preload("res://data/structures/independents_airfield.tres")
+# ★ Machinist's Union (faction wave 4).
+const UNION_BARRACKS: StructureTypeDef = preload("res://data/structures/union_barracks.tres")
+const UNION_FACTORY: StructureTypeDef = preload("res://data/structures/union_factory.tres")
+const UNION_AIRFIELD: StructureTypeDef = preload("res://data/structures/union_airfield.tres")
+const BULWARK: StructureTypeDef = preload("res://data/structures/bulwark.tres")
 
 ## ★ Every structure type in the roster, in declaration order. See
 ## [constant UnitTypes.ALL] for why this exists — a coverage guard that keeps its
 ## own copy of the roster only guards what someone remembered to copy.
 const ALL: Array[StructureTypeDef] = [HQ, FACTORY, BARRACKS, DEFENSIVE_STRUCTURE, RESEARCH_LAB, AIRFIELD,
 	SOLAR_BARRACKS, SOLAR_FACTORY, SOLAR_AIRFIELD, DEFENCE_NODE,
-	INDEPENDENTS_BARRACKS, INDEPENDENTS_FACTORY, INDEPENDENTS_AIRFIELD]
+	INDEPENDENTS_BARRACKS, INDEPENDENTS_FACTORY, INDEPENDENTS_AIRFIELD,
+	UNION_BARRACKS, UNION_FACTORY, UNION_AIRFIELD, BULWARK]
 
 ## Every structure a Builder may raise, in [constant ALL] order — decided by each type's
 ## [member StructureTypeDef.buildable] (the vault's `buildable` checkbox). The single source

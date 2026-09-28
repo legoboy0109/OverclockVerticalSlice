@@ -1,6 +1,6 @@
 # Faction — Machinist's Union
 
-> **Status**: **DRAFT** (2026-08-24) — Tier 2 of the faction corpus v2.
+> **Status**: **IMPLEMENTED 2026-09-28** (faction wave 4) — placeholder art borrowed. See `design/decision-log.md`.
 > **Name**: ★ TBD. Flavour: mech/vehicle-based industrial collective.
 > **Author**: user (direction) + agents · **Baseline**: `factions/democratic-alliance.md` (CR-10)
 >

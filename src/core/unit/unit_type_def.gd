@@ -82,6 +82,9 @@ enum AreaShape { SINGLE, BURST, LINE }
 
 ## TP-5d: attack added to a vehicle while this unit is its pilot (a trained crew is better).
 @export var crew_bonus_attack: int = 0
+## TP-5d: added to a vehicle's AP-per-tile move cost while this unit pilots it (negative =
+## faster). The result never drops below [constant Unit.MIN_MOVE_COST].
+@export var crew_bonus_move_cost: int = 0
 
 ## Borrow another type's sprites (its id) until this one has its own art — a faction's
 ## variant of a shared building, or a new unit awaiting art. Empty = its own id.

@@ -234,10 +234,11 @@ static func _cost_for_depth(unit: UnitState, tiles_entered: int) -> int:
 	var c: int = unit.type.soft_move_cap
 	var m: int = unit.tiles_moved_this_turn
 	var t: int = tiles_entered
-	var surcharge: int = UnitBalance.surcharge_for(unit.type.move_cost)
+	var per_tile: int = Unit.crewed_move_cost(unit)   # TP-5d: a trained crew drives faster
+	var surcharge: int = UnitBalance.surcharge_for(per_tile)
 	var base_tiles: int = max(0, min(t, c - m))
 	var overcap_tiles: int = t - base_tiles
-	return base_tiles * unit.type.move_cost + overcap_tiles * surcharge
+	return base_tiles * per_tile + overcap_tiles * surcharge
 
 
 ## Does a min-length path of [param depth] steps cross the soft cap at all?
