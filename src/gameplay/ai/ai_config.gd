@@ -292,3 +292,12 @@ extends Resource
 ## Added to a pilot-capable unit's matchup multiplier while the AI owns a vehicle nobody is
 ## crewing — a pilot is then worth the whole vehicle it unlocks, not its own weak gun.
 @export var crew_need_bonus: float = 1.5
+
+## ★ Transports (AI._score_transport_candidates). Infantry farther than this many tiles from the
+## nearest enemy is "far from the fight": worth carrying, and what a transport is valued by.
+@export var transport_far_distance: int = 6
+
+## Turns of carriage an embark is assumed to buy (value = per-tile positional value × the
+## transport's tiles per turn × this). 2 makes boarding clearly better than walking for a
+## slow infantry unit, without letting it outrank an attack.
+@export var transport_turns_estimate: float = 2.0

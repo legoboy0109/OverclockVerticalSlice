@@ -95,3 +95,74 @@ func test_a_pirate_walks_toward_an_empty_enemy_vehicle() -> void:
 	var best: AI._Candidate = AI._score_crewing_candidates(state, pirate, AI._Candidate.new())
 	assert_bool(best.action is MoveAction).is_true()
 	assert_int(state.grid.manhattan_distance((best.action as MoveAction).to, Vector2i(5, 5))).is_equal(1)
+
+
+func _crewed_transport(state: GameState, owner: int, pos: Vector2i) -> UnitState:
+	var t := _unit(state, owner, UnitTypes.TRANSPORT, pos)
+	var pilot := UnitState.new()
+	pilot.entity_id = 800 + t.entity_id
+	pilot.owner = owner
+	pilot.type = UnitTypes.TROOPER
+	pilot.current_hp = UnitTypes.TROOPER.hp
+	t.pilot = pilot
+	return t
+
+
+func test_far_infantry_boards_a_transport() -> void:
+	var state := _state()
+	_unit(state, 1, UnitTypes.TROOPER, Vector2i(11, 11))   # enemy far away
+	var tr := _crewed_transport(state, 0, Vector2i(1, 1))
+	var inf := _unit(state, 0, UnitTypes.TROOPER, Vector2i(1, 2))
+	var best: AI._Candidate = AI._score_transport_candidates(state, inf, AI._Candidate.new())
+	assert_bool(best.action is UseAbilityAction).is_true()
+	assert_object((best.action as UseAbilityAction).ability).is_same(Abilities.EMBARK)
+	assert_bool(state.apply_action(best.action).ok).is_true()
+	assert_bool(tr.cargo.has(inf)).is_true()
+
+
+func test_infantry_near_the_fight_does_not_board() -> void:
+	var state := _state()
+	_unit(state, 1, UnitTypes.TROOPER, Vector2i(1, 5))
+	_crewed_transport(state, 0, Vector2i(1, 1))
+	var inf := _unit(state, 0, UnitTypes.TROOPER, Vector2i(1, 2))
+	assert_object(AI._score_transport_candidates(state, inf, AI._Candidate.new()).action).is_null()
+
+
+func test_a_loaded_transport_unloads_near_the_enemy_not_far_from_it() -> void:
+	var state := _state()
+	var enemy := _unit(state, 1, UnitTypes.TROOPER, Vector2i(10, 5))
+	var tr := _crewed_transport(state, 0, Vector2i(2, 5))
+	var rider := UnitState.new()
+	rider.entity_id = 900
+	rider.owner = 0
+	rider.type = UnitTypes.TROOPER
+	rider.current_hp = UnitTypes.TROOPER.hp
+	tr.cargo.append(rider)
+	assert_object(AI._score_transport_candidates(state, tr, AI._Candidate.new()).action).override_failure_message(
+		"Unloaded while the enemy was 8 tiles away.").is_null()
+	state.grid.remove(enemy.position.x, enemy.position.y)
+	enemy.position = Vector2i(5, 5)
+	state.grid.place(enemy.entity_id, 5, 5)
+	var best: AI._Candidate = AI._score_transport_candidates(state, tr, AI._Candidate.new())
+	assert_bool(best.action is UseAbilityAction).is_true()
+	assert_object((best.action as UseAbilityAction).ability).is_same(Abilities.DISEMBARK)
+
+
+func test_a_battered_army_wants_medics_more() -> void:
+	var state := _state()
+	_unit(state, 1, UnitTypes.TROOPER, Vector2i(10, 10))
+	var a := _unit(state, 0, UnitTypes.HEAVY, Vector2i(2, 2))
+	var fresh: float = AI._matchup_multiplier(state, 0, UnitTypes.MEDIC)
+	a.current_hp = 3
+	assert_float(AI._matchup_multiplier(state, 0, UnitTypes.MEDIC)).is_greater(fresh)
+
+
+func test_transports_are_wanted_while_infantry_is_far_from_the_fight() -> void:
+	var state := _state()
+	_unit(state, 1, UnitTypes.TROOPER, Vector2i(11, 11))
+	var inf := _unit(state, 0, UnitTypes.TROOPER, Vector2i(0, 0))
+	var far: float = AI._matchup_multiplier(state, 0, UnitTypes.TRANSPORT)
+	state.grid.remove(0, 0)
+	inf.position = Vector2i(10, 11)
+	state.grid.place(inf.entity_id, 10, 11)
+	assert_float(AI._matchup_multiplier(state, 0, UnitTypes.TRANSPORT)).is_less(far)
