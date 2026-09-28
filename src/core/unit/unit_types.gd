@@ -44,6 +44,17 @@ const MISSILE_TEAM: UnitTypeDef = preload("res://data/units/missile_team.tres")
 const TECHNICAL: UnitTypeDef = preload("res://data/units/technical.tres")
 const SCRAP_TANK: UnitTypeDef = preload("res://data/units/scrap_tank.tres")
 const BUZZARD: UnitTypeDef = preload("res://data/units/buzzard.tres")
+# ★ Machinist's Union (faction wave 4).
+const MACHINIST: UnitTypeDef = preload("res://data/units/machinist.tres")
+const FOREMAN: UnitTypeDef = preload("res://data/units/foreman.tres")
+const GUARD: UnitTypeDef = preload("res://data/units/guard.tres")
+const WALKER: UnitTypeDef = preload("res://data/units/walker.tres")
+const SIEGE_MECH: UnitTypeDef = preload("res://data/units/siege_mech.tres")
+const HAULER: UnitTypeDef = preload("res://data/units/hauler.tres")
+const LANCER: UnitTypeDef = preload("res://data/units/lancer.tres")
+const BATTERY: UnitTypeDef = preload("res://data/units/battery.tres")
+const SKYWORKS_GUNSHIP: UnitTypeDef = preload("res://data/units/skyworks_gunship.tres")
+const SKYWORKS_INTERCEPTOR: UnitTypeDef = preload("res://data/units/skyworks_interceptor.tres")
 
 ## ★ Every unit type in the roster, in declaration order.
 ##
@@ -55,4 +66,5 @@ const BUZZARD: UnitTypeDef = preload("res://data/units/buzzard.tres")
 ## automatically extends the guard.
 const ALL: Array[UnitTypeDef] = [BUILDER, SCOUT, TROOPER, HEAVY, SNIPER, TANK, ARTILLERY, FIGHTER, BOMBER, HELICOPTER, TRANSPORT,
 	CITIZEN_TROOPER, PILOT, MEDIC, VOLUNTEER, LANCE_TEAM, GUN_TRUCK, ARMOURED_TRANSPORT, INTERCEPTOR, GUNSHIP, PARATROOPER_TRANSPORT,
-	PARTISAN, PIRATE, SABOTEUR, MARKSMAN, MISSILE_TEAM, TECHNICAL, SCRAP_TANK, BUZZARD]
+	PARTISAN, PIRATE, SABOTEUR, MARKSMAN, MISSILE_TEAM, TECHNICAL, SCRAP_TANK, BUZZARD,
+	MACHINIST, FOREMAN, GUARD, WALKER, SIEGE_MECH, HAULER, LANCER, BATTERY, SKYWORKS_GUNSHIP, SKYWORKS_INTERCEPTOR]

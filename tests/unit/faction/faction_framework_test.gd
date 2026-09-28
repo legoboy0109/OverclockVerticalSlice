@@ -146,3 +146,27 @@ func test_solar_is_poorer_with_a_shallower_economy_slope() -> void:
 	state.per_player[0].economy_tier = 1
 	state.per_player[1].economy_tier = 1
 	assert_int(Credits.credit_income(state, 1) - Credits.credit_income(state, 0)).is_equal(300)
+
+
+func test_a_machinist_crew_drives_the_siege_mech_faster() -> void:
+	var mech := UnitState.new()
+	mech.type = UnitTypes.SIEGE_MECH
+	var guard := UnitState.new()
+	guard.type = UnitTypes.FOREMAN   # can pilot, no crew bonus
+	mech.pilot = guard
+	assert_int(Unit.crewed_move_cost(mech)).is_equal(3)
+	var machinist := UnitState.new()
+	machinist.type = UnitTypes.MACHINIST
+	mech.pilot = machinist
+	assert_int(Unit.crewed_move_cost(mech)).is_equal(2)
+	assert_int(Movement.move_path_cost(mech, 1)).is_equal(2)
+
+
+func test_no_crew_makes_movement_free() -> void:
+	var walker := UnitState.new()
+	walker.type = UnitTypes.SCOUT.duplicate()
+	walker.type.move_cost = 1
+	var fast := UnitState.new()
+	fast.type = UnitTypes.MACHINIST
+	walker.pilot = fast
+	assert_int(Unit.crewed_move_cost(walker)).is_equal(Unit.MIN_MOVE_COST)
