@@ -45,7 +45,6 @@ func _run() -> void:
 	_shot("02-research-picker")
 
 	# Research in progress: the HQ menu names it, and Cancel Research quotes the refund.
-	root.close_menu_for_capture() if root.has_method("close_menu_for_capture") else null
 	hq.research_target = Techs.PENETRATION
 	hq.research_turns_remaining = 2
 	root.select_at_cursor()
