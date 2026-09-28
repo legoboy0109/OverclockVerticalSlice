@@ -6,6 +6,9 @@
 ├── .claude/                     # Agent definitions, skills, hooks, rules, docs
 ├── src/                         # Game source code (core, gameplay, ai, networking, ui, tools)
 ├── assets/                      # Game assets (art, audio, vfx, shaders, data)
+├── game-data/                   # ★ Obsidian vault — SOURCE OF TRUTH for units, structures, techs, factions, maps
+├── data/                        # Engine data (.tres). units/structures/techs/factions/maps are GENERATED from
+│                                #   game-data/ by tools/vault/build_data.py — edit the notes, never these files
 ├── design/                      # Game design documents (gdd, narrative, levels, balance)
 ├── docs/                        # Technical documentation (architecture, api, postmortems)
 │   └── engine-reference/        # Curated engine API snapshots (version-pinned)

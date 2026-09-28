@@ -1,4 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=2 format=3]
+; GENERATED from game-data/Techs/Attack Tech.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 5f478872225279539371b335c16c8beacbfef0f772584e327ca933f781255188
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 
@@ -10,4 +12,16 @@ tier = 1
 research_cost = 1000
 research_time = 3
 ap_surcharge = -1
+prerequisites = []
+required_structures = []
+exclusive_group = &""
+allowed_factions = []
 attack_bonus = 1
+defense_bonus = 0
+attack_range_bonus = 0
+ignores_cover = false
+idle_heal = 0
+economy_tier_bonus = 0
+produce_ap_discount = 0
+build_ap_discount = 0
+produce_cost_discount_pct = 0

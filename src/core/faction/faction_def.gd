@@ -6,6 +6,12 @@
 class_name FactionDef
 extends Resource
 
+## Player-facing name. Generated from the vault note's title (game-data/Factions/).
+@export var display_name: String
+
+## One-line player-facing description.
+@export_multiline var description: String
+
 ## Per-unit-type cost/mobility deltas (ADR-0012 §1 field name, exact). Story
 ## 007's minimal slice of the eventual closed 6-domain schema — only the
 ## [FactionUnitDelta] entries this story's [code]effective_produce_cost[/code]/

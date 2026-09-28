@@ -1,4 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
+; GENERATED from game-data/Units/Heavy.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: c855de441512377a4eb8002e22eb1a0642bf43edccf4759ebe9b1c030bee7b1e
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -8,8 +10,14 @@ display_name = "Heavy"
 hp = 10
 attack = 5
 attack_range = 2
+defense = 0
 move_cost = 3
 soft_move_cap = 2
-upkeep = 300
-production_turns = 2
 produce_cost = 700
+production_turns = 2
+upkeep = 300
+counts_toward_cap = true
+can_counterattack = false
+can_build = false
+targeting_mode = 0
+min_range = 1
