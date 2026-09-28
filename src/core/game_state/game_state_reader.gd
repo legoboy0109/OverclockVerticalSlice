@@ -94,7 +94,8 @@ func unit_info(entity_id: int) -> Dictionary:
 	return {
 		"type": unit.type,
 		"current_hp": unit.current_hp,
-		"hp": unit.type.hp,
+		"hp": Unit.effective_max_hp(unit),
+		"rank": unit.rank,
 		"effective_attack": Unit.effective_attack(_state, unit),
 		"move_cost": unit.type.move_cost,
 		"has_attacked": unit.has_attacked,

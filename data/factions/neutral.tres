@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="FactionDef" load_steps=3 format=3]
 ; GENERATED from game-data/Factions/Neutral.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 94ec99193bed62e62540aebb4b2f53193242cd77ab0fbae491b49e8395824591
+; source-sha256: 8e95bce237546ad80321460edf7cbaad4fa2b75fbdbc53e70e0a175f9907a65e
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Script" path="res://src/core/faction/faction_unit_delta.gd" id="2"]
@@ -10,3 +10,6 @@ script = ExtResource("1")
 display_name = "Neutral"
 description = "No modifiers — the baseline every faction is measured against."
 unit_deltas = []
+promotes = false
+rank_requires_support = false
+rank_support_structures = []

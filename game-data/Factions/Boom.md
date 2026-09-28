@@ -2,6 +2,9 @@
 id: boom
 description: Placeholder archetype (player 2's colour in the slice). No modifiers yet.
 unit_changes: []
+promotes: false
+rank_requires_support: false
+rank_support_structures: []
 ---
 
 ## Notes

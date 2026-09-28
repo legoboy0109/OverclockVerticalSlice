@@ -604,7 +604,7 @@ static func _retreat_value(threat_dist_before: int, threat_dist_after: int, \
 ## against a float fraction of the (int) max hp — matches the GDD's own
 ## `<=` phrasing exactly (a unit sitting precisely at the fraction is included).
 static func _is_wounded(unit: UnitState) -> bool:
-	return float(unit.current_hp) <= AIBalance.ai.retreat_hp_fraction * float(unit.type.hp)
+	return float(unit.current_hp) <= AIBalance.ai.retreat_hp_fraction * float(Unit.effective_max_hp(unit))
 
 
 ## Carrier for [method _nearest_threatening_enemy]'s result — the nearest live
@@ -825,7 +825,7 @@ static func _ability_value(lookahead: GameState, unit: UnitState, ability: Abili
 	match ability.id:
 		&"repair":
 			var t: UnitState = target
-			var restored: int = mini(ability.amount, t.type.hp - t.current_hp)
+			var restored: int = mini(ability.amount, Unit.effective_max_hp(t) - t.current_hp)
 			return _combat_value(restored, false, t)
 		&"fortify":
 			if not _nearest_threatening_enemy(lookahead, unit).found:
@@ -1040,7 +1040,7 @@ static func _ap_cost_opponent_paid_for(target: EntityState) -> int:
 ## already accounts for).
 static func _max_hp_of(target: EntityState) -> int:
 	if target is UnitState:
-		return (target as UnitState).type.hp
+		return Unit.effective_max_hp(target as UnitState)
 	return (target as StructureState).type.hp
 
 

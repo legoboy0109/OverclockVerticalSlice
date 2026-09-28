@@ -633,6 +633,9 @@ static func apply(state: GameState, action: AttackAction) -> Array[Event]:
 	for v: EntityState in victims:
 		if v.current_hp <= 0:
 			events.append_array(state.destroy_entity(v.entity_id))
+	# ★ PV-6: merit AFTER all deaths, rank changes after merit — never mid-resolution.
+	for v: EntityState in victims:
+		Promotion.award_hit(state, attacker, v)
 	# Only the PRIMARY target may counter (damage-types.md edge case): three free counters
 	# for one burst would make area weapons strictly bad.
 	# Story 006: conditional single counter — fires iff the defender survived
@@ -648,6 +651,9 @@ static func apply(state: GameState, action: AttackAction) -> Array[Event]:
 		events.append(DamageEvent.new(target.entity_id, attacker.entity_id, counter_dmg))
 		if attacker.current_hp <= 0:
 			events.append_array(state.destroy_entity(attacker.entity_id))
+		Promotion.award_hit(state, target, attacker)   # a counter kill earns merit too
+		Promotion.apply_rank(state, target)
+	Promotion.apply_rank(state, attacker)
 	return events
 
 

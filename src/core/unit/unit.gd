@@ -123,7 +123,40 @@ static func clone(unit: UnitState) -> UnitState:
 ## clamp so hp never reads negative). Never assign
 ## [member UnitState.current_hp] directly outside this function.
 static func apply_hp_delta(unit: UnitState, delta: int) -> void:
-	unit.current_hp = clampi(unit.current_hp + delta, 0, unit.type.hp)
+	unit.current_hp = clampi(unit.current_hp + delta, 0, effective_max_hp(unit))
+
+
+## [param unit]'s maximum hp: its type's, plus its rank's bonus (promotion-veterancy.md PV-3).
+## ★ The ONE place max hp is read for a unit — healing, repair, the AI and the HUD all use it,
+## so a promoted unit is never healed back to its old ceiling.
+static func effective_max_hp(unit: UnitState) -> int:
+	return unit.type.hp + _rank_value(CombatBalance.combat.rank_hp, unit.rank)
+
+
+## The rank's bonus from [param table], clamped to the table (rank 0 = no bonus).
+static func _rank_value(table: PackedInt32Array, rank: int) -> int:
+	if table.is_empty():
+		return 0
+	return table[clampi(rank, 0, table.size() - 1)]
+
+
+## The rank [param merit] earns under the threshold table (PV-2), 0..3.
+static func rank_for_merit(merit: int) -> int:
+	var t: PackedInt32Array = CombatBalance.combat.rank_thresholds
+	var r: int = 0
+	for i: int in t.size():
+		if merit >= t[i]:
+			r = i
+	return r
+
+
+## Moves [param unit] to [param new_rank], keeping current hp in step with max hp (PV-5: a
+## promotion grants the new hp at once; a demotion clamps it to the lower ceiling).
+static func set_rank(unit: UnitState, new_rank: int) -> void:
+	var before: int = effective_max_hp(unit)
+	unit.rank = new_rank
+	var after: int = effective_max_hp(unit)
+	unit.current_hp = clampi(unit.current_hp + maxi(0, after - before), 0, after)
 
 
 ## The attack value Combat uses (ADR-0010, TR-unit-006): [param unit]'s base attack
@@ -131,7 +164,7 @@ static func apply_hp_delta(unit: UnitState, delta: int) -> void:
 ## ([method Research.attack_bonus]). Computed [b]live[/b] every call — never baked — so
 ## an already-built unit reflects a tech completing mid-match (Rule 8).
 static func effective_attack(state: GameState, unit: UnitState) -> int:
-	return unit.type.attack + Research.attack_bonus(state, unit.owner)
+	return unit.type.attack + Research.attack_bonus(state, unit.owner) + _rank_value(CombatBalance.combat.rank_attack, unit.rank)
 
 
 ## The defense value Combat's damage formula subtracts (ADR-0010's
@@ -195,7 +228,9 @@ static func benefits_from_cover(unit: UnitState) -> bool:
 
 static func effective_attack_range(state: GameState, entity: EntityState) -> int:
 	if entity is UnitState:
-		return effective_type_attack_range(state, entity.type, entity.owner)
+		var base: int = effective_type_attack_range(state, entity.type, entity.owner)
+		# PV-3: a Champion's extra range, for a unit that attacks at all.
+		return base + _rank_value(CombatBalance.combat.rank_range, entity.rank) if base > 0 else base
 	return entity.type.attack_range
 
 
