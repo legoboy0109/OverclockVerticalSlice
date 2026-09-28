@@ -42,3 +42,23 @@ static func make_state(player_count: int = 2, active_player: int = 0) -> GameSta
 	state.round_number = 1
 	state.match_status = GameState.MatchStatus.IN_PROGRESS
 	return state
+
+
+## Builds a throwaway [TechDef] carrying only the given effect magnitudes — for tests
+## that need to prove a stat fold reads the TECH'S value rather than a hardcoded +1
+## (e.g. grant +5 attack and assert +5, which a hardcoded +1 would fail). Not in
+## [code]Techs.ALL[/code], so it never affects tree gating.
+static func make_tech(attack_bonus: int = 0, defense_bonus: int = 0) -> TechDef:
+	var tech := TechDef.new()
+	tech.display_name = "Test Tech"
+	tech.research_cost = 0
+	tech.research_time = 1
+	tech.attack_bonus = attack_bonus
+	tech.defense_bonus = defense_bonus
+	return tech
+
+
+## Marks [param tech] completed for [param player] directly, bypassing research —
+## the test equivalent of the tech having finished on an earlier turn.
+static func grant_tech(state: GameState, player: int, tech: TechDef) -> void:
+	state.per_player[player].completed_techs.append(tech)

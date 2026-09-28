@@ -98,7 +98,7 @@ func unit_info(entity_id: int) -> Dictionary:
 		"effective_attack": Unit.effective_attack(_state, unit),
 		"move_cost": unit.type.move_cost,
 		"has_attacked": unit.has_attacked,
-		"attack_range": unit.type.attack_range,
+		"attack_range": Unit.effective_attack_range(_state, unit),
 	}
 
 
@@ -261,7 +261,7 @@ func structure_info(entity_id: int) -> Dictionary:
 func can_afford_build(player: int, structure_type: StructureTypeDef) -> bool:
 	var cost: int = BaseProduction.effective_build_cost(_state, structure_type, player)
 	return Credits.can_afford(_state, player, cost) \
-		and AP.can_afford(_state, player, Balance.economy.build_ap_cost)
+		and AP.can_afford(_state, player, BaseProduction.effective_build_ap_cost(_state, player))
 
 
 ## True iff [param player] can currently afford to produce [param unit_type]
@@ -279,7 +279,7 @@ func can_afford_build(player: int, structure_type: StructureTypeDef) -> bool:
 func can_afford_produce(player: int, unit_type: UnitTypeDef) -> bool:
 	var cost: int = Unit.effective_produce_cost(_state, unit_type, player)
 	return Credits.can_afford(_state, player, cost) \
-		and AP.can_afford(_state, player, Balance.economy.produce_ap_cost)
+		and AP.can_afford(_state, player, BaseProduction.effective_produce_ap_cost(_state, player))
 
 
 ## The active player's index into [member GameState.per_player] (TR-hud-009,

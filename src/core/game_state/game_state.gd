@@ -263,10 +263,12 @@ func destroy_entity(entity_id: int) -> Array[Event]:
 	# hide a real pipeline error). Not defended against by design.
 	var e: EntityState = entities_by_id[entity_id]
 	var evts: Array[Event] = []
-	# TODO(research-tech epic): Lab-revert hook, ADR-0010 step (a) — call the
-	# forward-declared Research.on_lab_destroyed(self, e) here once a real
-	# StructureState/Research Lab model exists (is_research_lab(),
-	# current_research_target). No-op today; no consumer, no stub invented.
+	# (a) ★ CR-14 (2026-09-28): no Lab-revert hook is needed any more. Research runs at
+	# the HQ, and a destroyed Lab only blocks STARTING tier-2 research — completed and
+	# in-progress techs are untouched (user decision), and that gate is read live by
+	# Research.availability. Research in progress at a destroyed researcher simply goes
+	# with it, exactly like a unit in production (S8-28) — and the only researcher is the
+	# HQ, whose loss ends the match anyway.
 	grid.remove(e.position.x, e.position.y) # (b)
 	entities_by_id.erase(entity_id)          # (c)
 	if e is StructureState:
@@ -340,6 +342,10 @@ func start_turn(player: int) -> Array:
 	# 1. Set active player.
 	active_player = player
 
+	# 1b. ★ CR-14 Field Repair — BEFORE step 2, because it reads last turn's
+	# moved/attacked flags that step 2 is about to clear. See Research.apply_idle_healing.
+	var events: Array = Research.apply_idle_healing(self, player)
+
 	# 2. Reset per-turn flags for this player's entities, stable id order.
 	for e: EntityState in entities():
 		if e.owner != player:
@@ -350,7 +356,6 @@ func start_turn(player: int) -> Array:
 			Structure.reset_turn_flags(e)
 
 	# 3. Advance build + research timers (commutative order; both before step 4).
-	var events: Array = []
 	events.append_array(BaseProduction.advance_build_timers(self, player))
 	events.append_array(Research.advance_research_timers(self, player))
 
@@ -509,6 +514,10 @@ static func _ensure_dispatch_registered() -> void:
 	# other verb — a cancel that bypassed apply_action would skip the GAME_OVER and
 	# active-player checks the gate owns.
 	register_verb(Action.Verb.CANCEL_PRODUCTION, BaseProduction.validate_cancel_production, BaseProduction.apply_cancel_production)
+	# ★ CR-14 (2026-09-28): RESEARCH existed in the enum from the start but was never
+	# registered, so it could not be dispatched at all. CANCEL_RESEARCH is its sibling.
+	register_verb(Action.Verb.RESEARCH, Research.validate_research, Research.apply_research)
+	register_verb(Action.Verb.CANCEL_RESEARCH, Research.validate_cancel_research, Research.apply_cancel_research)
 	register_verb(Action.Verb.DISBAND, Upkeep.validate_disband, Upkeep.apply_disband)
 	register_verb(Action.Verb.WAIT, _validate_wait, _apply_wait)
 	_dispatch_registered = true
