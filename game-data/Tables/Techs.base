@@ -1,0 +1,16 @@
+filters:
+  and:
+    - file.inFolder("Techs")
+views:
+  - type: table
+    name: Techs
+    order:
+      - file.name
+      - tier
+      - description
+      - research_cost
+      - research_time
+      - ap_surcharge
+      - requires
+      - requires_structures
+      - exclusive_group

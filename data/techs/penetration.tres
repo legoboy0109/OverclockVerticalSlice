@@ -1,4 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
+; GENERATED from game-data/Techs/Penetration.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: bd638645cda8562f6c30e65f1d22d90420caedc83f73f04f6330ae5c732cbe5c
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/attack_1.tres" id="2"]
@@ -15,4 +17,13 @@ ap_surcharge = 2
 prerequisites = [ExtResource("2")]
 required_structures = [ExtResource("3")]
 exclusive_group = &"combat"
+allowed_factions = []
+attack_bonus = 0
+defense_bonus = 0
+attack_range_bonus = 0
 ignores_cover = true
+idle_heal = 0
+economy_tier_bonus = 0
+produce_ap_discount = 0
+build_ap_discount = 0
+produce_cost_discount_pct = 0

@@ -38,10 +38,18 @@
 class_name VSMap
 extends RefCounted
 
-const WIDTH: int = 12
-const HEIGHT: int = 10
-const HQ_A: Vector2i = Vector2i(2, 5)
-const HQ_B: Vector2i = Vector2i(9, 5)
+## ★ 2026-09-28: the board is DATA now — authored in `game-data/Maps/Vertical Slice.md` (a
+## text grid) and generated into this resource by `tools/vault/build_data.py`. Everything
+## below is derived from it, so an edited map reaches the slice, the simulator and every
+## test through this one class, exactly as the layout rules above require.
+const DATA: MapDefinition = preload("res://data/maps/vertical_slice.tres")
+
+## Static vars rather than consts: a value read off a loaded resource is not a constant
+## expression in GDScript. Callers read them exactly as they read the old consts.
+static var WIDTH: int = DATA.width
+static var HEIGHT: int = DATA.height
+static var HQ_A: Vector2i = DATA.hq_tiles[0]
+static var HQ_B: Vector2i = DATA.hq_tiles[1]
 
 ## The tile each seat's free starting Builder occupies — directly BEHIND its HQ,
 ## i.e. one step further from the enemy (S8-29, user decision 2026-08-26).
@@ -68,43 +76,20 @@ static func starting_builder_tile(hq_tile: Vector2i) -> Vector2i:
 ## `BaseProductionConfig.deploy_radius` (2) + 1 — see layout rule 2.
 const MIN_HQ_CLEARANCE: int = 3
 
-## The authored cover tiles, 8 of 120 (~7%).
+## The cover tiles, in row-major order, read off [constant DATA].
 ##
-## [codeblock]
-##  y\x  0  1  2  3  4  5  6  7  8  9 10 11
-##   0   .  .  .  .  .  .  .  .  .  .  .  .
-##   1   .  .  .  .  .  .  .  .  .  .  .  .
-##   2   .  .  .  .  .  .  .  .  .  .  .  .
-##   3   .  .  .  C  .  C  C  .  C  .  .  .
-##   4   .  .  .  .  .  .  .  .  .  .  .  .
-##   5   .  .  A  .  .  .  .  .  .  B  .  .
-##   6   .  .  .  .  .  .  .  .  .  .  .  .
-##   7   .  .  .  C  .  C  C  .  C  .  .  .
-##   8   .  .  .  .  .  .  .  .  .  .  .  .
-##   9   .  .  .  .  .  .  .  .  .  .  .  .
-## [/codeblock]
-## [b]A[/b] / [b]B[/b] are the HQs. Two flank clusters, one above and one below the HQ rank,
-## so a player who goes wide gets something to fight over — and the direct HQ-to-HQ lane at
-## `y = 5` is deliberately left OPEN.
-##
-## ★★ [b]That empty lane is a measured decision, not a gap.[/b] The first layout ran 14 tiles
-## and included the centre pair (5,5)/(6,5) plus outer tiles at y1/y9. It broke the S6-06
-## gate in a very specific way:
-## [codeblock]
-##                        resolve on play      +1 handicap cell
-##   no cover (S7-10)        19/22             1/6 reached the round cap
-##   14 tiles, centre lane   15/22             5/6 reached the round cap
-##   8 tiles, lane open      see below
-## [/codeblock]
-## Handicaps +2 and +3 were untouched at 25–30 turns either way; the damage was entirely in
-## the **+1 cell — the nearly-even games**. Cover let a slightly-behind player hold, which is
-## the intent, and then kept holding: the game stopped being a comeback and became a
-## stalemate. ★ **Defensive terrain in the lane both sides must cross converts close games
-## into draws.** Cover belongs where a player CHOOSES to fight, not where they are forced to.
-const COVER_TILES: Array[Vector2i] = [
-	Vector2i(3, 3), Vector2i(5, 3), Vector2i(6, 3), Vector2i(8, 3),
-	Vector2i(3, 7), Vector2i(5, 7), Vector2i(6, 7), Vector2i(8, 7),
-]
+## ★ Why the centre lane (`y = 5`) is left open is recorded in the map's vault note — it is a
+## measured decision (cover in the lane both sides must cross turned close games into
+## round-cap draws), and it belongs next to the grid a designer edits.
+static var COVER_TILES: Array[Vector2i] = _cover_tiles()
+
+
+static func _cover_tiles() -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for i: int in DATA.authored_terrain.size():
+		if DATA.authored_terrain[i] == GridState.Terrain.COVER:
+			out.append(Vector2i(i % DATA.width, i / DATA.width))
+	return out
 
 
 ## The shipping vertical-slice map: 12×10, two HQs, [constant COVER_TILES] as Cover, the rest
@@ -135,9 +120,7 @@ static func terrain(plain: bool = false) -> PackedByteArray:
 	out.fill(GridState.Terrain.PLAIN)
 	if plain:
 		return out
-	for tile: Vector2i in COVER_TILES:
-		out[tile.y * WIDTH + tile.x] = GridState.Terrain.COVER
-	return out
+	return DATA.authored_terrain.duplicate()
 
 
 ## True iff [param tile] is a Cover tile in the authored layout. A read-only convenience for

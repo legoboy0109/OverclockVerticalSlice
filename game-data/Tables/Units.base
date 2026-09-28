@@ -1,0 +1,18 @@
+filters:
+  and:
+    - file.inFolder("Units")
+views:
+  - type: table
+    name: Units
+    order:
+      - file.name
+      - hp
+      - attack
+      - attack_range
+      - defense
+      - move_cost
+      - soft_move_cap
+      - produce_cost
+      - production_turns
+      - upkeep
+      - can_build

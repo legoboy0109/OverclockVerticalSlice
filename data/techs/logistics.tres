@@ -1,4 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
+; GENERATED from game-data/Techs/Logistics.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: f8c02b45ac5d6e95297c5e3e5bd93d5c4f5d5dbd6e3f051b88912b43fcc1bb1b
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/economy_1.tres" id="2"]
@@ -15,5 +17,13 @@ ap_surcharge = 2
 prerequisites = [ExtResource("2")]
 required_structures = [ExtResource("3")]
 exclusive_group = &"economy"
+allowed_factions = []
+attack_bonus = 0
+defense_bonus = 0
+attack_range_bonus = 0
+ignores_cover = false
+idle_heal = 0
+economy_tier_bonus = 0
 produce_ap_discount = 1
 build_ap_discount = 1
+produce_cost_discount_pct = 0

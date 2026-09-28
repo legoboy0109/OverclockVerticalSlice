@@ -1,4 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=2 format=3]
+; GENERATED from game-data/Structures/Research Lab.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 695e881290652bf98718c6efbd5fd0f048aff775f87229d8436f3af7ffde8ecc
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 
@@ -6,11 +8,17 @@
 script = ExtResource("1")
 display_name = "Research Lab"
 hp = 12
-max_count = 1
-upkeep = 200
 build_cost = 800
 build_time = 2
+upkeep = 200
+max_count = 1
+cap_bonus = 0
 production_cap = 0
 producible_types = []
+attack = 0
+attack_range = 0
 defense = 0
 can_counterattack = false
+can_research = false
+targeting_mode = 0
+min_range = 1

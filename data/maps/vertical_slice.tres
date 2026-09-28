@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="MapDefinition" load_steps=2 format=3]
+; GENERATED from game-data/Maps/Vertical Slice.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: c6d0d9c65881b0de4f6e0f667384e2e0c5e6b222c21a82181cdefdf91afec17d
+
+[ext_resource type="Script" path="res://src/core/grid/map_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+width = 12
+height = 10
+mode = 0
+authored_terrain = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+hq_tiles = [Vector2i(2, 5), Vector2i(9, 5)]
+deploy_tiles = []

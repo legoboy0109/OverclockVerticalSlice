@@ -1,0 +1,19 @@
+filters:
+  and:
+    - file.inFolder("Structures")
+views:
+  - type: table
+    name: Structures
+    order:
+      - file.name
+      - hp
+      - build_cost
+      - build_time
+      - upkeep
+      - max_count
+      - cap_bonus
+      - produces
+      - attack
+      - attack_range
+      - defense
+      - can_research

@@ -1,0 +1,4 @@
+# Obsidian's per-machine UI state — not game data.
+.obsidian/workspace*.json
+.obsidian/cache
+.trash/

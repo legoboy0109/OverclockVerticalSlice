@@ -49,10 +49,10 @@ extends Node2D
 # ★ S7-11: aliases onto [VSMap], which is the single authored definition. Kept as names
 # here because ~a dozen call sites read them; redefining the VALUES here is what would let
 # the slice and the match simulator drift apart.
-const MAP_WIDTH: int = VSMap.WIDTH
-const MAP_HEIGHT: int = VSMap.HEIGHT
-const HQ_A: Vector2i = VSMap.HQ_A
-const HQ_B: Vector2i = VSMap.HQ_B
+static var MAP_WIDTH: int = VSMap.WIDTH
+static var MAP_HEIGHT: int = VSMap.HEIGHT
+static var HQ_A: Vector2i = VSMap.HQ_A
+static var HQ_B: Vector2i = VSMap.HQ_B
 
 ## The human player is 0; the AI is player 1 (VS 1v1, ADR-0011).
 const LOCAL_PLAYER: int = 0
