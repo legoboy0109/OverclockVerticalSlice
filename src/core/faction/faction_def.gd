@@ -36,6 +36,8 @@ extends Resource
 @export var infantry_cap_delta: int = 0
 ## D4 — added to base Credit income per turn.
 @export var base_income_delta: int = 0
+## D4 — added to each economy tier's income bonus (the slope, where base income is the intercept).
+@export var econ_tier_bonus_delta: int = 0
 ## D9 — percent added to total upkeep (e.g. 20 = +20%). Floored so upkeep never goes negative.
 @export var upkeep_pct_delta: int = 0
 

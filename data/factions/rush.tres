@@ -14,6 +14,7 @@ structures = []
 techs = []
 infantry_cap_delta = 0
 base_income_delta = 0
+econ_tier_bonus_delta = 0
 upkeep_pct_delta = 0
 unit_deltas = []
 promotes = false

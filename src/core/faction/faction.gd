@@ -90,6 +90,11 @@ static func base_income_delta(state: GameState, player: int) -> int:
 	return f.base_income_delta if f != null else 0
 
 
+static func econ_tier_bonus_delta(state: GameState, player: int) -> int:
+	var f: FactionDef = state.faction_of(player)
+	return f.econ_tier_bonus_delta if f != null else 0
+
+
 static func upkeep_pct_delta(state: GameState, player: int) -> int:
 	var f: FactionDef = state.faction_of(player)
 	return f.upkeep_pct_delta if f != null else 0

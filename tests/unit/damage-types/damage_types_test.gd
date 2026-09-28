@@ -69,7 +69,10 @@ func _attack(state: GameState, from: Vector2i, to: Vector2i) -> ActionResult:
 # --- The formula (AC-1..AC-7) ------------------------------------------------------
 
 func test_ac1_every_shipped_unit_deals_kinetic_so_no_matchup_changed() -> void:
-	for t: UnitTypeDef in UnitTypes.ALL:
+	# ⚠ Narrowed 2026-09-28 to the BASELINE faction's roster: faction waves add EMF/incendiary
+	# units on purpose (Solar's Lance Team). The guarantee DT-1 makes is that the pre-damage-type
+	# game — the Alliance — is unchanged.
+	for t: UnitTypeDef in Faction.units(Factions.DEMOCRATIC_ALLIANCE):
 		assert_int(t.damage_type).override_failure_message(
 			"%s is not KINETIC — shipped matchups would change." % t.display_name
 		).is_equal(UnitTypeDef.DamageType.KINETIC)

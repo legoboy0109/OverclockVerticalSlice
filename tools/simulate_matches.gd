@@ -134,6 +134,7 @@ var _plain_map: bool = false
 ## and S7-11 (cover) both lengthened matches — it was calibrated before either.
 var _produced: Dictionary = {}
 var _built: Dictionary = {}
+var _factions: Array[FactionDef] = [Factions.DEMOCRATIC_ALLIANCE, Factions.DEMOCRATIC_ALLIANCE]
 var _abilities: Dictionary = {}
 var _max_rounds_override: int = 0
 
@@ -180,6 +181,14 @@ func _parse_args() -> void:
 			_plain_map = true
 		elif arg.begins_with("--max-rounds="):
 			_max_rounds_override = maxi(0, int(arg.split("=")[1]))
+		elif arg.begins_with("--factions="):
+			# ★ Faction waves (CR-10): e.g. --factions=solar_federation,democratic_alliance — the
+			# ids are the vault notes' ids. Seat 0 plays the first. Default: Alliance mirror.
+			var ids: PackedStringArray = arg.split("=")[1].split(",")
+			for seat: int in mini(2, ids.size()):
+				for f: FactionDef in Factions.ALL:
+					if f.resource_path.get_file().get_basename() == ids[seat]:
+						_factions[seat] = f
 		elif arg.begins_with("--start-player="):
 			_start_player_override = clampi(int(arg.split("=")[1]), 0, 1)
 		elif arg == "--swap-hqs":
@@ -197,6 +206,7 @@ func _parse_args() -> void:
 	# own baseline; the numbers were clean, confident and meaningless. Report, do not assume.
 	if _start_player_override >= 0:
 		print("SIM_START_OVERRIDE,forced_starting_player=%d" % _start_player_override)
+	print("SIM_FACTIONS,%s,%s" % [_factions[0].display_name, _factions[1].display_name])
 	print("SIM_TERRAIN,cover_tiles=%d,of=%d,plain=%s,max_rounds=%d" % [
 		0 if _plain_map else VSMap.COVER_TILES.size(), VSMap.WIDTH * VSMap.HEIGHT, str(_plain_map),
 		_max_rounds_override if _max_rounds_override > 0 else VerticalSliceRoot.VS_MAX_ROUNDS
@@ -399,9 +409,7 @@ func _build_match(favoured: int, handicap: int, variant: int) -> GameState:
 	Balance.reset()
 	var max_rounds: int = _max_rounds_override if _max_rounds_override > 0 \
 		else VerticalSliceRoot.VS_MAX_ROUNDS
-	var state: GameState = MatchSetup.build(map,
-		[Factions.DEMOCRATIC_ALLIANCE, Factions.DEMOCRATIC_ALLIANCE] as Array[FactionDef],
-		starting_player, max_rounds, [0, 1])
+	var state: GameState = MatchSetup.build(map, _factions, starting_player, max_rounds, [0, 1])
 
 	# ★ S5-04 mirror seeding: BOTH players get the same unit at mirrored tiles, so
 	# the position differs between variants while staying exactly fair.

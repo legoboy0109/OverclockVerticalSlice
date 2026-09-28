@@ -1,6 +1,6 @@
 # Faction — Solar Federation
 
-> **Status**: **DRAFT** (2026-08-24) — Tier 2 of the faction corpus v2.
+> **Status**: **IMPLEMENTED 2026-09-28** (faction wave 2) — placeholder art borrowed from base units. See `design/decision-log.md`.
 > **Name**: ★ TBD. Flavour: Technocratic Socialists.
 > **Author**: user (direction) + agents · **Baseline**: `factions/democratic-alliance.md` (CR-10)
 >

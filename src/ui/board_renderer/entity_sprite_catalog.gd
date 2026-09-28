@@ -123,6 +123,9 @@ static func type_token(display_name: String) -> String:
 ## (2026-09-28; this used to be keyed by display name). A definition built in code, with no
 ## file behind it, falls back to [method type_token] of its display name.
 static func type_token_for(def: Resource) -> String:
+	var borrowed: Variant = def.get("art_id")
+	if borrowed != null and String(borrowed) != "":
+		return String(borrowed)
 	if def.resource_path != "" and def.resource_path.ends_with(".tres"):
 		return def.resource_path.get_file().get_basename()
 	return type_token(def.get("display_name"))
