@@ -78,3 +78,37 @@ Each entry: **the call** · why · how to reverse it.
 - ⚠ **Not built:** the area preview telegraph and the friendly-fire warning before commit
   (AC-13, advisory), and showing a unit's damage type/resistances in the HUD. The attack preview
   number already includes resistance.
+
+## Unit abilities + Transport & Pilots (`unit-abilities.md`, `transport-and-pilots.md`)
+
+- **ABOQ-1 — seven of the eight catalogue entries built; `SPOT` deferred.** Spot changes another
+  unit's range mid-turn conditional on adjacency — complex for its payoff, and no base unit needs it.
+- **Abilities are vault notes** (`game-data/Abilities/`): cost, range, cooldown, uses and magnitude
+  are editable; the effect is code keyed by `id`.
+- **Embark/Disembark are implicit** — every non-air unit may embark; they aren't listed on units.
+  Their costs are still vault notes.
+- **ABOQ-2 — Paradrop is the transport's action** (it carries the ability and its cooldown). AP is a
+  player-wide pool in this game, so "whose AP" only decides whose cooldown and turn it uses.
+- **ABOQ-4 — an ability and an attack exclude each other** (AB-5 as written): using one blocks the
+  other that turn. Embark/disembark are movement and exempt.
+- **Passengers and pilots are off the board**, stored inside their vehicle. They still count toward
+  the population cap and still pay upkeep, and die with the vehicle (TP-1/4/10).
+- **Aircraft do not need pilots.** TP-5a mandates it for ground vehicles only.
+- **`crew_bonus` (TP-5d) is not built** — no base unit uses it; it arrives with the Solar/Union rosters.
+- **Capture refuses a vehicle with passengers inside** — who would own the passengers is undefined.
+- **A crew-targeting hit on a pilot ignores Cover** (the pilot is inside the vehicle).
+- **Base roster abilities (my call):** Builder carries **Repair**; Heavy carries **Fortify**;
+  Scout and Trooper **can pilot** (per the Alliance roster); every ground vehicle **needs a pilot**;
+  new **Transport** (Factory, carries 3 infantry). Demolish, Self Destruct, Capture and Paradrop are
+  built and tested but no base unit carries them yet — they belong to faction units.
+- **An unpiloted vehicle is drawn dimmed** (the same "can't act" look as a stood-down unit), so a
+  fresh tank reads as inert rather than broken.
+- **AI:** crews its empty vehicles (walks a pilot over and embarks), and scores Repair, Fortify
+  (only when threatened), Demolish, Self Destruct and Capture on the attack scale. It never
+  disembarks or paradrops — it has no transport plan yet.
+
+### Findings to review
+- In a 30-game batch the AI used Fortify 87× and Repair 61×; games still resolved 27/30 by HQ kill,
+  average 63 turns (was 68) — Repair did not stall matches (ABOQ-3's worry).
+- The AI still rarely fields vehicles (3 Transports, 1 crewing across 30 games) — the economy
+  finding under Unit classes stands.

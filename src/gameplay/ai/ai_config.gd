@@ -268,3 +268,9 @@ extends Resource
 ## the ONLY route to it, so its worth is what it unlocks. Army production is protected
 ## by the build scorer's ordinary ratio competition (a Barracks scores ~1.1), not by this.
 @export var lab_unlock_value_discount: float = 1.0
+
+## Fraction of an unpiloted vehicle's Credit price the AI assigns to crewing it
+## ([method AI._score_crewing_candidates]). The vehicle is already bought; a pilot is what
+## makes it a unit. 0.5 puts crewing a Tank (~7 AP-equivalent per AP) well above a routine
+## move, so the AI crews before it wanders — without letting it outrank a kill on its HQ.
+@export var crew_vehicle_value_fraction: float = 0.5

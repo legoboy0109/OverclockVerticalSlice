@@ -1,8 +1,9 @@
-[gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Heavy.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 6c26137b69ff90162feb6e8fce5ca1e0da345bdd34f65cc7a32d4dcbe38588bd
+; source-sha256: 487b2e41135e788c063629cbe4045918cfb797db5cda72e3a4b74fc14cf5ea73
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/abilities/fortify.tres" id="2"]
 
 [resource]
 script = ExtResource("1")
@@ -29,3 +30,10 @@ resist_emf = 2
 resist_incendiary = 0
 area_shape = 0
 area_length = 4
+abilities = [ExtResource("2")]
+can_pilot = false
+requires_pilot = false
+transport_capacity = 0
+transport_accepts = Array[int]([])
+transport_size = 1
+targets_crew = false

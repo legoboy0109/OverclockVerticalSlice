@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+; GENERATED from game-data/Abilities/Disembark.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: ce5d0eed669741e136557c6adbd1dbe9562dd37b6b197a63c63269f7f3bbaa72
+
+[ext_resource type="Script" path="res://src/core/ability/ability_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Disembark"
+id = &"disembark"
+description = "A passenger or pilot steps out onto an adjacent tile. Its turn ends."
+ap_cost = 1
+credit_cost = 0
+ability_range = 1
+cooldown = 0
+uses_per_match = 0
+amount = 0

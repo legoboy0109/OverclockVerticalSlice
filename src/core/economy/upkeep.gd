@@ -62,6 +62,10 @@ static func total_upkeep(state: GameState, player: int) -> int:
 			if u.type == null:
 				continue
 			total += u.type.upkeep
+			# TP-10: a carried unit still exists, and is still paid for.
+			for c: UnitState in Unit.all_carried(u):
+				if c.type != null:
+					total += c.type.upkeep
 		elif e is StructureState:
 			var st: StructureState = e as StructureState
 			if st.type == null:

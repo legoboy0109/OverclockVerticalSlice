@@ -1,6 +1,6 @@
 # Unit Abilities
 
-> **Status**: **DRAFT** (2026-08-24) — Tier 1 of the faction corpus v2.
+> **Status**: **IMPLEMENTED 2026-09-28** (from the DRAFT of 2026-08-24; SPOT deferred). See `design/decision-log.md` § Unit abilities.
 > **Author**: user (direction) + agents · **System #**: 19 (new)
 > **Owning GDD for**: the ability catalogue, ability pricing, and the activation contract
 >

@@ -1,10 +1,11 @@
-[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=5 format=3]
 ; GENERATED from game-data/Structures/Factory.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: aaa4b5ff2922dd9abf2a9d12696a97dadc57ee1183b9c86cca35c6e7af212331
+; source-sha256: 5efdbc6815827c24f4d150ae7345818694070b9f39d119ad1c7bab1aad15968c
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/tank.tres" id="2"]
 [ext_resource type="Resource" path="res://data/units/artillery.tres" id="3"]
+[ext_resource type="Resource" path="res://data/units/transport.tres" id="4"]
 
 [resource]
 script = ExtResource("1")
@@ -17,7 +18,7 @@ upkeep = 200
 max_count = 2
 cap_bonus = 0
 production_cap = 1
-producible_types = [ExtResource("2"), ExtResource("3")]
+producible_types = [ExtResource("2"), ExtResource("3"), ExtResource("4")]
 attack = 0
 attack_range = 0
 defense = 0

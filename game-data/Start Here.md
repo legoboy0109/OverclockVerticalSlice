@@ -36,6 +36,7 @@ which note and which property. If you forget, the test suite fails and says so.
 | Units | Everything that moves | `data/units/` |
 | Structures | Everything that's built | `data/structures/` |
 | Techs | The research tree | `data/techs/` |
+| Abilities | Unit abilities: cost, range, cooldown, strength | `data/abilities/` |
 | Factions | Faction modifiers (only placeholders so far) | `data/factions/` |
 | Maps | Boards | `data/maps/` |
 

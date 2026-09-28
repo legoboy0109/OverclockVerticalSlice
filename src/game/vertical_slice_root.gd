@@ -185,6 +185,13 @@ var _action_menu: ActionMenu = null
 ## deploy something the player did not just pick.
 var _pending_produce: UnitTypeDef = null
 
+## ★ Unit abilities (2026-09-28): the ability whose target tile is being picked, and for
+## Disembark/Paradrop the passenger it moves. Abilities REUSE the produce tile-picker
+## (PREVIEW_PRODUCE: "pick one of these highlighted tiles") rather than adding an FSM state —
+## the interaction is identical. Cleared everywhere [member _pending_produce] is.
+var _pending_ability: AbilityDef = null
+var _pending_passenger_id: int = -1
+
 ## The structure type the Build flow will place, held for the same reason and for
 ## the same lifetime as [member _pending_produce].
 var _pending_build: StructureTypeDef = null
@@ -569,6 +576,7 @@ func _build_action_menu() -> void:
 	# goes THROUGH the signal — the S8-12 lesson below is why a picker whose choice is
 	# emitted into a void can pass every direct-call test and still do nothing.
 	_action_menu.research_tech_chosen.connect(_on_menu_research_chosen)
+	_action_menu.ability_chosen.connect(_on_menu_ability_chosen)
 	# ★ 2026-08-25 — THIS CONNECTION DID NOT EXIST, and Build had therefore never
 	# once worked from the UI. `ActionMenu` emitted `build_type_chosen` into a void:
 	# picking a structure from the Build picker closed the list and did nothing, and
@@ -850,6 +858,15 @@ func _announce_research(result: ActionResult) -> void:
 			_flash_msg("Research started: %s (%d turns)." % [e.tech.display_name, e.turns_remaining])
 		elif e is ResearchCancelledEvent and e.owner == LOCAL_PLAYER:
 			_flash_msg("Research cancelled: %s (+%d CR back)." % [e.tech.display_name, e.refund])
+		elif e is UnitEmbarkedEvent:
+			var who: String = "as pilot" if e.as_pilot else "as a passenger"
+			_flash_msg("Embarked %s." % who)
+		elif e is UnitDisembarkedEvent:
+			_flash_msg("Paradropped." if e.paradrop else "Disembarked — that unit's turn is over.")
+		elif e is VehicleCapturedEvent:
+			_flash_msg("Vehicle captured!" if e.new_owner == LOCAL_PLAYER else "The enemy captured one of your vehicles!")
+		elif e is AbilityUsedEvent and e.ability != null:
+			_flash_msg("%s: %d." % [e.ability.display_name, e.amount] if e.amount > 0 else "%s." % e.ability.display_name)
 		elif e is TechCompletedEvent:
 			if e.owner == LOCAL_PLAYER:
 				_flash_msg("Research complete: %s - %s" % [e.tech.display_name, e.tech.description])
@@ -1231,6 +1248,7 @@ func _on_menu_verb_chosen(verb: int) -> void:
 	match verb:
 		CommandFSM.Verb.MOVE:
 			_pending_produce = null
+			_pending_ability = null
 			_pending_build = null
 			_pending_builder_id = -1
 			_cmd.enter_preview(_state, entity, CommandFSM.State.PREVIEW_MOVE)
@@ -1238,6 +1256,7 @@ func _on_menu_verb_chosen(verb: int) -> void:
 			_flash_msg("Move: pick a highlighted tile. Esc to go back.")
 		CommandFSM.Verb.ATTACK:
 			_pending_produce = null
+			_pending_ability = null
 			_pending_build = null
 			_pending_builder_id = -1
 			_cmd.enter_preview(_state, entity, CommandFSM.State.PREVIEW_ATTACK)
@@ -1247,6 +1266,7 @@ func _on_menu_verb_chosen(verb: int) -> void:
 			# Build chooses nothing by itself — like Produce, the row opens a TYPE
 			# picker and the chosen type is what enters the placement preview.
 			_pending_produce = null
+			_pending_ability = null
 			_pending_build = null
 			_pending_builder_id = -1
 			open_build_picker()
@@ -1284,6 +1304,43 @@ func _on_menu_research_chosen(tech: TechDef) -> void:
 	action.researcher_id = entity.entity_id # action.player set by commit.
 	action.tech = tech
 	_cmd.dispatch_commit(action, _state)
+
+
+## ★ Unit abilities: a self-targeted ability (range 0 — Fortify, Self Destruct) commits at
+## once; anything else opens the tile picker over its legal targets, the same way Produce
+## asks for a deploy tile.
+func _on_menu_ability_chosen(ability: AbilityDef, passenger_id: int) -> void:
+	var entity: EntityState = _state.entities_by_id.get(_cmd.selected_id())
+	if not (entity is UnitState):
+		return
+	var unit: UnitState = entity
+	if ability.ability_range == 0:
+		_dispatch_ability(unit, ability, unit.position, passenger_id)
+		return
+	var passenger: UnitState = null
+	for p: UnitState in Unit.passengers(unit):
+		if p.entity_id == passenger_id:
+			passenger = p
+	_pending_produce = null
+	_pending_build = null
+	_pending_builder_id = -1
+	_pending_ability = ability
+	_pending_passenger_id = passenger_id
+	_cmd.enter_preview(_state, entity, CommandFSM.State.PREVIEW_PRODUCE)
+	_preview_tiles = Ability.legal_targets(_state, unit, ability, passenger)
+	_paint_preview_tiles()
+	_snap_cursor_to_preview()
+	_refresh_cost_preview()
+	_flash_msg("%s: pick a highlighted tile. Esc to go back." % ability.display_name)
+
+
+func _dispatch_ability(unit: UnitState, ability: AbilityDef, tile: Vector2i, passenger_id: int) -> bool:
+	var action := UseAbilityAction.new()
+	action.unit_id = unit.entity_id
+	action.ability = ability
+	action.target_tile = tile
+	action.passenger_id = passenger_id # action.player is set by CommandInterface.commit.
+	return _cmd.dispatch_commit(action, _state)
 
 
 ## Routes a chosen produce TYPE into the deploy-tile preview. The type is held in
@@ -1369,6 +1426,7 @@ func begin_build_preview(type: StructureTypeDef) -> void:
 		return
 	_pending_builder_id = builder.entity_id
 	_pending_produce = null
+	_pending_ability = null
 	_pending_build = type
 	_preview_tiles = BaseProduction.legal_build_tiles_for(_state, builder)
 	_action_menu.close()
@@ -1464,6 +1522,9 @@ func _refresh_cost_preview() -> void:
 			_show_ap_preview(Combat.attack_cost_for(entity))
 			_hud.close_credits_preview()
 		CommandFSM.State.PREVIEW_PRODUCE:
+			if _pending_ability != null:
+				_show_dual_preview(_pending_ability.ap_cost, _pending_ability.credit_cost)
+				return
 			if _pending_produce == null:
 				_close_cost_preview()
 				return
@@ -1517,6 +1578,7 @@ func _close_cost_preview() -> void:
 ## [CommandInterface]'s own Move/Attack overlays alone — those are its to clear.
 func _clear_placement_preview() -> void:
 	_pending_produce = null
+	_pending_ability = null
 	_pending_build = null
 	_pending_builder_id = -1
 	if not _preview_tiles.is_empty():
@@ -1676,6 +1738,11 @@ func _commit_attack(tile: Vector2i) -> bool:
 ## Commits a [ProduceAction] of [member _pending_produce] onto [param tile].
 func _commit_produce(tile: Vector2i) -> bool:
 	var entity: EntityState = _state.entities_by_id.get(_cmd.selected_id())
+	if _pending_ability != null and entity is UnitState:
+		if not _preview_tiles.has(tile):
+			_flash_msg("Not a legal target — pick a highlighted tile, or Esc to go back.")
+			return false
+		return _dispatch_ability(entity, _pending_ability, tile, _pending_passenger_id)
 	if not (entity is StructureState) or _pending_produce == null:
 		return false
 	if not _preview_tiles.has(tile):
@@ -1795,6 +1862,11 @@ func _is_entity_actionable(entity: EntityState) -> bool:
 	# is the read the glow existed to give and could not while "actionable" meant
 	# only "has AP and a legal target".
 	if _reader.is_stood_down(entity):
+		return false
+	# ★ Transport & Pilots: an empty vehicle cannot act at all until someone climbs in, and
+	# it should LOOK inert — otherwise a freshly built tank reads as ready and simply
+	# refuses to move, with nothing on the board saying why.
+	if entity is UnitState and not Unit.is_functional(entity):
 		return false
 	# ★ Structures are resolved BEFORE the empty-pool check, deliberately. A
 	# non-combat structure is a fixture with no turn allowance, so it must stay lit

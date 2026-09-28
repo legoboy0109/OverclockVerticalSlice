@@ -1,6 +1,6 @@
 # Transport & Pilots
 
-> **Status**: **DRAFT** (2026-08-24) — Tier 1 of the faction corpus v2.
+> **Status**: **IMPLEMENTED 2026-09-28** (from the DRAFT of 2026-08-24; `crew_bonus` deferred). See `design/decision-log.md` § Unit abilities.
 > **Author**: user (direction) + agents · **System #**: 20 (new)
 > **Owning GDD for**: unit carriage, and vehicle crewing / unpiloted state
 >

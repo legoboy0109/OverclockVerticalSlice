@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Artillery.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: fb90168be55fe9e840c3da37d5a581a686f10d363f0b013377d370bd317f2f73
+; source-sha256: 68b77ef443f9623908d1031caa3a18bd779f7a57c55add212d2558dcdf880730
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -29,3 +29,10 @@ resist_emf = -2
 resist_incendiary = 0
 area_shape = 1
 area_length = 4
+abilities = []
+can_pilot = false
+requires_pilot = true
+transport_capacity = 0
+transport_accepts = Array[int]([])
+transport_size = 3
+targets_crew = false

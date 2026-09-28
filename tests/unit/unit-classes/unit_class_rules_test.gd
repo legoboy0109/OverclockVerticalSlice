@@ -40,6 +40,20 @@ func _unit(state: GameState, owner: int, type: UnitTypeDef, pos: Vector2i) -> Un
 	return u
 
 
+# Vehicles need a pilot to move or shoot (transport-and-pilots.md TP-5). Class rules are
+# about a WORKING vehicle, so fixtures crew every vehicle they create.
+func _unit_crewed(state: GameState, owner: int, type: UnitTypeDef, pos: Vector2i) -> UnitState:
+	var u := _unit(state, owner, type, pos)
+	if type.requires_pilot:
+		var p := UnitState.new()
+		p.entity_id = 900 + u.entity_id
+		p.owner = owner
+		p.type = UnitTypes.TROOPER
+		p.current_hp = UnitTypes.TROOPER.hp
+		u.pilot = p
+	return u
+
+
 func _terrain(state: GameState, tile: Vector2i, terrain: int) -> void:
 	state.grid.terrain[state.grid.index(tile.x, tile.y)] = terrain
 
@@ -94,19 +108,23 @@ func test_producers_only_make_their_own_class() -> void:
 func test_ac1_ac2_rough_ground_stops_vehicles_not_infantry() -> void:
 	var state := _state()
 	var trooper := _unit(state, 0, UnitTypes.TROOPER, Vector2i(2, 2))
-	var tank := _unit(state, 0, UnitTypes.TANK, Vector2i(2, 6))
+	var tank := _unit_crewed(state, 0, UnitTypes.TANK, Vector2i(2, 6))
 	_terrain(state, Vector2i(3, 2), GridState.Terrain.ROUGH)
 	_terrain(state, Vector2i(3, 6), GridState.Terrain.ROUGH)
 	assert_bool(_reaches(state, trooper, Vector2i(3, 2))).is_true()
+	assert_bool(_reaches(state, tank, Vector2i(2, 7))).override_failure_message(
+		"Fixture: the tank cannot move at all, so 'blocked by rough' would pass vacuously.").is_true()
 	assert_bool(_reaches(state, tank, Vector2i(3, 6))).override_failure_message(
 		"A tank drove onto rough ground.").is_false()
 
 
 func test_ac1_a_vehicle_cannot_path_through_rough_ground() -> void:
 	var state := _state()
-	var tank := _unit(state, 0, UnitTypes.TANK, Vector2i(0, 5))
+	var tank := _unit_crewed(state, 0, UnitTypes.TANK, Vector2i(0, 5))
 	for y: int in GRID_SIZE:
 		_terrain(state, Vector2i(1, y), GridState.Terrain.ROUGH) # a wall of rough
+	assert_bool(_reaches(state, tank, Vector2i(0, 4))).override_failure_message(
+		"Fixture: the tank cannot move at all.").is_true()
 	assert_bool(_reaches(state, tank, Vector2i(2, 5))).is_false()
 
 
@@ -230,7 +248,7 @@ func test_a_unit_cannot_counterattack_what_it_cannot_target() -> void:
 
 func test_artillery_cannot_fire_at_point_blank() -> void:
 	var state := _state()
-	var arty := _unit(state, 0, UnitTypes.ARTILLERY, Vector2i(2, 2))
+	var arty := _unit_crewed(state, 0, UnitTypes.ARTILLERY, Vector2i(2, 2))
 	var near := _unit(state, 1, UnitTypes.SCOUT, Vector2i(3, 2))
 	var far := _unit(state, 1, UnitTypes.SCOUT, Vector2i(5, 2))
 	assert_bool(_targets(state, arty, far)).is_true()

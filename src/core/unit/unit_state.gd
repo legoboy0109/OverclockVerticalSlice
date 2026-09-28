@@ -68,3 +68,34 @@ extends EntityState
 ## exactly like [member has_attacked].
 @export var stood_down: bool = false
 
+## ★ Unit Abilities / Transport & Pilots (2026-09-28).
+
+## Whether this unit has used an ability this turn (AB-5). Reset at its owner's start of turn.
+@export var ability_used_this_turn: bool = false
+
+## Per-ability owner-turns until usable again, keyed by [member AbilityDef.id] (AB-7).
+@export var cooldowns: Dictionary = {}
+
+## Per-ability uses spent this match, keyed by [member AbilityDef.id] (AB-7).
+@export var uses: Dictionary = {}
+
+## Defence from Fortify, until its owner's next turn starts or it moves.
+@export var fortify: int = 0
+
+## Set by disembarking or being paradropped: the unit's turn is over (TP-3).
+@export var turn_ended: bool = false
+
+## Disembarked this turn, so it may not embark again until next turn (TP-3).
+@export var disembarked_this_turn: bool = false
+
+## Embarked this turn, so it may not disembark again until next turn (TP-3).
+@export var embarked_this_turn: bool = false
+
+## The unit crewing this vehicle, or null (TP-5/TP-6). Off the board: not in
+## [member GameState.entities_by_id] and not on the grid, until it disembarks.
+@export var pilot: UnitState = null
+
+## Passengers, off the board exactly like [member pilot] (TP-1). They keep their entity ids
+## and their own state; they die with the transport (TP-4).
+@export var cargo: Array[UnitState] = []
+

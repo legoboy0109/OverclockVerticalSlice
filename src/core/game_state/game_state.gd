@@ -518,6 +518,9 @@ static func _ensure_dispatch_registered() -> void:
 	# registered, so it could not be dispatched at all. CANCEL_RESEARCH is its sibling.
 	register_verb(Action.Verb.RESEARCH, Research.validate_research, Research.apply_research)
 	register_verb(Action.Verb.CANCEL_RESEARCH, Research.validate_cancel_research, Research.apply_cancel_research)
+	# ★ Unit abilities + transport (2026-09-28): every ability, embark and disembark included,
+	# is one verb through the same validate-then-apply gate as everything else (AB-4).
+	register_verb(Action.Verb.USE_ABILITY, Ability.validate, Ability.apply)
 	register_verb(Action.Verb.DISBAND, Upkeep.validate_disband, Upkeep.apply_disband)
 	register_verb(Action.Verb.WAIT, _validate_wait, _apply_wait)
 	_dispatch_registered = true

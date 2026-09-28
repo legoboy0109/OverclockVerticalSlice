@@ -111,7 +111,15 @@ KINDS: dict[str, Kind] = {
         Field("can_build", "bool", False),
         Field("targeting_mode", "enum", "direct", choices=TARGETING),
         Field("min_range", "int", 1),
-    ] + damage_fields(True)),
+    ] + damage_fields(True) + [
+        Field("abilities", "links", [], target="Abilities", help="Catalogue entries this unit carries"),
+        Field("can_pilot", "bool", False, help="May crew a vehicle (infantry only)"),
+        Field("requires_pilot", "bool", False, help="Inert until an infantry pilot climbs in"),
+        Field("transport_capacity", "int", 0, lo=0, hi=6, help="Passenger slots; 0 = not a transport"),
+        Field("transport_accepts", "enums", [], choices=UNIT_CLASS, help="Classes it can carry"),
+        Field("transport_size", "int", 1, lo=1, hi=6, help="Slots this unit takes as a passenger"),
+        Field("targets_crew", "bool", False, help="Its attacks hit a vehicle's pilot, not the vehicle"),
+    ]),
     "Structures": Kind("Structures", "structures", "res://src/core/structure/structure_type_def.gd",
                        "StructureTypeDef", [
         Field("buildable", "bool", False, help="Can a Builder raise it?"),
@@ -155,6 +163,15 @@ KINDS: dict[str, Kind] = {
     "Factions": Kind("Factions", "factions", "res://src/core/faction/faction_def.gd", "FactionDef", [
         Field("description", "str", ""),
         Field("unit_changes", "deltas", []),
+    ]),
+    "Abilities": Kind("Abilities", "abilities", "res://src/core/ability/ability_def.gd", "AbilityDef", [
+        Field("description", "str", ""),
+        Field("ap_cost", "int", required=True, lo=1, hi=20, help="No free abilities (AB-3)"),
+        Field("credit_cost", "int", 0, lo=0),
+        Field("ability_range", "int", required=True, lo=0, hi=10, help="0 = self"),
+        Field("cooldown", "int", 0, lo=0),
+        Field("uses_per_match", "int", 0, lo=0, help="0 = unlimited"),
+        Field("amount", "int", 0, help="The magnitude: hp, defence, damage"),
     ]),
     "Maps": Kind("Maps", "maps", "res://src/core/grid/map_definition.gd", "MapDefinition", []),
 }
@@ -373,6 +390,8 @@ def render(note: Note, index: dict) -> str:
         return str(len(ext))
 
     lines = [f"display_name = {gd_str(note.title)}"] if note.kind != "Maps" else []
+    if note.kind == "Abilities":
+        lines.append(f'id = &"{note.id}"')   # the effect code dispatches on this
     if note.kind == "Maps":
         mp = parse_map(note)
         lines += [

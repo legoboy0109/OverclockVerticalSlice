@@ -66,6 +66,10 @@ signal build_type_chosen(structure_type: StructureTypeDef)
 ## [signal produce_type_chosen]: a research order without a tech is not an order.
 signal research_tech_chosen(tech: TechDef)
 
+## ★ Unit abilities (2026-09-28): an ability picked from the Ability submenu. For
+## DISEMBARK/PARADROP [param passenger_id] names who leaves; otherwise -1.
+signal ability_chosen(ability: AbilityDef, passenger_id: int)
+
 ## Emitted when the player backs out of the TOP-LEVEL menu (submenu back-out is
 ## handled internally and never reaches the caller). The caller deselects.
 signal dismissed()
@@ -172,6 +176,7 @@ const VERB_LABELS: Dictionary = {
 	CommandFSM.Verb.DISBAND: "Disband",
 	CommandFSM.Verb.BUILD: "Build",
 	CommandFSM.Verb.RESEARCH: "Research",
+	CommandFSM.Verb.ABILITY: "Ability",
 	CommandFSM.Verb.CANCEL_RESEARCH: "Cancel Research",
 }
 
@@ -231,6 +236,7 @@ const REASON_LABELS: Dictionary = {
 	CommandFSM.Reason.NOT_A_BUILDER: "not a builder",
 	CommandFSM.Reason.NO_BUILD_SPACE: "no room beside it",
 	CommandFSM.Reason.NOT_A_RESEARCHER: "not a researcher",
+	CommandFSM.Reason.NO_ABILITIES: "no abilities",
 	CommandFSM.Reason.RESEARCH_BUSY: "researching already",
 	CommandFSM.Reason.NOTHING_RESEARCHABLE: "nothing to research",
 	CommandFSM.Reason.NOTHING_IN_RESEARCH: "nothing to cancel",
@@ -292,6 +298,7 @@ static func commit_rejection_text(reason: int) -> String:
 const REASON_ORDER: Array[int] = [
 	CommandFSM.Reason.NOT_A_PRODUCER,
 	CommandFSM.Reason.NOT_A_BUILDER,
+	CommandFSM.Reason.NO_ABILITIES,
 	CommandFSM.Reason.NOT_A_RESEARCHER,
 	CommandFSM.Reason.NOT_UNDER_CONSTRUCTION,
 	CommandFSM.Reason.NOTHING_IN_RESEARCH,
@@ -356,6 +363,7 @@ var _armed_verb: int = -1
 var _research_options: Array[CommandFSM.ResearchOption] = []
 var _research_status: String = ""
 var _research_refund: String = ""
+var _ability_options: Array[CommandFSM.AbilityOption] = []
 
 
 func _init() -> void:
@@ -438,6 +446,7 @@ func open(state: GameState, entity: EntityState, anchor_screen: Vector2, \
 	_close_submenu()
 	_build_plate()
 	_research_options = CommandFSM.research_options(state, entity)
+	_ability_options = CommandFSM.ability_options(state, entity)
 	_research_status = CommandFSM.research_status_text(entity)
 	_research_refund = ""
 	if entity is StructureState and (entity as StructureState).research_target != null:
@@ -601,7 +610,7 @@ func _fill_rows(model: Array[CommandFSM.VerbEntry], \
 		elif not entry.enabled:
 			right = _priced(entry.ap_cost, reason_text(entry.reason))
 		elif entry.verb == CommandFSM.Verb.PRODUCE or entry.verb == CommandFSM.Verb.BUILD \
-				or entry.verb == CommandFSM.Verb.RESEARCH:
+				or entry.verb == CommandFSM.Verb.RESEARCH or entry.verb == CommandFSM.Verb.ABILITY:
 			# ASCII ">" rather than a triangle: the fallback font has no glyph for
 			# one and would draw a tofu box.
 			#
@@ -728,6 +737,7 @@ static func _cost_text(credit_cost: int, ap_cost: int, enabled: bool, reason: in
 static func _is_inapplicable(entry: CommandFSM.VerbEntry) -> bool:
 	return (entry.reason & CommandFSM.Reason.NOT_UNDER_CONSTRUCTION) != 0 \
 		or (entry.reason & CommandFSM.Reason.NOT_A_RESEARCHER) != 0 \
+		or (entry.reason & CommandFSM.Reason.NO_ABILITIES) != 0 \
 		or (entry.reason & CommandFSM.Reason.NOTHING_IN_RESEARCH) != 0 \
 		or (entry.reason & CommandFSM.Reason.NOT_A_UNIT) != 0 \
 		or (entry.reason & CommandFSM.Reason.NOT_A_PRODUCER) != 0 \
@@ -929,6 +939,39 @@ static func research_option_text(option: CommandFSM.ResearchOption) -> String:
 		Action.Reason.IN_DEFICIT:
 			return "%s  in deficit" % price
 	return price
+
+
+## ★ Unit abilities: the Ability submenu. A row per ability (one per passenger for
+## Disembark/Paradrop), priced; a row with no legal target is shown dim with why.
+func _open_ability_submenu() -> void:
+	var items: Array[Dictionary] = []
+	for o: CommandFSM.AbilityOption in _ability_options:
+		var label: String = o.ability.display_name
+		if o.passenger != null:
+			label = "%s %s" % [o.ability.display_name, o.passenger.type.display_name]
+		else:
+			label = "%s - %s" % [o.ability.display_name, o.ability.description]
+		items.append({
+			"label": label,
+			"right": ability_option_text(o),
+			"enabled": o.enabled,
+			"is_reason": not o.enabled,
+			"on_press": _on_ability_row_pressed.bind(o.ability, o.passenger.entity_id if o.passenger != null else -1),
+		})
+	_build_submenu(items)
+
+
+## The right-hand text of one ability row: its price, or why it cannot be used now.
+static func ability_option_text(o: CommandFSM.AbilityOption) -> String:
+	var price: String = "%d AP" % o.ability.ap_cost
+	if o.ability.credit_cost > 0:
+		price = "%d CR + %s" % [o.ability.credit_cost, price]
+	return price if o.enabled else "%s  no target now" % price
+
+
+func _on_ability_row_pressed(ability: AbilityDef, passenger_id: int) -> void:
+	close()
+	ability_chosen.emit(ability, passenger_id)
 
 
 func open_build_options(options: Array[CommandFSM.BuildOption], \
@@ -1146,6 +1189,8 @@ func _on_verb_row_pressed(verb: int, produce_options: Array[CommandFSM.ProduceOp
 		CommandFSM.Verb.RESEARCH:
 			# Same shape as Produce: the row chooses nothing, the tech list commits.
 			_open_research_submenu()
+		CommandFSM.Verb.ABILITY:
+			_open_ability_submenu()
 		CommandFSM.Verb.CANCEL_BUILD, CommandFSM.Verb.DISBAND, CommandFSM.Verb.CANCEL_RESEARCH:
 			# ★ Two presses, not one (`design/ux/action-menu.md` decision 5).
 			#

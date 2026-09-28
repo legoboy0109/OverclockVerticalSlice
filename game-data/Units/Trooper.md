@@ -24,6 +24,13 @@ resist_emf: 2
 resist_incendiary: 0
 area_shape: single
 area_length: 4
+abilities: []
+can_pilot: true
+requires_pilot: false
+transport_capacity: 0
+transport_accepts: []
+transport_size: 1
+targets_crew: false
 ---
 
 ## Notes

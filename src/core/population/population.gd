@@ -60,6 +60,11 @@ static func current_population(state: GameState, player: int) -> int:
 		var u: UnitState = e as UnitState
 		# A null type is invalid state, not a chargeable slot — same reasoning as
 		# Upkeep.total_upkeep, which iterates this identical entity list.
+		# ★ TP-1 / PC-8: passengers and pilots are off the board but still count — otherwise
+		# loading a transport dodges the cap, and armour would cost no infantry slot.
+		for c: UnitState in Unit.all_carried(u):
+			if c.type != null and c.type.counts_toward_cap:
+				count += 1
 		if u.type == null or not u.type.counts_toward_cap:
 			continue
 		count += 1

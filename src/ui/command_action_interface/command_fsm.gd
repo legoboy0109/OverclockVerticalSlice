@@ -130,7 +130,7 @@ const NO_SINGLE_COST: int = -1
 ## verb of the selected thing exactly like Produce/Build — never a HUD control.
 ## Appended at the end, never inserted, for the same ordinal-stability reason as
 ## [constant Verb.BUILD].
-enum Verb { MOVE, ATTACK, PRODUCE, WAIT, CANCEL_BUILD, DISBAND, BUILD, RESEARCH, CANCEL_RESEARCH }
+enum Verb { MOVE, ATTACK, PRODUCE, WAIT, CANCEL_BUILD, DISBAND, BUILD, RESEARCH, CANCEL_RESEARCH, ABILITY }
 
 ## Disablement reason flags (powers of two — see [member VerbEntry.reason]'s
 ## doc comment for why this is a bitmask, not a single code). Each flag names
@@ -158,6 +158,7 @@ enum Reason {
 	NOT_A_RESEARCHER = 32768,     ## Research: the entity is not a structure whose type can research ([member StructureTypeDef.can_research]). STRUCTURAL — hidden, not dimmed (mirrors NOT_A_PRODUCER/NOT_A_BUILDER).
 	RESEARCH_BUSY = 65536,        ## Research: this researcher already has a tech in progress (one at a time, CR-14 Rule 3). SITUATIONAL — [method ActionMenu] shows what and how long instead of this generic label.
 	NOTHING_RESEARCHABLE = 131072, ## Research: [method Research.legal_research_targets] is empty for this player right now — every tech is already researched, excluded, or gated. SITUATIONAL.
+	NO_ABILITIES = 524288,        ## Ability: nothing this unit carries could be used right now, and it carries no catalogue ability either. STRUCTURAL — hidden (every ground unit can embark, so an always-dim row would be noise).
 	NOTHING_IN_RESEARCH = 262144,  ## Cancel Research: this researcher has no [member StructureState.research_target] to cancel. STRUCTURAL for the row's purposes — hidden, mirrors NOT_UNDER_CONSTRUCTION.
 }
 
@@ -370,6 +371,7 @@ static func menu_model(state: GameState, entity: EntityState) -> Array[VerbEntry
 	menu.append(_wait_entry(entity))
 	menu.append(_cancel_build_entry(state, entity))
 	menu.append(_cancel_research_entry(state, entity))
+	menu.append(_ability_entry(state, entity))
 	menu.append(_disband_entry(state, entity))
 	return menu
 
@@ -383,6 +385,56 @@ static func menu_model(state: GameState, entity: EntityState) -> Array[VerbEntry
 ## appended in 2026-08-25 — appending kept every existing ordinal valid but shifted
 ## the array positions after Produce. Callers that indexed by ordinal silently read
 ## the wrong row's [member VerbEntry.enabled].
+## AbilityOption — one row of the Ability submenu: an ability, and for DISEMBARK/PARADROP the
+## passenger it would move. [member enabled] iff it has at least one legal target now.
+class AbilityOption extends RefCounted:
+	var ability: AbilityDef
+	var passenger: UnitState
+	var enabled: bool
+	var targets: Array[Vector2i]
+
+	func _init(a: AbilityDef, p: UnitState, t: Array[Vector2i]) -> void:
+		ability = a
+		passenger = p
+		targets = t
+		enabled = not t.is_empty()
+
+
+## Every ability option [param entity] has, in [code]Abilities.ALL[/code] order (one per
+## passenger for DISEMBARK/PARADROP). Legality comes from [method Ability.legal_targets] —
+## the rules' own answer, never re-derived here (Pass-Through Invariant). Embark is listed
+## only when something is there to board, so an ordinary unit's menu stays short.
+static func ability_options(state: GameState, entity: EntityState) -> Array[AbilityOption]:
+	var out: Array[AbilityOption] = []
+	if not (entity is UnitState):
+		return out
+	var unit: UnitState = entity
+	for a: AbilityDef in Abilities.ALL:
+		if not Ability.carries(unit, a):
+			continue
+		if a == Abilities.DISEMBARK or a == Abilities.PARADROP:
+			for p: UnitState in Unit.passengers(unit):
+				if a == Abilities.PARADROP and p == unit.pilot:
+					continue
+				out.append(AbilityOption.new(a, p, Ability.legal_targets(state, unit, a, p)))
+			continue
+		var targets: Array[Vector2i] = Ability.legal_targets(state, unit, a)
+		if a == Abilities.EMBARK and targets.is_empty():
+			continue
+		out.append(AbilityOption.new(a, null, targets))
+	return out
+
+
+static func _ability_entry(state: GameState, entity: EntityState) -> VerbEntry:
+	var options: Array[AbilityOption] = ability_options(state, entity)
+	if options.is_empty():
+		return VerbEntry.new(Verb.ABILITY, false, Reason.NO_ABILITIES)
+	for o: AbilityOption in options:
+		if o.enabled:
+			return VerbEntry.new(Verb.ABILITY, true, Reason.NONE)
+	return VerbEntry.new(Verb.ABILITY, false, Reason.NO_TARGETS)
+
+
 static func entry_for(menu: Array[VerbEntry], verb: int) -> VerbEntry:
 	for entry: VerbEntry in menu:
 		if entry.verb == verb:

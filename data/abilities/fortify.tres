@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+; GENERATED from game-data/Abilities/Fortify.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: c86199ccfaa56609e2db3af901f4ba7a3466ad90595ad708dfe3ffb1a72bcdfe
+
+[ext_resource type="Script" path="res://src/core/ability/ability_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Fortify"
+id = &"fortify"
+description = "+2 defence until the start of this unit's next turn. Ends if it moves."
+ap_cost = 1
+credit_cost = 0
+ability_range = 0
+cooldown = 0
+uses_per_match = 0
+amount = 2

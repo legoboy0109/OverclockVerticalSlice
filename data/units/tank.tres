@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Tank.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 3820d5c939bbbed6ed15105d49cda950e4feffbe262fb7b14b61f614b495e5a2
+; source-sha256: c96cda728f70ebf9622e3b22304aaa8288552777485bc9077db93dafbad54cda
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -29,3 +29,10 @@ resist_emf = -2
 resist_incendiary = 2
 area_shape = 0
 area_length = 4
+abilities = []
+can_pilot = false
+requires_pilot = true
+transport_capacity = 0
+transport_accepts = Array[int]([])
+transport_size = 3
+targets_crew = false

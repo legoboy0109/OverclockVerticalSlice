@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+; GENERATED from game-data/Abilities/Paradrop.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 4b56fddc3fb5a823d0d4edfdbd25b8941564db125b983a72f42b5c4388086089
+
+[ext_resource type="Script" path="res://src/core/ability/ability_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Paradrop"
+id = &"paradrop"
+description = "Drop a passenger onto any empty tile within 3 of this transport, ignoring terrain."
+ap_cost = 3
+credit_cost = 0
+ability_range = 3
+cooldown = 2
+uses_per_match = 0
+amount = 0
