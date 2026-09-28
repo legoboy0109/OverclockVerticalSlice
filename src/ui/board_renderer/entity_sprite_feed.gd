@@ -215,6 +215,14 @@ var _dying: Dictionary = {}
 ## ADR-0013 §2 forbids.
 var _marker_nodes: Dictionary = {}
 
+## ★ Live [code]entity_id -> rank badge Sprite2D[/code] for promoted units ([RankBadge]).
+## In the occupant layer, so it Y-sorts with the units instead of hiding under them.
+var _rank_nodes: Dictionary = {}
+
+## Where the badge sits, relative to the unit's tile position: the tile diamond's lower-right
+## edge, clear of the body sprite's feet and of the neighbouring tile's unit.
+const RANK_BADGE_OFFSET: Vector2 = Vector2(46.0, -4.0)
+
 ## Which entities get an ownership decal (Story 009 / S5-08).
 enum MarkerPolicy {
 	ALL, ## Every entity. Delivers the non-hue channel board-wide, at more board clutter.
@@ -318,6 +326,7 @@ func _refresh_entity(entity: EntityState) -> void:
 	sprite.position = _board.grid_to_screen(entity.position) + _offset_for(id)
 	_last_entity[id] = entity
 	_refresh_marker(entity)
+	_refresh_rank(entity, sprite)
 	# Applied HERE and not inside _refresh_glow: that method early-returns for any
 	# actor with no authored emission mask, and the body read must not depend on
 	# whether a mask happens to exist. It is also gated behind an unchanged-state
@@ -590,6 +599,40 @@ func _refresh_marker(entity: EntityState) -> void:
 
 
 ## Whether [param entity] gets a decal under the current [member marker_policy].
+## Shows, updates or removes [param entity]'s veteran badge. Only units with rank > 0 carry one;
+## it follows the body sprite's position (including move/attack offsets) on every sync.
+func _refresh_rank(entity: EntityState, sprite: Sprite2D) -> void:
+	var id: int = entity.entity_id
+	var rank: int = (entity as UnitState).rank if entity is UnitState else 0
+	var tex: ImageTexture = RankBadge.texture_for(rank)
+	if tex == null or _board == null or _board.occupant_layer == null:
+		_remove_rank(id)
+		return
+	var badge: Sprite2D = _rank_nodes.get(id)
+	if badge == null:
+		badge = Sprite2D.new()
+		badge.name = "Rank%d" % id
+		badge.centered = true
+		_rank_nodes[id] = badge
+		_board.occupant_layer.add_child(badge)
+	badge.texture = tex
+	badge.position = sprite.position + RANK_BADGE_OFFSET
+
+
+## The badge node for [param entity_id], or null — for tests and the renderer's own bookkeeping.
+func rank_badge(entity_id: int) -> Sprite2D:
+	return _rank_nodes.get(entity_id)
+
+
+func _remove_rank(entity_id: int) -> void:
+	var badge: Sprite2D = _rank_nodes.get(entity_id)
+	_rank_nodes.erase(entity_id)
+	if badge != null and is_instance_valid(badge):
+		if badge.get_parent() != null:
+			badge.get_parent().remove_child(badge)
+		badge.queue_free()
+
+
 func _wants_marker(entity: EntityState) -> bool:
 	match marker_policy:
 		MarkerPolicy.ALL:
@@ -825,6 +868,7 @@ func _forget(entity_id: int) -> void:
 	_dying.erase(entity_id)
 	_last_entity.erase(entity_id)
 	_remove_marker(entity_id)
+	_remove_rank(entity_id)
 	if sprite != null and is_instance_valid(sprite):
 		if sprite.get_parent() != null:
 			sprite.get_parent().remove_child(sprite)
