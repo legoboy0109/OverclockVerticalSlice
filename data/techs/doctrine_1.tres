@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="TechDef" load_steps=3 format=3]
+; GENERATED from game-data/Techs/Doctrine I.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: ac33875e0c0a6ed683acd0971ea045d057c232270c86954f1167ba27894f5712
+
+[ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/structures/cathedral.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Doctrine I"
+description = "+1 attack to your ground vehicles."
+tier = 2
+research_cost = 1200
+research_time = 2
+ap_surcharge = 1
+prerequisites = []
+required_structures = [ExtResource("2")]
+exclusive_group = &""
+allowed_factions = []
+attack_bonus = 0
+defense_bonus = 0
+attack_range_bonus = 0
+ignores_cover = false
+idle_heal = 0
+economy_tier_bonus = 0
+produce_ap_discount = 0
+build_ap_discount = 0
+produce_cost_discount_pct = 0
+frees_pilots = []
+vehicle_attack_bonus = 1
+vehicle_defense_bonus = 0

@@ -9,6 +9,7 @@ script = ExtResource("1")
 display_name = "Protectorate Defence"
 buildable = false
 art_id = &"defensive_structure"
+counts_as = []
 hp = 10
 build_cost = 500
 build_time = 2

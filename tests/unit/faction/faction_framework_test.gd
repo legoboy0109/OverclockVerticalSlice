@@ -229,3 +229,85 @@ func test_mech_autonomy_is_the_protectorates_alone() -> void:
 func test_servitors_are_cap_exempt_and_poor_pilots() -> void:
 	assert_bool(UnitTypes.SERVITOR.counts_toward_cap).is_false()
 	assert_int(UnitTypes.SERVITOR.crew_bonus_attack).is_equal(-1)
+
+
+func _empire_state() -> GameState:
+	return MatchSetup.build(_map(),
+		[Factions.HOLY_COSMIC_EMPIRE, Factions.DEMOCRATIC_ALLIANCE] as Array[FactionDef], 0, 80)
+
+
+func test_the_empire_is_the_only_faction_that_promotes() -> void:
+	for f: FactionDef in Factions.playable():
+		assert_bool(f.promotes).is_equal(f == Factions.HOLY_COSMIC_EMPIRE)
+
+
+func test_a_knight_is_produced_a_veteran() -> void:
+	var state := _empire_state()
+	var barracks := StructureState.new()
+	barracks.entity_id = 500
+	barracks.owner = 0
+	barracks.position = Vector2i(4, 2)
+	barracks.type = StructureTypes.EMPIRE_BARRACKS
+	barracks.current_hp = barracks.type.hp
+	barracks.build_status = StructureState.BuildStatus.COMPLETED
+	state.entities_by_id[500] = barracks
+	state.grid.place(500, 4, 2)
+	state.per_player[0].current_credits = 5000
+	state.per_player[0].current_ap = 20
+	# The Knight needs a standing Cathedral to hold its rank (PV-7 support).
+	var cathedral := StructureState.new()
+	cathedral.entity_id = 501
+	cathedral.owner = 0
+	cathedral.position = Vector2i(4, 8)
+	cathedral.type = StructureTypes.CATHEDRAL
+	cathedral.current_hp = cathedral.type.hp
+	cathedral.build_status = StructureState.BuildStatus.COMPLETED
+	state.entities_by_id[501] = cathedral
+	state.grid.place(501, 4, 8)
+	var a := ProduceAction.new()
+	a.player = 0
+	a.producer_id = 500
+	a.unit_type = UnitTypes.KNIGHT
+	a.tile = BaseProduction.legal_deploy_tiles(state, barracks, UnitTypes.KNIGHT)[0]
+	assert_bool(state.apply_action(a).ok).is_true()
+	BaseProduction.advance_build_timers(state, 0)
+	var knight: UnitState = state.entity_at(a.tile)
+	assert_int(knight.rank).is_equal(1)
+	assert_int(Unit.effective_attack(state, knight)).is_equal(UnitTypes.KNIGHT.attack + CombatBalance.combat.rank_attack[1])
+
+
+func test_the_cathedral_opens_tier_two_like_a_research_lab() -> void:
+	var state := _empire_state()
+	GameStateFactory.grant_tech(state, 0, Techs.ATTACK_I)
+	assert_int(Research.availability(state, 0, Techs.PENETRATION)).is_equal(Action.Reason.REQUIRES_STRUCTURE)
+	var c := StructureState.new()
+	c.entity_id = 502
+	c.owner = 0
+	c.position = Vector2i(4, 8)
+	c.type = StructureTypes.CATHEDRAL
+	c.current_hp = c.type.hp
+	c.build_status = StructureState.BuildStatus.COMPLETED
+	state.entities_by_id[502] = c
+	state.grid.place(502, 4, 8)
+	assert_int(Research.availability(state, 0, Techs.PENETRATION)).is_equal(Action.Reason.OK)
+
+
+func test_doctrine_strengthens_vehicles_only() -> void:
+	var state := _empire_state()
+	var walker := UnitState.new()
+	walker.owner = 0
+	walker.type = UnitTypes.AEGIS_WALKER
+	var levy := UnitState.new()
+	levy.owner = 0
+	levy.type = UnitTypes.LEVY
+	var w_atk: int = Unit.effective_attack(state, walker)
+	var l_atk: int = Unit.effective_attack(state, levy)
+	GameStateFactory.grant_tech(state, 0, Techs.DOCTRINE_III)
+	assert_int(Unit.effective_attack(state, walker)).is_equal(w_atk + 1)
+	assert_int(Unit.effective_defense(state, walker)).is_equal(UnitTypes.AEGIS_WALKER.defense + 1)
+	assert_int(Unit.effective_attack(state, levy)).is_equal(l_atk)
+
+
+func test_doctrine_is_strictly_linear() -> void:
+	var state := _empire_state()
+	assert_int(Research.availability(state, 0, Techs.DOCTRINE_II)).is_equal(Action.Reason.PREREQUISITE_MISSING)

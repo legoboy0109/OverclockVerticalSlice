@@ -69,6 +69,10 @@ extends Resource
 ## which filters on this. (It used to be four hand-kept lists that had to agree.)
 @export var buildable: bool = false
 
+## Other structure types this one stands in for when a rule asks "does the player own a X?" —
+## the Empire's Cathedral counts as a Research Lab, so it gates tier-2 research like one.
+@export var counts_as: Array[StructureTypeDef] = []
+
 ## Borrow another type's sprites (its id) until this one has its own art — a faction's
 ## variant of a shared building, or a new unit awaiting art. Empty = its own id.
 ## ⚠ Placeholder: two types sharing art look identical on the board.

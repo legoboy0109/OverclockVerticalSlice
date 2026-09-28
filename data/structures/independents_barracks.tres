@@ -14,6 +14,7 @@ script = ExtResource("1")
 display_name = "Independents Barracks"
 buildable = false
 art_id = &"barracks"
+counts_as = []
 hp = 12
 build_cost = 900
 build_time = 2

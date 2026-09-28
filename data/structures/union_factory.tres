@@ -14,6 +14,7 @@ script = ExtResource("1")
 display_name = "Union Factory"
 buildable = false
 art_id = &"factory"
+counts_as = []
 hp = 16
 build_cost = 1000
 build_time = 3

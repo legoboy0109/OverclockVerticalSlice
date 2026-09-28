@@ -21,6 +21,10 @@ const LOGISTICS: TechDef = preload("res://data/techs/logistics.tres")
 const FOUNDRY: TechDef = preload("res://data/techs/foundry.tres")
 ## ★ Galactic Protectorate only (in its own tree, not the shared one).
 const MECH_AUTONOMY: TechDef = preload("res://data/techs/mech_autonomy.tres")
+## ★ Holy Cosmic Empire only: the linear Doctrine line.
+const DOCTRINE_I: TechDef = preload("res://data/techs/doctrine_1.tres")
+const DOCTRINE_II: TechDef = preload("res://data/techs/doctrine_2.tres")
+const DOCTRINE_III: TechDef = preload("res://data/techs/doctrine_3.tres")
 
 const ALL: Array[TechDef] = [
 	ATTACK_I, DEFENSE_I, ECONOMY_I,

@@ -1480,8 +1480,16 @@ static func _economy_value(lookahead: GameState, player: int, structure_type: St
 	# ★ CR-14 (2026-09-28): the Research Lab has its own dedicated model (see
 	# _lab_value's doc) -- it has no cap_bonus and produces nothing, so falling through
 	# to _capacity_value below would always return 0 and the AI would never build one.
-	if structure_type == StructureTypes.RESEARCH_LAB:
-		return _lab_value(lookahead, player)
+	if structure_type == StructureTypes.RESEARCH_LAB or StructureTypes.RESEARCH_LAB in structure_type.counts_as:
+		# ★ Faction v2: a faction's own lab (the Empire's Cathedral) is valued like one, plus —
+		# for a faction whose ranks need it (PV-7) — what it keeps standing: without one every
+		# veteran drops a rank a turn, so an unsupported promoting army values it at its own price.
+		var value: float = _lab_value(lookahead, player)
+		var f: FactionDef = lookahead.faction_of(player)
+		if f != null and f.rank_requires_support and structure_type in f.rank_support_structures \
+				and BaseProduction.structure_count(lookahead, player, structure_type) == 0:
+			value += credits_to_ap(float(structure_type.build_cost)) * AIBalance.ai.rank_support_value_fraction
+		return value
 
 	# ★ S6-06 (2026-08-24): CAPACITY value — the term whose absence caused the gate failure.
 	#
@@ -1758,8 +1766,11 @@ static func _foundry_tech_marginal_value(lookahead: GameState, player: int, tech
 ## stand between "built" and "completed") — sized modest so it never crowds out army
 ## production (task scope: "must not crowd out army production").
 static func _lab_value(lookahead: GameState, player: int) -> float:
-	if BaseProduction.structure_count(lookahead, player, StructureTypes.RESEARCH_LAB) > 0:
-		return 0.0
+	# Any lab-equivalent the player owns (a Research Lab, or a structure that counts as one).
+	for e: EntityState in lookahead.entities():
+		if e is StructureState and e.owner == player and (e.type == StructureTypes.RESEARCH_LAB \
+				or StructureTypes.RESEARCH_LAB in e.type.counts_as):
+			return 0.0
 
 	var probe: GameState = lookahead.clone()
 	var phantom_lab := StructureState.new()

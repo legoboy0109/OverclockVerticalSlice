@@ -82,3 +82,6 @@ extends Resource
 ## Unit types that no longer need a pilot once this is researched (the Galactic Protectorate's
 ## Mech Autonomy, faction-identity.md CR-11a). Crewed ones eject their pilot on completion.
 @export var frees_pilots: Array[UnitTypeDef] = []
+## Added to GROUND VEHICLES only (the Holy Cosmic Empire's Doctrine line).
+@export var vehicle_attack_bonus: int = 0
+@export var vehicle_defense_bonus: int = 0
