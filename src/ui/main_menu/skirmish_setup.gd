@@ -60,7 +60,7 @@ func _build() -> void:
 	title.add_theme_color_override("font_color", MainMenu.TITLE_HUE)
 	column.add_child(title)
 
-	for i: int in 5:
+	for i: int in 6:
 		var row := Button.new()
 		row.custom_minimum_size = ROW_SIZE
 		row.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -137,6 +137,10 @@ func _step(row: int, dir: int) -> void:
 				MatchSettings.ROUNDS_MIN, MatchSettings.ROUNDS_MAX)
 		4:
 			_settings.first_mover = posmod(_settings.first_mover + dir, 3)
+		5:
+			var maps: Array[MapDefinition] = Maps.all()
+			var at: int = maxi(0, maps.find(_settings.map))
+			_settings.map = maps[posmod(at + dir, maps.size())]
 	_refresh()
 
 
@@ -148,6 +152,7 @@ func _refresh() -> void:
 		"AP per turn:     < %d >" % _settings.ap_per_turn,
 		"Round limit:     < %d >" % _settings.round_limit,
 		"Moves first:     < %s >" % movers[_settings.first_mover],
+		"Map:             < %s (%dx%d) >" % [_settings.map.display_name, _settings.map.width, _settings.map.height],
 	]
 	for i: int in _rows.size():
 		_rows[i].text = texts[i]

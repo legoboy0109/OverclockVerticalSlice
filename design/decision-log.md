@@ -311,3 +311,31 @@ Alliance mirror is byte-for-byte unchanged (29/30 HQ kills, avg 55 turns).
   authored.
 - ⚠ Using specialists did not make their factions win more. Either the specialists are weak as
   designed, or the AI uses them crudely (e.g. a Medic spends its turn healing instead of shooting).
+
+## Bigger maps (2026-09-28)
+
+- **Two new maps, drawn in the vault:** *Crossroads* (18×14 — open centre, walled/rough flanks) and
+  *Highlands* (24×16, the engine's maximum — two ridges with passes, rough foothills that stop
+  vehicles). ★ **Placeholder names** — rename the notes to rename the maps.
+- **All maps follow the vertical slice's measured layout rules**, now enforced for every map by
+  `tests/unit/map/all_maps_test.gd`: mirror-symmetric, nothing within 3 tiles of an HQ, an open
+  HQ-to-HQ row, both starting Builders seated, HQs reachable.
+- **A Map row on the setup screen** (remembered like the other choices). The user listed which
+  settings to expose before multiple maps existed; a map picker is the necessary addition.
+- **Camera:** a map bigger than 12×10 opens at the tile size the 12×10 board shows (the size the
+  legibility gate was measured at), centred on your HQ — not shrunk to fit. **Zoom now works on
+  keyboard (+/−, keypad +/−) and gamepad (RT in / LT out)**, not only the mouse wheel; zooming keeps
+  the cursor in view. ⚠ Zoom is **not rebindable** in Settings: the triggers are axes and the
+  rebinding system handles keys and buttons only.
+- **"Behind the HQ"** (the starting Builder's tile) now means away from the enemy along whichever
+  axis separates the HQs, so top-vs-bottom maps work too.
+
+### Findings to review
+- ✅ **Transports finally get used on big maps** (Highlands: 20 built, 27 boardings, 5 unloads; the
+  small map: 2 built).
+- ⚠ **Big-map games mostly run out the 80-round limit** (AI mirror: Crossroads 17/30 capped,
+  Highlands 24/30; small map ~1/30). The AI does not commit to attacking across a long board.
+  Options: a longer default round limit per map (you can already raise it on the setup screen),
+  and/or making the AI push toward the enemy HQ harder on big boards.
+- ⚠ The AI produces a great many Builders (~80 per game on the big maps) — they are cheap and get
+  consumed building; worth capping if it shows up in play.

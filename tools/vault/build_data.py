@@ -411,12 +411,13 @@ def render(note: Note, index: dict) -> str:
         ext.append((type_, path))
         return str(len(ext))
 
-    lines = [f"display_name = {gd_str(note.title)}"] if note.kind != "Maps" else []
+    lines = [f"display_name = {gd_str(note.title)}"]
     if note.kind == "Abilities":
         lines.append(f'id = &"{note.id}"')   # the effect code dispatches on this
     if note.kind == "Maps":
         mp = parse_map(note)
         lines += [
+            f"description = {gd_str(str(note.props.get('description', '')))}",
             f"width = {mp['width']}",
             f"height = {mp['height']}",
             "mode = 0",

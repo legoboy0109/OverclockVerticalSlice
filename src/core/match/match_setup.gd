@@ -46,7 +46,7 @@ static func build(map: MapDefinition, factions: Array[FactionDef], starting_play
 ## seat whose tile is off-board or blocked — a slower opening, never a broken match.
 static func seed_starting_builders(state: GameState, hq_tiles: Array[Vector2i]) -> void:
 	for player: int in hq_tiles.size():
-		var tile: Vector2i = VSMap.starting_builder_tile(hq_tiles[player])
+		var tile: Vector2i = VSMap.starting_builder_tile(hq_tiles[player], hq_tiles[1 - player])
 		if not state.grid.in_bounds(tile.x, tile.y) or not state.grid.is_passable(tile.x, tile.y):
 			continue
 		var hq_type: StructureTypeDef = Faction.hq_type(state.faction_of(player))
