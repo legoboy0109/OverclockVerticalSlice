@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
+; GENERATED from game-data/Units/Armoured Transport.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 40c2f1aa5a022e7762921d8fb65ace44f858aadb38f7b7fe6dc864ad8fa7efd6
+
+[ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Armoured Transport"
+unit_class = 1
+can_target = Array[int]([0, 1])
+hp = 18
+attack = 3
+attack_range = 1
+defense = 0
+move_cost = 2
+soft_move_cap = 3
+produce_cost = 1300
+production_turns = 2
+upkeep = 400
+counts_toward_cap = false
+can_counterattack = false
+can_build = false
+targeting_mode = 0
+min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = -2
+resist_incendiary = 0
+area_shape = 0
+area_length = 4
+abilities = []
+can_pilot = false
+requires_pilot = true
+transport_capacity = 4
+transport_accepts = Array[int]([0])
+transport_size = 3
+targets_crew = false
+crew_bonus_attack = 0
+art_id = &"transport"

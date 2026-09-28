@@ -118,3 +118,31 @@ func test_the_setup_screen_steps_and_clamps_its_settings() -> void:
 	assert_int(screen.settings().round_limit).is_equal(MatchSettings.ROUNDS_MIN)
 	screen._step(4, 1)
 	assert_int(screen.settings().first_mover).is_equal(MatchSettings.FirstMover.AI)
+
+
+func test_a_trained_pilot_makes_the_vehicle_hit_harder() -> void:
+	var state := MatchSetup.build(_map(),
+		[Factions.SOLAR_FEDERATION, Factions.SOLAR_FEDERATION] as Array[FactionDef], 0, 80)
+	var truck := UnitState.new()
+	truck.entity_id = 300
+	truck.owner = 0
+	truck.position = Vector2i(5, 1)
+	truck.type = UnitTypes.GUN_TRUCK
+	truck.current_hp = truck.type.hp
+	var trooper := UnitState.new()
+	trooper.type = UnitTypes.TROOPER
+	truck.pilot = trooper
+	var plain: int = Unit.effective_attack(state, truck)
+	var pilot := UnitState.new()
+	pilot.type = UnitTypes.PILOT
+	truck.pilot = pilot
+	assert_int(Unit.effective_attack(state, truck)).is_equal(plain + UnitTypes.PILOT.crew_bonus_attack)
+
+
+func test_solar_is_poorer_with_a_shallower_economy_slope() -> void:
+	var state := MatchSetup.build(_map(),
+		[Factions.SOLAR_FEDERATION, Factions.DEMOCRATIC_ALLIANCE] as Array[FactionDef], 0, 80)
+	assert_int(Credits.credit_income(state, 1) - Credits.credit_income(state, 0)).is_equal(200)
+	state.per_player[0].economy_tier = 1
+	state.per_player[1].economy_tier = 1
+	assert_int(Credits.credit_income(state, 1) - Credits.credit_income(state, 0)).is_equal(300)

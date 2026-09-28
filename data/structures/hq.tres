@@ -9,6 +9,7 @@
 script = ExtResource("1")
 display_name = "HQ"
 buildable = false
+art_id = &""
 hp = 40
 build_cost = 0
 build_time = 0

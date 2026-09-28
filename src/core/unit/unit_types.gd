@@ -24,6 +24,17 @@ const FIGHTER: UnitTypeDef = preload("res://data/units/fighter.tres")
 const BOMBER: UnitTypeDef = preload("res://data/units/bomber.tres")
 const HELICOPTER: UnitTypeDef = preload("res://data/units/helicopter.tres")
 const TRANSPORT: UnitTypeDef = preload("res://data/units/transport.tres")
+# ★ Solar Federation (faction wave 2, 2026-09-28).
+const CITIZEN_TROOPER: UnitTypeDef = preload("res://data/units/citizen_trooper.tres")
+const PILOT: UnitTypeDef = preload("res://data/units/pilot.tres")
+const MEDIC: UnitTypeDef = preload("res://data/units/medic.tres")
+const VOLUNTEER: UnitTypeDef = preload("res://data/units/volunteer.tres")
+const LANCE_TEAM: UnitTypeDef = preload("res://data/units/lance_team.tres")
+const GUN_TRUCK: UnitTypeDef = preload("res://data/units/gun_truck.tres")
+const ARMOURED_TRANSPORT: UnitTypeDef = preload("res://data/units/armoured_transport.tres")
+const INTERCEPTOR: UnitTypeDef = preload("res://data/units/interceptor.tres")
+const GUNSHIP: UnitTypeDef = preload("res://data/units/gunship.tres")
+const PARATROOPER_TRANSPORT: UnitTypeDef = preload("res://data/units/paratrooper_transport.tres")
 
 ## ★ Every unit type in the roster, in declaration order.
 ##
@@ -33,4 +44,5 @@ const TRANSPORT: UnitTypeDef = preload("res://data/units/transport.tres")
 ## shipped with no sprite and the suite stayed green, which is precisely the failure
 ## that list was written to prevent. Adding a `.tres` to this registry now
 ## automatically extends the guard.
-const ALL: Array[UnitTypeDef] = [BUILDER, SCOUT, TROOPER, HEAVY, SNIPER, TANK, ARTILLERY, FIGHTER, BOMBER, HELICOPTER, TRANSPORT]
+const ALL: Array[UnitTypeDef] = [BUILDER, SCOUT, TROOPER, HEAVY, SNIPER, TANK, ARTILLERY, FIGHTER, BOMBER, HELICOPTER, TRANSPORT,
+	CITIZEN_TROOPER, PILOT, MEDIC, VOLUNTEER, LANCE_TEAM, GUN_TRUCK, ARMOURED_TRANSPORT, INTERCEPTOR, GUNSHIP, PARATROOPER_TRANSPORT]

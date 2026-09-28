@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="FactionDef" load_steps=8 format=3]
+; GENERATED from game-data/Factions/Solar Federation.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: ed960b4259c9229c77af59fa6e9f0b33f60b466c25d267fa1d1f8bca1c4dedbf
+
+[ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/structures/solar_barracks.tres" id="2"]
+[ext_resource type="Resource" path="res://data/structures/solar_factory.tres" id="3"]
+[ext_resource type="Resource" path="res://data/structures/solar_airfield.tres" id="4"]
+[ext_resource type="Resource" path="res://data/structures/research_lab.tres" id="5"]
+[ext_resource type="Resource" path="res://data/structures/autonomous_defence_node.tres" id="6"]
+[ext_resource type="Script" path="res://src/core/faction/faction_unit_delta.gd" id="7"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Solar Federation"
+description = "Cheap, fast, numerous: a mobile citizen army of specialists that wins on tempo and loses every straight exchange."
+playable = true
+structures = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")]
+techs = []
+infantry_cap_delta = 1
+base_income_delta = -200
+econ_tier_bonus_delta = -100
+upkeep_pct_delta = 0
+unit_deltas = []
+promotes = false
+rank_requires_support = false
+rank_support_structures = []

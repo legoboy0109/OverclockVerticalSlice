@@ -151,3 +151,24 @@ User decisions (2026-09-28): **colour = which player** (OQ-11); **factions in wa
   want it to need a pilot — structures with pilots is new machinery; deferred).
 - ⚠ **Not built:** a faction emblem on units (the design's replacement for faction-by-colour), and
   the per-faction comparison sheets (CR-10 — a design-review gate, due as each faction is added).
+
+## Faction wave 2 — Solar Federation (`factions/solar-federation.md`)
+
+- **Solar uses the shared HQ and Builder.** Its design has the HQ making infantry; that predates
+  the Builder rule (S8-13) that every faction now follows.
+- **Faction variants of shared buildings are their own structures** (Solar Barracks — 4 allowed,
+  its own production list; Solar Factory; Solar Airfield). The Research Lab is shared.
+- ⚠ **Placeholder art is BORROWED** (`art_id`): e.g. Pilot and Volunteer both look like a Scout,
+  Citizen Trooper like a Trooper, Gun Truck and Armoured Transport like the Transport. Units that
+  look identical but play differently are a real legibility problem — the first thing real art fixes.
+- **Crew bonus (TP-5d) built as `crew_bonus_attack`** — the Pilot's +1. Other crew-bonus stats
+  (hp, move, range) are not built; no unit uses them yet.
+- **Income:** −200 base, −100 per economy tier; with CR-14's single economy tier, Solar's income
+  runs 800 → 1,200 against the Alliance's 1,000 → 1,500.
+
+### Findings to review
+- **Solar vs Alliance, 60 AI-vs-AI games (both seats): the Alliance won 39 (65%).** All games
+  resolved, no errors. ⚠ Weak evidence: the AI plays Solar as mass Citizen Troopers — it produced
+  19 Pilots, 4 transports and **no Medics, Volunteers or Lance Teams** — so Solar's specialist
+  identity is untested; and the harness's handicap cells hand out Alliance Troopers to both seats.
+  A symmetric-policy AI cannot measure faction skill ceilings anyway (see `.agent/notes.md`).

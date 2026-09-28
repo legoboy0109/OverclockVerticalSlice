@@ -47,7 +47,7 @@ extends RefCounted
 static func credit_income_breakdown(state: GameState, player: int) -> Dictionary:
 	var cfg: EconomyConfig = Balance.economy
 	var tier: int = clampi(state.per_player[player].economy_tier, 0, cfg.max_economy_tier)
-	return {"base": cfg.base_income + Faction.base_income_delta(state, player), "tiers": cfg.econ_tier_bonus * tier}   # D4
+	return {"base": cfg.base_income + Faction.base_income_delta(state, player), "tiers": (cfg.econ_tier_bonus + Faction.econ_tier_bonus_delta(state, player)) * tier}   # D4 intercept + slope
 
 
 ## Returns [param player]'s total Credit income for this turn — the sum of

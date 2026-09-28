@@ -30,6 +30,7 @@ structures = [ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource(
 techs = [ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16")]
 infantry_cap_delta = 0
 base_income_delta = 0
+econ_tier_bonus_delta = 0
 upkeep_pct_delta = 0
 unit_deltas = []
 promotes = false

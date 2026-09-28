@@ -8,6 +8,7 @@
 script = ExtResource("1")
 display_name = "Research Lab"
 buildable = true
+art_id = &""
 hp = 12
 build_cost = 800
 build_time = 2

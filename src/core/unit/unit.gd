@@ -164,7 +164,9 @@ static func set_rank(unit: UnitState, new_rank: int) -> void:
 ## ([method Research.attack_bonus]). Computed [b]live[/b] every call — never baked — so
 ## an already-built unit reflects a tech completing mid-match (Rule 8).
 static func effective_attack(state: GameState, unit: UnitState) -> int:
-	return unit.type.attack + Research.attack_bonus(state, unit.owner) + _rank_value(CombatBalance.combat.rank_attack, unit.rank)
+	# TP-5d: a trained pilot improves the vehicle it crews, only while it is aboard.
+	var crew: int = unit.pilot.type.crew_bonus_attack if unit.pilot != null else 0
+	return unit.type.attack + Research.attack_bonus(state, unit.owner) + _rank_value(CombatBalance.combat.rank_attack, unit.rank) + crew
 
 
 ## The defense value Combat's damage formula subtracts (ADR-0010's

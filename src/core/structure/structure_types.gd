@@ -22,11 +22,17 @@ const BARRACKS: StructureTypeDef = preload("res://data/structures/barracks.tres"
 const DEFENSIVE_STRUCTURE: StructureTypeDef = preload("res://data/structures/defensive_structure.tres")
 const RESEARCH_LAB: StructureTypeDef = preload("res://data/structures/research_lab.tres")
 const AIRFIELD: StructureTypeDef = preload("res://data/structures/airfield.tres")
+# ★ Solar Federation (faction wave 2). Not in the shared roster (buildable = false).
+const SOLAR_BARRACKS: StructureTypeDef = preload("res://data/structures/solar_barracks.tres")
+const SOLAR_FACTORY: StructureTypeDef = preload("res://data/structures/solar_factory.tres")
+const SOLAR_AIRFIELD: StructureTypeDef = preload("res://data/structures/solar_airfield.tres")
+const DEFENCE_NODE: StructureTypeDef = preload("res://data/structures/autonomous_defence_node.tres")
 
 ## ★ Every structure type in the roster, in declaration order. See
 ## [constant UnitTypes.ALL] for why this exists — a coverage guard that keeps its
 ## own copy of the roster only guards what someone remembered to copy.
-const ALL: Array[StructureTypeDef] = [HQ, FACTORY, BARRACKS, DEFENSIVE_STRUCTURE, RESEARCH_LAB, AIRFIELD]
+const ALL: Array[StructureTypeDef] = [HQ, FACTORY, BARRACKS, DEFENSIVE_STRUCTURE, RESEARCH_LAB, AIRFIELD,
+	SOLAR_BARRACKS, SOLAR_FACTORY, SOLAR_AIRFIELD, DEFENCE_NODE]
 
 ## Every structure a Builder may raise, in [constant ALL] order — decided by each type's
 ## [member StructureTypeDef.buildable] (the vault's `buildable` checkbox). The single source

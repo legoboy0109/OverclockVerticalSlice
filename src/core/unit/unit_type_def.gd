@@ -80,6 +80,14 @@ enum AreaShape { SINGLE, BURST, LINE }
 ## This unit's attacks hit a crewed vehicle's PILOT instead of the vehicle (TP-7).
 @export var targets_crew: bool = false
 
+## TP-5d: attack added to a vehicle while this unit is its pilot (a trained crew is better).
+@export var crew_bonus_attack: int = 0
+
+## Borrow another type's sprites (its id) until this one has its own art — a faction's
+## variant of a shared building, or a new unit awaiting art. Empty = its own id.
+## ⚠ Placeholder: two types sharing art look identical on the board.
+@export var art_id: StringName = &""
+
 @export var display_name: String
 @export var hp: int
 @export var attack: int

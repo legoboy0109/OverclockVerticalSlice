@@ -69,6 +69,11 @@ extends Resource
 ## which filters on this. (It used to be four hand-kept lists that had to agree.)
 @export var buildable: bool = false
 
+## Borrow another type's sprites (its id) until this one has its own art — a faction's
+## variant of a shared building, or a new unit awaiting art. Empty = its own id.
+## ⚠ Placeholder: two types sharing art look identical on the board.
+@export var art_id: StringName = &""
+
 ## What kind of damage this deals (damage-types.md DT-1). KINETIC is neutral — every unit
 ## that existed before damage types is KINETIC, which is what keeps their matchups unchanged.
 @export var damage_type: int = UnitTypeDef.DamageType.KINETIC
