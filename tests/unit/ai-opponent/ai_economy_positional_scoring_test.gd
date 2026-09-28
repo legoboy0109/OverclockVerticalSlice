@@ -840,7 +840,12 @@ func test_positional_advance_only_proposes_distance_closing_moves() -> void:
 	state.per_player[0].faction = Factions.NEUTRAL
 	var t := _make_trooper_reach_type()  # attack_range 1, soft_move_cap 8 -> reach 9
 	var unit := _make_unit(1, 0, t, Vector2i(8, 0))
-	var enemy := _make_unit(2, 1, t, Vector2i(0, 0))  # nearest enemy at distance 8
+	# ⚠ 2026-09-28: an enemy that cannot shoot back. Since "mass before advancing", a lone unit
+	# will not walk into a live enemy's reach at all — which would make this test about that rule
+	# instead of about never proposing a non-closing move.
+	var harmless: UnitTypeDef = t.duplicate()
+	harmless.can_target = []
+	var enemy := _make_unit(2, 1, harmless, Vector2i(0, 0))  # nearest enemy at distance 8
 	_place(state, unit)
 	_place(state, enemy)
 
@@ -866,7 +871,10 @@ func test_positional_advance_leaps_to_furthest_reachable_tile_not_one_tile_step(
 	state.per_player[0].faction = Factions.NEUTRAL
 	var t := _make_trooper_reach_type()  # move_cost 2, soft_move_cap 8, attack_range 1
 	var unit := _make_unit(1, 0, t, Vector2i(8, 0))
-	var enemy := _make_unit(2, 1, t, Vector2i(0, 0))  # nearest enemy at distance 8
+	# An enemy that cannot shoot back, so the "mass before advancing" rule stays out of this test.
+	var harmless: UnitTypeDef = t.duplicate()
+	harmless.can_target = []
+	var enemy := _make_unit(2, 1, harmless, Vector2i(0, 0))  # nearest enemy at distance 8
 	_place(state, unit)
 	_place(state, enemy)
 

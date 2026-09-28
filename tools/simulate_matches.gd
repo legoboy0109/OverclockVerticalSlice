@@ -136,6 +136,7 @@ var _produced: Dictionary = {}
 var _built: Dictionary = {}
 var _factions: Array[FactionDef] = [Factions.DEMOCRATIC_ALLIANCE, Factions.DEMOCRATIC_ALLIANCE]
 var _abilities: Dictionary = {}
+var _dump_turn: int = -1
 var _max_rounds_override: int = 0
 
 ## ★ S7-13 — force which seat moves first, for every game in the batch. -1 = the default
@@ -181,6 +182,9 @@ func _parse_args() -> void:
 			_plain_map = true
 		elif arg.begins_with("--max-rounds="):
 			_max_rounds_override = maxi(0, int(arg.split("=")[1]))
+		elif arg.begins_with("--dump-turn="):
+			# Diagnostic: print every entity's position at this turn (SIM_POS rows).
+			_dump_turn = int(arg.split("=")[1])
 		elif arg.begins_with("--map="):
 			# ★ Bigger maps: e.g. --map=highlands (a vault map id). Default: the vertical slice.
 			for mp: MapDefinition in Maps.all():
@@ -270,6 +274,11 @@ func _play(game: int, favoured: int, handicap: int, variant: int) -> void:
 	while state.match_status != GameState.MatchStatus.GAME_OVER and turn < MAX_TURNS:
 		turn += 1
 		_snapshot(game, favoured, handicap, variant, turn, state)
+		if turn == _dump_turn:
+			for e: EntityState in state.entities():
+				var tname: String = e.type.display_name if e.get("type") != null else "?"
+				print("SIM_POS,%d,%d,%d,%s,%d,%d,%d" % [game, turn, e.owner, tname, e.position.x, e.position.y,
+					(e as UnitState).current_hp if e is UnitState else (e as StructureState).current_hp])
 		_run_one_turn(state, game, turn, favoured)
 	var capped: int = 1 if turn >= MAX_TURNS else 0
 	print("SIM_END,%d,%d,%d,%d,%d,%d,%d" % [

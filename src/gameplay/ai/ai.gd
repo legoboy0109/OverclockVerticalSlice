@@ -442,6 +442,11 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 			continue # Defensive — reachable() never returns the start tile itself.
 		if not Combat.legal_targets_from(lookahead, unit, r.tile).is_empty():
 			continue # Edge Cases/AC-20: positional scoring applies only to a
+		# ★ Mass before advancing (2026-09-28). Never step alone into guns: measured on the big
+		# maps, units crossed the long lane one at a time and were shot before they could fire
+		# (1,137 Snipers built in 30 games, armies of 2-5). Retreats are exempt.
+		if not is_wounded_and_threatened and _advance_is_premature(lookahead, unit, r.tile):
+			continue
 			         # tile with "no combo target reachable FROM IT" — a tile
 			         # that enables a move+attack combo is already scored by
 			         # the combo loop above and must not also compete here
@@ -1304,10 +1309,18 @@ static func _matchup_multiplier(lookahead: GameState, owner: int, unit_type: Uni
 	var ability_effect: float = _ability_matchup_effect(lookahead, owner, unit_type)
 	if unit_type.attack <= 0 or unit_type.can_target.is_empty():
 		if unit_type.can_build:
-			return 1.0 + bonus   # a Builder's worth is what it raises
+			# ★ A Builder's worth is what it will raise — and only if nobody is already free to
+			# raise it. Measured 2026-09-28: at a flat value the AI kept ~4-8 idle Builders per
+			# side (~90 produced per big-map game). They count toward the infantry cap and cost
+			# upkeep, so they crowded out the army and drained the bank — the real reason
+			# big-map games stalled with neither HQ touched.
+			if _builder_count(lookahead, owner) >= AIBalance.ai.max_builders:
+				return 0.0
+			return 1.0 + bonus
 		if unit_type.transport_capacity > 0:
-			# Worth the share of our infantry still far from the fight — what it would carry.
-			return AIBalance.ai.matchup_floor + AIBalance.ai.matchup_scale * _far_infantry_share(lookahead, owner) + bonus
+			# Worth the far-off infantry that has NO seat yet — measured: valued by the far share
+			# alone, the AI bought ~90 transports per big-map batch it could never fill.
+			return AIBalance.ai.matchup_floor + AIBalance.ai.matchup_scale * _unseated_far_share(lookahead, owner) + bonus
 		return AIBalance.ai.matchup_floor + AIBalance.ai.matchup_scale * ability_effect + bonus
 	var probe := UnitState.new()
 	probe.owner = owner
@@ -1372,6 +1385,28 @@ static func _ability_matchup_effect(lookahead: GameState, owner: int, unit_type:
 	return best
 
 
+## Share (0..1) of our infantry that is far from the fight AND has no transport seat to take it —
+## far infantry minus the free seats our working transports already offer.
+static func _unseated_far_share(lookahead: GameState, owner: int) -> float:
+	var all: int = 0
+	var far: int = 0
+	var seats: int = 0
+	for e: EntityState in lookahead.entities():
+		if not (e is UnitState) or e.owner != owner:
+			continue
+		var u: UnitState = e
+		if u.type.unit_class == UnitTypeDef.UnitClass.INFANTRY:
+			all += 1
+			if _nearest_live_enemy_distance(lookahead, u.position, owner) > AIBalance.ai.transport_far_distance:
+				far += 1
+		if u.type.transport_capacity > 0:
+			seats += u.type.transport_capacity - Unit.transport_load(u)
+	for e: EntityState in lookahead.entities():   # one already in production offers seats too
+		if e is StructureState and e.owner == owner and (e as StructureState).producing_type != null:
+			seats += (e as StructureState).producing_type.transport_capacity
+	return float(maxi(0, far - seats)) / float(all) if all > 0 else 0.0
+
+
 ## Share (0..1) of our infantry farther than [member AIConfig.transport_far_distance] tiles from
 ## the nearest enemy — the troops a transport would actually move.
 static func _far_infantry_share(lookahead: GameState, owner: int) -> float:
@@ -1383,6 +1418,45 @@ static func _far_infantry_share(lookahead: GameState, owner: int) -> float:
 			if _nearest_live_enemy_distance(lookahead, e.position, owner) > AIBalance.ai.transport_far_distance:
 				far += 1
 	return float(far) / float(all) if all > 0 else 0.0
+
+
+static func _builder_count(lookahead: GameState, owner: int) -> int:
+	var n: int = 0
+	for e: EntityState in lookahead.entities():
+		if e is UnitState and e.owner == owner and (e as UnitState).type.can_build:
+			n += 1
+	for e: EntityState in lookahead.entities():   # one already in production counts too
+		if e is StructureState and e.owner == owner and (e as StructureState).producing_type != null \
+				and (e as StructureState).producing_type.can_build:
+			n += 1
+	return n
+
+
+## True when moving [param unit] to [param dest] walks it into the reach of enemies that can
+## shoot it without enough friends alongside: fewer friendly fighters (itself included) within
+## [member AIConfig.mass_radius] of [param dest] than enemies threatening it, or fewer than
+## [member AIConfig.mass_minimum]. The unit then holds just outside range until the army arrives.
+static func _advance_is_premature(lookahead: GameState, unit: UnitState, dest: Vector2i) -> bool:
+	var threats: int = 0
+	for e: EntityState in lookahead.entities():
+		if e.owner == unit.owner or e.owner < 0 or not Combat.can_target(e, unit):
+			continue
+		if e is StructureState and (e as StructureState).type.attack <= 0:
+			continue
+		if lookahead.grid.manhattan_distance(dest, e.position) <= _threat_reach_of(lookahead, e):
+			threats += 1
+	if threats == 0:
+		return false
+	var friends: int = 1   # itself
+	for e: EntityState in lookahead.entities():
+		if e == unit or e.owner != unit.owner or not (e is UnitState):
+			continue
+		var f: UnitState = e
+		if f.type.attack <= 0 or f.type.can_build:
+			continue
+		if lookahead.grid.manhattan_distance(dest, f.position) <= AIBalance.ai.mass_radius:
+			friends += 1
+	return friends < maxi(threats, AIBalance.ai.mass_minimum)
 
 
 static func _owns_empty_vehicle(lookahead: GameState, owner: int) -> bool:
