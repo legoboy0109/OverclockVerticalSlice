@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
+; GENERATED from game-data/Units/Buzzard.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 3c249c59e47bf2bd8bc793f0b76bc46bdeae47868678d9312df44216417e3275
+
+[ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/abilities/paradrop.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Buzzard"
+unit_class = 2
+can_target = Array[int]([0, 1])
+hp = 6
+attack = 3
+attack_range = 1
+defense = 0
+move_cost = 1
+soft_move_cap = 6
+produce_cost = 1300
+production_turns = 2
+upkeep = 400
+counts_toward_cap = false
+can_counterattack = false
+can_build = false
+targeting_mode = 0
+min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = -2
+resist_incendiary = 0
+area_shape = 0
+area_length = 4
+abilities = [ExtResource("2")]
+can_pilot = false
+requires_pilot = true
+transport_capacity = 2
+transport_accepts = Array[int]([0])
+transport_size = 3
+targets_crew = false
+crew_bonus_attack = 0
+art_id = &"helicopter"

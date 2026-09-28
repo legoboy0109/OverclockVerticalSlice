@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=3 format=3]
+; GENERATED from game-data/Structures/Independents Airfield.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 50b35317e662f7711debb0358992d0a4049959890ca214ff30bd099c4b2179d5
+
+[ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/units/buzzard.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Independents Airfield"
+buildable = false
+art_id = &"airfield"
+hp = 12
+build_cost = 1200
+build_time = 3
+upkeep = 200
+max_count = 1
+cap_bonus = 0
+production_cap = 1
+producible_types = [ExtResource("2")]
+attack = 0
+attack_range = 0
+defense = 0
+can_counterattack = false
+can_research = false
+can_target = Array[int]([0, 1])
+targeting_mode = 0
+min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = 0
+resist_incendiary = 0

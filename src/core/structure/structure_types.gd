@@ -27,12 +27,17 @@ const SOLAR_BARRACKS: StructureTypeDef = preload("res://data/structures/solar_ba
 const SOLAR_FACTORY: StructureTypeDef = preload("res://data/structures/solar_factory.tres")
 const SOLAR_AIRFIELD: StructureTypeDef = preload("res://data/structures/solar_airfield.tres")
 const DEFENCE_NODE: StructureTypeDef = preload("res://data/structures/autonomous_defence_node.tres")
+# ★ Independents (faction wave 3).
+const INDEPENDENTS_BARRACKS: StructureTypeDef = preload("res://data/structures/independents_barracks.tres")
+const INDEPENDENTS_FACTORY: StructureTypeDef = preload("res://data/structures/independents_factory.tres")
+const INDEPENDENTS_AIRFIELD: StructureTypeDef = preload("res://data/structures/independents_airfield.tres")
 
 ## ★ Every structure type in the roster, in declaration order. See
 ## [constant UnitTypes.ALL] for why this exists — a coverage guard that keeps its
 ## own copy of the roster only guards what someone remembered to copy.
 const ALL: Array[StructureTypeDef] = [HQ, FACTORY, BARRACKS, DEFENSIVE_STRUCTURE, RESEARCH_LAB, AIRFIELD,
-	SOLAR_BARRACKS, SOLAR_FACTORY, SOLAR_AIRFIELD, DEFENCE_NODE]
+	SOLAR_BARRACKS, SOLAR_FACTORY, SOLAR_AIRFIELD, DEFENCE_NODE,
+	INDEPENDENTS_BARRACKS, INDEPENDENTS_FACTORY, INDEPENDENTS_AIRFIELD]
 
 ## Every structure a Builder may raise, in [constant ALL] order — decided by each type's
 ## [member StructureTypeDef.buildable] (the vault's `buildable` checkbox). The single source

@@ -35,6 +35,15 @@ const ARMOURED_TRANSPORT: UnitTypeDef = preload("res://data/units/armoured_trans
 const INTERCEPTOR: UnitTypeDef = preload("res://data/units/interceptor.tres")
 const GUNSHIP: UnitTypeDef = preload("res://data/units/gunship.tres")
 const PARATROOPER_TRANSPORT: UnitTypeDef = preload("res://data/units/paratrooper_transport.tres")
+# ★ Independents (faction wave 3).
+const PARTISAN: UnitTypeDef = preload("res://data/units/partisan.tres")
+const PIRATE: UnitTypeDef = preload("res://data/units/pirate.tres")
+const SABOTEUR: UnitTypeDef = preload("res://data/units/saboteur.tres")
+const MARKSMAN: UnitTypeDef = preload("res://data/units/marksman.tres")
+const MISSILE_TEAM: UnitTypeDef = preload("res://data/units/missile_team.tres")
+const TECHNICAL: UnitTypeDef = preload("res://data/units/technical.tres")
+const SCRAP_TANK: UnitTypeDef = preload("res://data/units/scrap_tank.tres")
+const BUZZARD: UnitTypeDef = preload("res://data/units/buzzard.tres")
 
 ## ★ Every unit type in the roster, in declaration order.
 ##
@@ -45,4 +54,5 @@ const PARATROOPER_TRANSPORT: UnitTypeDef = preload("res://data/units/paratrooper
 ## that list was written to prevent. Adding a `.tres` to this registry now
 ## automatically extends the guard.
 const ALL: Array[UnitTypeDef] = [BUILDER, SCOUT, TROOPER, HEAVY, SNIPER, TANK, ARTILLERY, FIGHTER, BOMBER, HELICOPTER, TRANSPORT,
-	CITIZEN_TROOPER, PILOT, MEDIC, VOLUNTEER, LANCE_TEAM, GUN_TRUCK, ARMOURED_TRANSPORT, INTERCEPTOR, GUNSHIP, PARATROOPER_TRANSPORT]
+	CITIZEN_TROOPER, PILOT, MEDIC, VOLUNTEER, LANCE_TEAM, GUN_TRUCK, ARMOURED_TRANSPORT, INTERCEPTOR, GUNSHIP, PARATROOPER_TRANSPORT,
+	PARTISAN, PIRATE, SABOTEUR, MARKSMAN, MISSILE_TEAM, TECHNICAL, SCRAP_TANK, BUZZARD]
