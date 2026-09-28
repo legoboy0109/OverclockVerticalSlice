@@ -1,16 +1,25 @@
-## Balance — Autoload, logic-free lookup for AP Economy's tuning config.
+## Balance — the economy tuning in force (ADR-0006: every system reads `Balance.economy`).
 ##
-## Foundation-layer Autoload per ADR-0006, mirroring [code]MatchService[/code]'s
-## thin "read-only lookup convenience" idiom (ADR-0001). Loads [EconomyConfig]
-## once at boot and exposes it by reference. Never mutates, validates, or
-## interprets anything — systems read [code]Balance.economy.*[/code] directly;
-## only this Autoload decides where the `.tres` lives.
-##
-## Registered in `project.godot`'s `[autoload]` section so `AP`'s functions can
-## read `Balance.economy` as a bare global reference, matching the GDD's
-## documented `income(player)` signature (never `income(player, config)`).
+## ★ 2026-09-28 (match settings): `economy` is the config for the CURRENT match. A player-chosen
+## AP-per-turn is applied to a per-match COPY ([method apply_match]), never to the shared preload,
+## so one match's choice can never leak into the next, into the simulator, or into a test.
+## It is deliberately not on GameState: GameState.clone() deep-copies, and the AI clones
+## constantly — the config would be copied thousands of times a turn for nothing.
 extends Node
 
-## The loaded [EconomyConfig] tuning-constants resource. No other fields. No
-## methods beyond direct property access.
-var economy: EconomyConfig = preload("res://data/balance/economy_config.tres")
+## The designer's values, as shipped. Never modified.
+var base_economy: EconomyConfig = preload("res://data/balance/economy_config.tres")
+
+## The values in force for the current match.
+var economy: EconomyConfig = base_economy
+
+
+## Starts a match's economy: a fresh copy of the shipped values with the player's AP choice.
+func apply_match(ap_per_turn: int) -> void:
+	economy = base_economy.duplicate()
+	economy.flat_ap_per_turn = ap_per_turn
+
+
+## Back to the shipped values (tests, the simulator, leaving a match).
+func reset() -> void:
+	economy = base_economy

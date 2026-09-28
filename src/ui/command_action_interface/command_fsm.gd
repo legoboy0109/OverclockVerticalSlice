@@ -608,7 +608,7 @@ static func _build_entry(state: GameState, entity: EntityState) -> VerbEntry:
 	# and the row must stay live while one choice remains.
 	var ap_affordable: bool = AP.can_afford(state, unit.owner, BaseProduction.effective_build_ap_cost(state, unit.owner))
 	var any_affordable: bool = false
-	for structure_type: StructureTypeDef in _buildable_types():
+	for structure_type: StructureTypeDef in _buildable_types(state, unit.owner):
 		var credit_cost: int = BaseProduction.effective_build_cost(state, structure_type, unit.owner)
 		if ap_affordable and Credits.can_afford(state, unit.owner, credit_cost):
 			any_affordable = true
@@ -707,8 +707,9 @@ static func research_status_text(entity: EntityState) -> String:
 ## what is OFFERED; this is only "is anything at all affordable", so a superset
 ## would at worst enable a row whose picker then greys every line — visible and
 ## explicable, rather than a row greyed for an invisible reason.
-static func _buildable_types() -> Array[StructureTypeDef]:
-	return StructureTypes.BUILDABLE
+static func _buildable_types(state: GameState = null, player: int = 0) -> Array[StructureTypeDef]:
+	# The player's faction decides (D5); with no state (a roster-only check) the shared roster.
+	return Faction.buildable(state, player) if state != null else StructureTypes.BUILDABLE
 
 
 ## ProduceOption — one row of [method produce_options]' submenu: a single unit
@@ -915,7 +916,7 @@ static func research_options(state: GameState, entity: EntityState) -> Array[Res
 		return options
 	var player: int = researcher.owner
 
-	for tech: TechDef in Techs.ALL:
+	for tech: TechDef in Faction.techs(state, player):   # the player's own tree (D6)
 		var gate: int = Research.availability(state, player, tech)
 		var credit_cost: int = Research.effective_research_cost(state, tech, player)
 		var ap_cost: int = Research.effective_research_ap_surcharge(state, tech, player)
@@ -967,7 +968,7 @@ static func _first_missing_prereq(state: GameState, player: int, tech: TechDef) 
 static func _exclusive_sibling(state: GameState, player: int, tech: TechDef) -> TechDef:
 	if tech.exclusive_group == &"":
 		return null
-	for other: TechDef in Techs.ALL:
+	for other: TechDef in Faction.techs(state, player):
 		if other == tech or other.exclusive_group != tech.exclusive_group:
 			continue
 		if Research.has_tech(state, player, other) or Research.is_under_research(state, player, other):

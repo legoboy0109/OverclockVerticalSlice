@@ -22,6 +22,9 @@ var _cli_runner: Object
 
 
 func _initialize() -> void:
+	# ★ 2026-09-28: tests never read the player's saved skirmish choices (user://match.cfg) —
+	# a test result must not depend on what was last played on this machine.
+	OS.set_environment("OVERCLOCK_TESTS", "1")
 	_cli_runner = load(_CI_RUNNER).new()
 	# Feed GdUnit4 a clean, engine-flag-free arg list (its parser rejects unknown
 	# args like --headless/--script). get_cmdline_args() returns _debug_cmd_args

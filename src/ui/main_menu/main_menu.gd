@@ -225,8 +225,14 @@ func _open_settings() -> void:
 
 
 func _on_new_skirmish() -> void:
+	# ★ 2026-09-28: NEW SKIRMISH opens the setup screen (factions + match settings) rather
+	# than dropping straight into a fixed match. The setup screen starts the match itself.
 	new_skirmish_requested.emit()
-	get_tree().change_scene_to_file(SLICE_SCENE)
+	var setup := SkirmishSetup.new()
+	add_child(setup)
+	setup.open_from(func() -> void:
+		setup.queue_free()
+		_buttons[Entry.NEW_SKIRMISH].grab_focus())
 
 
 func _open_quit_confirm() -> void:

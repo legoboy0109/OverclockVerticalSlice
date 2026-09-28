@@ -130,8 +130,8 @@ func _build() -> GameState:
 
 	var state: GameState = GameState.start_match(map, 0)
 	state.max_rounds = VerticalSliceRoot.VS_MAX_ROUNDS
-	state.per_player[0].faction = Factions.RUSH
-	state.per_player[1].faction = Factions.BOOM
+	state.per_player[0].faction = Factions.DEMOCRATIC_ALLIANCE
+	state.per_player[1].faction = Factions.DEMOCRATIC_ALLIANCE
 	state.per_player[0].is_ai_controlled = true
 	state.per_player[1].is_ai_controlled = true
 

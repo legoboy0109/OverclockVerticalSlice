@@ -31,7 +31,7 @@ extends RefCounted
 ## attrition brings them under. Losing a building must not kill soldiers.
 static func effective_cap(state: GameState, player: int) -> int:
 	var cfg: BaseProductionConfig = StructureBalance.base_production
-	var total: int = cfg.base_infantry_cap
+	var total: int = cfg.base_infantry_cap + Faction.infantry_cap_delta(state, player)   # D3
 	for e: EntityState in state.entities():
 		if e.owner != player or not (e is StructureState):
 			continue

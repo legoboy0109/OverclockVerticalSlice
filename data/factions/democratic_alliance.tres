@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="FactionDef" load_steps=18 format=3]
+; GENERATED from game-data/Factions/Democratic Alliance.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: a3234d4c72f0e95de0e185ea7063e4073119e71950c3e64d25f60045ebdd6558
+
+[ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/structures/hq.tres" id="2"]
+[ext_resource type="Resource" path="res://data/structures/barracks.tres" id="3"]
+[ext_resource type="Resource" path="res://data/structures/factory.tres" id="4"]
+[ext_resource type="Resource" path="res://data/structures/airfield.tres" id="5"]
+[ext_resource type="Resource" path="res://data/structures/research_lab.tres" id="6"]
+[ext_resource type="Resource" path="res://data/structures/defensive_structure.tres" id="7"]
+[ext_resource type="Resource" path="res://data/techs/attack_1.tres" id="8"]
+[ext_resource type="Resource" path="res://data/techs/defense_1.tres" id="9"]
+[ext_resource type="Resource" path="res://data/techs/economy_1.tres" id="10"]
+[ext_resource type="Resource" path="res://data/techs/penetration.tres" id="11"]
+[ext_resource type="Resource" path="res://data/techs/volley.tres" id="12"]
+[ext_resource type="Resource" path="res://data/techs/plating.tres" id="13"]
+[ext_resource type="Resource" path="res://data/techs/field_repair.tres" id="14"]
+[ext_resource type="Resource" path="res://data/techs/logistics.tres" id="15"]
+[ext_resource type="Resource" path="res://data/techs/foundry.tres" id="16"]
+[ext_resource type="Script" path="res://src/core/faction/faction_unit_delta.gd" id="17"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Democratic Alliance"
+description = "The generalist: a serviceable answer to everything, the best answer to nothing. The balance baseline."
+playable = true
+hq = ExtResource("2")
+structures = [ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")]
+techs = [ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16")]
+infantry_cap_delta = 0
+base_income_delta = 0
+upkeep_pct_delta = 0
+unit_deltas = []
+promotes = false
+rank_requires_support = false
+rank_support_structures = []

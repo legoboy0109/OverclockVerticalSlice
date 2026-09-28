@@ -1,6 +1,7 @@
 # Faction Identity
 
-> **Status**: **IN REVISION — framework v2** (2026-08-24). Was **Approved** (2026-07-22) as
+> **Status**: **IMPLEMENTED (framework) 2026-09-28** — factions own HQ, structures and tech tree; D3/D4/D9 modifiers; colour = seat. Factions added in waves, Alliance first. See `design/decision-log.md`.
+> Previously: **IN REVISION — framework v2** (2026-08-24). Was **Approved** (2026-07-22) as
 > framework v1. This revision is a **framework-shape change, not a balance pass**, and requires a
 > fresh `/design-review` before it can return to Approved. v1 is preserved at
 > `git show design/initial-gdd-corpus:design/gdd/faction-identity.md`.

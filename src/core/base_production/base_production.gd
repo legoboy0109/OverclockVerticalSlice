@@ -210,6 +210,9 @@ static func _clears_enemy_standoff(state: GameState, player: int, tile: Vector2i
 ## Performance Guardrail).
 static func validate_build(state: GameState, action: BuildAction) -> int:
 	var player: int = state.active_player
+	# ★ Faction v2 (D5): a player may only raise their own faction's structures.
+	if action.structure_type == null or not (action.structure_type in Faction.buildable(state, player)):
+		return Action.Reason.ILLEGAL_TARGET
 	# Dual-cost (ADR-0006 pivot): effective_build_cost is the Credit main cost;
 	# build also spends a BUILD_AP_COST AP surcharge. Legal iff BOTH afford.
 	var cost: int = effective_build_cost(state, action.structure_type, player)

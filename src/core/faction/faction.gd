@@ -36,3 +36,60 @@ static func unit_delta(f: FactionDef, type: UnitTypeDef) -> FactionUnitDelta:
 		if d.type == type:
 			return d
 	return null
+
+
+# ---------------------------------------------------------------------------
+# ★ Faction framework v2 (2026-09-28) — what a player's faction owns.
+# Every "what can THIS player build / research / field" question goes through here, so the
+# rules, the menus and the AI can never disagree about a faction's content.
+# ---------------------------------------------------------------------------
+
+## The structures [param player] may build: their faction's own list, or the shared roster.
+static func buildable(state: GameState, player: int) -> Array[StructureTypeDef]:
+	var f: FactionDef = state.faction_of(player)
+	if f != null and not f.structures.is_empty():
+		return f.structures
+	return StructureTypes.BUILDABLE
+
+
+## [param player]'s tech tree, in the faction's authored order, or the shared tree.
+static func techs(state: GameState, player: int) -> Array[TechDef]:
+	var f: FactionDef = state.faction_of(player)
+	if f != null and not f.techs.is_empty():
+		return f.techs
+	return Techs.ALL
+
+
+## The HQ type [param faction] starts with.
+static func hq_type(faction: FactionDef) -> StructureTypeDef:
+	return faction.hq if faction != null and faction.hq != null else StructureTypes.HQ
+
+
+## Every unit type [param faction] can field: whatever its HQ and buildable structures produce.
+## Derived, not listed — a unit list kept beside the structures would be one more thing to drift.
+static func units(faction: FactionDef) -> Array[UnitTypeDef]:
+	var out: Array[UnitTypeDef] = []
+	var sources: Array[StructureTypeDef] = [hq_type(faction)]
+	sources.append_array(faction.structures if faction != null and not faction.structures.is_empty() \
+		else StructureTypes.BUILDABLE)
+	for s: StructureTypeDef in sources:
+		for t: UnitTypeDef in s.producible_types:
+			if not out.has(t):
+				out.append(t)
+	return out
+
+
+## D3 / D4 / D9 folds — each owning system adds these at its own read site (CR-4).
+static func infantry_cap_delta(state: GameState, player: int) -> int:
+	var f: FactionDef = state.faction_of(player)
+	return f.infantry_cap_delta if f != null else 0
+
+
+static func base_income_delta(state: GameState, player: int) -> int:
+	var f: FactionDef = state.faction_of(player)
+	return f.base_income_delta if f != null else 0
+
+
+static func upkeep_pct_delta(state: GameState, player: int) -> int:
+	var f: FactionDef = state.faction_of(player)
+	return f.upkeep_pct_delta if f != null else 0

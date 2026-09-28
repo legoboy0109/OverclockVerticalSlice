@@ -197,6 +197,11 @@ func test_ac4_build_commit_splits_ap_surcharge_and_credit_main_cost() -> void:
 	state.per_player[0].current_credits = 20  # fund Credits (build main cost, ADR-0006 pivot)
 
 	var buildable := _make_structure_type_for_build(6)
+	# ★ Faction v2: a player may only build their faction's structures, so this test's
+	# synthetic type goes in a test faction's roster (never mutate the shared Neutral).
+	var test_faction := FactionDef.new()
+	test_faction.structures = [buildable]
+	state.per_player[0].faction = test_faction
 	var preview: CommandFSM.BuildEntry = CommandFSM.build_preview(state, 0, buildable)
 	assert_bool(preview.affordable).is_true()
 	assert_bool(preview.legal_tiles.is_empty()).is_false()

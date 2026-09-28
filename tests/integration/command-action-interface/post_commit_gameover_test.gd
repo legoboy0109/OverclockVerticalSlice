@@ -199,6 +199,11 @@ func test_build_commit_lands_on_new_structure_not_prior_selection() -> void:
 	state.per_player[0].current_credits = 20 # fund the build's Credit main cost (dual-cost pivot).
 
 	var buildable := _make_buildable_type(6)
+	# ★ Faction v2: a player may only build their faction's structures, so this test's
+	# synthetic type goes in a test faction's roster (never mutate the shared Neutral).
+	var test_faction := FactionDef.new()
+	test_faction.structures = [buildable]
+	state.per_player[0].faction = test_faction
 	var preview: CommandFSM.BuildEntry = CommandFSM.build_preview(state, 0, buildable)
 	assert_bool(preview.legal_tiles.is_empty()).is_false()
 	var target: Vector2i = preview.legal_tiles[0]

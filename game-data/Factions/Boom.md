@@ -1,6 +1,13 @@
 ---
 id: boom
-description: Placeholder archetype (player 2's colour in the slice). No modifiers yet.
+description: 'Seat colour palette: player 2 (cyan). Not a playable faction — colour means which player, not faction.'
+playable: false
+hq: null
+structures: []
+techs: []
+infantry_cap_delta: 0
+base_income_delta: 0
+upkeep_pct_delta: 0
 unit_changes: []
 promotes: false
 rank_requires_support: false

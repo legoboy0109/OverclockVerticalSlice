@@ -69,6 +69,9 @@ static func availability(state: GameState, player: int, tech: TechDef) -> int:
 		return Action.Reason.RESEARCH_IN_PROGRESS
 	if not tech.allowed_factions.is_empty() and not (state.faction_of(player) in tech.allowed_factions):
 		return Action.Reason.TECH_FACTION_RESTRICTED
+	# D6: a tech outside the player's own tree is not theirs to research.
+	if not (tech in Faction.techs(state, player)):
+		return Action.Reason.TECH_FACTION_RESTRICTED
 	if _is_excluded(state, player, tech):
 		return Action.Reason.TECH_EXCLUDED
 	for prereq: TechDef in tech.prerequisites:
@@ -86,7 +89,7 @@ static func availability(state: GameState, player: int, tech: TechDef) -> int:
 ## [method validate_research].
 static func legal_research_targets(state: GameState, player: int) -> Array[TechDef]:
 	var out: Array[TechDef] = []
-	for tech: TechDef in Techs.ALL:
+	for tech: TechDef in Faction.techs(state, player):   # D6: the player's own tree
 		if availability(state, player, tech) == Action.Reason.OK:
 			out.append(tech)
 	return out
@@ -326,7 +329,7 @@ static func apply_idle_healing(state: GameState, player: int) -> Array:
 static func _is_excluded(state: GameState, player: int, tech: TechDef) -> bool:
 	if tech.exclusive_group == &"":
 		return false
-	for other: TechDef in Techs.ALL:
+	for other: TechDef in Faction.techs(state, player):
 		if other == tech or other.exclusive_group != tech.exclusive_group:
 			continue
 		if has_tech(state, player, other) or is_under_research(state, player, other):

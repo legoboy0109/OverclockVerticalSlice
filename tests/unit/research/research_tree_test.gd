@@ -257,11 +257,28 @@ func test_a_second_lab_unlocks_nothing_more() -> void:
 
 func test_faction_restricted_tech_is_locked_for_other_factions() -> void:
 	var state := _state()
+	# Two test factions that both carry the tech in their tree (D6); only one is allowed it.
 	var restricted := GameStateFactory.make_tech(1)
-	restricted.allowed_factions = [Factions.RUSH]
+	var allowed := FactionDef.new()
+	var other := FactionDef.new()
+	allowed.techs = [restricted]
+	other.techs = [restricted]
+	restricted.allowed_factions = [allowed]
+	state.per_player[0].faction = other
 	assert_int(Research.availability(state, 0, restricted)).is_equal(Action.Reason.TECH_FACTION_RESTRICTED)
-	state.per_player[0].faction = Factions.RUSH
+	state.per_player[0].faction = allowed
 	assert_int(Research.availability(state, 0, restricted)).is_equal(Action.Reason.OK)
+
+
+func test_a_tech_outside_the_players_tree_is_not_theirs() -> void:
+	# Faction v2 (D6): each faction owns its tree; a tech it does not list is not researchable.
+	var state := _state()
+	var foreign := GameStateFactory.make_tech(1)
+	var f := FactionDef.new()
+	f.techs = [Techs.ATTACK_I]
+	state.per_player[0].faction = f
+	assert_int(Research.availability(state, 0, Techs.ATTACK_I)).is_equal(Action.Reason.OK)
+	assert_int(Research.availability(state, 0, foreign)).is_equal(Action.Reason.TECH_FACTION_RESTRICTED)
 
 
 func test_no_shipped_tech_is_faction_restricted_yet() -> void:
