@@ -32,15 +32,9 @@ extends GdUnitTestSuite
 const GRID_SIZE: int = 8
 
 
-# The attacker's effective_attack reads the process-global Research stub bonus
-# only when its owner holds Attack Tech (none here) — reset for isolation anyway,
-# matching the suite convention (tests/unit/effective_attack_test.gd).
-func before_test() -> void:
-	Research.reset()
-
-
-func after_test() -> void:
-	Research.reset()
+# The attacker's effective_attack reads Research.attack_bonus (CR-14, no
+# static state) only when its owner has completed a tech with a nonzero
+# attack_bonus (none here) — no before/after_test reset hook is needed.
 
 
 # --- Fixture builders --------------------------------------------------------

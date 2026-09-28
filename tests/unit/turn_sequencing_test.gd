@@ -8,11 +8,12 @@
 # MapDefinitionFactory-style inline builder for the one test that exercises
 # start_match's grid+HQ construction. Uses the real Base & Production
 # BaseProduction.advance_build_timers (Story 002) against real Under-
-# Construction StructureStates, the Research stub's GS-003 extension
-# (advance_research_timers + queue_completion), and the real Unit/UnitState
-# classes (Unit System Story 002/003) plus the Structure/StructureState stub
-# for the step-2 flag-reset dispatch. No RNG, no time-dependent asserts, no
-# file I/O; each test resets the Research stub for isolation.
+# Construction StructureStates, and the real Research (CR-14, landed
+# 2026-09-28) against real StructureStates carrying a research_target, plus
+# the real Unit/UnitState classes (Unit System Story 002/003) and the real
+# Structure/StructureState for the step-2 flag-reset dispatch. No RNG, no
+# time-dependent asserts, no file I/O; each test builds its own isolated state
+# (Research holds no static state to reset — CR-14).
 #
 # Migration note (Base & Production Story 002): this suite originally drove
 # BaseProduction.queue_completion()/BaseProduction.reset() against
@@ -24,14 +25,23 @@
 # Outpost (build_status=UNDER_CONSTRUCTION, build_turns_remaining=1) so the
 # real start_turn step-3 advance decrements it to 0 and completes it THAT
 # turn — same "one outpost finishes building this turn" scenario the stub
-# simulated, same +2 tier1 income bonus, same one StructureCompletedEvent.
+# simulated; since S6-01 a completing outpost contributes nothing to income.
+#
+# Migration note (CR-14, 2026-09-28): the Research stub's
+# queue_completion(player, bonus) is gone (Research is now stateless — no
+# reset() either). Every former call site is replaced by
+# _add_researching_structure(state, player, tech, turns_remaining), placing
+# one real HQ-templated StructureState with research_target = tech so the
+# real start_turn step-3 advance_research_timers completes it THAT turn. Where
+# the original bonus magnitude was never actually observed by an assertion,
+# the completing tech is a zero-effect GameStateFactory.make_tech() (matching
+# the outpost's own no-income-effect case); where the test's point IS that a
+# same-turn completion is observed by the income snapshot, it uses the real
+# Techs.ECONOMY_I so the assertion exercises the genuine economy_tier_bonus
+# path (Balance.economy.econ_tier_bonus), not a stale stand-in number.
 #
 # Naming follows tests/README.md: [system]_[feature]_test.gd + test_[scenario]_[expected].
 extends GdUnitTestSuite
-
-
-func before_test() -> void:
-	Research.reset()
 
 
 # Small counter helper used to assert action_applied's emission/payload
@@ -65,6 +75,30 @@ func _add_under_construction_outpost(state: GameState, player: int) -> void:
 	structure.build_turns_remaining = 1
 	state.entities_by_id[structure.entity_id] = structure
 	state.next_entity_id += 1
+
+
+# Places one real Completed structure (HQ template — research runs at the HQ,
+# CR-14) owned by `player` directly into state.entities_by_id with
+# [param tech] under research at [param turns_remaining] owner-turns left — no
+# grid needed (advance_research_timers never touches the grid). The next
+# advance_research_timers() call for `player` decrements it, and completes it
+# THAT SAME call once it reaches 0, appending one TechCompletedEvent and (for a
+# tech with a nonzero economy_tier_bonus) raising the owner's economy_tier —
+# the real-mechanism replacement for the deleted Research stub's
+# queue_completion(player, bonus).
+func _add_researching_structure(state: GameState, player: int, tech: TechDef, turns_remaining: int = 1) -> StructureState:
+	var structure := StructureState.new()
+	structure.entity_id = state.next_entity_id
+	structure.owner = player
+	structure.position = Vector2i(structure.entity_id, 5) # unique, arbitrary — no grid in play
+	structure.type = StructureTypes.HQ
+	structure.current_hp = structure.type.hp
+	structure.build_status = StructureState.BuildStatus.COMPLETED
+	structure.research_target = tech
+	structure.research_turns_remaining = turns_remaining
+	state.entities_by_id[structure.entity_id] = structure
+	state.next_entity_id += 1
+	return structure
 
 
 # Builds a minimal 8x8 all-Plain AUTHORED MapDefinition with two HQs, suitable
@@ -267,20 +301,20 @@ func test_income_total_same_regardless_of_which_system_supplies_the_completion()
 	# (build then research) with no seam to permute it, so the manifest's
 	# "the two timer-advance calls must stay commutative" contract is a
 	# DESIGN-TIME invariant enforced by ADR-0008 + code review, NOT by this
-	# test. What this test actually proves: a +2 bonus sourced from a completed
-	# outpost and a +2 sourced from a completed tech land on the SAME final Credit
-	# income (12) — i.e. Credits.credit_income treats both step-3 sources additively
-	# and interchangeably. A genuine call-order-permutation test would require
-	# start_turn to accept an orderable Array[Callable] for step 3 (see
-	# tech-debt).
+	# test. What this test actually proves: a completion sourced from a completed
+	# outpost and a completion sourced from a completed tech (with zero economy
+	# effect, CR-14's make_tech(0, 0)) land on the SAME final Credit income —
+	# i.e. Credits.credit_income treats both step-3 sources identically when
+	# neither carries an economy_tier_bonus. A genuine call-order-permutation
+	# test would require start_turn to accept an orderable Array[Callable] for
+	# step 3 (see tech-debt).
 	var state_build_first := GameStateFactory.make_state(2, 0)
 	_add_under_construction_outpost(state_build_first, 0) # completes this turn (no income effect since S6-01)
 	var events_a: Array = state_build_first.start_turn(0)
 
-	Research.reset()
-
 	var state_research_first := GameStateFactory.make_state(2, 0)
-	Research.queue_completion(0, 2) # bonus term set to 2, matching the outpost case
+	# completes this turn; zero economy_tier_bonus, matching the outpost's no-op case.
+	_add_researching_structure(state_research_first, 0, GameStateFactory.make_tech(), 1)
 	var events_b: Array = state_research_first.start_turn(0)
 
 	# ★ S6-01 (2026-08-24): both step-3 sources now contribute NOTHING to income --
@@ -303,9 +337,10 @@ func test_income_total_same_regardless_of_which_system_supplies_the_completion()
 
 
 func test_step2_flag_reset_and_step3_timers_both_complete_before_step4_when_both_fire_same_turn() -> void:
-	# Arrange — both a build AND a research completion queued the same turn,
-	# plus an active-player unit whose flag must be reset (step 2) — proves
-	# steps 2 and 3 both run, and step 4's snapshot reflects BOTH step-3 terms.
+	# Arrange — both a build completion AND a research completion (Economy Tech I,
+	# a real economy_tier_bonus-carrying tech) queued the same turn, plus an
+	# active-player unit whose flag must be reset (step 2) — proves steps 2 and 3
+	# both run, and step 4's snapshot reflects BOTH step-3 completions.
 	var state := GameStateFactory.make_state(2, 0)
 	var unit := UnitState.new()
 	unit.entity_id = 0
@@ -313,21 +348,23 @@ func test_step2_flag_reset_and_step3_timers_both_complete_before_step4_when_both
 	unit.has_attacked = true
 	state.entities_by_id[unit.entity_id] = unit
 	state.next_entity_id = 1
-	_add_under_construction_outpost(state, 0) # +2 (tier1 outpost), completes this turn
-	Research.queue_completion(0, 3) # +3 (economy tech term)
+	_add_under_construction_outpost(state, 0) # completes this turn (no income effect since S6-01)
+	_add_researching_structure(state, 0, Techs.ECONOMY_I, 1) # completes this turn -> economy_tier 0 -> 1
 	# Act
 	var events: Array = state.start_turn(0)
 	# Assert — step 2 ran (flag reset).
 	assert_bool(unit.has_attacked).is_false()
 	# Step 3 produced both completions; step 4b's Credit income observes both same turn.
 	assert_int(events.size()).is_equal(2)
-	# ★ S6-01: income is base + research tiers only. The outpost completing in step 3
-	# and the queued Research stub term BOTH contribute nothing -- income no longer
-	# reads the board. The step-3-before-step-4 ordering is still proven by the two
-	# completion events above.
-	# ★ S6-02: NET banks, not gross -- the outpost that just completed pays upkeep.
+	# ★ S6-01: the outpost completing in step 3 still contributes nothing to income
+	# -- structures no longer feed the Credit curve. But Economy Tech I DOES: it
+	# writes economy_tier before step 4b's snapshot, the real Rule-6 ordering proof
+	# that CR-14 gives this suite back (replacing the deleted Research stub's
+	# opaque bonus term).
+	assert_int(state.per_player[0].economy_tier).is_equal(1)
+	# ★ S6-02: NET banks, not gross -- the outpost and HQ that own upkeep this turn.
 	assert_int(state.per_player[0].current_credits) \
-		.is_equal(maxi(0, Balance.economy.base_income - Upkeep.total_upkeep(state, 0)))
+		.is_equal(maxi(0, Balance.economy.base_income + Balance.economy.econ_tier_bonus - Upkeep.total_upkeep(state, 0)))
 	assert_int(state.per_player[0].current_ap).is_equal(Balance.economy.flat_ap_per_turn) # flat, economy-independent
 
 
@@ -461,7 +498,7 @@ func test_structure_and_tech_completed_events_flow_through_action_applied_signal
 	var spy := _SignalSpy.new()
 	state.action_applied.connect(spy._on_action_applied)
 	_add_under_construction_outpost(state, 1) # completions apply to the INCOMING player (1)
-	Research.queue_completion(1, 1)
+	_add_researching_structure(state, 1, GameStateFactory.make_tech(), 1)
 	var action := EndTurnAction.new()
 	action.player = 0
 	# Act

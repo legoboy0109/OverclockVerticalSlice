@@ -29,14 +29,9 @@ const GRID_SIZE: int = 10
 
 # None of the accessors under test fold Research (effective_build_cost/
 # effective_production_cap/cancel_refund are Neutral no-ops with no tech read;
-# Unit.effective_produce_cost folds Faction, not Research) -- reset anyway,
-# matching the suite-wide isolation convention.
-func before_test() -> void:
-	Research.reset()
-
-
-func after_test() -> void:
-	Research.reset()
+# Unit.effective_produce_cost folds Faction, not Research). Research holds no
+# static state to reset (CR-14, 2026-09-28), so no before/after_test hook is
+# needed for isolation here.
 
 
 # --- Fixture builders --------------------------------------------------------

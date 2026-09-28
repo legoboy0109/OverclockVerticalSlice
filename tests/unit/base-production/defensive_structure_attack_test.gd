@@ -34,16 +34,9 @@ extends GdUnitTestSuite
 const GRID_SIZE: int = 8
 
 
-# The Attack-Tech bonus lives on the process-global Research stub static; reset
-# before and after every test so this suite neither inherits a leaked bonus nor
-# leaks its own injection into a suite that runs later in the same process
-# (isolation convention — mirrors tests/unit/effective_attack_test.gd).
-func before_test() -> void:
-	Research.reset()
-
-
-func after_test() -> void:
-	Research.reset()
+# Research holds no static state (CR-14, 2026-09-28: bonuses are summed live
+# from PlayerState.completed_techs, per state) — no before/after_test reset
+# hook is needed for isolation here.
 
 
 # --- Fixture builders --------------------------------------------------------
@@ -213,15 +206,14 @@ func test_defensive_structure_has_no_legal_move_action_immobility() -> void:
 # --- AC-attack-tech-no-buff (toggle regression) ------------------------------
 
 func test_defensive_structure_attack_is_not_buffed_by_owner_attack_tech() -> void:
-	# Arrange -- pin a KNOWN, nonzero Attack-Tech bonus (3) so this test does not
-	# ride on the Research stub's default value: without pinning, the assertion
-	# would stay green even if Attack Tech were globally inert (bonus 0), proving
-	# nothing. A Completed Defensive Structure (attack 4) whose owner HAS Attack
-	# Tech; a defense-0 enemy on plain terrain (no cover, no defense tech) so the
+	# Arrange -- grant a KNOWN, nonzero Attack-bonus tech (3) so this test does not
+	# ride on a default value: without granting one, the assertion would stay
+	# green even if Attack Tech were globally inert (bonus 0), proving nothing.
+	# A Completed Defensive Structure (attack 4) whose owner HAS the tech granted;
+	# a defense-0 enemy on plain terrain (no cover, no defense tech) so the
 	# damage isolates the attack term.
-	Research.set_attack_tech_bonus(3)
 	var state := _make_state(5)
-	state.per_player[0].has_attack_tech = true
+	GameStateFactory.grant_tech(state, 0, GameStateFactory.make_tech(3))
 	var struct := _make_defensive_structure(1, 0, Vector2i(2, 2))
 	var enemy := _make_enemy_unit(2, 1, Vector2i(2, 3))
 	_place(state, struct)
