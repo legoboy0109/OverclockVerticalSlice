@@ -92,8 +92,14 @@ static func all_carried(unit: UnitState) -> Array[UnitState]:
 
 ## Whether [param unit] can act at all (TP-5): a vehicle that needs a pilot and has none
 ## cannot move, attack or use abilities. It still blocks its tile and can be destroyed.
-static func is_functional(unit: UnitState) -> bool:
-	return not unit.type.requires_pilot or unit.pilot != null
+static func is_functional(state: GameState, unit: UnitState) -> bool:
+	return not needs_pilot(state, unit) or unit.pilot != null
+
+
+## Whether [param unit] needs a pilot to act right now: its type does, and its owner has not
+## researched a tech that frees that type (CR-11a — the Protectorate's Mech Autonomy).
+static func needs_pilot(state: GameState, unit: UnitState) -> bool:
+	return unit.type.requires_pilot and not Research.frees_pilot(state, unit.owner, unit.type)
 
 
 ## Passenger slots in use in [param unit] (TP-2). The pilot's seat is not a slot.

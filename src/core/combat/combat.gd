@@ -339,7 +339,7 @@ static func legal_targets(state: GameState, attacker: EntityState) -> Array[Targ
 static func legal_targets_from(state: GameState, attacker: EntityState, from_tile: Vector2i) -> Array[TargetResult]:
 	# TP-5 / TP-3: an unpiloted vehicle has no one on the gun, and a unit that disembarked
 	# this turn is done. No targets means no attack AND no counterattack, from one place.
-	if attacker is UnitState and (not Unit.is_functional(attacker) or (attacker as UnitState).turn_ended):
+	if attacker is UnitState and (not Unit.is_functional(state, attacker) or (attacker as UnitState).turn_ended):
 		return []
 	if attacker.type.targeting_mode == UnitTypeDef.TargetingMode.AREA:
 		return _area_targets_from(state, attacker, from_tile)

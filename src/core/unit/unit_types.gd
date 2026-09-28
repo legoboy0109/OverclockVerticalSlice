@@ -55,6 +55,18 @@ const LANCER: UnitTypeDef = preload("res://data/units/lancer.tres")
 const BATTERY: UnitTypeDef = preload("res://data/units/battery.tres")
 const SKYWORKS_GUNSHIP: UnitTypeDef = preload("res://data/units/skyworks_gunship.tres")
 const SKYWORKS_INTERCEPTOR: UnitTypeDef = preload("res://data/units/skyworks_interceptor.tres")
+# ★ Galactic Protectorate (faction wave 5).
+const SERVITOR: UnitTypeDef = preload("res://data/units/servitor.tres")
+const DEMOLITIONS_SPECIALIST: UnitTypeDef = preload("res://data/units/demolitions_specialist.tres")
+const LANCE_SPECIALIST: UnitTypeDef = preload("res://data/units/lance_specialist.tres")
+const SUPPORT_SPECIALIST: UnitTypeDef = preload("res://data/units/support_specialist.tres")
+const SENTINEL_MECH: UnitTypeDef = preload("res://data/units/sentinel_mech.tres")
+const BREAKER_MECH: UnitTypeDef = preload("res://data/units/breaker_mech.tres")
+const LANCE_TANK: UnitTypeDef = preload("res://data/units/lance_tank.tres")
+const CINDER_TANK: UnitTypeDef = preload("res://data/units/cinder_tank.tres")
+const STRAFER: UnitTypeDef = preload("res://data/units/strafer.tres")
+const AUTONOMOUS_LIFTER: UnitTypeDef = preload("res://data/units/autonomous_lifter.tres")
+const TALON: UnitTypeDef = preload("res://data/units/talon.tres")
 
 ## ★ Every unit type in the roster, in declaration order.
 ##
@@ -67,4 +79,5 @@ const SKYWORKS_INTERCEPTOR: UnitTypeDef = preload("res://data/units/skyworks_int
 const ALL: Array[UnitTypeDef] = [BUILDER, SCOUT, TROOPER, HEAVY, SNIPER, TANK, ARTILLERY, FIGHTER, BOMBER, HELICOPTER, TRANSPORT,
 	CITIZEN_TROOPER, PILOT, MEDIC, VOLUNTEER, LANCE_TEAM, GUN_TRUCK, ARMOURED_TRANSPORT, INTERCEPTOR, GUNSHIP, PARATROOPER_TRANSPORT,
 	PARTISAN, PIRATE, SABOTEUR, MARKSMAN, MISSILE_TEAM, TECHNICAL, SCRAP_TANK, BUZZARD,
-	MACHINIST, FOREMAN, GUARD, WALKER, SIEGE_MECH, HAULER, LANCER, BATTERY, SKYWORKS_GUNSHIP, SKYWORKS_INTERCEPTOR]
+	MACHINIST, FOREMAN, GUARD, WALKER, SIEGE_MECH, HAULER, LANCER, BATTERY, SKYWORKS_GUNSHIP, SKYWORKS_INTERCEPTOR,
+	SERVITOR, DEMOLITIONS_SPECIALIST, LANCE_SPECIALIST, SUPPORT_SPECIALIST, SENTINEL_MECH, BREAKER_MECH, LANCE_TANK, CINDER_TANK, STRAFER, AUTONOMOUS_LIFTER, TALON]

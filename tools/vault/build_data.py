@@ -119,7 +119,7 @@ KINDS: dict[str, Kind] = {
         Field("transport_accepts", "enums", [], choices=UNIT_CLASS, help="Classes it can carry"),
         Field("transport_size", "int", 1, lo=1, hi=6, help="Slots this unit takes as a passenger"),
         Field("targets_crew", "bool", False, help="Its attacks hit a vehicle's pilot, not the vehicle"),
-        Field("crew_bonus_attack", "int", 0, lo=0, hi=1, help="Attack it adds to a vehicle it pilots (TP-5d: at most +1)"),
+        Field("crew_bonus_attack", "int", 0, lo=-1, hi=1, help="Attack it adds to a vehicle it pilots (TP-5d: at most +1)"),
         Field("crew_bonus_move_cost", "int", 0, lo=-1, hi=0, help="Move cost it takes off a vehicle it pilots (TP-5d: at most -1)"),
         Field("art_id", "group", "", help="Borrow another unit's sprites (its id) until this has art"),
     ]),
@@ -163,6 +163,7 @@ KINDS: dict[str, Kind] = {
         Field("produce_ap_discount", "int", 0),
         Field("build_ap_discount", "int", 0),
         Field("produce_cost_discount_pct", "int", 0),
+        Field("frees_pilots", "links", [], target="Units", help="Unit types that stop needing a pilot"),
     ]),
     "Factions": Kind("Factions", "factions", "res://src/core/faction/faction_def.gd", "FactionDef", [
         Field("description", "str", ""),

@@ -1,6 +1,6 @@
 # Faction — Galactic Protectorate
 
-> **Status**: **DRAFT** (2026-08-24) — Tier 2 of the faction corpus v2.
+> **Status**: **IMPLEMENTED 2026-09-28** (faction wave 5) — Cinder Tank single-weapon; SPOT deferred; placeholder art. See `design/decision-log.md`.
 > **Name**: ★ TBD. Flavour: Hoppean / Voluntarist Alliance.
 > **Author**: user (direction) + agents · **Baseline**: `factions/democratic-alliance.md` (CR-10)
 >

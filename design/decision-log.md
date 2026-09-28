@@ -207,3 +207,23 @@ User decisions (2026-09-28): **colour = which player** (OQ-11); **factions in wa
   already names this: *"the AI cannot play six different armies with one set of weights."*
   ⇒ **Faction-aware AI is the prerequisite for any faction balance judgement.** Until then these
   win rates measure the AI, not the factions.
+
+## Faction wave 5 — Galactic Protectorate (`factions/galactic-protectorate.md`)
+
+- **Mech Autonomy built as a data effect** (`frees_pilots` on a tech): once researched, Sentinel and
+  Breaker mechs stop needing pilots and crewed ones eject their pilot onto an adjacent tile (it
+  stays aboard if there's no room). Tanks never stop needing crew (CR-11a). "Needs a pilot" is now
+  a live question (`Unit.needs_pilot`), not just a type flag.
+- **Mech Autonomy is gated on a Research Lab** (my call — the design gives no prerequisite); it is
+  in the Protectorate's own tree only.
+- ⚠ **The Cinder Tank has one weapon, not two.** Its design gives it napalm at range 2–4 and a
+  machine gun at range 1; "attack profiles chosen by range" is new machinery nothing else needs.
+  It ships with the napalm gun (incendiary, area targeting, min range 2).
+- **Lance Tank and Cinder Tank use area targeting** (indirect fire) because of their minimum range.
+- **The Servitor is robot infantry: EMF −2, cap-exempt, 300 upkeep, a −1-attack pilot.**
+- ⚠ Support Specialist ships without SPOT. Placeholder art borrowed.
+
+### Findings to review
+- **Protectorate vs Alliance: Alliance 48/60.** Clearest case yet of the AI problem: it built
+  **89 Lance Specialists** — anti-armour troops that cannot shoot infantry — against a mostly-infantry
+  army. The AI values a unit by its price without asking what it can hit.

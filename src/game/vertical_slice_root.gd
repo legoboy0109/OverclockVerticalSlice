@@ -1826,7 +1826,7 @@ func _is_entity_actionable(entity: EntityState) -> bool:
 	# ★ Transport & Pilots: an empty vehicle cannot act at all until someone climbs in, and
 	# it should LOOK inert — otherwise a freshly built tank reads as ready and simply
 	# refuses to move, with nothing on the board saying why.
-	if entity is UnitState and not Unit.is_functional(entity):
+	if entity is UnitState and not Unit.is_functional(_state, entity):
 		return false
 	# ★ Structures are resolved BEFORE the empty-pool check, deliberately. A
 	# non-combat structure is a fixture with no turn allowance, so it must stay lit

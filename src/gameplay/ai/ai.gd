@@ -859,7 +859,7 @@ static func _score_crewing_candidates(lookahead: GameState, entity: EntityState,
 		if not (e is UnitState) or e.owner != unit.owner:
 			continue
 		var v: UnitState = e
-		if not v.type.requires_pilot or v.pilot != null:
+		if not Unit.needs_pilot(lookahead, v) or v.pilot != null:
 			continue
 		var value: float = credits_to_ap(float(v.type.produce_cost)) * AIBalance.ai.crew_vehicle_value_fraction
 		if lookahead.grid.manhattan_distance(unit.position, v.position) == 1:

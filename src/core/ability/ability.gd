@@ -78,7 +78,7 @@ static func _unit_gate(state: GameState, unit: UnitState, ability: AbilityDef) -
 	if not carries(unit, ability):
 		return Action.Reason.ABILITY_NOT_CARRIED
 	# A pilotless vehicle may still let passengers OUT — it is the passengers acting.
-	if ability != Abilities.DISEMBARK and not Unit.is_functional(unit):
+	if ability != Abilities.DISEMBARK and not Unit.is_functional(state, unit):
 		return Action.Reason.VEHICLE_UNPILOTED
 	if unit.turn_ended:
 		return Action.Reason.ALREADY_ACTED
@@ -117,7 +117,7 @@ static func validate(state: GameState, action: UseAbilityAction) -> int:
 	var target: EntityState = state.entity_at(tile)
 	match action.ability.id:
 		&"embark":
-			return _validate_embark(unit, target)
+			return _validate_embark(state, unit, target)
 		&"disembark", &"paradrop":
 			var passenger: UnitState = _passenger(unit, action.passenger_id)
 			if passenger == null:
@@ -149,18 +149,18 @@ static func validate(state: GameState, action: UseAbilityAction) -> int:
 				return Action.Reason.ILLEGAL_TARGET
 			var v: UnitState = target
 			# Ground only; must be empty — the pilot has to be dealt with first.
-			if v.type.unit_class != UnitTypeDef.UnitClass.GROUND_VEHICLE or not v.type.requires_pilot \
+			if v.type.unit_class != UnitTypeDef.UnitClass.GROUND_VEHICLE or not Unit.needs_pilot(state, v) \
 					or v.pilot != null or not v.cargo.is_empty():
 				return Action.Reason.ILLEGAL_TARGET
 			return Action.Reason.OK
 	return Action.Reason.UNKNOWN_VERB
 
 
-static func _validate_embark(unit: UnitState, target: EntityState) -> int:
+static func _validate_embark(state: GameState, unit: UnitState, target: EntityState) -> int:
 	if not (target is UnitState) or target.owner != unit.owner or target == unit:
 		return Action.Reason.ILLEGAL_TARGET
 	var v: UnitState = target
-	if v.type.requires_pilot and v.pilot == null and unit.type.can_pilot:
+	if Unit.needs_pilot(state, v) and v.pilot == null and unit.type.can_pilot:
 		return Action.Reason.OK
 	if v.type.transport_capacity <= 0 or not (unit.type.unit_class in v.type.transport_accepts):
 		return Action.Reason.TRANSPORT_FULL
@@ -205,7 +205,7 @@ static func apply(state: GameState, action: UseAbilityAction) -> Array[Event]:
 	match ability.id:
 		&"embark":
 			var v: UnitState = state.entity_at(tile)
-			var as_pilot: bool = v.type.requires_pilot and v.pilot == null and unit.type.can_pilot
+			var as_pilot: bool = Unit.needs_pilot(state, v) and v.pilot == null and unit.type.can_pilot
 			_lift_off_board(state, unit)
 			unit.embarked_this_turn = true
 			if as_pilot:

@@ -36,6 +36,11 @@ const UNION_BARRACKS: StructureTypeDef = preload("res://data/structures/union_ba
 const UNION_FACTORY: StructureTypeDef = preload("res://data/structures/union_factory.tres")
 const UNION_AIRFIELD: StructureTypeDef = preload("res://data/structures/union_airfield.tres")
 const BULWARK: StructureTypeDef = preload("res://data/structures/bulwark.tres")
+# ★ Galactic Protectorate (faction wave 5).
+const PROTECTORATE_BARRACKS: StructureTypeDef = preload("res://data/structures/protectorate_barracks.tres")
+const PROTECTORATE_FACTORY: StructureTypeDef = preload("res://data/structures/protectorate_factory.tres")
+const PROTECTORATE_AIRFIELD: StructureTypeDef = preload("res://data/structures/protectorate_airfield.tres")
+const PROTECTORATE_DEFENCE: StructureTypeDef = preload("res://data/structures/protectorate_defence.tres")
 
 ## ★ Every structure type in the roster, in declaration order. See
 ## [constant UnitTypes.ALL] for why this exists — a coverage guard that keeps its
@@ -43,7 +48,8 @@ const BULWARK: StructureTypeDef = preload("res://data/structures/bulwark.tres")
 const ALL: Array[StructureTypeDef] = [HQ, FACTORY, BARRACKS, DEFENSIVE_STRUCTURE, RESEARCH_LAB, AIRFIELD,
 	SOLAR_BARRACKS, SOLAR_FACTORY, SOLAR_AIRFIELD, DEFENCE_NODE,
 	INDEPENDENTS_BARRACKS, INDEPENDENTS_FACTORY, INDEPENDENTS_AIRFIELD,
-	UNION_BARRACKS, UNION_FACTORY, UNION_AIRFIELD, BULWARK]
+	UNION_BARRACKS, UNION_FACTORY, UNION_AIRFIELD, BULWARK,
+	PROTECTORATE_BARRACKS, PROTECTORATE_FACTORY, PROTECTORATE_AIRFIELD, PROTECTORATE_DEFENCE]
 
 ## Every structure a Builder may raise, in [constant ALL] order — decided by each type's
 ## [member StructureTypeDef.buildable] (the vault's `buildable` checkbox). The single source

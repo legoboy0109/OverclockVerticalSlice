@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=2 format=3]
+; GENERATED from game-data/Structures/Protectorate Defence.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: c73d3e5af3925fbcd217b8b42cddd5ff9b33151dc1814117cb0ea47b85cd89e2
+
+[ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Protectorate Defence"
+buildable = false
+art_id = &"defensive_structure"
+hp = 10
+build_cost = 500
+build_time = 2
+upkeep = 100
+max_count = 2
+cap_bonus = 0
+production_cap = 0
+producible_types = []
+attack = 3
+attack_range = 2
+defense = 1
+can_counterattack = true
+can_research = false
+can_target = Array[int]([0, 1])
+targeting_mode = 0
+min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = 0
+resist_incendiary = 0
