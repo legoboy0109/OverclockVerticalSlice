@@ -301,3 +301,14 @@ extends Resource
 ## transport's tiles per turn × this). 2 makes boarding clearly better than walking for a
 ## slow infantry unit, without letting it outrank an attack.
 @export var transport_turns_estimate: float = 2.0
+
+## How many Builders the AI keeps at once (counting one in production). More are worth nothing
+## to it. 1 is enough: a structure is raised in one action, and the next Builder is ordered the
+## turn this one is consumed. See AI._matchup_multiplier for the measured reason.
+@export var max_builders: int = 1
+
+## ★ Mass before advancing (AI._advance_is_premature). A unit steps into enemy reach only with at
+## least max(threatening enemies, mass_minimum) friendly fighters — itself included — within
+## mass_radius tiles of where it lands. Otherwise it holds just outside range for the army.
+@export var mass_radius: int = 3
+@export var mass_minimum: int = 2

@@ -166,3 +166,20 @@ func test_transports_are_wanted_while_infantry_is_far_from_the_fight() -> void:
 	inf.position = Vector2i(10, 11)
 	state.grid.place(inf.entity_id, 10, 11)
 	assert_float(AI._matchup_multiplier(state, 0, UnitTypes.TRANSPORT)).is_less(far)
+
+
+func test_a_lone_unit_will_not_walk_into_enemy_guns() -> void:
+	var state := _state()
+	var sniper := _unit(state, 1, UnitTypes.SNIPER, Vector2i(6, 5))   # reach 3 + 3
+	var scout := _unit(state, 0, UnitTypes.SCOUT, Vector2i(0, 5))
+	assert_bool(AI._advance_is_premature(state, scout, Vector2i(2, 5))).override_failure_message(
+		"A lone Scout was allowed to step into a Sniper's reach.").is_true()
+	assert_bool(AI._advance_is_premature(state, scout, Vector2i(0, 0))).is_false()   # out of reach
+
+
+func test_a_group_may_advance_together() -> void:
+	var state := _state()
+	_unit(state, 1, UnitTypes.SNIPER, Vector2i(6, 5))
+	var scout := _unit(state, 0, UnitTypes.SCOUT, Vector2i(0, 5))
+	_unit(state, 0, UnitTypes.TROOPER, Vector2i(1, 4))
+	assert_bool(AI._advance_is_premature(state, scout, Vector2i(2, 5))).is_false()

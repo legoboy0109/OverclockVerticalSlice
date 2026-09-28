@@ -339,3 +339,25 @@ Alliance mirror is byte-for-byte unchanged (29/30 HQ kills, avg 55 turns).
   and/or making the AI push toward the enemy HQ harder on big boards.
 - ⚠ The AI produces a great many Builders (~80 per game on the big maps) — they are cheap and get
   consumed building; worth capping if it shows up in play.
+
+## AI pushes harder on big maps (2026-09-28)
+
+- **Builder cap:** the AI keeps at most `max_builders` (1) spare Builders; the ~80-per-game
+  Builder spam is gone.
+- **Transports valued by need:** it counts far-away infantry that don't already have a seat, so it
+  no longer overbuilds Haulers.
+- **Mass before advancing:** a unit won't step into enemy firing reach unless enough friendly
+  armed units are nearby. That means at least as many as the enemies covering that tile, and at
+  least `mass_minimum` (2) within `mass_radius` (3). Before this, units trickled forward one at a
+  time and Snipers picked them off (1,137 Snipers built in one batch, armies of 2–5). A wounded
+  unit that is under threat may still retreat freely.
+- Results (AI mirror, 30 games per map, HQ destroyed before the round limit):
+  **small map 30/30** (avg 51.8 turns), **Crossroads 12/30**, **Highlands 8/30** (was 3).
+
+### Findings to review
+- ⚠ **Big maps still mostly run to the round limit.** The remaining drain is structures being
+  destroyed and rebuilt over and over (one Highlands batch rebuilt 265 Barracks, 162 Factories
+  and 81 Research Labs), which keeps armies small. That is an economy/attrition question, not a
+  quick AI fix.
+- ★ **Your call:** give each map its own default round limit (e.g. Crossroads 120,
+  Highlands 160), so long maps have room to finish.
