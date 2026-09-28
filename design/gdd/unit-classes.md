@@ -1,6 +1,6 @@
 # Unit Classes
 
-> **Status**: **DRAFT** (2026-08-24) — Tier 1 of the faction corpus v2.
+> **Status**: **IMPLEMENTED 2026-09-28** (from the DRAFT of 2026-08-24). Open questions UCOQ-1/2/3 were decided while building — see `design/decision-log.md` § Unit classes.
 > **Author**: user (direction) + agents · **System #**: 17 (new — supersedes the deferred #14 "Vehicle & Mech Tier")
 > **Owning GDD for**: the infantry / ground vehicle / air taxonomy and what each class means
 >

@@ -67,7 +67,7 @@ func test_every_registered_type_comes_from_the_vault() -> void:
 	registered.append_array(UnitTypes.ALL)
 	registered.append_array(StructureTypes.ALL)
 	registered.append_array(Techs.ALL)
-	registered.append_array([Factions.NEUTRAL, Factions.RUSH, Factions.BOOM, VSMap.DATA])
+	registered.append_array([Factions.NEUTRAL, Factions.RUSH, Factions.BOOM, VSMap.data()])
 	for res: Resource in registered:
 		assert_bool(generated.has(res.resource_path)).override_failure_message(
 			"%s is used by the game but was not generated from the vault." % res.resource_path

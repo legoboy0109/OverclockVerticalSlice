@@ -693,7 +693,7 @@ static func apply_cancel(state: GameState, action: CancelBuildAction) -> Array[E
 ##
 ## O(r²) scan (12 candidate tiles at radius 2) plus a bounded sort — cheap
 ## (control-manifest Performance Guardrail); safe to recompute every preview frame.
-static func legal_deploy_tiles(state: GameState, producer: StructureState, _unit_type: UnitTypeDef) -> Array[Vector2i]:
+static func legal_deploy_tiles(state: GameState, producer: StructureState, unit_type: UnitTypeDef) -> Array[Vector2i]:
 	var grid: GridState = state.grid
 	var radius: int = StructureBalance.base_production.deploy_radius
 	var out: Array[Vector2i] = []
@@ -704,7 +704,10 @@ static func legal_deploy_tiles(state: GameState, producer: StructureState, _unit
 				continue # the producer's own tile
 			var t := Vector2i(producer.position.x + dx, producer.position.y + dy)
 			if grid.in_bounds(t.x, t.y) and grid.is_passable(t.x, t.y):
-				out.append(t)
+				# UC-2 / AC-10: a vehicle is never deployed onto ground it cannot stand on.
+				# unit_type may be null ("is there ANY room?"), in which case terrain is not asked.
+				if unit_type == null or Unit.can_stand_on(unit_type, grid.terrain_at(t.x, t.y)):
+					out.append(t)
 	out.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return grid.index(a.x, a.y) < grid.index(b.x, b.y))
 	return out
 

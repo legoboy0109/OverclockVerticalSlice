@@ -64,6 +64,15 @@ extends Resource
 ## [member TechDef.required_structures].
 @export var can_research: bool = false
 
+## Whether a Builder may raise this structure (2026-09-28). The ONE place the build roster
+## is decided — every build list in the game reads [code]StructureTypes.BUILDABLE[/code],
+## which filters on this. (It used to be four hand-kept lists that had to agree.)
+@export var buildable: bool = false
+
+## Unit classes this structure can fire on (unit-classes.md UC-4), for a structure that
+## attacks at all. Same meaning as [member UnitTypeDef.can_target].
+@export var can_target: Array[int] = [UnitTypeDef.UnitClass.INFANTRY, UnitTypeDef.UnitClass.GROUND_VEHICLE]
+
 ## Combat targeting profile for this structure as an attacker (the Defensive
 ## Structure is the only VS structure that fires). Mirrors
 ## [member UnitTypeDef.targeting_mode] — AREA is dormant in the VS roster.

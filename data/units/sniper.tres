@@ -1,12 +1,14 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Sniper.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: c82190314099be447827966569fae8451e5f8f7292fbb36acc702c8276a26729
+; source-sha256: 7c3cad54398228b7748292afede6bff19c5d683085214fc912e1c44e6ee1a2c0
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
 display_name = "Sniper"
+unit_class = 0
+can_target = Array[int]([0, 1])
 hp = 3
 attack = 6
 attack_range = 3

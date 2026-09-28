@@ -64,7 +64,8 @@ extends RefCounted
 ## so a later story's structure-attacker work extends it in place rather than
 ## re-opening this function.
 static func damage(state: GameState, attacker: EntityState, defender: EntityState) -> int:
-	var cover: int = CombatBalance.combat.cover_dr if (defender is UnitState and state.grid.is_cover(defender.position.x, defender.position.y)) else 0
+	# UC-2: Cover protects infantry only.
+	var cover: int = CombatBalance.combat.cover_dr if (defender is UnitState and Unit.benefits_from_cover(defender) and state.grid.is_cover(defender.position.x, defender.position.y)) else 0
 	# ★ CR-14 Penetration: a UNIT attacker whose owner holds it ignores Cover entirely.
 	if attacker is UnitState and Research.ignores_cover(state, attacker.owner):
 		cover = 0
@@ -220,6 +221,10 @@ static func _walk_direction(state: GameState, attacker: EntityState, origin: Vec
 		var occupant_id: int = state.grid.occupant_at(tile.x, tile.y)
 		if occupant_id != GridState.EMPTY_OCCUPANT:
 			var occupant: EntityState = state.entity_at(tile)
+			# ★ UC-4: something this attacker cannot target does not block its line either —
+			# a ground gun fires under an aircraft, an anti-air gun over a tank.
+			if not can_target(attacker, occupant):
+				continue
 			if occupant.owner != attacker.owner:
 				return _WalkResult.new(BlockedReason.NONE, TargetResult.new(occupant_id, tile))
 			return _WalkResult.new(BlockedReason.BLOCKED_BY_FRIENDLY)
@@ -295,6 +300,17 @@ static func legal_targets_from(state: GameState, attacker: EntityState, from_til
 ## to 1, always [code]<=[/code] any [code]attack_range >= 1[/code]) — this is a
 ## no-op guard for the whole VS roster; it only ever matters for a
 ## (currently-dormant) AREA fixture.
+## Whether [param attacker] may attack [param target] at all, by class (unit-classes.md
+## UC-4). A unit target is legal iff its class is in the attacker's
+## [code]can_target[/code]. A STRUCTURE counts as a ground target — attackable by anything
+## that can hit infantry or ground vehicles, so a Fighter (air-only) cannot hit a building.
+static func can_target(attacker: EntityState, target: EntityState) -> bool:
+	var classes: Array[int] = attacker.type.can_target
+	if target is UnitState:
+		return (target as UnitState).type.unit_class in classes
+	return UnitTypeDef.UnitClass.INFANTRY in classes or UnitTypeDef.UnitClass.GROUND_VEHICLE in classes
+
+
 static func has_valid_targeting_schema(entity: EntityState) -> bool:
 	return entity.type.min_range <= entity.type.attack_range
 
@@ -346,7 +362,7 @@ static func _area_targets_from(state: GameState, attacker: EntityState, from_til
 				continue
 			var tile := Vector2i(x, y)
 			var occupant: EntityState = state.entity_at(tile)
-			if occupant.owner == attacker.owner:
+			if occupant.owner == attacker.owner or not can_target(attacker, occupant):
 				continue
 			var dist: int = state.grid.manhattan_distance(from_tile, tile)
 			if dist < min_range or dist > attack_range:

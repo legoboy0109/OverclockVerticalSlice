@@ -57,19 +57,10 @@ const _REACHABILITY_MULTIPLIER_REACHABLE := 1.1
 const _REACHABILITY_MULTIPLIER_IN_CONTACT := 1.0
 const _REACHABILITY_MULTIPLIER_ISOLATED := 0.9
 
-## Every player-buildable [StructureTypeDef] (Story 004) — deliberately a
-## [b]code constant[/b] here, not a [code]StructureTypes[/code] registry
-## method: the HQ is setup-placed, never a [BuildAction] candidate (GDD
-## Formulas `production_value` note / [method BaseProduction.legal_build_tiles]
-## doc, "The HQ is never a candidate"), so it is excluded from this list. Order
-## is irrelevant to correctness (every entry is folded into the same
-## running-best scan) but fixed for determinism (ADR-0003).
-const _BUILDABLE_STRUCTURE_TYPES: Array[StructureTypeDef] = [
-	StructureTypes.FACTORY,
-	StructureTypes.BARRACKS,
-	StructureTypes.DEFENSIVE_STRUCTURE,
-	StructureTypes.RESEARCH_LAB,
-]
+## The structures the AI may consider building — the shared, data-driven roster
+## ([code]StructureTypes.BUILDABLE[/code], from each structure's vault `buildable` box), so
+## the AI and the player can never be offered different things. The HQ is never buildable.
+static var _BUILDABLE_STRUCTURE_TYPES: Array[StructureTypeDef] = StructureTypes.BUILDABLE
 
 
 ## Running-best candidate carrier (ADR-0011 §2) — the sole mutable slot the
@@ -639,6 +630,9 @@ static func _nearest_threatening_enemy(state: GameState, unit: UnitState) -> _Th
 	for e: EntityState in state.entities():
 		if e.owner == unit.owner:
 			continue
+		# UC-4: an enemy that cannot target this unit's class is no threat to it at any range.
+		if not Combat.can_target(e, unit):
+			continue
 		var reach: int = _threat_reach_of(state, e)
 		var dist: int = state.grid.manhattan_distance(unit.position, e.position)
 		if dist > reach:
@@ -678,6 +672,9 @@ static func _deploy_tile_is_lethal(lookahead: GameState, owner: int, \
 		if e.owner == owner:
 			continue
 		if lookahead.grid.manhattan_distance(tile, e.position) > _threat_reach_of(lookahead, e):
+			continue
+		# UC-4: preview_damage prices a hit whether or not the hit is legal — ask first.
+		if not Combat.can_target(e, probe):
 			continue
 		if Combat.preview_damage(lookahead, e, probe) >= unit_type.hp:
 			return true
@@ -746,6 +743,9 @@ static func _sets_up_attack_next_turn(state: GameState, unit: UnitState, dest: V
 	var reach: int = unit.type.soft_move_cap + Unit.effective_attack_range(state, unit)
 	for e: EntityState in state.entities():
 		if e.owner == unit.owner:
+			continue
+		# UC-4: a Fighter next to a tank has set nothing up — it cannot shoot it.
+		if not Combat.can_target(unit, e):
 			continue
 		if state.grid.manhattan_distance(dest, e.position) <= reach:
 			return true

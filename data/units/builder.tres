@@ -1,12 +1,14 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Builder.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 29979813976e7aa6115f8a976398796bf6535a7cc7ca4f37b4c344c3a2bc1e58
+; source-sha256: 49deb1ad270b8c6f87d1c1a8447efc3821555fbf20367631050cdcae1524c06f
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
 display_name = "Builder"
+unit_class = 0
+can_target = Array[int]([])
 hp = 3
 attack = 0
 attack_range = 0

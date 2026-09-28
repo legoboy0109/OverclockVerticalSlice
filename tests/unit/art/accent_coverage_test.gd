@@ -38,7 +38,7 @@ const _ART := "res://assets/art/units"
 func _archetypes() -> Array[String]:
 	var out: Array[String] = []
 	for type: UnitTypeDef in UnitTypes.ALL:
-		out.append(EntitySpriteCatalog.type_token(type.display_name))
+		out.append(EntitySpriteCatalog.type_token_for(type))
 	return out
 
 ## Faction tokens that carry OWNERSHIP and must therefore carry hue.

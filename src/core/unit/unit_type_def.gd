@@ -21,6 +21,17 @@ extends Resource
 ## AREA targeting is dormant in the VS (no roster member uses it yet).
 enum TargetingMode { DIRECT, AREA }
 
+## The three unit classes (unit-classes.md UC-1, closed set). A class decides how a unit
+## meets terrain, whether Cover protects it, and who can shoot it — see [Unit] for the rules.
+enum UnitClass { INFANTRY, GROUND_VEHICLE, AIR }
+
+## This unit's class (UC-1). Immutable for the life of the unit (UC-8).
+@export var unit_class: int = UnitClass.INFANTRY
+
+## The classes this unit can attack (UC-4). Structures count as ground targets: they are
+## attackable by anything that can target INFANTRY or GROUND_VEHICLE. Empty = unarmed.
+@export var can_target: Array[int] = [UnitClass.INFANTRY, UnitClass.GROUND_VEHICLE]
+
 @export var display_name: String
 @export var hp: int
 @export var attack: int

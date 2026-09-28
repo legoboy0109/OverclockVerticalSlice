@@ -1,24 +1,28 @@
-[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=4 format=3]
 ; GENERATED from game-data/Structures/Factory.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: aa90d778f3430d6c38e0bfcd8d8f29bc674e23765726afa090cade678a6ad342
+; source-sha256: b3848f96136921f920cae57018ef77c4c478bb34b52027de0b73c9759412c9ee
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/units/tank.tres" id="2"]
+[ext_resource type="Resource" path="res://data/units/artillery.tres" id="3"]
 
 [resource]
 script = ExtResource("1")
 display_name = "Factory"
-hp = 8
+buildable = true
+hp = 14
 build_cost = 1000
 build_time = 3
 upkeep = 200
 max_count = 2
 cap_bonus = 0
-production_cap = 0
-producible_types = []
+production_cap = 1
+producible_types = [ExtResource("2"), ExtResource("3")]
 attack = 0
 attack_range = 0
 defense = 0
 can_counterattack = false
 can_research = false
+can_target = Array[int]([0, 1])
 targeting_mode = 0
 min_range = 1

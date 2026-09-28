@@ -1,5 +1,6 @@
 ---
 id: hq
+buildable: false
 hp: 40
 build_cost: 0
 build_time: 0
@@ -14,6 +15,9 @@ attack_range: 0
 defense: 2
 can_counterattack: false
 can_research: true
+can_target:
+- infantry
+- ground_vehicle
 targeting_mode: direct
 min_range: 1
 ---

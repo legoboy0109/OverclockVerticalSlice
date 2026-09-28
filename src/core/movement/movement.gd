@@ -159,11 +159,11 @@ static func _reachable_within(state: GameState, unit: UnitState, ap_budget: int)
 				var idx: int = grid.index(n.x, n.y)
 				if visited_depth[idx] != -1:
 					continue # Already settled at an equal-or-shallower depth.
-				if not _is_traversable(state, n.x, n.y, unit.owner):
+				if not _is_traversable(state, n.x, n.y, unit):
 					continue
 				visited_depth[idx] = depth
 				next_frontier.append(n)
-				if _is_valid_destination(state, n.x, n.y):
+				if _is_valid_destination(state, n.x, n.y, unit):
 					results.append(ReachableTile.new(n, cost_at_depth, surcharged))
 		frontier = next_frontier
 
@@ -177,16 +177,20 @@ static func _reachable_within(state: GameState, unit: UnitState, ap_budget: int)
 ## [method Object.get_class]) and shares [param mover_owner] — friendly units
 ## pass through; every [code]StructureState[/code] (any owner) and every enemy
 ## [code]UnitState[/code] is a hard blocker (ADR-0009). O(1).
-static func _is_traversable(state: GameState, x: int, y: int, mover_owner: int) -> bool:
+static func _is_traversable(state: GameState, x: int, y: int, unit: UnitState) -> bool:
 	if not state.grid.in_bounds(x, y):
 		return false
-	if state.grid.terrain_at(x, y) == GridState.Terrain.IMPASSABLE:
+	# ★ UC-2/UC-3: aircraft fly over everything — terrain, units and structures alike. Air's
+	# advantage is REACH; it still has to land somewhere legal ([method _is_valid_destination]).
+	if unit.type.unit_class == UnitTypeDef.UnitClass.AIR:
+		return true
+	if not Unit.can_stand_on(unit.type, state.grid.terrain_at(x, y)):
 		return false
 	var occupant_id: int = state.grid.occupant_at(x, y)
 	if occupant_id == GridState.EMPTY_OCCUPANT:
 		return true
 	var occupant: EntityState = state.entity_at(Vector2i(x, y))
-	return occupant is UnitState and occupant.owner == mover_owner
+	return occupant is UnitState and occupant.owner == unit.owner
 
 
 ## Destination-filter predicate — can a path STOP here? Reuses
@@ -194,8 +198,8 @@ static func _is_traversable(state: GameState, x: int, y: int, mover_owner: int) 
 ## occupant is empty." Applied only when deciding whether to emit a result,
 ## never when deciding whether to expand through the tile (a friendly-occupied
 ## tile is traversable but excluded from the returned set). O(1).
-static func _is_valid_destination(state: GameState, x: int, y: int) -> bool:
-	return state.grid.is_passable(x, y)
+static func _is_valid_destination(state: GameState, x: int, y: int, unit: UnitState) -> bool:
+	return state.grid.is_passable(x, y) and Unit.can_stand_on(unit.type, state.grid.terrain_at(x, y))
 
 
 ## Returns the orthogonal in-bounds neighbors of [param pos], in an explicit

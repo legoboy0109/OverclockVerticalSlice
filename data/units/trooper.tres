@@ -1,12 +1,14 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Trooper.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 515ce085afbb5e2f919d376cd5ee663cfba377753b6233dd3ea1107b31a4f3e1
+; source-sha256: 0a2f117277faec62e39584283181264d88ef595603db37d4f1149e1d438d9a2f
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
 display_name = "Trooper"
+unit_class = 0
+can_target = Array[int]([0, 1])
 hp = 6
 attack = 3
 attack_range = 2

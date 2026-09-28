@@ -132,6 +132,8 @@ var _plain_map: bool = false
 ##
 ## The cap became the binding constraint on close games after S7-10 (faster reinforcement)
 ## and S7-11 (cover) both lengthened matches — it was calibrated before either.
+var _produced: Dictionary = {}
+var _built: Dictionary = {}
 var _max_rounds_override: int = 0
 
 ## ★ S7-13 — force which seat moves first, for every game in the batch. -1 = the default
@@ -228,6 +230,12 @@ func _run() -> void:
 			for variant: int in count:
 				game += 1
 				_play(game, favoured, handicap, variant)
+	# ★ 2026-09-28: what the AI actually fields and raises, across the whole batch — so a new
+	# unit or structure the AI never touches shows up as a zero rather than as silence.
+	for key: String in _produced:
+		print("SIM_PRODUCED,%s,%d" % [key, _produced[key]])
+	for key: String in _built:
+		print("SIM_BUILT,%s,%d" % [key, _built[key]])
 	print("SIM_DONE")
 	get_tree().quit()
 
@@ -278,6 +286,12 @@ func _run_one_turn(state: GameState, game: int = 0, turn: int = 0, favoured: int
 		if action == null:
 			break
 		var result: ActionResult = state.apply_action(action)
+		if result.ok and action is ProduceAction:
+			var key: String = (action as ProduceAction).unit_type.display_name
+			_produced[key] = _produced.get(key, 0) + 1
+		if result.ok and action is BuildAction:
+			var bkey: String = (action as BuildAction).structure_type.display_name
+			_built[bkey] = _built.get(bkey, 0) + 1
 		if not result.ok:
 			rejects += 1
 			if rejects >= 8:

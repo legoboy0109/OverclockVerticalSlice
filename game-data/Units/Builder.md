@@ -1,5 +1,7 @@
 ---
 id: builder
+unit_class: infantry
+can_target: []
 hp: 3
 attack: 0
 attack_range: 0

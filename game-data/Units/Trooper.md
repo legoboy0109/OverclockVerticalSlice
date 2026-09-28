@@ -1,5 +1,9 @@
 ---
 id: trooper
+unit_class: infantry
+can_target:
+- infantry
+- ground_vehicle
 hp: 6
 attack: 3
 attack_range: 2

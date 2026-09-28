@@ -1,5 +1,6 @@
 ---
 id: defensive_structure
+buildable: true
 hp: 10
 build_cost: 500
 build_time: 2
@@ -13,6 +14,9 @@ attack_range: 2
 defense: 1
 can_counterattack: true
 can_research: false
+can_target:
+- infantry
+- ground_vehicle
 targeting_mode: direct
 min_range: 1
 ---

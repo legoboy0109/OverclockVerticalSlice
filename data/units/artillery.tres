@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
+; GENERATED from game-data/Units/Artillery.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: b5cbd9861526fc78be66f9918bc2489172f79b8a0b9073a7e35585ad6837548f
+
+[ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Artillery"
+unit_class = 1
+can_target = Array[int]([0, 1])
+hp = 16
+attack = 8
+attack_range = 5
+defense = 0
+move_cost = 2
+soft_move_cap = 2
+produce_cost = 1600
+production_turns = 3
+upkeep = 500
+counts_toward_cap = false
+can_counterattack = false
+can_build = false
+targeting_mode = 1
+min_range = 2

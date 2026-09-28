@@ -656,13 +656,7 @@ static func research_status_text(entity: EntityState) -> String:
 ## would at worst enable a row whose picker then greys every line — visible and
 ## explicable, rather than a row greyed for an invisible reason.
 static func _buildable_types() -> Array[StructureTypeDef]:
-	return [
-		StructureTypes.BARRACKS,
-	# ★ The RESEARCH LAB was removed by S8-34 while research did not exist, and restored
-	# 2026-09-28 (CR-14): it is now the gate for every tier-2 tech.
-		StructureTypes.RESEARCH_LAB,
-		StructureTypes.DEFENSIVE_STRUCTURE,
-	] as Array[StructureTypeDef]
+	return StructureTypes.BUILDABLE
 
 
 ## ProduceOption — one row of [method produce_options]' submenu: a single unit

@@ -42,14 +42,31 @@ extends RefCounted
 ## text grid) and generated into this resource by `tools/vault/build_data.py`. Everything
 ## below is derived from it, so an edited map reaches the slice, the simulator and every
 ## test through this one class, exactly as the layout rules above require.
-const DATA: MapDefinition = preload("res://data/maps/vertical_slice.tres")
+const DATA_PATH: String = "res://data/maps/vertical_slice.tres"
 
-## Static vars rather than consts: a value read off a loaded resource is not a constant
-## expression in GDScript. Callers read them exactly as they read the old consts.
-static var WIDTH: int = DATA.width
-static var HEIGHT: int = DATA.height
-static var HQ_A: Vector2i = DATA.hq_tiles[0]
-static var HQ_B: Vector2i = DATA.hq_tiles[1]
+## ⚠ LOADED ON FIRST USE, never at class-load time. A `preload` read by a static
+## initializer ran before the resource's own script was attached whenever VSMap happened to
+## load early — `DATA.width` then failed on a bare `Resource`. The full suite passed only
+## because of the order its files loaded in. Properties with getters keep every caller's
+## `VSMap.WIDTH` syntax unchanged while deferring the load to the first read.
+static var _data: MapDefinition = null
+
+
+## The generated map resource (see the vault note named in its header).
+static func data() -> MapDefinition:
+	if _data == null:
+		_data = load(DATA_PATH) as MapDefinition
+	return _data
+
+
+static var WIDTH: int:
+	get: return data().width
+static var HEIGHT: int:
+	get: return data().height
+static var HQ_A: Vector2i:
+	get: return data().hq_tiles[0]
+static var HQ_B: Vector2i:
+	get: return data().hq_tiles[1]
 
 ## The tile each seat's free starting Builder occupies — directly BEHIND its HQ,
 ## i.e. one step further from the enemy (S8-29, user decision 2026-08-26).
@@ -81,14 +98,16 @@ const MIN_HQ_CLEARANCE: int = 3
 ## ★ Why the centre lane (`y = 5`) is left open is recorded in the map's vault note — it is a
 ## measured decision (cover in the lane both sides must cross turned close games into
 ## round-cap draws), and it belongs next to the grid a designer edits.
-static var COVER_TILES: Array[Vector2i] = _cover_tiles()
+static var COVER_TILES: Array[Vector2i]:
+	get: return _cover_tiles()
 
 
 static func _cover_tiles() -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
-	for i: int in DATA.authored_terrain.size():
-		if DATA.authored_terrain[i] == GridState.Terrain.COVER:
-			out.append(Vector2i(i % DATA.width, i / DATA.width))
+	var d: MapDefinition = data()
+	for i: int in d.authored_terrain.size():
+		if d.authored_terrain[i] == GridState.Terrain.COVER:
+			out.append(Vector2i(i % d.width, i / d.width))
 	return out
 
 
@@ -120,7 +139,7 @@ static func terrain(plain: bool = false) -> PackedByteArray:
 	out.fill(GridState.Terrain.PLAIN)
 	if plain:
 		return out
-	return DATA.authored_terrain.duplicate()
+	return data().authored_terrain.duplicate()
 
 
 ## True iff [param tile] is a Cover tile in the authored layout. A read-only convenience for

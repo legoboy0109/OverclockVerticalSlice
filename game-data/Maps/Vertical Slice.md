@@ -7,7 +7,8 @@ The skirmish board. Edit the grid below; spaces between symbols are optional.
 | Symbol | Meaning |
 |---|---|
 | `.` | open ground |
-| `c` | cover (attacks against a unit here deal 1 less damage) |
+| `c` | cover (attacks against infantry here deal 1 less damage) |
+| `r` | rough ground (ground vehicles cannot enter) |
 | `#` | blocked (impassable) |
 | `A` | player 1's HQ |
 | `B` | player 2's HQ |

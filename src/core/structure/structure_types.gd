@@ -21,8 +21,15 @@ const FACTORY: StructureTypeDef = preload("res://data/structures/factory.tres")
 const BARRACKS: StructureTypeDef = preload("res://data/structures/barracks.tres")
 const DEFENSIVE_STRUCTURE: StructureTypeDef = preload("res://data/structures/defensive_structure.tres")
 const RESEARCH_LAB: StructureTypeDef = preload("res://data/structures/research_lab.tres")
+const AIRFIELD: StructureTypeDef = preload("res://data/structures/airfield.tres")
 
 ## ★ Every structure type in the roster, in declaration order. See
 ## [constant UnitTypes.ALL] for why this exists — a coverage guard that keeps its
 ## own copy of the roster only guards what someone remembered to copy.
-const ALL: Array[StructureTypeDef] = [HQ, FACTORY, BARRACKS, DEFENSIVE_STRUCTURE, RESEARCH_LAB]
+const ALL: Array[StructureTypeDef] = [HQ, FACTORY, BARRACKS, DEFENSIVE_STRUCTURE, RESEARCH_LAB, AIRFIELD]
+
+## Every structure a Builder may raise, in [constant ALL] order — decided by each type's
+## [member StructureTypeDef.buildable] (the vault's `buildable` checkbox). The single source
+## for the build picker, the HUD, the Build row and the AI.
+static var BUILDABLE: Array[StructureTypeDef] = ALL.filter(
+	func(t: StructureTypeDef) -> bool: return t.buildable)
