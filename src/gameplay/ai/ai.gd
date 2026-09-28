@@ -852,14 +852,25 @@ static func _ability_value(lookahead: GameState, unit: UnitState, ability: Abili
 
 
 static func _score_crewing_candidates(lookahead: GameState, entity: EntityState, best: _Candidate) -> _Candidate:
-	if not (entity is UnitState) or not (entity as UnitState).type.can_pilot:
+	if not (entity is UnitState):
 		return best
 	var unit: UnitState = entity
+	var can_capture: bool = Abilities.CAPTURE_VEHICLE in unit.type.abilities
+	if not unit.type.can_pilot and not can_capture:
+		return best
 	for e: EntityState in lookahead.entities():
-		if not (e is UnitState) or e.owner != unit.owner:
+		if not (e is UnitState):
 			continue
 		var v: UnitState = e
 		if not Unit.needs_pilot(lookahead, v) or v.pilot != null:
+			continue
+		# ★ An ENEMY empty ground vehicle is a target for a unit that can capture: walk up to it
+		# (the capture itself is scored by _score_ability_candidates once adjacent).
+		if v.owner != unit.owner:
+			if not can_capture or v.type.unit_class != UnitTypeDef.UnitClass.GROUND_VEHICLE \
+					or lookahead.grid.manhattan_distance(unit.position, v.position) == 1:
+				continue
+		elif not unit.type.can_pilot:
 			continue
 		var value: float = credits_to_ap(float(v.type.produce_cost)) * AIBalance.ai.crew_vehicle_value_fraction
 		if lookahead.grid.manhattan_distance(unit.position, v.position) == 1:
@@ -920,6 +931,18 @@ static func _consider_attack(lookahead: GameState, attacker: EntityState, target
 	var hp_removed: int = mini(Combat.preview_damage(lookahead, attacker, target), _current_hp_of(target))
 	var is_kill: bool = hp_removed >= _current_hp_of(target)
 	var value: float = _combat_value(hp_removed, is_kill, target)
+	# ★ TP-7: a crew-targeting attack on a crewed vehicle hits the PILOT. Value what really
+	# happens: damage to the pilot, and — if it dies — a vehicle left empty and stealable.
+	if attacker is UnitState and attacker.type.targets_crew and target is UnitState \
+			and (target as UnitState).pilot != null:
+		var pilot: UnitState = (target as UnitState).pilot
+		var pdmg: int = maxi(CombatBalance.combat.min_damage, Combat._effective_attack_for(lookahead, attacker)
+			- Unit.effective_defense(lookahead, pilot) - Combat.resistance(pilot, attacker.type.damage_type))
+		var pilot_dead: bool = pdmg >= pilot.current_hp
+		value = _combat_value(mini(pdmg, pilot.current_hp), pilot_dead, pilot)
+		if pilot_dead:
+			value += credits_to_ap(float((target as UnitState).type.produce_cost)) * AIBalance.ai.crew_vehicle_value_fraction
+		is_kill = false
 	# ★ Damage types DT-8: an area attack hits everything in its shape, friends included.
 	# Add what the splash does to other enemies and SUBTRACT what it does to our own — the
 	# placement decision the design wants, and what stops the AI bombing its own line.
@@ -1120,6 +1143,9 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 	var local := _Candidate.new()
 
 	for unit_type: UnitTypeDef in producer.type.producible_types:
+		# ★ Faction-aware AI (2026-09-28): how much this type is worth AGAINST THIS ENEMY, computed
+		# once per type (it does not depend on the deploy tile).
+		var matchup: float = _matchup_multiplier(lookahead, producer.owner, unit_type)
 		var cost: int = Unit.effective_produce_cost(lookahead, unit_type, producer.owner)
 		# Dual-cost affordability (ADR-0006 pivot): produce needs BOTH the Credit
 		# main cost AND the AP surcharge, else apply_action rejects it — skip such
@@ -1143,7 +1169,7 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 			# value by a raw Credit cost happened to cancel, so produce scoring survived the
 			# rescale by luck rather than by design -- and it left produce incomparable with
 			# move/attack, which are AP-native. Now both convert explicitly.
-			var value: float = credits_to_ap(_production_value(unit_type, multiplier))
+			var value: float = credits_to_ap(_production_value(unit_type, multiplier)) * matchup
 			# ★ S8-27: a unit that dies before it acts bought nothing. Without this the
 			# reachability multiplier pulls production onto the most forward tile, which
 			# against a mirrored opponent is exactly the tile its army can one-shot.
@@ -1189,6 +1215,55 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 ## same horizon the economy projection already uses rather than inventing a second one.
 static func lifetime_credit_cost(unit_type: UnitTypeDef) -> float:
 	return float(unit_type.produce_cost) + float(unit_type.upkeep) * float(AIBalance.ai.economy_horizon)
+
+
+## ★ Faction-aware AI (2026-09-28, faction-identity.md OQ-15): how well [param unit_type]
+## fits the CURRENT matchup, as a multiplier on its production value.
+##
+## Measured before this existed: the AI valued a unit by its price alone, so it bought 89
+## anti-armour-only Lance Specialists against an infantry army, never fielded Solar's
+## specialists, and never crewed its own vehicles — every non-baseline faction lost for reasons
+## that had nothing to do with the faction.
+##
+## Effect = Σ over enemy entities of (their worth × how much of their hp one hit takes, if this
+## type can target them at all) ÷ Σ their worth — 0 for a unit that can hit nothing present, ~1
+## for one that kills in a hit. Mapped to [member AIConfig.matchup_floor] +
+## [member AIConfig.matchup_scale] × effect. Unarmed types (Builders, transports) are 1.0: their
+## worth is not measured in damage (unarmed transports sit at the floor). A pilot-capable type gets
+## [member AIConfig.crew_need_bonus] while we own a vehicle nobody is crewing.
+static func _matchup_multiplier(lookahead: GameState, owner: int, unit_type: UnitTypeDef) -> float:
+	var bonus: float = 0.0
+	if unit_type.can_pilot and _owns_empty_vehicle(lookahead, owner):
+		bonus = AIBalance.ai.crew_need_bonus
+	if unit_type.attack <= 0 or unit_type.can_target.is_empty():
+		# A Builder's worth is what it raises, so it keeps its flat value. An unarmed TRANSPORT
+		# sits at the floor: this AI has no plan for carrying troops, so it would buy one and
+		# never use it — measured: at 1.0 the Union AI bought 89 Haulers over its armed vehicles.
+		return (1.0 if unit_type.can_build else AIBalance.ai.matchup_floor) + bonus
+	var probe := UnitState.new()
+	probe.owner = owner
+	probe.type = unit_type
+	probe.current_hp = unit_type.hp
+	var total: float = 0.0
+	var hit: float = 0.0
+	for e: EntityState in lookahead.entities():
+		if e.owner == owner or e.owner < 0:
+			continue
+		var worth: float = _opponent_paid_ap_equivalent(e)
+		if worth <= 0.0:
+			continue
+		total += worth
+		if Combat.can_target(probe, e):
+			hit += worth * minf(1.0, float(Combat.damage(lookahead, probe, e)) / float(maxi(1, _max_hp_of(e))))
+	var effect: float = hit / total if total > 0.0 else 0.5
+	return AIBalance.ai.matchup_floor + AIBalance.ai.matchup_scale * effect + bonus
+
+
+static func _owns_empty_vehicle(lookahead: GameState, owner: int) -> bool:
+	for e: EntityState in lookahead.entities():
+		if e is UnitState and e.owner == owner and Unit.needs_pilot(lookahead, e) and (e as UnitState).pilot == null:
+			return true
+	return false
 
 
 static func _production_value(unit_type: UnitTypeDef, multiplier: float) -> float:

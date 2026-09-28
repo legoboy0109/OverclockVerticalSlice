@@ -280,3 +280,15 @@ extends Resource
 ## what it costs — measured: at 0 the Empire AI never built a Cathedral in 60 games, so
 ## promotion, the faction's whole identity, did almost nothing.
 @export var rank_support_value_fraction: float = 1.0
+
+## ★ Faction-aware production ([method AI._matchup_multiplier]). A unit's production value is
+## scaled by floor + scale × (how much of the enemy it can hit, and how hard: 0..1).
+## floor 0.25 keeps a unit that cannot hit anything present purchasable at a quarter of its
+## value (the enemy may field its targets later); scale 1.25 makes a unit that kills in one
+## hit worth 1.5×. A typical mid-roster infantry lands near 0.9 — close to the old flat value.
+@export var matchup_floor: float = 0.25
+@export var matchup_scale: float = 1.25
+
+## Added to a pilot-capable unit's matchup multiplier while the AI owns a vehicle nobody is
+## crewing — a pilot is then worth the whole vehicle it unlocks, not its own weak gun.
+@export var crew_need_bonus: float = 1.5
