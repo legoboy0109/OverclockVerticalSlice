@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="FactionDef" load_steps=18 format=3]
+; GENERATED from game-data/Factions/Galactic Protectorate.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: c8bab08f7dc9309d6fb93556052feecbb6481a1c278c9412882fceede9c3d855
+
+[ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/structures/protectorate_barracks.tres" id="2"]
+[ext_resource type="Resource" path="res://data/structures/protectorate_factory.tres" id="3"]
+[ext_resource type="Resource" path="res://data/structures/protectorate_airfield.tres" id="4"]
+[ext_resource type="Resource" path="res://data/structures/research_lab.tres" id="5"]
+[ext_resource type="Resource" path="res://data/structures/protectorate_defence.tres" id="6"]
+[ext_resource type="Resource" path="res://data/techs/attack_1.tres" id="7"]
+[ext_resource type="Resource" path="res://data/techs/defense_1.tres" id="8"]
+[ext_resource type="Resource" path="res://data/techs/economy_1.tres" id="9"]
+[ext_resource type="Resource" path="res://data/techs/penetration.tres" id="10"]
+[ext_resource type="Resource" path="res://data/techs/volley.tres" id="11"]
+[ext_resource type="Resource" path="res://data/techs/plating.tres" id="12"]
+[ext_resource type="Resource" path="res://data/techs/field_repair.tres" id="13"]
+[ext_resource type="Resource" path="res://data/techs/logistics.tres" id="14"]
+[ext_resource type="Resource" path="res://data/techs/foundry.tres" id="15"]
+[ext_resource type="Resource" path="res://data/techs/mech_autonomy.tres" id="16"]
+[ext_resource type="Script" path="res://src/core/faction/faction_unit_delta.gd" id="17"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Galactic Protectorate"
+description = "Robots and specialists: cheap machines that never run out, elite humans who decide fights — and an EMF weakness everywhere."
+playable = true
+structures = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")]
+techs = [ExtResource("7"), ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16")]
+infantry_cap_delta = -1
+base_income_delta = 0
+econ_tier_bonus_delta = 0
+upkeep_pct_delta = 0
+unit_deltas = []
+promotes = false
+rank_requires_support = false
+rank_support_structures = []

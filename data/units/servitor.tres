@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
+; GENERATED from game-data/Units/Servitor.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: f1249c58c51cb11af458e09560fd54e4739760f4fff9f9db10b4e7e7d3dd8182
+
+[ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Servitor"
+unit_class = 0
+can_target = Array[int]([0, 1])
+hp = 4
+attack = 2
+attack_range = 1
+defense = 0
+move_cost = 2
+soft_move_cap = 3
+produce_cost = 200
+production_turns = 1
+upkeep = 300
+counts_toward_cap = false
+can_counterattack = false
+can_build = false
+targeting_mode = 0
+min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = -2
+resist_incendiary = 0
+area_shape = 0
+area_length = 4
+abilities = []
+can_pilot = true
+requires_pilot = false
+transport_capacity = 0
+transport_accepts = Array[int]([])
+transport_size = 1
+targets_crew = false
+crew_bonus_attack = -1
+crew_bonus_move_cost = 0
+art_id = &"trooper"

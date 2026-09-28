@@ -88,7 +88,7 @@ class ReachableTile extends RefCounted:
 static func reachable(state: GameState, unit: UnitState) -> Array[ReachableTile]:
 	# TP-5 / TP-3: a pilotless vehicle cannot move, and nor can a unit whose turn ended by
 	# disembarking. Empty here means every caller — rules, menu, AI — agrees.
-	if not Unit.is_functional(unit) or unit.turn_ended:
+	if not Unit.is_functional(state, unit) or unit.turn_ended:
 		return []
 	return _reachable_within(state, unit, state.current_ap(unit.owner))
 

@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=6 format=3]
+; GENERATED from game-data/Structures/Protectorate Factory.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 7b0b0ce6bd6aa86a43bd944482c691a1bac6ee49fdbacb52eab1bdda9172f5cf
+
+[ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/units/sentinel_mech.tres" id="2"]
+[ext_resource type="Resource" path="res://data/units/breaker_mech.tres" id="3"]
+[ext_resource type="Resource" path="res://data/units/lance_tank.tres" id="4"]
+[ext_resource type="Resource" path="res://data/units/cinder_tank.tres" id="5"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Protectorate Factory"
+buildable = false
+art_id = &"factory"
+hp = 14
+build_cost = 1000
+build_time = 3
+upkeep = 200
+max_count = 3
+cap_bonus = 0
+production_cap = 1
+producible_types = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5")]
+attack = 0
+attack_range = 0
+defense = 0
+can_counterattack = false
+can_research = false
+can_target = Array[int]([0, 1])
+targeting_mode = 0
+min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = 0
+resist_incendiary = 0

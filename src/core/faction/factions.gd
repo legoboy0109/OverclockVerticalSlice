@@ -26,10 +26,11 @@ const DEMOCRATIC_ALLIANCE: FactionDef = preload("res://data/factions/democratic_
 const SOLAR_FEDERATION: FactionDef = preload("res://data/factions/solar_federation.tres")
 const INDEPENDENTS: FactionDef = preload("res://data/factions/independents.tres")
 const MACHINISTS_UNION: FactionDef = preload("res://data/factions/machinists_union.tres")
+const GALACTIC_PROTECTORATE: FactionDef = preload("res://data/factions/galactic_protectorate.tres")
 
 ## Every faction, in picker order. ⚠ Rush and Boom are no longer factions in play — they are the
 ## two SEAT colour palettes (user decision 2026-09-28: colour means which player, not faction).
-const ALL: Array[FactionDef] = [DEMOCRATIC_ALLIANCE, SOLAR_FEDERATION, INDEPENDENTS, MACHINISTS_UNION, NEUTRAL, RUSH, BOOM]
+const ALL: Array[FactionDef] = [DEMOCRATIC_ALLIANCE, SOLAR_FEDERATION, INDEPENDENTS, MACHINISTS_UNION, GALACTIC_PROTECTORATE, NEUTRAL, RUSH, BOOM]
 
 ## The seat colour palettes: seat 0 orange, seat 1 cyan, whatever faction each seat plays.
 const SEAT_PALETTES: Array[FactionDef] = [RUSH, BOOM]

@@ -27,3 +27,4 @@ economy_tier_bonus = 0
 produce_ap_discount = 1
 build_ap_discount = 1
 produce_cost_discount_pct = 0
+frees_pilots = []

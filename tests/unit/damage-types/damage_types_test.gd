@@ -110,9 +110,15 @@ func test_ac5_ac6_incendiary_ignores_cover_and_kinetic_does_not() -> void:
 
 
 func test_dt9b_machines_are_weak_to_emf_and_infantry_resist_it() -> void:
-	for t: UnitTypeDef in UnitTypes.ALL:
+	# ⚠ 2026-09-28: DT-9b keys EMF on what a unit is MADE of, not its class — the Protectorate's
+	# Servitor is robot INFANTRY and is deliberately EMF-weak. So: the baseline's infantry resist,
+	# and every machine (vehicle or aircraft) in any roster is weak.
+	for t: UnitTypeDef in Faction.units(Factions.DEMOCRATIC_ALLIANCE):
 		if t.unit_class == UnitTypeDef.UnitClass.INFANTRY:
 			assert_int(t.resist_emf).is_equal(2)
+	for t: UnitTypeDef in UnitTypes.ALL:
+		if t.unit_class == UnitTypeDef.UnitClass.INFANTRY:
+			continue
 		else:
 			assert_int(t.resist_emf).override_failure_message(
 				"%s is a machine but not EMF-vulnerable." % t.display_name).is_less(0)

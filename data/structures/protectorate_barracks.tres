@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=6 format=3]
+; GENERATED from game-data/Structures/Protectorate Barracks.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: b8d32e7babad0bffb72311eab4f0bbc7797bca828f0953b01512e5ecb34950ad
+
+[ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/units/servitor.tres" id="2"]
+[ext_resource type="Resource" path="res://data/units/demolitions_specialist.tres" id="3"]
+[ext_resource type="Resource" path="res://data/units/lance_specialist.tres" id="4"]
+[ext_resource type="Resource" path="res://data/units/support_specialist.tres" id="5"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Protectorate Barracks"
+buildable = false
+art_id = &"barracks"
+hp = 12
+build_cost = 600
+build_time = 2
+upkeep = 100
+max_count = 2
+cap_bonus = 2
+production_cap = 4
+producible_types = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5")]
+attack = 0
+attack_range = 0
+defense = 0
+can_counterattack = false
+can_research = false
+can_target = Array[int]([0, 1])
+targeting_mode = 0
+min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = 0
+resist_incendiary = 0

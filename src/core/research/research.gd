@@ -151,6 +151,14 @@ static func idle_heal(state: GameState, player: int) -> int:
 	return total
 
 
+## Whether [param player] has researched a tech that frees [param type] from needing a pilot.
+static func frees_pilot(state: GameState, player: int, type: UnitTypeDef) -> bool:
+	for t: TechDef in state.per_player[player].completed_techs:
+		if type in t.frees_pilots:
+			return true
+	return false
+
+
 static func produce_ap_discount(state: GameState, player: int) -> int:
 	var total: int = 0
 	for t: TechDef in state.per_player[player].completed_techs:
@@ -286,6 +294,8 @@ static func advance_research_timers(state: GameState, player: int) -> Array:
 			ps.economy_tier = clampi(ps.economy_tier + tech.economy_tier_bonus, 0, Balance.economy.max_economy_tier)
 		lab.research_target = null
 		lab.research_turns_remaining = 0
+		if not tech.frees_pilots.is_empty():
+			events.append_array(_eject_freed_pilots(state, player, tech))
 		var evt := TechCompletedEvent.new()
 		evt.owner = player
 		evt.tech = tech
@@ -302,6 +312,35 @@ static func advance_research_timers(state: GameState, player: int) -> Array:
 ## ever written during their owner's own turn, so at this point they describe exactly
 ## the previous owner-turn. A unit deployed at this same start-of-turn does not exist
 ## yet (step 3), so it cannot be healed before it has had a turn to be idle in.
+## CR-11a: once a type no longer needs a pilot, the pilot aboard each such unit climbs out onto
+## the first free adjacent tile (N, E, S, W). With nowhere to stand it stays aboard — still a
+## passenger, still counted — rather than vanishing.
+static func _eject_freed_pilots(state: GameState, player: int, tech: TechDef) -> Array:
+	var events: Array = []
+	for e: EntityState in state.entities():
+		if not (e is UnitState) or e.owner != player:
+			continue
+		var v: UnitState = e
+		if v.pilot == null or not (v.type in tech.frees_pilots):
+			continue
+		for d: Vector2i in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
+			var t: Vector2i = v.position + d
+			if state.grid.in_bounds(t.x, t.y) and state.grid.is_passable(t.x, t.y) \
+					and Unit.can_stand_on(v.pilot.type, state.grid.terrain_at(t.x, t.y)):
+				var p: UnitState = v.pilot
+				v.pilot = null
+				p.position = t
+				state.entities_by_id[p.entity_id] = p
+				state.grid.place(p.entity_id, t.x, t.y)
+				var d_evt := UnitDisembarkedEvent.new()
+				d_evt.unit_id = p.entity_id
+				d_evt.vehicle_id = v.entity_id
+				d_evt.tile = t
+				events.append(d_evt)
+				break
+	return events
+
+
 static func apply_idle_healing(state: GameState, player: int) -> Array:
 	var amount: int = idle_heal(state, player)
 	if amount <= 0:

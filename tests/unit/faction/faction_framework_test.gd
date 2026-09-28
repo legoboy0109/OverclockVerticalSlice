@@ -170,3 +170,62 @@ func test_no_crew_makes_movement_free() -> void:
 	fast.type = UnitTypes.MACHINIST
 	walker.pilot = fast
 	assert_int(Unit.crewed_move_cost(walker)).is_equal(Unit.MIN_MOVE_COST)
+
+
+func _protectorate_state() -> GameState:
+	return MatchSetup.build(_map(),
+		[Factions.GALACTIC_PROTECTORATE, Factions.DEMOCRATIC_ALLIANCE] as Array[FactionDef], 0, 80)
+
+
+func _place(state: GameState, type: UnitTypeDef, tile: Vector2i) -> UnitState:
+	var u := UnitState.new()
+	u.entity_id = state.next_entity_id
+	u.owner = 0
+	u.position = tile
+	u.type = type
+	u.current_hp = type.hp
+	state.entities_by_id[u.entity_id] = u
+	state.grid.place(u.entity_id, tile.x, tile.y)
+	state.next_entity_id += 1
+	return u
+
+
+func test_mech_autonomy_frees_mechs_but_never_tanks() -> void:
+	var state := _protectorate_state()
+	var mech := _place(state, UnitTypes.SENTINEL_MECH, Vector2i(5, 1))
+	var tank := _place(state, UnitTypes.LANCE_TANK, Vector2i(5, 8))
+	assert_bool(Unit.is_functional(state, mech)).is_false()
+	GameStateFactory.grant_tech(state, 0, Techs.MECH_AUTONOMY)
+	assert_bool(Unit.is_functional(state, mech)).is_true()
+	assert_bool(Unit.is_functional(state, tank)).override_failure_message(
+		"Mech Autonomy freed a TANK — CR-11a says tanks always need crew.").is_false()
+
+
+func test_completing_mech_autonomy_ejects_the_pilot() -> void:
+	var state := _protectorate_state()
+	var mech := _place(state, UnitTypes.SENTINEL_MECH, Vector2i(5, 1))
+	var pilot := UnitState.new()
+	pilot.entity_id = 400
+	pilot.owner = 0
+	pilot.type = UnitTypes.SERVITOR
+	pilot.current_hp = pilot.type.hp
+	mech.pilot = pilot
+	var hq: StructureState = Research.researcher(state, 0)
+	hq.research_target = Techs.MECH_AUTONOMY
+	hq.research_turns_remaining = 1
+	Research.advance_research_timers(state, 0)
+	assert_object(mech.pilot).is_null()
+	assert_bool(state.entities_by_id.has(400)).is_true()
+	assert_int(state.grid.manhattan_distance(pilot.position, mech.position)).is_equal(1)
+
+
+func test_mech_autonomy_is_the_protectorates_alone() -> void:
+	var state := _protectorate_state()
+	assert_bool(Faction.techs(state, 0).has(Techs.MECH_AUTONOMY)).is_true()
+	assert_bool(Faction.techs(state, 1).has(Techs.MECH_AUTONOMY)).is_false()
+	assert_int(Research.availability(state, 1, Techs.MECH_AUTONOMY)).is_equal(Action.Reason.TECH_FACTION_RESTRICTED)
+
+
+func test_servitors_are_cap_exempt_and_poor_pilots() -> void:
+	assert_bool(UnitTypes.SERVITOR.counts_toward_cap).is_false()
+	assert_int(UnitTypes.SERVITOR.crew_bonus_attack).is_equal(-1)

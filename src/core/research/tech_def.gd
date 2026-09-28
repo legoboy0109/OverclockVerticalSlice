@@ -79,3 +79,6 @@ extends Resource
 @export var build_ap_discount: int = 0
 ## Percent knocked off every unit's Credit produce cost, floored at 1 Credit.
 @export var produce_cost_discount_pct: int = 0
+## Unit types that no longer need a pilot once this is researched (the Galactic Protectorate's
+## Mech Autonomy, faction-identity.md CR-11a). Crewed ones eject their pilot on completion.
+@export var frees_pilots: Array[UnitTypeDef] = []

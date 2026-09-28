@@ -19,6 +19,8 @@ const PLATING: TechDef = preload("res://data/techs/plating.tres")
 const FIELD_REPAIR: TechDef = preload("res://data/techs/field_repair.tres")
 const LOGISTICS: TechDef = preload("res://data/techs/logistics.tres")
 const FOUNDRY: TechDef = preload("res://data/techs/foundry.tres")
+## ★ Galactic Protectorate only (in its own tree, not the shared one).
+const MECH_AUTONOMY: TechDef = preload("res://data/techs/mech_autonomy.tres")
 
 const ALL: Array[TechDef] = [
 	ATTACK_I, DEFENSE_I, ECONOMY_I,
