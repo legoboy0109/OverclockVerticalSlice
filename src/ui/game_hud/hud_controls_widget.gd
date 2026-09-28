@@ -188,16 +188,9 @@ func _default_buildable_types() -> Array[StructureTypeDef]:
 	# unproductive structure 0 -- so this only ever affected the human.
 	return [
 		StructureTypes.BARRACKS,
-	# ⛔ The RESEARCH LAB is deliberately absent (S8-34, 2026-08-26) — the SAME reasoning
-	# S6-09 applied to the Factory, and for a starker reason. The Research & Tech epic
-	# (ADR-0018) is NOT BUILT: `research.gd` is an explicit forward declaration, there is
-	# no ResearchAction, and Action.Verb.RESEARCH is never registered with GameState, so
-	# it cannot be dispatched at all. A Lab is 800 Credits and a consumed Builder for a
-	# building that does NOTHING, with nothing in the UI saying so.
-	# ★ Restore this entry in the same change that makes research work — see CR-14 in
-	# `design/gdd/research-tech.md` and the epic in `post-gate-backlog.md`.
-	# ⚠ The type itself stays in StructureTypes.ALL on purpose: the art-coverage guards
-	# enumerate ALL, and dropping it there would silently stop guarding its sprites.
+	# ★ The RESEARCH LAB was removed by S8-34 while research did not exist, and restored
+	# 2026-09-28 (CR-14): it is now the gate for every tier-2 tech.
+		StructureTypes.RESEARCH_LAB,
 		StructureTypes.DEFENSIVE_STRUCTURE,
 	]
 

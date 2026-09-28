@@ -38,13 +38,18 @@ func _hud_roster() -> Array[StructureTypeDef]:
 	return roster
 
 
-func test_the_research_lab_is_not_offered_while_research_does_nothing() -> void:
-	# ⛔ Restore it in the SAME change that makes research work — CR-14 in
-	# design/gdd/research-tech.md. Not before: a player who buys one gets nothing.
+func test_the_research_lab_is_offered_because_it_gates_tier_two() -> void:
+	# ★ Restored 2026-09-28 (CR-14). Research runs at the HQ; the Lab is the gate every
+	# tier-2 tech requires. Absent, the whole second half of the tree is unreachable.
 	assert_bool(_slice_roster().has(StructureTypes.RESEARCH_LAB)).override_failure_message(
-		"The Research Lab is offered again, but Action.Verb.RESEARCH is still not " +
-		"registered with GameState — it is 800 Credits for a building that cannot act."
-	).is_false()
+		"The Research Lab is not offered, but every tier-2 tech requires one — the " +
+		"player could never reach tier 2."
+	).is_true()
+	for tech: TechDef in Techs.ALL:
+		for gate: StructureTypeDef in tech.required_structures:
+			assert_bool(_slice_roster().has(gate)).override_failure_message(
+				"%s requires a %s, which the player cannot build." % [tech.display_name, gate.display_name]
+			).is_true()
 
 
 func test_the_factory_is_not_offered_while_it_produces_nothing() -> void:
