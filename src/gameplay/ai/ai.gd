@@ -252,6 +252,7 @@ static func choose_action(state: GameState, economy_investments_committed: int, 
 		best = _score_research_candidates(lookahead, entity, economy_investments_committed, best)
 		best = _score_cancel_build_candidates(lookahead, entity, builds_committed_this_turn, best)
 		best = _score_crewing_candidates(lookahead, entity, best)
+		best = _score_transport_candidates(lookahead, entity, best)
 		best = _score_ability_candidates(lookahead, entity, best)
 
 	# Pass-threshold gate (ADR-0011 §1, AC-9): a candidate that does not clear
@@ -851,6 +852,69 @@ static func _ability_value(lookahead: GameState, unit: UnitState, ability: Abili
 	return 0.0
 
 
+## ★ Transports (2026-09-28): the AI's troop-carrying plan, in three steps that each score on
+## the same positional scale as walking.
+## [br]1. EMBARK — infantry far from the fight (> [member AIConfig.transport_far_distance]) boards
+##    an adjacent working transport with room: worth the tiles the transport will carry it
+##    ([member AIConfig.transport_turns_estimate] turns at the transport's own pace).
+## [br]2. The loaded transport then advances like any unit (positional scoring already moves it).
+## [br]3. DISEMBARK / PARADROP — near the enemy, a passenger is dropped on the tile that best sets
+##    it up to attack next turn. Far from the enemy it stays aboard (no value in unloading).
+static func _score_transport_candidates(lookahead: GameState, entity: EntityState, best: _Candidate) -> _Candidate:
+	if not (entity is UnitState):
+		return best
+	var unit: UnitState = entity
+	# 1. Board.
+	if unit.type.unit_class != UnitTypeDef.UnitClass.AIR and not unit.turn_ended \
+			and _nearest_live_enemy_distance(lookahead, unit.position, unit.owner) > AIBalance.ai.transport_far_distance:
+		for d: Vector2i in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
+			var v: EntityState = lookahead.entity_at(unit.position + d)
+			if not (v is UnitState) or v.owner != unit.owner or (v as UnitState).type.transport_capacity <= 0:
+				continue
+			if not Unit.is_functional(lookahead, v):
+				continue
+			var a := UseAbilityAction.new()
+			a.player = unit.owner
+			a.unit_id = unit.entity_id
+			a.ability = Abilities.EMBARK
+			a.target_tile = v.position
+			if Ability.validate(lookahead, a) != Action.Reason.OK:
+				continue
+			if Unit.needs_pilot(lookahead, v) and (v as UnitState).pilot == null:
+				continue   # that would crew it, not ride it — _score_crewing_candidates' job
+			var value: float = AIBalance.ai.positional_value_per_tile_closed \
+				* float((v as UnitState).type.soft_move_cap) * AIBalance.ai.transport_turns_estimate
+			var score: float = value / float(Abilities.EMBARK.ap_cost)
+			if _is_better(score, Abilities.EMBARK.ap_cost, unit.entity_id, best.score, best.ap_cost, best.entity_id):
+				best = _Candidate.new(a, score, Abilities.EMBARK.ap_cost, unit.entity_id, v.position)
+	# 3. Unload near the enemy.
+	if unit.cargo.is_empty():
+		return best
+	for p: UnitState in unit.cargo:
+		for ability: AbilityDef in [Abilities.DISEMBARK, Abilities.PARADROP]:
+			if not Ability.carries(unit, ability):
+				continue
+			for t: Vector2i in Ability.legal_targets(lookahead, unit, ability, p):
+				var dist_after: int = _nearest_live_enemy_distance(lookahead, t, unit.owner)
+				if dist_after > p.type.soft_move_cap + p.type.attack_range:
+					continue   # not yet near enough to be worth leaving the transport
+				var value: float = AIBalance.ai.setup_advance_bonus if _sets_up_attack_next_turn(lookahead, p, t) else 0.0
+				value += AIBalance.ai.positional_value_per_tile_closed * float(maxi(0,
+					_nearest_live_enemy_distance(lookahead, unit.position, unit.owner) - dist_after))
+				if value <= 0.0:
+					continue
+				var score: float = value / float(ability.ap_cost)
+				if _is_better(score, ability.ap_cost, unit.entity_id, best.score, best.ap_cost, best.entity_id):
+					var a2 := UseAbilityAction.new()
+					a2.player = unit.owner
+					a2.unit_id = unit.entity_id
+					a2.ability = ability
+					a2.target_tile = t
+					a2.passenger_id = p.entity_id
+					best = _Candidate.new(a2, score, ability.ap_cost, unit.entity_id, t)
+	return best
+
+
 static func _score_crewing_candidates(lookahead: GameState, entity: EntityState, best: _Candidate) -> _Candidate:
 	if not (entity is UnitState):
 		return best
@@ -1235,11 +1299,16 @@ static func _matchup_multiplier(lookahead: GameState, owner: int, unit_type: Uni
 	var bonus: float = 0.0
 	if unit_type.can_pilot and _owns_empty_vehicle(lookahead, owner):
 		bonus = AIBalance.ai.crew_need_bonus
+	# ★ Specialists are worth what their ABILITIES do, not just their gun (2026-09-28, second
+	# pass): a Medic's attack of 1 made it look worthless, so the AI never built one.
+	var ability_effect: float = _ability_matchup_effect(lookahead, owner, unit_type)
 	if unit_type.attack <= 0 or unit_type.can_target.is_empty():
-		# A Builder's worth is what it raises, so it keeps its flat value. An unarmed TRANSPORT
-		# sits at the floor: this AI has no plan for carrying troops, so it would buy one and
-		# never use it — measured: at 1.0 the Union AI bought 89 Haulers over its armed vehicles.
-		return (1.0 if unit_type.can_build else AIBalance.ai.matchup_floor) + bonus
+		if unit_type.can_build:
+			return 1.0 + bonus   # a Builder's worth is what it raises
+		if unit_type.transport_capacity > 0:
+			# Worth the share of our infantry still far from the fight — what it would carry.
+			return AIBalance.ai.matchup_floor + AIBalance.ai.matchup_scale * _far_infantry_share(lookahead, owner) + bonus
+		return AIBalance.ai.matchup_floor + AIBalance.ai.matchup_scale * ability_effect + bonus
 	var probe := UnitState.new()
 	probe.owner = owner
 	probe.type = unit_type
@@ -1256,7 +1325,64 @@ static func _matchup_multiplier(lookahead: GameState, owner: int, unit_type: Uni
 		if Combat.can_target(probe, e):
 			hit += worth * minf(1.0, float(Combat.damage(lookahead, probe, e)) / float(maxi(1, _max_hp_of(e))))
 	var effect: float = hit / total if total > 0.0 else 0.5
-	return AIBalance.ai.matchup_floor + AIBalance.ai.matchup_scale * effect + bonus
+	return AIBalance.ai.matchup_floor + AIBalance.ai.matchup_scale * maxf(effect, ability_effect) + bonus
+
+
+## The best 0..1 effect [param unit_type]'s ABILITIES have in this matchup (0 if none apply):
+## [br]• Repair — how much of our army's hp is missing (×2, capped at 1): a Medic is worth most
+##   to a battered army and little to a fresh one.
+## [br]• Demolish — its boosted hit against the enemy's structures, weighted by their worth.
+## [br]• Self Destruct — its blast against the enemy, halved: it can only ever be used once.
+static func _ability_matchup_effect(lookahead: GameState, owner: int, unit_type: UnitTypeDef) -> float:
+	var best: float = 0.0
+	for a: AbilityDef in unit_type.abilities:
+		match a.id:
+			&"repair":
+				var missing: float = 0.0
+				var total: float = 0.0
+				for e: EntityState in lookahead.entities():
+					if e is UnitState and e.owner == owner:
+						total += float(Unit.effective_max_hp(e))
+						missing += float(Unit.effective_max_hp(e) - (e as UnitState).current_hp)
+				if total > 0.0:
+					best = maxf(best, minf(1.0, 2.0 * missing / total))
+			&"demolish":
+				var worth: float = 0.0
+				var hit: float = 0.0
+				for e: EntityState in lookahead.entities():
+					if e.owner == owner or e.owner < 0:
+						continue
+					var w: float = _opponent_paid_ap_equivalent(e)
+					worth += w
+					if e is StructureState:
+						hit += w * minf(1.0, float(unit_type.attack + a.amount) / float(maxi(1, _max_hp_of(e))))
+				if worth > 0.0:
+					best = maxf(best, hit / worth)
+			&"self_destruct":
+				var worth2: float = 0.0
+				var hit2: float = 0.0
+				for e: EntityState in lookahead.entities():
+					if e.owner == owner or e.owner < 0:
+						continue
+					var w2: float = _opponent_paid_ap_equivalent(e)
+					worth2 += w2
+					hit2 += w2 * minf(1.0, float(a.amount) / float(maxi(1, _max_hp_of(e))))
+				if worth2 > 0.0:
+					best = maxf(best, 0.5 * hit2 / worth2)
+	return best
+
+
+## Share (0..1) of our infantry farther than [member AIConfig.transport_far_distance] tiles from
+## the nearest enemy — the troops a transport would actually move.
+static func _far_infantry_share(lookahead: GameState, owner: int) -> float:
+	var all: int = 0
+	var far: int = 0
+	for e: EntityState in lookahead.entities():
+		if e is UnitState and e.owner == owner and (e as UnitState).type.unit_class == UnitTypeDef.UnitClass.INFANTRY:
+			all += 1
+			if _nearest_live_enemy_distance(lookahead, e.position, owner) > AIBalance.ai.transport_far_distance:
+				far += 1
+	return float(far) / float(all) if all > 0 else 0.0
 
 
 static func _owns_empty_vehicle(lookahead: GameState, owner: int) -> bool:

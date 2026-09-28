@@ -290,3 +290,24 @@ in the current matchup, and to use each faction's signature tools.
 Alliance is simply the strongest roster (its design is "complete"), and how much is the AI still
 not playing specialists (Solar's Medics/Volunteers, the Independents' Saboteurs) or transports.
 A human playing each faction is the next real measurement.
+
+## AI — specialists and transports (second pass, 2026-09-28)
+
+- **Specialists are valued by their abilities** as well as their gun: Repair by how much of the
+  army's hp is missing, Demolish by its boosted hit on enemy structures, Self Destruct by its blast
+  (halved — one use). Transports by the share of infantry far from the fight.
+- **Transport plan:** far-off infantry boards a working transport; a loaded transport advances
+  like any unit; near the enemy it unloads (or paradrops) a passenger on the tile that best sets up
+  an attack. Knobs: `transport_far_distance` (6), `transport_turns_estimate` (2).
+
+### Results (60 games per faction vs the Alliance)
+Solar 9 · Independents 21 · Union 18 · Protectorate 15 · Empire 26 = **89/300** (was 97). The
+Alliance mirror is byte-for-byte unchanged (29/30 HQ kills, avg 55 turns).
+- ✅ Specialists now appear and act: Medics 34, Volunteers 13, Saboteurs 11, Support 26, Demolitions
+  76, Confessors 41; Demolish used 77×, Self Destruct 5×, Repair far more.
+- ⚠ **Transports still barely feature (2 built).** Not a bug — the plan is unit-tested — but on the
+  12×10 board most infantry is within 6 tiles of the fight for most of the game, so a transport
+  rarely beats walking. **Transports need bigger maps to matter**; worth remembering when maps are
+  authored.
+- ⚠ Using specialists did not make their factions win more. Either the specialists are weak as
+  designed, or the AI uses them crudely (e.g. a Medic spends its turn healing instead of shooting).
