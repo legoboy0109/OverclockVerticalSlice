@@ -90,7 +90,15 @@ def helicopter(d, a):
     d.ellipse((86, 42, 100, 56), fill=BODY)                                    # canopy
 
 
-UNIT_SHAPES = {"tank": tank, "artillery": artillery, "fighter": fighter, "bomber": bomber,
+def transport(d, a):
+    poly(d, [(10, 106), (104, 106), (118, 90), (24, 90)], BODY_DARK)
+    poly(d, [(14, 94), (106, 94), (118, 60), (26, 60)], a)                     # tall box body
+    poly(d, [(84, 60), (118, 60), (118, 78), (96, 84)], BODY)                  # cab window
+    for x in (36, 56):
+        d.rectangle((x, 70, x + 12, 80), fill=BODY)                           # side hatches
+
+
+UNIT_SHAPES = {"transport": transport, "tank": tank, "artillery": artillery, "fighter": fighter, "bomber": bomber,
                "helicopter": helicopter}
 
 

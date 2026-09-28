@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+; GENERATED from game-data/Abilities/Self Destruct.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 2d7b4aa4c3eae9a51038fd97e79eb9fe1a194391b571927ff1cc91ba23045072
+
+[ext_resource type="Script" path="res://src/core/ability/ability_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Self Destruct"
+id = &"self_destruct"
+description = "Destroy this unit, dealing 6 damage to everything next to it — friends included."
+ap_cost = 1
+credit_cost = 0
+ability_range = 0
+cooldown = 0
+uses_per_match = 1
+amount = 6

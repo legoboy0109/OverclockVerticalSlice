@@ -50,6 +50,51 @@ static func reset_turn_flags(unit: UnitState) -> void:
 	unit.has_attacked = false
 	unit.tiles_moved_this_turn = 0
 	unit.stood_down = false # a stand-down lasts one turn, never longer.
+	# ★ Abilities / transport (2026-09-28). Fortify lasts until its owner's next turn;
+	# cooldowns tick once per owner-turn.
+	unit.ability_used_this_turn = false
+	unit.turn_ended = false
+	unit.disembarked_this_turn = false
+	unit.embarked_this_turn = false
+	unit.fortify = 0
+	for key: Variant in unit.cooldowns.keys():
+		unit.cooldowns[key] = maxi(0, int(unit.cooldowns[key]) - 1)
+	# Passengers are off the board, so start_turn's entity loop never reaches them.
+	for passenger: UnitState in passengers(unit):
+		reset_turn_flags(passenger)
+
+
+## Everyone riding in [param unit]: its pilot (if any) then its cargo, one level deep.
+static func passengers(unit: UnitState) -> Array[UnitState]:
+	var out: Array[UnitState] = []
+	if unit.pilot != null:
+		out.append(unit.pilot)
+	out.append_array(unit.cargo)
+	return out
+
+
+## Everyone riding in [param unit] at any depth (a vehicle carried in a transport has a
+## pilot too). Population and upkeep count these: a carried unit still exists (TP-1/TP-10).
+static func all_carried(unit: UnitState) -> Array[UnitState]:
+	var out: Array[UnitState] = []
+	for p: UnitState in passengers(unit):
+		out.append(p)
+		out.append_array(all_carried(p))
+	return out
+
+
+## Whether [param unit] can act at all (TP-5): a vehicle that needs a pilot and has none
+## cannot move, attack or use abilities. It still blocks its tile and can be destroyed.
+static func is_functional(unit: UnitState) -> bool:
+	return not unit.type.requires_pilot or unit.pilot != null
+
+
+## Passenger slots in use in [param unit] (TP-2). The pilot's seat is not a slot.
+static func transport_load(unit: UnitState) -> int:
+	var total: int = 0
+	for c: UnitState in unit.cargo:
+		total += c.type.transport_size
+	return total
 
 
 ## Returns an independent deep copy of [param unit] via
@@ -94,7 +139,7 @@ static func effective_attack(state: GameState, unit: UnitState) -> int:
 ## [method Research.defense_bonus] (Defense Tech, and Plating on top). Live, like
 ## [method effective_attack].
 static func effective_defense(state: GameState, unit: UnitState) -> int:
-	return unit.type.defense + Research.defense_bonus(state, unit.owner)
+	return unit.type.defense + Research.defense_bonus(state, unit.owner) + unit.fortify
 
 
 ## The AP cost to produce a unit of [param unit_type] for [param player]

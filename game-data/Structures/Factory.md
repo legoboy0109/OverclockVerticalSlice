@@ -11,6 +11,7 @@ production_cap: 1
 produces:
 - '[[Tank]]'
 - '[[Artillery]]'
+- '[[Transport]]'
 attack: 0
 attack_range: 0
 defense: 0

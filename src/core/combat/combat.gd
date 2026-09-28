@@ -337,6 +337,10 @@ static func legal_targets(state: GameState, attacker: EntityState) -> Array[Targ
 ## (control-manifest Performance Guardrail); called once per reachable-frontier
 ## tile by the dominant caller, ADR-0011's AI lookahead.
 static func legal_targets_from(state: GameState, attacker: EntityState, from_tile: Vector2i) -> Array[TargetResult]:
+	# TP-5 / TP-3: an unpiloted vehicle has no one on the gun, and a unit that disembarked
+	# this turn is done. No targets means no attack AND no counterattack, from one place.
+	if attacker is UnitState and (not Unit.is_functional(attacker) or (attacker as UnitState).turn_ended):
+		return []
 	if attacker.type.targeting_mode == UnitTypeDef.TargetingMode.AREA:
 		return _area_targets_from(state, attacker, from_tile)
 	var results: Array[TargetResult] = []
@@ -367,6 +371,8 @@ static func legal_targets_from(state: GameState, attacker: EntityState, from_til
 ## [code]can_target[/code]. A STRUCTURE counts as a ground target — attackable by anything
 ## that can hit infantry or ground vehicles, so a Fighter (air-only) cannot hit a building.
 static func can_target(attacker: EntityState, target: EntityState) -> bool:
+	if target == null:
+		return false
 	var classes: Array[int] = attacker.type.can_target
 	if target is UnitState:
 		return (target as UnitState).type.unit_class in classes
@@ -607,6 +613,20 @@ static func apply(state: GameState, action: AttackAction) -> Array[Event]:
 	for v: EntityState in victims:
 		dmgs.append(damage(state, attacker, v))
 	for i: int in victims.size():
+		# ★ TP-7: a crew-targeting attack on a CREWED vehicle hits the pilot instead. If the
+		# pilot dies the vehicle is left intact and unpiloted — ready to be captured. Against an
+		# unpiloted or autonomous vehicle it falls through to normal damage, so it is never wasted.
+		if attacker is UnitState and attacker.type.targets_crew and victims[i] is UnitState \
+				and (victims[i] as UnitState).pilot != null:
+			var vehicle: UnitState = victims[i]
+			# A pilot inside a vehicle is never in Cover, whatever tile it boarded from.
+			var pilot_dmg: int = maxi(CombatBalance.combat.min_damage, _effective_attack_for(state, attacker)
+				- Unit.effective_defense(state, vehicle.pilot) - resistance(vehicle.pilot, attacker.type.damage_type))
+			Unit.apply_hp_delta(vehicle.pilot, -pilot_dmg)
+			if vehicle.pilot.current_hp <= 0:
+				vehicle.pilot = null
+			events.append(DamageEvent.new(attacker.entity_id, vehicle.entity_id, pilot_dmg))
+			continue
 		_apply_damage_to(victims[i], dmgs[i])   # polymorphic: unit OR structure defender
 		# The blow is announced BEFORE any death it causes (ADR-0004 ordering).
 		events.append(DamageEvent.new(attacker.entity_id, victims[i].entity_id, dmgs[i]))

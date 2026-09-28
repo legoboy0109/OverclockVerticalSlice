@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Scout.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 52f1032da0195d6480a7e3d9cdf9196eb091298a23d3e35b3b8723fccd635aea
+; source-sha256: eafc679bc120f6d246521f75db4047dc2f2167cec7db07b5f527cd903991f8a0
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -29,3 +29,10 @@ resist_emf = 2
 resist_incendiary = 0
 area_shape = 0
 area_length = 4
+abilities = []
+can_pilot = true
+requires_pilot = false
+transport_capacity = 0
+transport_accepts = Array[int]([])
+transport_size = 1
+targets_crew = false

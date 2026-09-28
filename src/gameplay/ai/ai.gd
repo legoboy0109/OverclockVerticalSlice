@@ -251,6 +251,8 @@ static func choose_action(state: GameState, economy_investments_committed: int, 
 		best = _score_build_and_economy_candidates(lookahead, entity, economy_investments_committed, best)
 		best = _score_research_candidates(lookahead, entity, economy_investments_committed, best)
 		best = _score_cancel_build_candidates(lookahead, entity, builds_committed_this_turn, best)
+		best = _score_crewing_candidates(lookahead, entity, best)
+		best = _score_ability_candidates(lookahead, entity, best)
 
 	# Pass-threshold gate (ADR-0011 §1, AC-9): a candidate that does not clear
 	# AIBalance.ai.pass_threshold is not worth the AP — return null so the driver
@@ -778,6 +780,115 @@ static func _tiles_moved_for(unit: UnitState, reported_cost: int) -> int:
 ## [param tiles_moved] tiles entered — the sole [Action] constructor the
 ## positional/retreat branch uses, mirroring [method _consider_attack]'s
 ## "construct, never apply" discipline (ADR-0011 §1: only the caller commits).
+## ★ Transport & Pilots (2026-09-28): crew our own empty vehicles. A vehicle arrives from
+## the Factory unpiloted and inert (TP-5b) — without this the AI would buy armour and never
+## use it. A pilot-capable infantry unit next to one climbs in (worth
+## [member AIConfig.crew_vehicle_value_fraction] of the vehicle's price, since crewing is
+## what turns that spend into a working unit); one that can reach a tile beside it this turn
+## walks there first. Nearest vehicle by id order, deterministic (ADR-0003).
+## ★ Unit abilities (2026-09-28): scores every catalogue ability [param entity] could use
+## right now, on the same AP-equivalent value-per-AP scale as an attack, over the legal
+## targets the rules themselves report ([method Ability.legal_targets]). Embark is scored by
+## [method _score_crewing_candidates]; disembark and paradrop are not proposed (the AI has
+## no transport plan yet). Values reuse the attack model so abilities compete honestly:
+## [br]• Repair — the restored hp, priced like hp removed from us.
+## [br]• Fortify — only when an enemy that can hit this unit is in reach; the defence it
+##   adds times the expected hits a turn.
+## [br]• Demolish — exactly an attack's value against the structure.
+## [br]• Self Destruct — enemy damage, less friendly damage, less the unit itself.
+## [br]• Capture — the vehicle's price: we gain a unit the opponent paid for.
+static func _score_ability_candidates(lookahead: GameState, entity: EntityState, best: _Candidate) -> _Candidate:
+	if not (entity is UnitState):
+		return best
+	var unit: UnitState = entity
+	for ability: AbilityDef in Ability.usable(lookahead, unit):
+		if ability == Abilities.EMBARK or ability == Abilities.DISEMBARK or ability == Abilities.PARADROP:
+			continue
+		var cost: float = float(ability.ap_cost) + credits_to_ap(float(ability.credit_cost))
+		for tile: Vector2i in Ability.legal_targets(lookahead, unit, ability):
+			var value: float = _ability_value(lookahead, unit, ability, tile)
+			if value <= 0.0:
+				continue
+			var score: float = value / cost
+			if _is_better(score, ability.ap_cost, unit.entity_id, best.score, best.ap_cost, best.entity_id):
+				var a := UseAbilityAction.new()
+				a.player = unit.owner
+				a.unit_id = unit.entity_id
+				a.ability = ability
+				a.target_tile = tile
+				best = _Candidate.new(a, score, ability.ap_cost, unit.entity_id, tile)
+	return best
+
+
+static func _ability_value(lookahead: GameState, unit: UnitState, ability: AbilityDef, tile: Vector2i) -> float:
+	var target: EntityState = lookahead.entity_at(tile)
+	match ability.id:
+		&"repair":
+			var t: UnitState = target
+			var restored: int = mini(ability.amount, t.type.hp - t.current_hp)
+			return _combat_value(restored, false, t)
+		&"fortify":
+			if not _nearest_threatening_enemy(lookahead, unit).found:
+				return 0.0
+			return float(ability.amount) * AIBalance.ai.attacks_landed_per_turn_estimate / AIBalance.ai.hp_per_ap
+		&"demolish":
+			var dmg: int = maxi(CombatBalance.combat.min_damage, Unit.effective_attack(lookahead, unit)
+				+ ability.amount - target.type.defense)
+			var removed: int = mini(dmg, _current_hp_of(target))
+			return _combat_value(removed, removed >= _current_hp_of(target), target)
+		&"self_destruct":
+			var total: float = -_combat_value(unit.current_hp, true, unit)
+			for d: Vector2i in [Vector2i.UP, Vector2i.LEFT, Vector2i.RIGHT, Vector2i.DOWN]:
+				var v: EntityState = lookahead.entity_at(unit.position + d)
+				if v == null:
+					continue
+				var hit: int = mini(ability.amount, _current_hp_of(v))
+				var val: float = _combat_value(hit, hit >= _current_hp_of(v), v)
+				total += val if v.owner != unit.owner else -val
+			return total
+		&"capture_vehicle":
+			return credits_to_ap(float((target as UnitState).type.produce_cost))
+	return 0.0
+
+
+static func _score_crewing_candidates(lookahead: GameState, entity: EntityState, best: _Candidate) -> _Candidate:
+	if not (entity is UnitState) or not (entity as UnitState).type.can_pilot:
+		return best
+	var unit: UnitState = entity
+	for e: EntityState in lookahead.entities():
+		if not (e is UnitState) or e.owner != unit.owner:
+			continue
+		var v: UnitState = e
+		if not v.type.requires_pilot or v.pilot != null:
+			continue
+		var value: float = credits_to_ap(float(v.type.produce_cost)) * AIBalance.ai.crew_vehicle_value_fraction
+		if lookahead.grid.manhattan_distance(unit.position, v.position) == 1:
+			var embark := UseAbilityAction.new()
+			embark.player = unit.owner
+			embark.unit_id = unit.entity_id
+			embark.ability = Abilities.EMBARK
+			embark.target_tile = v.position
+			if Ability.validate(lookahead, embark) != Action.Reason.OK:
+				continue
+			var score: float = value / float(Abilities.EMBARK.ap_cost)
+			if _is_better(score, Abilities.EMBARK.ap_cost, unit.entity_id, best.score, best.ap_cost, best.entity_id):
+				best = _Candidate.new(embark, score, Abilities.EMBARK.ap_cost, unit.entity_id)
+			continue
+		# Not adjacent: walk to the cheapest tile beside it that is reachable this turn.
+		var step: Movement.ReachableTile = null
+		for r: Movement.ReachableTile in Movement.reachable(lookahead, unit):
+			if lookahead.grid.manhattan_distance(r.tile, v.position) == 1 and (step == null or r.min_cost < step.min_cost):
+				step = r
+		if step == null:
+			continue
+		var cost: int = step.min_cost + Abilities.EMBARK.ap_cost
+		var move_score: float = value / float(cost)
+		if _is_better(move_score, cost, unit.entity_id, best.score, best.ap_cost, best.entity_id):
+			best = _Candidate.new(_make_move_action(unit, step.tile, _tiles_moved_for(unit, step.min_cost)),
+				move_score, cost, unit.entity_id, step.tile)
+	return best
+
+
 static func _make_move_action(unit: UnitState, dest: Vector2i, tiles_moved: int) -> MoveAction:
 	var action := MoveAction.new()
 	action.player = unit.owner

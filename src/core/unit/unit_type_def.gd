@@ -57,6 +57,29 @@ enum AreaShape { SINGLE, BURST, LINE }
 ## Tiles a LINE attack covers (DT-7). Ignored by other shapes.
 @export var area_length: int = 4
 
+## Catalogue abilities this unit carries (unit-abilities.md AB-2). Embark and disembark are
+## not listed here — every unit that fits in a transport may use them (see [Ability]).
+@export var abilities: Array[AbilityDef] = []
+
+## May crew a vehicle (transport-and-pilots.md TP-5c). Infantry only.
+@export var can_pilot: bool = false
+
+## Inert until a pilot climbs in: cannot move, attack or use abilities (TP-5). Every ground
+## vehicle ships with this on (TP-5a) — it is what makes armour cost an infantry slot.
+@export var requires_pilot: bool = false
+
+## Passenger slots (TP-2); 0 = not a transport. The pilot's seat is separate.
+@export var transport_capacity: int = 0
+
+## Unit classes this transport accepts as passengers (TP-2).
+@export var transport_accepts: Array[int] = []
+
+## Slots this unit takes as a passenger: 1 for infantry, 3 for a vehicle (TP-2).
+@export var transport_size: int = 1
+
+## This unit's attacks hit a crewed vehicle's PILOT instead of the vehicle (TP-7).
+@export var targets_crew: bool = false
+
 @export var display_name: String
 @export var hp: int
 @export var attack: int

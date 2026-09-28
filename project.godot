@@ -76,6 +76,9 @@ StructureTypes="*res://src/core/structure/structure_types.gd"
 ; the stable order the research picker, legal_research_targets and the AI walk.
 Techs="*res://src/core/research/techs.gd"
 
+; ★ 2026-09-28 (Unit Abilities). Registry of AbilityDef presets, generated from the vault.
+Abilities="*res://src/core/ability/abilities.gd"
+
 ; Thin, logic-free config Autoload (ADR-0017 D6), a sibling of Balance/
 ; UnitBalance/CombatBalance. Loads the BaseProductionConfig tuning resource
 ; once at boot; Base & Production (and cross-system readers like Combat's

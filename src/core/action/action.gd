@@ -44,7 +44,7 @@ extends RefCounted
 ## ⚠ APPENDED ONLY, never inserted — CommandFSM and several callers index this by
 ## ordinal, and renumbering an existing verb silently rewires every one of them.
 ## (S8-13 learned this when appending BUILD; CANCEL_PRODUCTION follows the rule.)
-enum Verb { MOVE, ATTACK, BUILD, PRODUCE, RESEARCH, CANCEL_BUILD, END_TURN, DISBAND, WAIT, CANCEL_PRODUCTION, CANCEL_RESEARCH }
+enum Verb { MOVE, ATTACK, BUILD, PRODUCE, RESEARCH, CANCEL_BUILD, END_TURN, DISBAND, WAIT, CANCEL_PRODUCTION, CANCEL_RESEARCH, USE_ABILITY }
 
 ## Every rejection cause [method GameState.apply_action] can return, plus
 ## [constant Reason.OK] for a passing [code]validate()[/code]. Deliberately an
@@ -114,6 +114,17 @@ enum Reason {
 	TECH_FACTION_RESTRICTED,
 	# Cancel Research on a researcher with nothing in progress.
 	NOTHING_IN_RESEARCH,
+	# ★ Unit abilities / transport (2026-09-28), appended to preserve ordinals.
+	# This unit does not carry that ability.
+	ABILITY_NOT_CARRIED,
+	# Already acted this way this turn (AB-5), or its turn has ended (TP-3).
+	ALREADY_ACTED,
+	# The ability is cooling down, or its uses for the match are spent (AB-7).
+	ABILITY_ON_COOLDOWN,
+	# A vehicle with no pilot cannot act (TP-5).
+	VEHICLE_UNPILOTED,
+	# No room: the transport is full, or it will not take this class (TP-2).
+	TRANSPORT_FULL,
 }
 
 ## Which verb this is — the dispatch key [method GameState.apply_action] uses

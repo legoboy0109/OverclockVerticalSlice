@@ -86,6 +86,10 @@ class ReachableTile extends RefCounted:
 ##     print(r.tile, r.min_cost, r.is_surcharged)
 ## [/codeblock]
 static func reachable(state: GameState, unit: UnitState) -> Array[ReachableTile]:
+	# TP-5 / TP-3: a pilotless vehicle cannot move, and nor can a unit whose turn ended by
+	# disembarking. Empty here means every caller — rules, menu, AI — agrees.
+	if not Unit.is_functional(unit) or unit.turn_ended:
+		return []
 	return _reachable_within(state, unit, state.current_ap(unit.owner))
 
 
@@ -312,6 +316,7 @@ static func apply(state: GameState, action: Action) -> Array[Event]:
 	state.grid.move(move.from, move.to)
 	unit.position = move.to
 	unit.tiles_moved_this_turn += move.tiles_entered
+	unit.fortify = 0   # Fortify ends the moment the unit moves (unit-abilities.md)
 	# ★ 2026-08-25: acting clears the stand-down mark. It records "I am finished
 	# with this one", and the player has visibly changed their mind — leaving it
 	# set would keep the entity dim and skipped while it still had a turn left.

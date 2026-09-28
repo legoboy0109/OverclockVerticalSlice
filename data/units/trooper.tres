@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Trooper.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: d089508c18796e9530cb035cc09200df4cf4a02f18a84916a824cc78591bf8ee
+; source-sha256: 9d65914c713abf977c05fe1bdba742f9ccc4d74754f14f407b202703c54f1f49
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -29,3 +29,10 @@ resist_emf = 2
 resist_incendiary = 0
 area_shape = 0
 area_length = 4
+abilities = []
+can_pilot = true
+requires_pilot = false
+transport_capacity = 0
+transport_accepts = Array[int]([])
+transport_size = 1
+targets_crew = false

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+; GENERATED from game-data/Abilities/Repair.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: cd763d759bb092575698c630faf60c3f7ab87bbaf91f3c19556c08c4cdd303c0
+
+[ext_resource type="Script" path="res://src/core/ability/ability_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Repair"
+id = &"repair"
+description = "Restore hp to one adjacent friendly unit (not itself)."
+ap_cost = 2
+credit_cost = 100
+ability_range = 1
+cooldown = 1
+uses_per_match = 0
+amount = 4

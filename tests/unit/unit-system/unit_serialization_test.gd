@@ -53,6 +53,11 @@ const KNOWN_FIELDS: Array[String] = [
 	# lookahead disagree with the board it was cloned from. This guard caught the
 	# field on the turn it was added, which is exactly what it is for.
 	"stood_down",
+	# ★ 2026-09-28 — unit abilities and transport. All must survive duplicate_deep() for the
+	# same reason: pilot and cargo are whole UnitStates carried inside this one, and an AI
+	# lookahead that dropped them would see an empty vehicle.
+	"ability_used_this_turn", "cooldowns", "uses", "fortify", "turn_ended",
+	"disembarked_this_turn", "embarked_this_turn", "pilot", "cargo",
 ]
 
 

@@ -134,6 +134,7 @@ var _plain_map: bool = false
 ## and S7-11 (cover) both lengthened matches — it was calibrated before either.
 var _produced: Dictionary = {}
 var _built: Dictionary = {}
+var _abilities: Dictionary = {}
 var _max_rounds_override: int = 0
 
 ## ★ S7-13 — force which seat moves first, for every game in the batch. -1 = the default
@@ -236,6 +237,8 @@ func _run() -> void:
 		print("SIM_PRODUCED,%s,%d" % [key, _produced[key]])
 	for key: String in _built:
 		print("SIM_BUILT,%s,%d" % [key, _built[key]])
+	for key: String in _abilities:
+		print("SIM_ABILITY,%s,%d" % [key, _abilities[key]])
 	print("SIM_DONE")
 	get_tree().quit()
 
@@ -289,6 +292,9 @@ func _run_one_turn(state: GameState, game: int = 0, turn: int = 0, favoured: int
 		if result.ok and action is ProduceAction:
 			var key: String = (action as ProduceAction).unit_type.display_name
 			_produced[key] = _produced.get(key, 0) + 1
+		if result.ok and action is UseAbilityAction:
+			var akey: String = (action as UseAbilityAction).ability.display_name
+			_abilities[akey] = _abilities.get(akey, 0) + 1
 		if result.ok and action is BuildAction:
 			var bkey: String = (action as BuildAction).structure_type.display_name
 			_built[bkey] = _built.get(bkey, 0) + 1
