@@ -1,5 +1,6 @@
 ---
 id: new_map
+round_limit: 80
 ---
 
 ```map

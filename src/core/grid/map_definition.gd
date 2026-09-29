@@ -49,6 +49,10 @@ const MAX_DIM: int = 24
 ## the vault note's title and `description`.
 @export var display_name: String
 @export_multiline var description: String
+## ★ 2026-09-28 (user decision): the round limit a match on this map starts with — longer boards
+## need longer games. The setup screen switches to it when the map changes; the player can still
+## change it. From the vault note's `round_limit` (default 80, the small map's measured cap).
+@export var default_round_limit: int = 80
 
 @export var width: int
 

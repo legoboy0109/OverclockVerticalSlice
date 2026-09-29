@@ -140,7 +140,7 @@ func _step(row: int, dir: int) -> void:
 		5:
 			var maps: Array[MapDefinition] = Maps.all()
 			var at: int = maxi(0, maps.find(_settings.map))
-			_settings.map = maps[posmod(at + dir, maps.size())]
+			_settings.choose_map(maps[posmod(at + dir, maps.size())])
 	_refresh()
 
 

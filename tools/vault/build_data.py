@@ -416,7 +416,11 @@ def render(note: Note, index: dict) -> str:
         lines.append(f'id = &"{note.id}"')   # the effect code dispatches on this
     if note.kind == "Maps":
         mp = parse_map(note)
+        rl = note.props.get("round_limit", 80)
+        if not isinstance(rl, int) or isinstance(rl, bool) or not 20 <= rl <= 200:
+            raise VaultError(f"{note.rel}: round_limit must be a whole number from 20 to 200 (got {rl!r})")
         lines += [
+            f"default_round_limit = {rl}",
             f"description = {gd_str(str(note.props.get('description', '')))}",
             f"width = {mp['width']}",
             f"height = {mp['height']}",

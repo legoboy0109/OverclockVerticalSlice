@@ -103,7 +103,26 @@ func test_match_settings_default_to_a_playable_faction_and_shipped_values() -> v
 	var m := MatchSettings.defaults()
 	assert_bool(m.factions[0].playable).is_true()
 	assert_int(m.ap_per_turn).is_equal(Balance.base_economy.flat_ap_per_turn)
-	assert_int(m.round_limit).is_equal(VerticalSliceRoot.VS_MAX_ROUNDS)
+	assert_int(m.round_limit).is_equal(m.map.default_round_limit)
+
+
+func test_choosing_a_map_switches_to_its_round_limit() -> void:
+	var m := MatchSettings.defaults()
+	var highlands: MapDefinition = load("res://data/maps/highlands.tres")
+	m.round_limit = 30
+	m.choose_map(highlands)
+	assert_object(m.map).is_same(highlands)
+	assert_int(m.round_limit).is_equal(160)
+
+
+func test_the_setup_screen_map_row_changes_the_round_limit() -> void:
+	var screen: SkirmishSetup = auto_free(SkirmishSetup.new())
+	add_child(screen)
+	await get_tree().process_frame
+	screen._step(5, 1)
+	var chosen: MapDefinition = screen.settings().map
+	assert_object(chosen).is_not_same(Maps.all()[0])
+	assert_int(screen.settings().round_limit).is_equal(chosen.default_round_limit)
 
 
 func test_the_setup_screen_steps_and_clamps_its_settings() -> void:

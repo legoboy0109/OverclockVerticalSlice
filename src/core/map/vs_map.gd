@@ -132,6 +132,7 @@ static func _cover_tiles() -> Array[Vector2i]:
 static func build(plain: bool = false) -> MapDefinition:
 	var map := MapDefinition.new()
 	map.display_name = data().display_name
+	map.default_round_limit = data().default_round_limit
 	map.width = WIDTH
 	map.height = HEIGHT
 	map.mode = MapDefinition.Mode.AUTHORED
