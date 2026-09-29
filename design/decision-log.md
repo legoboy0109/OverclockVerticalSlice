@@ -688,6 +688,8 @@ are unchanged, so code and saves are unaffected):
 - Machinist's Union → **Ross Foundry Collective**
 - Independents → **The Lightless**
 - Galactic Protectorate → **Trappist Autonomous Mandate**
-- Holy Cosmic Empire → *pending (options offered)*
-- ⚠ Open: building notes still carry the old short names ("Solar Barracks", "Union Factory",
-  "Protectorate Defence", "Independents Airfield", "Empire …").
+- Holy Cosmic Empire → **Order of the Ninth Descent**
+- **Buildings** use a short form of the new name for now (user; flavourful names to come later):
+  Front / Collective / Lightless / Mandate / Order + Barracks, Factory, Airfield (and Mandate
+  Defence). The Accord uses the shared generic buildings. Cathedral, Bulwark and other unprefixed
+  buildings are unchanged.

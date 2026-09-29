@@ -1,5 +1,5 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=5 format=3]
-; GENERATED from game-data/Structures/Protectorate Airfield.md — edit the note, then run: python3 tools/vault/build_data.py
+; GENERATED from game-data/Structures/Mandate Airfield.md — edit the note, then run: python3 tools/vault/build_data.py
 ; source-sha256: f1d58b6a3961d15c0a2d5bec39a4a82723f2e86762d8484a62ac08abdc62908c
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
@@ -9,7 +9,7 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Protectorate Airfield"
+display_name = "Mandate Airfield"
 buildable = false
 art_id = &"airfield"
 counts_as = []

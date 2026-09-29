@@ -4,9 +4,9 @@ description: A hierarchy that grows stronger with every battle — and falls apa
 playable: true
 hq: null
 structures:
-- '[[Empire Barracks]]'
-- '[[Empire Factory]]'
-- '[[Empire Airfield]]'
+- '[[Order Barracks]]'
+- '[[Order Factory]]'
+- '[[Order Airfield]]'
 - '[[Cathedral]]'
 - '[[Defensive Structure]]'
 techs:

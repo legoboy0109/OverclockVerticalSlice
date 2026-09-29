@@ -4,9 +4,9 @@ description: 'Poor, few and dangerous: every soldier a specialist, and their bes
 playable: true
 hq: null
 structures:
-- '[[Independents Barracks]]'
-- '[[Independents Factory]]'
-- '[[Independents Airfield]]'
+- '[[Lightless Barracks]]'
+- '[[Lightless Factory]]'
+- '[[Lightless Airfield]]'
 - '[[Research Lab]]'
 - '[[Defensive Structure]]'
 techs: []

@@ -1,5 +1,5 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=4 format=3]
-; GENERATED from game-data/Structures/Independents Factory.md — edit the note, then run: python3 tools/vault/build_data.py
+; GENERATED from game-data/Structures/Lightless Factory.md — edit the note, then run: python3 tools/vault/build_data.py
 ; source-sha256: 3ab97a958d2b479ecb65578819e6d838ecdc47659848c4d13f730a558791702f
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
@@ -8,7 +8,7 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Independents Factory"
+display_name = "Lightless Factory"
 buildable = false
 art_id = &"factory"
 counts_as = []

@@ -1,5 +1,5 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=3 format=3]
-; GENERATED from game-data/Structures/Independents Airfield.md — edit the note, then run: python3 tools/vault/build_data.py
+; GENERATED from game-data/Structures/Lightless Airfield.md — edit the note, then run: python3 tools/vault/build_data.py
 ; source-sha256: 50b35317e662f7711debb0358992d0a4049959890ca214ff30bd099c4b2179d5
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
@@ -7,7 +7,7 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Independents Airfield"
+display_name = "Lightless Airfield"
 buildable = false
 art_id = &"airfield"
 counts_as = []

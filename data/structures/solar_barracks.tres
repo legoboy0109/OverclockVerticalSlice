@@ -1,5 +1,5 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=7 format=3]
-; GENERATED from game-data/Structures/Solar Barracks.md — edit the note, then run: python3 tools/vault/build_data.py
+; GENERATED from game-data/Structures/Front Barracks.md — edit the note, then run: python3 tools/vault/build_data.py
 ; source-sha256: fc7bfbfe4ee5f1c9ccc1b9588bbfa19b0b1b98ad0ed700a9650f5feba252cb9f
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
@@ -11,7 +11,7 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Solar Barracks"
+display_name = "Front Barracks"
 buildable = false
 art_id = &"barracks"
 counts_as = []
