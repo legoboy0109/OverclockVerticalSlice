@@ -51,7 +51,11 @@ extends Resource
 ## Flat Credit income every player earns each turn regardless of board state.
 ## ★ The board no longer contributes to income at all — this plus the tier term
 ## is the whole formula.
-@export var base_income: int = 1000
+## ★ 2026-09-29 (user decision): 1000 → 1500. At 1000 the AI fielded under 2 fighters at a time,
+## so armies never formed groups and big-map games dragged on (Highlands HQ kills averaged 84
+## rounds). At 1500: Crossroads 28/30 decisive in ~34 rounds, Highlands 25/30 in ~51, and groups
+## of 3+ on 17-31% of turns (design/decision-log.md, "Army size is the real lever").
+@export var base_income: int = 1500
 
 ## Credit income added per completed economy research tier.
 @export var econ_tier_bonus: int = 500

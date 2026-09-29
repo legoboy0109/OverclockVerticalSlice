@@ -531,3 +531,27 @@ measured (30 games per map); **none beat the shipped steady-pressure AI**, so th
   Groups form on their own and games get much shorter. Gathering still didn't beat pressure
   there (Crossroads 25/30, Highlands 21/30). **Open decision (user): raise base income?** It also
   changes human play (bigger armies, faster games). Faction balance at higher income is not yet measured.
+
+## Base income 1000 → 1500 (user decision, 2026-09-29) — ⏸ on branch, awaiting two calls
+
+- Set in `EconomyConfig.base_income`. The income curve becomes 1500 / 2000 / 2500 / 3000 by tier.
+- ⚠ **Unit cap vs upkeep rule breaks.** `population_cap_test` guards "the cap sits just above the
+  army upkeep can sustain", so upkeep is what limits army size. At a fully researched economy the
+  sustainable army is now 11 against a cap of 10, so the cap would do the limiting. **User call:**
+  raise the base infantry cap 4 → 6 (cap 12), or accept a cap-limited late game.
+- **Faction check** (each faction vs the Alliance, 30 games each; faction wins, old → new income):
+
+  | Faction | Small map | Crossroads |
+  |---|---|---|
+  | Solar Federation | 6 → 7 | 9 → 7 |
+  | Independents | 8 → 10 | 18 → 25 |
+  | Machinist's Union | 5 → 6 | 8 → 6 |
+  | Galactic Protectorate | 11 → 14 | 8 → 9 |
+  | Holy Cosmic Empire | 16 → 11 | **19 → 4** |
+  | **Total** | 46 → 48 /150 | 62 → 51 /150 |
+
+  - Independents gain because their flat −200 income penalty shrinks from 20% to 13% of base.
+  - **Empire collapse (Crossroads):** the Alliance can now afford Artillery (3 → 38 built;
+    1,600 Credits, range 5, 16 hp). Nothing the Empire fields reaches past 3, so Artillery shells
+    it from out of reach (it landed the killing blow on the HQ in 11 games; the Alliance won by
+    HQ kill 23 times, was 11). Game length unchanged (~50 rounds), so it isn't about promotion time.
