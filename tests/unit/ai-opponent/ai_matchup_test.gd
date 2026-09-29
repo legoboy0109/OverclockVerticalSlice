@@ -296,3 +296,56 @@ func test_a_threatened_builder_retreats_out_of_reach() -> void:
 	var dest: Vector2i = (best.action as MoveAction).to
 	assert_int(state.grid.manhattan_distance(dest, sniper.position)) \
 		.is_greater(state.grid.manhattan_distance(builder.position, sniper.position))
+
+
+# --- AP priority (2026-09-29) --------------------------------------------------------------------
+
+func _fortify_value(state: GameState, unit: UnitState) -> float:
+	return AI._ability_value(state, unit, Abilities.FORTIFY, unit.position)
+
+
+func test_a_heavy_that_is_pushing_does_not_fortify() -> void:
+	var b: Array = _push_board(2)
+	var state: GameState = b[0]
+	var heavy := _unit(state, 0, UnitTypes.HEAVY, Vector2i(3, 4))
+	_unit(state, 1, UnitTypes.TROOPER, Vector2i(6, 4))   # an enemy in reach, so Fortify is on the table
+	assert_float(_fortify_value(state, heavy)).override_failure_message(
+		"A Heavy in a push-ready group dug in instead of advancing.").is_equal(0.0)
+	# Control: with the hold rule off (the old behaviour) this same Heavy WOULD fortify.
+	var saved: int = AIBalance.ai.fortify_hold_rule
+	AIBalance.ai.fortify_hold_rule = 0
+	var old_value: float = _fortify_value(state, heavy)
+	AIBalance.ai.fortify_hold_rule = saved
+	assert_float(old_value).is_greater(0.0)
+
+
+func test_a_lone_heavy_holding_under_threat_does_fortify() -> void:
+	# Positive control: alone (the massing rule forbids advancing into reach) and threatened.
+	var state := _state()
+	var heavy := _unit(state, 0, UnitTypes.HEAVY, Vector2i(2, 5))
+	_unit(state, 1, UnitTypes.SNIPER, Vector2i(7, 5))
+	assert_float(_fortify_value(state, heavy)).is_greater(0.0)
+
+
+func test_an_efficient_step_beats_a_diluted_leap() -> void:
+	# A short wall across the lane at x=2 (rows 4-6): one clean step east is possible, but every
+	# tile beyond the wall is reached by a detour that walks more tiles than it closes. The fold
+	# used to keep that furthest tile, which scored below the bar, so the unit stood still.
+	# (A friendly unit would not do as the blocker — units pass through their own side.)
+	var state := _state()
+	for y: int in [4, 5, 6]:
+		state.grid.terrain[state.grid.index(2, y)] = GridState.Terrain.IMPASSABLE
+	var harmless: UnitTypeDef = UnitTypes.TROOPER.duplicate()
+	harmless.can_target = []
+	_unit(state, 1, harmless, Vector2i(11, 5))
+	var mover := _unit(state, 0, UnitTypes.TROOPER, Vector2i(0, 5))
+	# Control: with the rule off (the old furthest-tile fold) this board DOES yield a diluted leap.
+	AIBalance.ai.efficient_moves_first = false
+	var old_best := AI._score_positional_and_retreat_candidates(state, mover, AI._Candidate.new())
+	AIBalance.ai.efficient_moves_first = true
+	assert_float(old_best.score).is_less_equal(AIBalance.ai.pass_threshold)
+	var best := AI._score_positional_and_retreat_candidates(state, mover, AI._Candidate.new())
+	assert_bool(best.action is MoveAction).is_true()
+	assert_float(best.score).override_failure_message(
+		"The chosen advance (%s, score %.2f) is below the bar although a clean step east exists." \
+			% [(best.action as MoveAction).to, best.score]).is_greater(AIBalance.ai.pass_threshold)

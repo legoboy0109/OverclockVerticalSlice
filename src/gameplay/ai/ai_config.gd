@@ -327,3 +327,15 @@ extends Resource
 @export var push_defence_radius: int = 4
 @export var push_structure_value_factor: float = 0.1
 @export var push_siege_multiplier: float = 3.0
+
+## ★ AP priority switches (kept as knobs so each rule can be measured on its own with the
+## simulator's --ai=<knob>=<value>). efficient_moves_first: the advance/siege folds prefer a tile
+## that clears pass_threshold over a further, diluted one. fortify_hold_rule: 0 = Fortify
+## whenever threatened (the old behaviour); 1 = never in a push-ready group; 2 = also never when
+## the unit has a worthwhile move.
+## ⚠ A third rule — spend AP that would be lost over the carry-over cap on any positive,
+## credit-free action — was built and measured (2026-09-29) and removed: it changed nothing,
+## because by the end of a turn the AI genuinely has nothing useful left to do. AP is not what
+## limits it; Credits (army size) are. See design/decision-log.md.
+@export var efficient_moves_first: bool = true
+@export var fortify_hold_rule: int = 2

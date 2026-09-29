@@ -417,6 +417,7 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 	var ret_ap_cost: int = 0
 
 	var adv_found: bool = false
+	var adv_efficient: bool = false
 	var adv_tile: Vector2i = Vector2i.ZERO
 	var adv_tiles_moved: int = 0
 	var adv_dist_after: int = nearest_enemy_dist_before
@@ -441,6 +442,7 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 	if pushing:
 		siege_rate *= AIBalance.ai.push_siege_multiplier
 	var siege_found: bool = false
+	var siege_efficient: bool = false
 	var siege_tile: Vector2i = Vector2i.ZERO
 	var siege_tiles_moved: int = 0
 	var siege_dist_after: int = siege_dist_before
@@ -500,8 +502,13 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 				var s_value: float = siege_rate * float(siege_dist_before - hq_dist_after)
 				var s_score: float = s_value / float(tiles_moved)
 				var s_take: bool = false
+				# ★ AP priority (2026-09-29): an efficient step beats a diluted leap — see the
+				# same rule in the advance fold below.
+				var s_efficient: bool = s_score > AIBalance.ai.pass_threshold or not AIBalance.ai.efficient_moves_first
 				if not siege_found:
 					s_take = true
+				elif s_efficient != siege_efficient:
+					s_take = s_efficient
 				elif hq_dist_after < siege_dist_after:
 					s_take = true
 				elif hq_dist_after == siege_dist_after \
@@ -513,6 +520,7 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 					# whichever tile Movement enumerated first.
 					s_take = _tile_wins_tie(lookahead, r.tile, siege_tile, hq, axis_horizontal)
 				if s_take:
+					siege_efficient = s_efficient
 					siege_found = true
 					siege_tile = r.tile
 					siege_tiles_moved = tiles_moved
@@ -558,8 +566,17 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 		# cover, which is the entire point.
 		var effective_dist: int = dist_after - (AIBalance.ai.cover_tile_discount if dest_is_cover else 0)
 		var take: bool = false
+		# ★ AP priority (2026-09-29): a tile whose per-tile score clears pass_threshold always
+		# beats one that does not. The fold otherwise keeps the FURTHEST tile, and a far tile
+		# reached by a detour (5 tiles walked to close 3) scores below the bar — so choose_action
+		# dropped it and the unit stood still, although a shorter step was worth taking.
+		# Measured on Highlands: 52-70% of idle fighters. A diluted leap is still kept as the
+		# fallback when nothing efficient exists (choose_action's pass_threshold then decides).
+		var efficient: bool = score > AIBalance.ai.pass_threshold or not AIBalance.ai.efficient_moves_first
 		if not adv_found:
 			take = true
+		elif efficient != adv_efficient:
+			take = efficient
 		elif effective_dist < adv_effective_dist:
 			take = true
 		elif effective_dist == adv_effective_dist and _is_better(score, r.min_cost, unit.entity_id, adv_score, adv_ap_cost, unit.entity_id):
@@ -571,6 +588,7 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 			# it is what handed the east seat 14 of 14 close games.
 			take = _tile_wins_tie(lookahead, r.tile, adv_tile, hq, axis_horizontal)
 		if take:
+			adv_efficient = efficient
 			adv_found = true
 			adv_tile = r.tile
 			adv_tiles_moved = tiles_moved
@@ -854,6 +872,17 @@ static func _ability_value(lookahead: GameState, unit: UnitState, ability: Abili
 		&"fortify":
 			if not _nearest_threatening_enemy(lookahead, unit).found:
 				return 0.0
+			# ★ AP priority (2026-09-29): Fortify is a HOLDING action — moving ends it — so it is
+			# worth nothing to a unit that is about to move. Before this, its flat value (≈2.0 per
+			# AP against ≈0.16-0.6 per tile for moving) won whenever an enemy was in reach, and
+			# the AI dug in instead of advancing: 11,608 Fortifies in 30 Highlands games.
+			var hold_rule: int = AIBalance.ai.fortify_hold_rule
+			if hold_rule >= 1 and _push_ready(lookahead, unit, _enemy_hq(lookahead, unit.owner)):
+				return 0.0
+			if hold_rule >= 2:
+				var move: _Candidate = _score_positional_and_retreat_candidates(lookahead, unit, _Candidate.new())
+				if move.action != null and move.score > AIBalance.ai.pass_threshold:
+					return 0.0
 			return float(ability.amount) * AIBalance.ai.attacks_landed_per_turn_estimate / AIBalance.ai.hp_per_ap
 		&"demolish":
 			var dmg: int = maxi(CombatBalance.combat.min_damage, Unit.effective_attack(lookahead, unit)
