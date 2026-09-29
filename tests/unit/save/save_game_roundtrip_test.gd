@@ -194,5 +194,5 @@ func test_the_label_names_map_factions_and_round() -> void:
 	var state := _played_match(3)
 	var label: String = SaveGame.describe(state, VSMap.data())
 	assert_str(label).contains(VSMap.data().display_name)
-	assert_str(label).contains("Solar Federation")
+	assert_str(label).contains(Factions.SOLAR_FEDERATION.display_name)
 	assert_str(label).contains("round %d" % state.round_number)

@@ -678,3 +678,16 @@ fighters) and groups form on 40–56% of turns. AI thinking time ~0.1 s a turn (
   which are awkward on a pad; saving over a used slot needs a second press on the same row, not a
   dialog; a finished match deletes the autosave; Restart after loading replays the loaded matchup.
 - Format: explicit JSON (a Godot resource file can run code when loaded). See ADR-0019.
+
+## Faction names (user decision, 2026-09-29)
+
+Setting: distant future, multi-system, grounded/realistic science fiction. Renamed (the internal ids
+are unchanged, so code and saves are unaffected):
+- Democratic Alliance → **The Accord of Inner Systems**
+- Solar Federation → **Wolf Citizens' Front**
+- Machinist's Union → **Ross Foundry Collective**
+- Independents → **The Lightless**
+- Galactic Protectorate → **Trappist Autonomous Mandate**
+- Holy Cosmic Empire → *pending (options offered)*
+- ⚠ Open: building notes still carry the old short names ("Solar Barracks", "Union Factory",
+  "Protectorate Defence", "Independents Airfield", "Empire …").
