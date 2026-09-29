@@ -144,6 +144,14 @@ var _dump_turn: int = -1
 var _push_trace: bool = false
 ## With --push-trace: "attacker type>victim type" -> kills, printed as SIM_KILL rows.
 var _kills: Dictionary = {}
+## With --ap-trace: AP spent per action category, summed over the batch (SIM_AP rows), plus one
+## SIM_APTURN row per turn: player, AP at start, AP left, how the turn ended.
+var _ap_trace: bool = false
+var _ap_spent: Dictionary = {}
+## With --ap-trace: why each fighter that could have moved did not, at the end of its turn
+## ("pushing:" prefix when it was ready to push). Printed as SIM_IDLE rows.
+var _idle: Dictionary = {}
+var _idle_detail: bool = false   # --idle-detail: split SIM_IDLE by unit type and move score
 var _max_rounds_override: int = 0
 
 ## ★ S7-13 — force which seat moves first, for every game in the batch. -1 = the default
@@ -197,6 +205,17 @@ func _parse_args() -> void:
 			var ut: UnitTypeDef = load("res://data/units/%s.tres" % unit_and_prop[0])
 			ut.set(unit_and_prop[1], int(spec[2]))
 			print("SIM_UNIT_STAT,%s,%s,%d" % [unit_and_prop[0], unit_and_prop[1], int(ut.get(unit_and_prop[1]))])
+		elif arg == "--idle-detail":
+			_idle_detail = true
+		elif arg.begins_with("--ai="):
+			# AI-knob experiment for this run only: --ai=fortify_hold_rule=0 (repeatable).
+			var kv: PackedStringArray = arg.trim_prefix("--ai=").split("=")
+			var cur: Variant = AIBalance.ai.get(kv[0])
+			var v: Variant = (kv[1] == "true") if cur is bool else (float(kv[1]) if cur is float else int(kv[1]))
+			AIBalance.ai.set(kv[0], v)
+			print("SIM_AI_KNOB,%s,%s" % [kv[0], str(AIBalance.ai.get(kv[0]))])
+		elif arg == "--ap-trace":
+			_ap_trace = true
 		elif arg == "--push-trace":
 			_push_trace = true
 		elif arg.begins_with("--dump-turn="):
@@ -278,6 +297,10 @@ func _run() -> void:
 		print("SIM_ABILITY,%s,%d" % [key, _abilities[key]])
 	for key: String in _kills:
 		print("SIM_KILL,%s,%d" % [key, _kills[key]])
+	for key: String in _ap_spent:
+		print("SIM_AP,%s,%d" % [key, _ap_spent[key]])
+	for key: String in _idle:
+		print("SIM_IDLE,%s,%d" % [key, _idle[key]])
 	print("SIM_DONE")
 	get_tree().quit()
 
@@ -330,10 +353,15 @@ func _run_one_turn(state: GameState, game: int = 0, turn: int = 0, favoured: int
 		and state.active_player == favoured
 		and _draw(game, turn) < _degrade_favoured_pct
 	)
+	var ap_start: int = state.per_player[state.active_player].current_ap
+	var ended_by: String = "rejects"
 	while true:
 		var action: Action = AI.choose_action(state, economy_investments)
 		if action == null:
+			ended_by = "nothing_worth_it"
 			break
+		var ap_key: String = _ap_category(state, action) if _ap_trace else ""
+		var ap_before: int = state.per_player[state.active_player].current_ap
 		var victim_key: String = ""
 		var victim_id: int = -1
 		if _push_trace and action is AttackAction:
@@ -343,6 +371,8 @@ func _run_one_turn(state: GameState, game: int = 0, turn: int = 0, favoured: int
 				victim_id = vic.entity_id
 				victim_key = "%s>%s" % [atk.type.display_name, vic.type.display_name]
 		var result: ActionResult = state.apply_action(action)
+		if _ap_trace and result.ok:
+			_ap_spent[ap_key] = _ap_spent.get(ap_key, 0) + ap_before - state.per_player[state.active_player].current_ap
 		if result.ok and victim_id >= 0 and not state.entities_by_id.has(victim_id):
 			_kills[victim_key] = _kills.get(victim_key, 0) + 1
 		if result.ok and action is ProduceAction:
@@ -374,6 +404,10 @@ func _run_one_turn(state: GameState, game: int = 0, turn: int = 0, favoured: int
 			return
 		if capped_turn and committed >= 1:
 			break
+	if _ap_trace:
+		_tally_idle(state)
+		print("SIM_APTURN,%d,%d,%d,%d,%d,%s" % [game, turn, state.active_player, ap_start,
+			state.per_player[state.active_player].current_ap, ended_by])
 	var end_turn := EndTurnAction.new()
 	end_turn.player = state.active_player
 	state.apply_action(end_turn)
@@ -557,3 +591,95 @@ func _trace_push(game: int, turn: int, state: GameState) -> void:
 			defenders += 1
 	print("SIM_PUSH,%d,%d,%d,%d,%d,%d,%d,%.1f,%d" % [game, turn, p, fighters.size(), largest, ready,
 		defenders, float(dist_sum) / maxf(1.0, float(fighters.size())), forward])
+
+
+## The --ap-trace category an action's AP is booked under. Moves are split by WHO moves, since
+## "the army advances slowly" is a question about fighter moves specifically; a fighter's
+## move+attack combo commits as a move, so it lands in move_fighter too.
+func _ap_category(state: GameState, action: Action) -> String:
+	if action is MoveAction:
+		var u: EntityState = state.entity_at((action as MoveAction).from)
+		if u is UnitState:
+			var t: UnitTypeDef = (u as UnitState).type
+			if t.can_build:
+				return "move_builder"
+			if t.attack <= 0:
+				return "move_unarmed"
+			return "move_fighter"
+		return "move_other"
+	if action is AttackAction:
+		return "attack"
+	if action is ProduceAction:
+		return "produce"
+	if action is BuildAction:
+		return "build"
+	if action is ResearchAction:
+		return "research"
+	if action is UseAbilityAction:
+		return "ability"
+	return "other_" + action.get_class()
+
+
+## For every fighter of the side whose turn just ended that neither moved nor attacked, the
+## first reason (in this order) the AI left it where it was. Uses the AI's own scoring helpers,
+## so "why" means what the AI saw, not a re-derivation.
+func _tally_idle(state: GameState) -> void:
+	var p: int = state.active_player
+	var hq: StructureState = AI._enemy_hq(state, p)
+	for e: EntityState in state.entities():
+		if not (e is UnitState) or e.owner != p:
+			continue
+		var u: UnitState = e
+		if u.type.attack <= 0 or u.type.can_build or u.has_attacked or u.tiles_moved_this_turn > 0:
+			continue
+		var why: String = ""
+		if u.fortify > 0:
+			why = "fortified"
+		else:
+			var best := AI._score_positional_and_retreat_candidates(state, u, AI._Candidate.new())
+			if best.action != null:
+				why = "move_scored_%s" % ("above_threshold" if best.score > AIBalance.ai.pass_threshold else "below_threshold")
+			else:
+				var reachable: int = 0
+				var closing: int = 0
+				var premature: int = 0
+				var target_tiles: int = 0
+				var before: int = state.grid.manhattan_distance(u.position, hq.position) if hq else 0
+				for r: Movement.ReachableTile in Movement.reachable(state, u):
+					if not AP.can_afford(state, p, r.min_cost):
+						continue
+					reachable += 1
+					if hq == null or state.grid.manhattan_distance(r.tile, hq.position) >= before:
+						continue
+					closing += 1
+					if not Combat.legal_targets_from(state, u, r.tile).is_empty():
+						target_tiles += 1
+					elif AI._advance_is_premature(state, u, r.tile):
+						premature += 1
+				if reachable == 0:
+					why = "cannot_move"
+				elif closing == 0:
+					why = "no_tile_closer_to_hq"
+				elif premature == closing:
+					why = "massing_rule_blocks_all"
+				elif target_tiles + premature == closing:
+					why = "only_attack_tiles_left"
+				else:
+					why = "no_candidate_other"
+		var key: String = ("pushing:" if AI._push_ready(state, u, hq) else "") + why
+		if _idle_detail:
+			key += "|%s|moved=%d|carried=%s" % [u.type.display_name, u.tiles_moved_this_turn,
+				str(state.entity_at(u.position) != u)]
+			if why.ends_with("cannot_move"):
+				var free: int = 0
+				for d: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+					var n: Vector2i = u.position + d
+					if state.grid.in_bounds(n.x, n.y) and state.grid.is_passable(n.x, n.y):
+						free += 1
+				key += "|ap=%s|open_sides=%d" % ["<move_cost" if state.current_ap(p) < u.type.move_cost else "enough", free]
+			if why == "move_scored_below_threshold":
+				var b := AI._score_positional_and_retreat_candidates(state, u, AI._Candidate.new())
+				var mv: MoveAction = b.action
+				key += "|score=%.2f|tiles=%d|closer_by=%d" % [b.score, mv.tiles_entered,
+					AI._nearest_live_enemy_distance(state, u.position, p) - AI._nearest_live_enemy_distance(state, mv.to, p)]
+		_idle[key] = _idle.get(key, 0) + 1

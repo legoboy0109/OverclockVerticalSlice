@@ -455,3 +455,50 @@ Measured with the simulator's new `--push-trace` (Highlands, 80 rounds, 30 games
   have real armies to defend with, and ready groups seem to advance slowly. Unverified guess: the
   shared per-turn AP pool is spent on building, production and research before the army moves.
   Next step, if wanted: tally AP spent by category in the simulator.
+
+## Where the AP goes + AP priority (2026-09-29)
+
+Measured with the simulator's new `--ap-trace` (AP spent by action type, AP left per turn, and
+why each idle fighter stayed put). 30 games per map, each map's own round limit.
+
+### Findings
+- **AP is not scarce.** The AI spent only about 20% of the AP it received, and **about half of all
+  AP was lost** over the 10-point carry-over cap. Every turn ended because nothing left was
+  worth doing, never because AP ran out. Building, production and research used about 5% of
+  spent AP; the economy is limited by Credits.
+- **Fortify ate the army's turns.** It was used 11,608 times in 30 Highlands games (about 2 per
+  side per turn). The AI valued it at about 2.0 per AP, against 0.16–0.6 per tile for moving, so
+  any unit within enemy reach dug in, and moving would have cancelled it.
+- **Idle fighters mostly had a move, just a "diluted" one.** The advance logic always offered
+  the furthest reachable tile. When terrain forced a detour (e.g. 5 tiles walked to get 3
+  closer), that tile scored under the bar and the unit did nothing, although a shorter,
+  worthwhile step existed. That covered 52–70% of idle fighters.
+- Unpiloted Artillery accounts for most of the rest (a minor, separate issue).
+
+### What changed (the AI's AP priority)
+1. **Efficient moves first:** a tile that clears the "worth doing" bar always beats a further
+   one that doesn't (both the advance and the go-for-the-HQ moves).
+2. **Fortify is a holding action:** it's worth nothing to a unit in a push-ready group, or to one
+   with a worthwhile move. It is still used by units that have nowhere good to go.
+3. ✗ **Tried and removed: "use it or lose it"** (spend AP that would be lost over the cap on any
+   positive, credit-free action). It made no measurable difference, because by turn end the AI
+   genuinely has nothing useful left to do.
+- Knobs: `efficient_moves_first`, `fortify_hold_rule` (0 = old always-fortify, 1 = not in a
+  ready group, 2 = also not with a worthwhile move; shipped at 2). Rule-by-rule measurements
+  were run on Highlands; the Fortify rule is the big lever.
+
+### Results
+
+| Map | HQ destroyed before → after | Avg rounds of those games | Group of 3+ (turns) |
+|---|---|---|---|
+| Vertical Slice | 26 → 30 /30 | 24 → 26 | 43% → 23% |
+| Crossroads | 18 → 23 /30 | 30 → 56 | 36% → 7% |
+| Highlands | 13 → 27 /30 | 48 → 84 | 47% → 4% |
+
+Faction vs Alliance: 46/150 (was 48/150). Unchanged.
+
+### ★ Trade-off for the user
+The AI now finishes far more games, but by **steady pressure, not massed pushes**: groups rarely
+form, and decisive games take longer. Fortify's +4 defence was what let waiting units survive long
+enough to gather. Setting `fortify_hold_rule` back to 0 restores the old dig-in-and-mass style
+(more groups, far fewer decisive games).
