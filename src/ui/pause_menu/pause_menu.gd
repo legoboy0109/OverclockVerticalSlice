@@ -14,10 +14,11 @@
 ## the pause menu instead, so a player can always retreat one step rather than
 ## being dropped straight back into the match from a half-made decision.
 ##
-## [b]Both destructive actions are confirm-gated.[/b] The spec calls this an
-## accessibility/error-prevention safeguard rather than a nicety: the vertical
-## slice has no save, so a mis-click on Restart or Quit destroys the match with no
-## recovery.
+## [b]Restart is confirm-gated; quitting no longer needs to be.[/b] The spec gated both as an
+## error-prevention safeguard because the slice had no save. Since save/load (user decision
+## 2026-09-29) "Quit" is "Save & Quit to Menu": the match is kept in the autosave and Continue
+## resumes it, so nothing is lost and the prompt would only slow the player down. Restart still
+## discards the match and keeps its prompt. "Save Game" opens the manual slots.
 ##
 ## [b]Testable model[/b]: [method entry_labels] / [method focused_entry] /
 ## [method is_open] / [method open_confirm_kind] are the integration surface.
@@ -27,11 +28,13 @@ extends Control
 signal resume_requested
 signal restart_requested
 signal quit_to_menu_requested
+## The player chose a manual save slot (the owning scene writes it).
+signal save_requested(slot: String)
 
 ## Entry ids in the spec's stated focus order.
-enum Entry { RESUME, RESTART, SETTINGS, QUIT_TO_MENU }
+enum Entry { RESUME, SAVE, RESTART, SETTINGS, QUIT_TO_MENU }
 ## Which confirm prompt is showing, if any.
-enum Confirm { NONE, RESTART, QUIT }
+enum Confirm { NONE, RESTART }
 
 ## ✅ Live since 2026-08-24 — [SettingsScreen] exists. `pause.md` requires that
 ## back from settings returns to THIS overlay, not to the match, which is why the
@@ -92,9 +95,10 @@ func _build() -> void:
 
 	_buttons = [
 		MenuStyle.make_entry("RESUME", true, ENTRY_WIDTH),
+		MenuStyle.make_entry("SAVE GAME", true, ENTRY_WIDTH),
 		MenuStyle.make_entry("RESTART SKIRMISH", true, ENTRY_WIDTH),
 		MenuStyle.make_entry("SETTINGS", SETTINGS_AVAILABLE, ENTRY_WIDTH),
-		MenuStyle.make_entry("QUIT TO MAIN MENU", true, ENTRY_WIDTH),
+		MenuStyle.make_entry("SAVE & QUIT TO MENU", true, ENTRY_WIDTH),
 	]
 	for b: Button in _buttons:
 		column.add_child(b)
@@ -103,7 +107,8 @@ func _build() -> void:
 
 	_buttons[Entry.RESUME].pressed.connect(request_resume)
 	_buttons[Entry.RESTART].pressed.connect(func() -> void: _open_confirm(Confirm.RESTART))
-	_buttons[Entry.QUIT_TO_MENU].pressed.connect(func() -> void: _open_confirm(Confirm.QUIT))
+	_buttons[Entry.SAVE].pressed.connect(_open_save_slots)
+	_buttons[Entry.QUIT_TO_MENU].pressed.connect(request_save_and_quit)
 	if SETTINGS_AVAILABLE:
 		_buttons[Entry.SETTINGS].pressed.connect(_open_settings)
 
@@ -186,10 +191,27 @@ func _open_settings() -> void:
 		_buttons[Entry.SETTINGS].grab_focus())
 
 
+## Saves the match (the owner writes the autosave) and leaves for the main menu — no prompt,
+## because nothing is lost.
+func request_save_and_quit() -> void:
+	visible = false
+	quit_to_menu_requested.emit()
+
+
+## Opens the manual save slots over the pause menu; focus returns to "Save Game" afterwards.
+func _open_save_slots() -> void:
+	var panel := SaveSlotsPanel.create(SaveSlotsPanel.Mode.SAVE)
+	add_child(panel)
+	panel.slot_chosen.connect(func(slot: String) -> void:
+		save_requested.emit(slot)
+		panel.queue_free()
+		_buttons[Entry.SAVE].grab_focus())
+	panel.closed.connect(func() -> void: _buttons[Entry.SAVE].grab_focus())
+
+
 func _open_confirm(kind: int) -> void:
 	_confirm_kind = kind
-	_confirm_label.text = "Restart this skirmish?" if kind == Confirm.RESTART \
-		else "Leave the match? Progress is lost."
+	_confirm_label.text = "Restart this skirmish? This match is discarded."
 	_confirm_layer.visible = true
 	_confirm_yes.grab_focus() # a pad must land inside the modal
 
@@ -199,7 +221,7 @@ func _open_confirm(kind: int) -> void:
 func close_confirm() -> void:
 	if not _confirm_layer.visible:
 		return
-	var came_from: int = Entry.RESTART if _confirm_kind == Confirm.RESTART else Entry.QUIT_TO_MENU
+	var came_from: int = Entry.RESTART
 	_confirm_layer.visible = false
 	_confirm_kind = Confirm.NONE
 	_buttons[came_from].grab_focus()
@@ -212,8 +234,6 @@ func _on_confirmed() -> void:
 	visible = false
 	if kind == Confirm.RESTART:
 		restart_requested.emit()
-	elif kind == Confirm.QUIT:
-		quit_to_menu_requested.emit()
 
 
 func _unhandled_input(event: InputEvent) -> void:

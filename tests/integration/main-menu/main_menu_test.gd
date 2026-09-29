@@ -9,6 +9,29 @@
 extends GdUnitTestSuite
 
 
+## Every test starts from an empty save folder (the test one — see SaveGame.dir()), so whether
+## Continue/Load are live never depends on what another test left behind.
+func before_test() -> void:
+	_clear_saves()
+
+
+func after_test() -> void:
+	_clear_saves()
+
+
+func _clear_saves() -> void:
+	SaveGame.delete(SaveGame.AUTOSAVE)
+	for slot: String in SaveGame.MANUAL_SLOTS:
+		SaveGame.delete(slot)
+
+
+func _write_autosave() -> void:
+	var map: MapDefinition = load("res://data/maps/vertical_slice.tres")
+	VSMap.select(map)
+	SaveGame.write(SaveGame.AUTOSAVE, MatchSetup.build(map,
+		[Factions.DEMOCRATIC_ALLIANCE, Factions.DEMOCRATIC_ALLIANCE] as Array[FactionDef], 0, 80, [1]))
+
+
 func _make_menu() -> MainMenu:
 	var menu: MainMenu = auto_free(load("res://scenes/main_menu.tscn").instantiate())
 	add_child(menu)
@@ -31,22 +54,44 @@ func _collect_buttons(n: Node, out: Array[Button]) -> void:
 
 
 # ==============================================================================
-# AC: the three entries, in order, with no Campaign/Continue in the VS build.
+# AC: the entries, in order. ★ Continue and Load Game arrived with save/load (2026-09-29);
+# Campaign is still omitted rather than greyed — it was never built.
 # ==============================================================================
 
-func test_menu_offers_exactly_the_three_specified_entries_in_order() -> void:
+func test_menu_offers_the_specified_entries_in_order() -> void:
 	var menu: MainMenu = await _make_menu()
-	assert_array(menu.entry_labels()).is_equal(["NEW SKIRMISH", "SETTINGS", "QUIT"])
+	assert_array(menu.entry_labels()).is_equal(["CONTINUE", "NEW SKIRMISH", "LOAD GAME", "SETTINGS", "QUIT"])
 
 
-func test_no_campaign_or_continue_entry_in_the_vertical_slice() -> void:
-	# The spec is explicit that these are OMITTED rather than greyed: persistence
-	# does not exist, and a disabled entry for a feature that was never built reads
-	# as a broken game rather than a scoped one.
+func test_no_campaign_entry() -> void:
 	var menu: MainMenu = await _make_menu()
-	var joined: String = "|".join(menu.entry_labels())
-	assert_str(joined).not_contains("CAMPAIGN")
-	assert_str(joined).not_contains("CONTINUE")
+	assert_str("|".join(menu.entry_labels())).not_contains("CAMPAIGN")
+
+
+func test_continue_and_load_are_inert_but_shown_with_no_saves() -> void:
+	var menu: MainMenu = await _make_menu()
+	assert_bool(menu.entry_interactive(MainMenu.Entry.CONTINUE)).is_false()
+	assert_bool(menu.entry_interactive(MainMenu.Entry.LOAD)).is_false()
+
+
+func test_an_autosave_makes_continue_live_and_focused() -> void:
+	_write_autosave()
+	var menu: MainMenu = await _make_menu()
+	assert_bool(menu.entry_interactive(MainMenu.Entry.CONTINUE)).is_true()
+	assert_bool(menu.entry_interactive(MainMenu.Entry.LOAD)).is_true()
+	assert_int(menu.focused_entry()).override_failure_message(
+		"A returning player with a match in progress should land on Continue").is_equal(MainMenu.Entry.CONTINUE)
+
+
+func test_a_save_that_cannot_be_read_says_so_and_stays_on_the_menu() -> void:
+	DirAccess.make_dir_recursive_absolute(SaveGame.dir())
+	var f := FileAccess.open(SaveGame.path_for(SaveGame.AUTOSAVE), FileAccess.WRITE)
+	f.store_string("{ broken")
+	f.close()
+	var menu: MainMenu = await _make_menu()
+	assert_bool(menu.load_and_play(SaveGame.AUTOSAVE)).is_false()
+	assert_str(menu.notice_text()).contains("could not be loaded")
+	assert_object(SaveGame.pending).is_null()
 
 
 # ==============================================================================
@@ -67,6 +112,7 @@ func test_every_entry_is_interactive_now_that_settings_exists() -> void:
 	# exist. SettingsScreen landed 2026-08-24, so all three entries are live and
 	# main-menu.md's Settings acceptance criterion can finally pass.
 	var menu: MainMenu = await _make_menu()
+	# (Continue and Load depend on saves — see the tests above.)
 	assert_bool(menu.entry_interactive(MainMenu.Entry.NEW_SKIRMISH)).is_true()
 	assert_bool(menu.entry_interactive(MainMenu.Entry.SETTINGS)).is_true()
 	assert_bool(menu.entry_interactive(MainMenu.Entry.QUIT)).is_true()

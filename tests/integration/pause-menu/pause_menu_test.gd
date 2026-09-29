@@ -3,10 +3,9 @@
 #
 # Several of these pin properties that only bite a player holding a controller or
 # a player who mis-clicks: that Resume holds focus on open, that Esc backs out one
-# step rather than two, and that neither destructive action can fire without a
-# confirm. The vertical slice has no save, so a mis-fired Restart or Quit destroys
-# the match with no recovery — the spec calls the confirm gate an accessibility
-# error-prevention safeguard rather than a nicety, and these tests treat it that way.
+# step rather than two, and that Restart cannot fire without a confirm — it discards the
+# match. ★ Since save/load (2026-09-29) Quit is "Save & Quit to Menu": the match is kept in
+# the autosave, so it fires at once; gating it would only slow the player down.
 extends GdUnitTestSuite
 
 
@@ -21,10 +20,10 @@ func _make_pause() -> PauseMenu:
 # AC: the four entries, in order, Resume focused on open.
 # ==============================================================================
 
-func test_offers_the_four_specified_entries_in_focus_order() -> void:
+func test_offers_the_specified_entries_in_focus_order() -> void:
 	var p: PauseMenu = await _make_pause()
 	assert_array(p.entry_labels()).is_equal(
-		["RESUME", "RESTART SKIRMISH", "SETTINGS", "QUIT TO MAIN MENU"])
+		["RESUME", "SAVE GAME", "RESTART SKIRMISH", "SETTINGS", "SAVE & QUIT TO MENU"])
 
 
 func test_starts_closed_and_opens_with_resume_focused() -> void:
@@ -44,6 +43,7 @@ func test_all_four_entries_are_interactive_now_that_settings_exists() -> void:
 	# 2026-08-24, so pause.md's Settings acceptance criterion can pass.
 	var p: PauseMenu = await _make_pause()
 	assert_bool(p.entry_interactive(PauseMenu.Entry.RESUME)).is_true()
+	assert_bool(p.entry_interactive(PauseMenu.Entry.SAVE)).is_true()
 	assert_bool(p.entry_interactive(PauseMenu.Entry.RESTART)).is_true()
 	assert_bool(p.entry_interactive(PauseMenu.Entry.SETTINGS)).is_true()
 	assert_bool(p.entry_interactive(PauseMenu.Entry.QUIT_TO_MENU)).is_true()
@@ -69,19 +69,45 @@ func test_restart_opens_a_confirm_and_does_not_fire_immediately() -> void:
 	).is_empty()
 
 
-func test_quit_opens_a_confirm_that_names_the_consequence() -> void:
+func test_restart_confirm_names_the_consequence() -> void:
+	var p: PauseMenu = await _make_pause()
+	p.open()
+	p._open_confirm(PauseMenu.Confirm.RESTART)
+	await get_tree().process_frame
+	# The wording has to say what is lost, not just ask twice.
+	assert_str(p.confirm_text()).contains("discarded")
+
+
+func test_save_and_quit_fires_at_once_because_nothing_is_lost() -> void:
 	var p: PauseMenu = await _make_pause()
 	p.open()
 	var fired: Array[String] = []
 	p.quit_to_menu_requested.connect(func() -> void: fired.append("quit"))
-
-	p._open_confirm(PauseMenu.Confirm.QUIT)
+	p.request_save_and_quit()
 	await get_tree().process_frame
+	assert_array(fired).is_equal(["quit"])
+	assert_int(p.open_confirm_kind()).is_equal(PauseMenu.Confirm.NONE)
+	assert_bool(p.is_open()).is_false()
 
-	assert_int(p.open_confirm_kind()).is_equal(PauseMenu.Confirm.QUIT)
-	# The wording has to say what is lost, not just ask twice.
-	assert_str(p.confirm_text()).contains("Progress is lost")
-	assert_array(fired).is_empty()
+
+func test_save_game_opens_the_slots_and_reports_the_choice() -> void:
+	var p: PauseMenu = await _make_pause()
+	p.open()
+	var saved: Array[String] = []
+	p.save_requested.connect(func(slot: String) -> void: saved.append(slot))
+	for slot: String in SaveGame.MANUAL_SLOTS:
+		SaveGame.delete(slot)   # the test save folder: empty slots save on the first press
+	p._open_save_slots()
+	await get_tree().process_frame
+	var panel: SaveSlotsPanel = null
+	for c: Node in p.get_children():
+		if c is SaveSlotsPanel:
+			panel = c
+	assert_object(panel).is_not_null()
+	panel.press("slot2")
+	await get_tree().process_frame
+	assert_array(saved).is_equal(["slot2"])
+	assert_bool(p.is_open()).override_failure_message("Saving returns to the pause menu").is_true()
 
 
 func test_confirming_fires_exactly_the_matching_signal() -> void:
@@ -91,11 +117,11 @@ func test_confirming_fires_exactly_the_matching_signal() -> void:
 	p.restart_requested.connect(func() -> void: fired.append("restart"))
 	p.quit_to_menu_requested.connect(func() -> void: fired.append("quit"))
 
-	p._open_confirm(PauseMenu.Confirm.QUIT)
+	p._open_confirm(PauseMenu.Confirm.RESTART)
 	p.confirm_now()
 	await get_tree().process_frame
 
-	assert_array(fired).is_equal(["quit"])
+	assert_array(fired).is_equal(["restart"])
 	assert_bool(p.is_open()).is_false()
 
 
@@ -137,7 +163,7 @@ func test_escape_from_a_confirm_returns_to_pause_not_to_the_match() -> void:
 	# Esc to retreat from the prompt, not to dismiss everything.
 	var p: PauseMenu = await _make_pause()
 	p.open()
-	p._open_confirm(PauseMenu.Confirm.QUIT)
+	p._open_confirm(PauseMenu.Confirm.RESTART)
 	await get_tree().process_frame
 
 	var resumed: Array[String] = []

@@ -49,10 +49,10 @@ beneath it.
 | Resume (back to match) | "Resume" · Esc again | Returns to exact match state; no state change |
 | Fresh match | "Restart Skirmish" (confirm) | Discards current match, reloads the VS map from turn 1 |
 | Settings | "Settings" | Opens settings; back returns to the pause overlay |
-| Main Menu | "Quit to Main Menu" (confirm) | Discards current match (VS has no save); one-way for this match |
+| Main Menu | "Save & Quit to Menu" (no confirm) | ★ 2026-09-29: keeps the match in the autosave; Continue resumes it (ADR-0019) |
 
 Restart and Quit-to-Menu are **one-way for the current match** — the in-progress skirmish is not
-recoverable (VS has no save). Both are confirm-gated.
+recoverable (VS has no save). Both are confirm-gated. ★ **Superseded 2026-09-29 (ADR-0019):** Quit is now Save & Quit and needs no confirm; Restart keeps its confirm. A "Save Game" entry opens three manual slots.
 
 ---
 
