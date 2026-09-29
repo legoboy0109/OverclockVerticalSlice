@@ -48,3 +48,21 @@ RNG (ADR-0003), and the AI keeps no state between turns.
   test will fail until it is.
 - UI-only state (selection, cursor, open menus, the action log) is not saved. A loaded match opens
   deselected.
+
+## ADR Dependencies
+- **ADR-0003** (deterministic simulation): no mid-match RNG, so a snapshot of `GameState` is a
+  complete save; the play-on test relies on this determinism.
+- **ADR-0005** (map authoring): the grid is saved as built, and the map is referenced by path.
+- **ADR-0007** (structure identity): `is_hq()` compares by object identity, which D2 preserves.
+
+## Engine Compatibility
+Redot 26.2 (Godot 4.6 API). Uses `JSON`, `FileAccess`, `DirAccess.rename_absolute` (atomic
+replace on the same volume), `Object.get_property_list()` usage flags
+(`PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_SCRIPT_VARIABLE`), and `Script.get_global_name()`.
+JSON numbers load as floats; D3's decoder casts back to each property's declared type.
+
+## GDD Requirements Addressed
+- `design/ux/main-menu.md` — Continue / Load Game entries (previously "persistence deferred").
+- `design/ux/pause.md` — Save Game; Quit becomes Save & Quit (the confirm gate existed only because
+  the slice had no save).
+- User decisions of 2026-09-29, recorded in `design/decision-log.md` ("Save / load").
