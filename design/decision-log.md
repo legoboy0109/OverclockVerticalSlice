@@ -502,3 +502,32 @@ The AI now finishes far more games, but by **steady pressure, not massed pushes*
 form, and decisive games take longer. Fortify's +4 defence was what let waiting units survive long
 enough to gather. Setting `fortify_hold_rule` back to 0 restores the old dig-in-and-mass style
 (more groups, far fewer decisive games).
+
+## "Fortify until the group is ready" — tried, not shipped (2026-09-29)
+
+User asked for a middle ground between steady pressure and dig-in-and-mass: fighters not yet in
+a push-ready group gather and hold (and may Fortify), then push together. Built three ways and
+measured (30 games per map); **none beat the shipped steady-pressure AI**, so the code was removed.
+
+| Version | Crossroads HQ kills | Highlands HQ kills | Groups of 3+ |
+|---|---|---|---|
+| Shipped: steady pressure | 23/30 | 27/30 | 4–7% |
+| Gather on the biggest group | 19/30 | 3/30 | 7–19% |
+| Gather at a staging point 40% / 50% of the way | 13–22/30 | 2–14/30 | 4–7% |
+| Staging point + group of 2 is enough | 25/30 | 23/30 | 4–6% |
+
+- Why: **the AI averages under 2 fighters alive per side**, so a group of 3 rarely exists to
+  gather. Gathering on the biggest group put each army beside its own HQ, where the push rule
+  counted it as HQ defenders, so neither side ever saw an opening.
+- ★ **Army size is the real lever, and it's economic.** At 1.5× base income (1000 → 1500,
+  simulator only, not shipped):
+
+  | Map | HQ kills (pressure AI) | Avg rounds | Groups of 3+ |
+  |---|---|---|---|
+  | Vertical Slice | 30/30 | 26 → 22 | 23% → 31% |
+  | Crossroads | 23 → 28 /30 | 56 → 34 | 7% → 20% |
+  | Highlands | 27 → 25 /30 | 84 → 51 | 4% → 17% |
+
+  Groups form on their own and games get much shorter. Gathering still didn't beat pressure
+  there (Crossroads 25/30, Highlands 21/30). **Open decision (user): raise base income?** It also
+  changes human play (bigger armies, faster games). Faction balance at higher income is not yet measured.
