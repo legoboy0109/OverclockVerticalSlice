@@ -287,6 +287,16 @@ func _build_match() -> void:
 	# ★ 2026-09-28 (faction framework v2 + match settings): the match is whatever the player
 	# chose on the skirmish setup screen (remembered between runs), built by the SAME
 	# MatchSetup the simulator and diagnostic tools use — see its header for why that matters.
+	# ★ Save/load (2026-09-29): a save picked on the main menu is resumed instead of a new match.
+	if SaveGame.pending != null:
+		var loaded: SaveGame.Loaded = SaveGame.pending
+		SaveGame.pending = null
+		Balance.apply_match(loaded.ap_per_turn)
+		VSMap.select(loaded.map)
+		_state = loaded.state
+		MatchSettings.current = MatchSettings.from_loaded(loaded)   # Restart replays this matchup
+		_reader = GameStateReader.new(_state)
+		return
 	var settings: MatchSettings = MatchSettings.active()
 	Balance.apply_match(settings.ap_per_turn)
 	VSMap.select(settings.map)   # ★ the chosen board; every map reader follows it
@@ -800,6 +810,8 @@ func _build_cursor() -> void:
 ## [br]3. [b]Motion last, AFTER the sync[/b], so a lean or a lunge is measured from
 ##    where the actors now are rather than where they were.
 func _on_action_applied(result: ActionResult) -> void:
+	if _state.match_status == GameState.MatchStatus.GAME_OVER:
+		SaveGame.delete(SaveGame.AUTOSAVE)   # Continue must never offer a finished match
 	_dispatch_deaths(result)
 	_refresh_open_preview() # the board changed under any open range overlay.
 	_refresh_occupant_pick_regions() # entities moved/spawned/died — re-author the click targets.
@@ -941,6 +953,7 @@ func _drive_ai_turns() -> void:
 			and _state.per_player[_state.active_player].is_ai_controlled:
 		await _ai_driver.run_ai_turn(_state)
 	_ai_running = false
+	_autosave()
 	_refresh_status() # back to "Your turn"
 
 
@@ -2108,6 +2121,36 @@ func quit_to_main_menu() -> void:
 	get_tree().change_scene_to_file(MAIN_MENU_SCENE)
 
 
+## ★ Save/load (user decision 2026-09-29): the autosave, written at the start of every one of the
+## player's turns — i.e. whenever the AI hands the turn back, including the match's first turn.
+## A finished match deletes it instead, so Continue never offers a game that is over.
+func _autosave() -> void:
+	if _state.match_status != GameState.MatchStatus.IN_PROGRESS:
+		SaveGame.delete(SaveGame.AUTOSAVE)
+		return
+	if _state.per_player[_state.active_player].is_ai_controlled:
+		return
+	if SaveGame.write(SaveGame.AUTOSAVE, _state) != OK:
+		_flash_msg("Autosave failed - see the log")
+
+
+## Pause menu "Save Game": writes the match to a manual slot and says so.
+func save_to_slot(slot: String) -> void:
+	if SaveGame.write(slot, _state) == OK:
+		_flash_msg("Saved to %s" % SaveSlotsPanel.row_text(SaveGame.info(slot)).get_slice("  —  ", 0))
+	else:
+		_flash_msg("Save failed - see the log")
+
+
+## Pause menu "Save & Quit to Menu": keeps the match in the autosave, so Continue resumes it.
+## Safe at any moment, even mid-AI-turn — every commit leaves the state whole, and a match loaded
+## on the AI's turn hands straight back to it.
+func save_and_quit() -> void:
+	if _state.match_status == GameState.MatchStatus.IN_PROGRESS:
+		SaveGame.write(SaveGame.AUTOSAVE, _state)
+	quit_to_main_menu()
+
+
 ## Builds the pause overlay on its own [CanvasLayer], above the HUD's, so nothing
 ## in the HUD can ever draw over the thing that is meant to be modal.
 func _build_pause_menu() -> void:
@@ -2119,7 +2162,8 @@ func _build_pause_menu() -> void:
 	layer.add_child(_pause)
 	_pause.resume_requested.connect(resume_from_pause)
 	_pause.restart_requested.connect(restart_match)
-	_pause.quit_to_menu_requested.connect(quit_to_main_menu)
+	_pause.quit_to_menu_requested.connect(save_and_quit)
+	_pause.save_requested.connect(save_to_slot)
 
 
 ## Jumps the board cursor to the next highlighted tile, wrapping at the end.

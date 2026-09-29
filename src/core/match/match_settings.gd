@@ -51,6 +51,21 @@ func choose_map(new_map: MapDefinition) -> void:
 	ap_per_turn = clampi(new_map.default_ap_per_turn, AP_MIN, AP_MAX)
 
 
+## The settings a loaded save was played with, so "Restart Skirmish" after loading restarts THAT
+## matchup rather than whatever the setup screen last held. Not written to disk: the setup
+## screen's remembered choice is the player's, not the save's.
+static func from_loaded(loaded: SaveGame.Loaded) -> MatchSettings:
+	var m := defaults()
+	m.factions = [] as Array[FactionDef]
+	for p: PlayerState in loaded.state.per_player:
+		m.factions.append(p.faction)
+	m.map = loaded.map
+	m.ap_per_turn = loaded.ap_per_turn
+	m.round_limit = loaded.state.max_rounds
+	m.first_mover = FirstMover.PLAYER if loaded.state.starting_player == 0 else FirstMover.AI
+	return m
+
+
 ## The settings to use now: whatever was chosen this run, else what was saved, else defaults.
 static func active() -> MatchSettings:
 	if current == null:

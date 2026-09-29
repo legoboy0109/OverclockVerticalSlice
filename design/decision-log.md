@@ -667,3 +667,14 @@ fighters) and groups form on 40–56% of turns. AI thinking time ~0.1 s a turn (
 - Map-level outliers remain: Independents strong on Highlands (25/30); Empire (9) and Solar (11)
   weak there. Solar is at the bottom edge overall (35/90).
 - All measurements are AI vs AI. How each faction feels in human hands is untested.
+
+## Save / load (user decisions, 2026-09-29) — ADR-0019
+
+- **Autosave + manual slots** (user): the game autosaves at the start of each of your turns; the main
+  menu has **Continue** (top, focused when there is a match to resume) and **Load Game**; the pause
+  menu has **Save Game** (3 slots) and **Save & Quit to Menu** (user: yes), which replaces Quit and
+  needs no confirm. Restart keeps its confirm.
+- My calls: 3 manual slots; automatic labels (map, factions, round, date) instead of typed names,
+  which are awkward on a pad; saving over a used slot needs a second press on the same row, not a
+  dialog; a finished match deletes the autosave; Restart after loading replays the loaded matchup.
+- Format: explicit JSON (a Godot resource file can run code when loaded). See ADR-0019.

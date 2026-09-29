@@ -64,10 +64,12 @@ const FOOTER_TEXT: Color = Color(0.42, 0.47, 0.55)
 ## the player can still read past is not modal.
 const SCRIM: Color = Color(0.0, 0.0, 0.0, 0.90)
 
-## Entry ids, in the spec's stated focus order.
-enum Entry { NEW_SKIRMISH, SETTINGS, QUIT }
+## Entry ids, in the spec's stated focus order. ★ CONTINUE and LOAD GAME added with save/load
+## (user decision 2026-09-29); both are shown inert — never hidden — when there is nothing to load.
+enum Entry { CONTINUE, NEW_SKIRMISH, LOAD, SETTINGS, QUIT }
 
 var _buttons: Array[Button] = []
+var _notice: Label = null
 var _quit_confirm: Control = null
 var _confirm_yes: Button = null
 
@@ -82,7 +84,8 @@ func _ready() -> void:
 	# The spec: New Skirmish focused on load. Without this a gamepad boots into a
 	# menu it cannot move within, because focus traversal needs somewhere to start.
 	if not _buttons.is_empty():
-		_buttons[Entry.NEW_SKIRMISH].grab_focus()
+		# Continue first when there is a match to go back to — the common case for a returning player.
+		_buttons[Entry.CONTINUE if entry_interactive(Entry.CONTINUE) else Entry.NEW_SKIRMISH].grab_focus()
 
 
 func _build() -> void:
@@ -116,11 +119,18 @@ func _build() -> void:
 	stack.add_theme_constant_override("separation", int(ENTRY_GAP))
 	centred.add_child(stack)
 
+	var any_save: bool = SaveGame.exists(SaveGame.AUTOSAVE)
+	for slot: String in SaveGame.MANUAL_SLOTS:
+		any_save = any_save or SaveGame.exists(slot)
 	_buttons = [
+		_make_entry(stack, "CONTINUE", SaveGame.exists(SaveGame.AUTOSAVE), "No match in progress."),
 		_make_entry(stack, "NEW SKIRMISH", true),
+		_make_entry(stack, "LOAD GAME", any_save, "No saved games yet."),
 		_make_entry(stack, "SETTINGS", SETTINGS_AVAILABLE),
 		_make_entry(stack, "QUIT", true),
 	]
+	_buttons[Entry.CONTINUE].pressed.connect(func() -> void: load_and_play(SaveGame.AUTOSAVE))
+	_buttons[Entry.LOAD].pressed.connect(_open_load)
 	_buttons[Entry.NEW_SKIRMISH].pressed.connect(_on_new_skirmish)
 	_buttons[Entry.QUIT].pressed.connect(_open_quit_confirm)
 	if SETTINGS_AVAILABLE:
@@ -136,13 +146,21 @@ func _build() -> void:
 	footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(footer)
 
+	# One line under the entries for "that save could not be loaded" — a failed load must say so.
+	_notice = Label.new()
+	_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_notice.add_theme_font_size_override("font_size", FOOTER_FONT_SIZE + 3)
+	_notice.add_theme_color_override("font_color", TITLE_HUE)
+	stack.add_child(_notice)
+
 	_build_quit_confirm()
 
 
 ## Builds one menu entry. [param interactive] false renders it at full visibility
 ## but refuses focus and input — the Standard Button pattern's "inert" state, which
 ## is explicit that inert controls are never hidden.
-func _make_entry(parent: Node, text: String, interactive: bool) -> Button:
+func _make_entry(parent: Node, text: String, interactive: bool,
+		inert_reason: String = "Settings are not implemented yet.") -> Button:
 	var b := Button.new()
 	b.text = text
 	b.custom_minimum_size = Vector2(ENTRY_SIZE.x, maxf(ENTRY_SIZE.y, MIN_HIT_TARGET))
@@ -154,7 +172,7 @@ func _make_entry(parent: Node, text: String, interactive: bool) -> Button:
 	if not interactive:
 		# Says WHY rather than just refusing. A dead-looking entry with no
 		# explanation reads as a bug; this reads as a scope boundary.
-		b.tooltip_text = "Settings are not implemented yet."
+		b.tooltip_text = inert_reason
 	parent.add_child(b)
 	return b
 
@@ -235,6 +253,28 @@ func _on_new_skirmish() -> void:
 		_buttons[Entry.NEW_SKIRMISH].grab_focus())
 
 
+## Resumes the save in [param slot]: hands it to the match scene, which picks it up instead of
+## building a new match. A save that cannot be read says so here and stays on the menu.
+func load_and_play(slot: String) -> bool:
+	var loaded: SaveGame.Loaded = SaveGame.read(slot)
+	if loaded == null:
+		_notice.text = "That save could not be loaded."
+		return false
+	SaveGame.pending = loaded
+	get_tree().change_scene_to_file(SLICE_SCENE)
+	return true
+
+
+func _open_load() -> void:
+	var panel := SaveSlotsPanel.create(SaveSlotsPanel.Mode.LOAD)
+	add_child(panel)
+	panel.slot_chosen.connect(func(slot: String) -> void:
+		panel.queue_free()
+		if not load_and_play(slot):
+			_buttons[Entry.LOAD].grab_focus())
+	panel.closed.connect(func() -> void: _buttons[Entry.LOAD].grab_focus())
+
+
 func _open_quit_confirm() -> void:
 	_quit_confirm.visible = true
 	_confirm_yes.grab_focus() # a pad must land on something inside the modal
@@ -298,3 +338,7 @@ func open_quit_confirm() -> void:
 ## The footer's build stamp.
 func version_text() -> String:
 	return _version_stamp()
+
+## The failed-load message, empty when there is none.
+func notice_text() -> String:
+	return _notice.text if _notice != null else ""

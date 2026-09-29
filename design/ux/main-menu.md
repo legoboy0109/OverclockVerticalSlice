@@ -45,7 +45,7 @@ target from pause → Quit to Main Menu. Alternate entry: none (it is the root).
 | Entry Source | Trigger | Player carries this context |
 |---|---|---|
 | App launch | Process start | none (fresh) |
-| In-match Pause | "Quit to Main Menu" (confirm) | match discarded (VS has no save); returns to a clean menu |
+| In-match Pause | "Save & Quit to Menu" | ★ 2026-09-29: match kept in the autosave; Continue resumes it (ADR-0019) |
 
 | Exit Destination | Trigger | Notes |
 |---|---|---|
@@ -85,7 +85,7 @@ keyboard/gamepad navigable, no board to keep clear here).
 | Quit | Menu stack | button | "Quit" | Yes | **Standard Button** |
 | Version stamp | Footer | text | build id | No | — |
 
-*No dead entries* — Campaign/Continue are omitted in the VS (persistence deferred), not greyed.
+*No dead entries* — Campaign is omitted, not greyed. ★ 2026-09-29 (ADR-0019): **Continue** (top; focused when an autosave exists) and **Load Game** now exist and are shown inert when there is nothing to load.
 
 ### ASCII Wireframe
 
