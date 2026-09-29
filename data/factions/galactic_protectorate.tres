@@ -1,5 +1,5 @@
 [gd_resource type="Resource" script_class="FactionDef" load_steps=18 format=3]
-; GENERATED from game-data/Factions/Galactic Protectorate.md — edit the note, then run: python3 tools/vault/build_data.py
+; GENERATED from game-data/Factions/Trappist Autonomous Mandate.md — edit the note, then run: python3 tools/vault/build_data.py
 ; source-sha256: f122736abc3f79136f8c7b3ba37a1edf3289433fe7234b5f06f1a38e1c90dbcb
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
@@ -22,7 +22,7 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Galactic Protectorate"
+display_name = "Trappist Autonomous Mandate"
 description = "Robots and specialists: cheap machines that never run out, elite humans who decide fights — and an EMF weakness everywhere."
 playable = true
 structures = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")]

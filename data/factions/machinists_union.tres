@@ -1,5 +1,5 @@
 [gd_resource type="Resource" script_class="FactionDef" load_steps=8 format=3]
-; GENERATED from game-data/Factions/Machinist's Union.md — edit the note, then run: python3 tools/vault/build_data.py
+; GENERATED from game-data/Factions/Ross Foundry Collective.md — edit the note, then run: python3 tools/vault/build_data.py
 ; source-sha256: 8293a82e116ab283abcdc93e14f581cc876499bbea93758da941bc63c5e08626
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
@@ -12,7 +12,7 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Machinist's Union"
+display_name = "Ross Foundry Collective"
 description = "Weak early, overwhelming late: crews for the best machines in the game, guarded by the strongest defences."
 playable = true
 structures = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")]

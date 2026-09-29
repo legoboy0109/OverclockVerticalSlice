@@ -131,5 +131,5 @@ func test_a_used_slot_shows_what_is_in_it() -> void:
 	var row: String = p.row_labels()[2]
 	assert_str(row).starts_with("Slot 2")
 	assert_str(row).contains("Highlands")
-	assert_str(row).contains("Independents")
+	assert_str(row).contains(Factions.INDEPENDENTS.display_name)
 	assert_bool(p.row_enabled()[2]).is_true()

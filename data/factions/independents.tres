@@ -1,5 +1,5 @@
 [gd_resource type="Resource" script_class="FactionDef" load_steps=8 format=3]
-; GENERATED from game-data/Factions/Independents.md — edit the note, then run: python3 tools/vault/build_data.py
+; GENERATED from game-data/Factions/The Lightless.md — edit the note, then run: python3 tools/vault/build_data.py
 ; source-sha256: 073c6abeff08ba56168d560e5428eac4b903b0b3e56724545e5e21b9ee0d0745
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
@@ -12,7 +12,7 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Independents"
+display_name = "The Lightless"
 description = "Poor, few and dangerous: every soldier a specialist, and their best vehicles are the ones they steal."
 playable = true
 structures = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")]

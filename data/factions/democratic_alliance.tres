@@ -1,5 +1,5 @@
 [gd_resource type="Resource" script_class="FactionDef" load_steps=18 format=3]
-; GENERATED from game-data/Factions/Democratic Alliance.md — edit the note, then run: python3 tools/vault/build_data.py
+; GENERATED from game-data/Factions/The Accord of Inner Systems.md — edit the note, then run: python3 tools/vault/build_data.py
 ; source-sha256: f789fcfb37ed24ce8f5189120f798ae094ef060f0689e41bfb9cbb7871377ea5
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
@@ -22,7 +22,7 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Democratic Alliance"
+display_name = "The Accord of Inner Systems"
 description = "The generalist: a serviceable answer to everything, the best answer to nothing. The balance baseline."
 playable = true
 hq = ExtResource("2")
