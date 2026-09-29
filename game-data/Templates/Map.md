@@ -1,6 +1,7 @@
 ---
 id: new_map
 round_limit: 80
+ap_per_turn: 20
 ---
 
 ```map

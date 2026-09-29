@@ -10,7 +10,7 @@ and the game is generated from these notes. Open this folder as a vault in Obsid
   Rename a note and Obsidian updates every link — and the game's name for it follows the title.
 - **Leave `id` alone** unless you mean it: it's the name the code knows the thing by.
 - **Below the properties** is yours: design notes, reasoning, ideas. The game ignores it.
-- **Maps** are drawn as text in a `map` block — see [[Vertical Slice]]. Their `round_limit` is the round limit a match on that map starts with (20–200; the player can still change it).
+- **Maps** are drawn as text in a `map` block — see [[Vertical Slice]]. Their `round_limit` and `ap_per_turn` are what a match on that map starts with (rounds 20–200, AP 10–40; the player can still change both on the setup screen).
 - **New things:** create a note in the right folder from a template (Templates core plugin,
   folder `Templates`). New units/structures also need art and a place in the game's rosters —
   ask Claude to wire them in.

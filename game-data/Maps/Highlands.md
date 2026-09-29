@@ -1,6 +1,7 @@
 ---
 id: highlands
 round_limit: 160
+ap_per_turn: 30
 description: 'The largest board: two ridges with passes, rough foothills that stop vehicles, and cover in the passes.'
 ---
 

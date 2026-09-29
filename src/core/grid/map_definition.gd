@@ -53,6 +53,11 @@ const MAX_DIM: int = 24
 ## need longer games. The setup screen switches to it when the map changes; the player can still
 ## change it. From the vault note's `round_limit` (default 80, the small map's measured cap).
 @export var default_round_limit: int = 80
+## ★ 2026-09-29 (user decision): the AP per turn a match on this map starts with, like the round
+## limit. Big boards need more: with real armies, running out of AP was what stalled big-map
+## attacks (Highlands at 20 AP: 7/30 decisive AI games; at 30: 17-18/30). From the vault note's
+## `ap_per_turn` (default 20).
+@export var default_ap_per_turn: int = 20
 
 @export var width: int
 

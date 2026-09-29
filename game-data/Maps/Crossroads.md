@@ -1,6 +1,7 @@
 ---
 id: crossroads
 round_limit: 120
+ap_per_turn: 30
 description: 'A mid-size board: an open centre, with rough ground and short walls on both flanks.'
 ---
 
