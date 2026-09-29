@@ -157,7 +157,7 @@ func _place(state: GameState, entity: EntityState) -> void:
 func test_unit_reduced_to_zero_hp_removed_same_step_grid_and_entities() -> void:
 	# Arrange -- Heavy (atk 5) vs a 1-hp defense-0 unit defender: lethal.
 	var state := _make_state()
-	var heavy := _make_unit(1, 0, UnitTypes.HEAVY, Vector2i(0, 0))
+	var heavy := _make_unit(1, 0, _heavy5(), Vector2i(0, 0))
 	var frail := _make_unit(2, 1, _make_frail_type(), Vector2i(1, 0))
 	frail.current_hp = 1
 	_place(state, heavy)
@@ -178,7 +178,7 @@ func test_hq_reduced_to_zero_hp_appends_structure_destroyed_event_is_hq_true() -
 	# hit is lethal exactly. is_hq=true claims real HQ identity (ADR-0007) --
 	# hp/defense are the real template's, not a fixture-picked number.
 	var state := _make_state()
-	var heavy := _make_unit(1, 0, UnitTypes.HEAVY, Vector2i(0, 0))
+	var heavy := _make_unit(1, 0, _heavy5(), Vector2i(0, 0))
 	var enemy_hq := _make_structure(2, 1, Vector2i(1, 0), 0, true)
 	_place(state, heavy)
 	_place(state, enemy_hq)
@@ -204,7 +204,7 @@ func test_hq_reduced_to_zero_hp_appends_structure_destroyed_event_is_hq_true() -
 func test_non_hq_structure_reduced_to_zero_hp_no_game_over() -> void:
 	# Arrange -- Heavy vs an enemy non-HQ structure (defense 0, hp 5): lethal.
 	var state := _make_state()
-	var heavy := _make_unit(1, 0, UnitTypes.HEAVY, Vector2i(0, 0))
+	var heavy := _make_unit(1, 0, _heavy5(), Vector2i(0, 0))
 	var enemy_structure := _make_structure(2, 1, Vector2i(1, 0), 5, false)
 	_place(state, heavy)
 	_place(state, enemy_structure)
@@ -228,7 +228,7 @@ func test_non_hq_structure_reduced_to_zero_hp_no_game_over() -> void:
 func test_unit_reduced_to_zero_hp_appends_unit_destroyed_event() -> void:
 	# Arrange -- same lethal setup as AC-1.
 	var state := _make_state()
-	var heavy := _make_unit(1, 0, UnitTypes.HEAVY, Vector2i(0, 0))
+	var heavy := _make_unit(1, 0, _heavy5(), Vector2i(0, 0))
 	var frail := _make_unit(2, 1, _make_frail_type(), Vector2i(1, 0))
 	frail.current_hp = 1
 	_place(state, heavy)
@@ -322,7 +322,7 @@ func test_hq_at_exact_damage_destroyed_event_drives_run_win_check_game_over() ->
 	# real HQ identity (ADR-0007); the real template's hp (40) comfortably
 	# exceeds current_hp so the inline clamp ceiling never interferes.
 	var state := _make_state()
-	var heavy := _make_unit(1, 0, UnitTypes.HEAVY, Vector2i(0, 0))
+	var heavy := _make_unit(1, 0, _heavy5(), Vector2i(0, 0))
 	var enemy_hq := _make_structure(2, 1, Vector2i(1, 0), 0, true)
 	_place(state, heavy)
 	_place(state, enemy_hq)
@@ -343,3 +343,11 @@ func test_hq_at_exact_damage_destroyed_event_drives_run_win_check_game_over() ->
 	state.run_win_check(events)
 	assert_int(state.match_status).is_equal(GameState.MatchStatus.GAME_OVER)
 	assert_int(state.winner).is_equal(0) # opponent of the destroyed HQ's owner (1)
+
+
+## Pinned stand-in for the Heavy at attack 5: these tests check combat arithmetic, not the
+## Heavy's balance (its attack went 5 -> 4 on 2026-09-29).
+func _heavy5() -> UnitTypeDef:
+	var t: UnitTypeDef = UnitTypes.HEAVY.duplicate()
+	t.attack = 5
+	return t

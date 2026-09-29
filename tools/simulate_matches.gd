@@ -145,7 +145,8 @@ var _push_trace: bool = false
 ## With --push-trace: "attacker type>victim type" -> kills, printed as SIM_KILL rows.
 var _kills: Dictionary = {}
 ## With --ap-trace: AP spent per action category, summed over the batch (SIM_AP rows), plus one
-## SIM_APTURN row per turn: player, AP at start, AP left, how the turn ended.
+## SIM_APTURN row per turn: player, AP at start, AP left, how the turn ended, the AI's thinking
+## time that turn in ms, and how many entities were on the board.
 var _ap_trace: bool = false
 ## --econ=flat_ap_per_turn=N given: use it instead of the map's own default AP.
 var _ap_override: bool = false
@@ -209,6 +210,14 @@ func _parse_args() -> void:
 			print("SIM_UNIT_STAT,%s,%s,%d" % [unit_and_prop[0], unit_and_prop[1], int(ut.get(unit_and_prop[1]))])
 		elif arg == "--idle-detail":
 			_idle_detail = true
+		elif arg.begins_with("--faction-stat="):
+			# Faction experiment for this run only: --faction-stat=machinists_union.base_income_delta=-200
+			# (repeatable). Mutates the loaded FactionDef, which every reference shares.
+			var fspec: PackedStringArray = arg.trim_prefix("--faction-stat=").split("=")
+			var fparts: PackedStringArray = fspec[0].split(".")
+			var fd: FactionDef = load("res://data/factions/%s.tres" % fparts[0])
+			fd.set(fparts[1], int(fspec[1]))
+			print("SIM_FACTION_STAT,%s,%s,%d" % [fparts[0], fparts[1], int(fd.get(fparts[1]))])
 		elif arg.begins_with("--econ="):
 			# Economy experiment for this run only: --econ=base_income=1500 (repeatable). Set on
 			# the BASE config, because every game's Balance.reset() copies the match economy from it.
@@ -364,6 +373,7 @@ func _run_one_turn(state: GameState, game: int = 0, turn: int = 0, favoured: int
 		and _draw(game, turn) < _degrade_favoured_pct
 	)
 	var ap_start: int = state.per_player[state.active_player].current_ap
+	var think_start_usec: int = Time.get_ticks_usec()   # --ap-trace: the AI's thinking time this turn
 	var ended_by: String = "rejects"
 	while true:
 		var action: Action = AI.choose_action(state, economy_investments)
@@ -415,9 +425,10 @@ func _run_one_turn(state: GameState, game: int = 0, turn: int = 0, favoured: int
 		if capped_turn and committed >= 1:
 			break
 	if _ap_trace:
+		var think_ms: int = (Time.get_ticks_usec() - think_start_usec) / 1000   # before the diagnostics below
 		_tally_idle(state)
-		print("SIM_APTURN,%d,%d,%d,%d,%d,%s" % [game, turn, state.active_player, ap_start,
-			state.per_player[state.active_player].current_ap, ended_by])
+		print("SIM_APTURN,%d,%d,%d,%d,%d,%s,%d,%d" % [game, turn, state.active_player, ap_start,
+			state.per_player[state.active_player].current_ap, ended_by, think_ms, state.entities().size()])
 	var end_turn := EndTurnAction.new()
 	end_turn.player = state.active_player
 	state.apply_action(end_turn)

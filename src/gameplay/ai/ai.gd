@@ -1410,7 +1410,49 @@ static func _matchup_multiplier(lookahead: GameState, owner: int, unit_type: Uni
 		if Combat.can_target(probe, e):
 			hit += worth * minf(1.0, float(Combat.damage(lookahead, probe, e)) / float(maxi(1, _max_hp_of(e))))
 	var effect: float = hit / total if total > 0.0 else 0.5
-	return AIBalance.ai.matchup_floor + AIBalance.ai.matchup_scale * maxf(effect, ability_effect) + bonus
+	# ★ Durability (faction balance pass, 2026-09-29): the effect above measures only what the
+	# unit DOES to the enemy, never how long it lasts. A 3-hp unit and a 20-hp mech dealing the
+	# same damage scored the same, so every faction's AI spammed its glass cannons (Marksmen,
+	# Inquisitors, the old Sniper) and under-built its durable units (Protectorate and Union
+	# mechs, Empire Knights and walkers) — which the faction matrix then read as faction
+	# weakness. Scale the offence by how many enemy hits the unit survives.
+	# ⚠ Applied to the ability value too: first measured without it, the ability-valued units
+	# escaped the penalty and became the cheapest-looking buy (Solar 1,233 Volunteers, Independents
+	# 920 Saboteurs). A Medic or a Self-Destructing Volunteer has to live to use its ability.
+	var durability: float = _durability_factor(lookahead, owner, unit_type)
+	return AIBalance.ai.matchup_floor + AIBalance.ai.matchup_scale * maxf(effect, ability_effect) * durability + bonus
+
+
+## How long [param unit_type] lasts against [param owner]'s current enemy, as a multiplier on its
+## offence: the enemy hits it survives — its hp over the worth-weighted average damage of the
+## enemies that can target it — divided by [member AIConfig.durability_reference_hits], clamped to
+## [[member AIConfig.durability_min], [member AIConfig.durability_max]]. A unit nothing present can
+## hit gets the maximum. 1.0 when [member AIConfig.durability_weighting] is off.
+static func _durability_factor(lookahead: GameState, owner: int, unit_type: UnitTypeDef) -> float:
+	var cfg: AIConfig = AIBalance.ai
+	if not cfg.durability_weighting:
+		return 1.0
+	var probe := UnitState.new()
+	probe.owner = owner
+	probe.type = unit_type
+	probe.current_hp = unit_type.hp
+	var own_hq: StructureState = _own_hq(lookahead, owner)
+	probe.position = own_hq.position if own_hq != null else Vector2i.ZERO   # a plain tile: no cover bonus
+	var weight: float = 0.0
+	var dmg: float = 0.0
+	for e: EntityState in lookahead.entities():
+		if e.owner == owner or e.owner < 0:
+			continue
+		var armed: bool = (e as UnitState).type.attack > 0 if e is UnitState else (e as StructureState).type.attack > 0
+		if not armed or not Combat.can_target(e, probe):
+			continue
+		var w: float = _opponent_paid_ap_equivalent(e)
+		weight += w
+		dmg += w * float(Combat.damage(lookahead, e, probe))
+	if weight <= 0.0:
+		return cfg.durability_max
+	var hits: float = float(unit_type.hp) / maxf(1.0, dmg / weight)
+	return clampf(hits / cfg.durability_reference_hits, cfg.durability_min, cfg.durability_max)
 
 
 ## The best 0..1 effect [param unit_type]'s ABILITIES have in this matchup (0 if none apply):
@@ -1585,8 +1627,15 @@ static func _owns_empty_vehicle(lookahead: GameState, owner: int) -> bool:
 	return false
 
 
+## ★ Price dependence (faction balance pass, 2026-09-29): the value scaled with the unit's own
+## price, and production divides it by the lifetime cost — so price all but cancelled and the AI
+## was blind to cost-efficiency: a cheap unit and a dear one with the same fit scored the same,
+## and a swarm faction (Solar: "cheap, fast, numerous") could not be played. The price enters
+## as price^[member AIConfig.production_price_exponent] × reference^(1 − exponent): 1 = the old
+## rule, 0 = every unit worth the same reference sum, so cheaper is better at equal fit.
 static func _production_value(unit_type: UnitTypeDef, multiplier: float) -> float:
-	return float(unit_type.produce_cost) * multiplier
+	var a: float = AIBalance.ai.production_price_exponent
+	return pow(float(unit_type.produce_cost), a) * pow(AIBalance.ai.production_reference_cost, 1.0 - a) * multiplier
 
 
 ## `REACHABILITY_MULTIPLIER`'s fixed 3-band (GDD Formulas/Tuning Knobs) — a

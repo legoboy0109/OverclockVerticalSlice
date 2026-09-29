@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Heavy.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: eae953752969cb46eb5930243c4dab778f5d769510229d6183f036653412ab13
+; source-sha256: 09b5e5da594aca124f717c0e6e5c683363021152172b9de84c0fc735c8538b00
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/abilities/fortify.tres" id="2"]
@@ -11,7 +11,7 @@ display_name = "Heavy"
 unit_class = 0
 can_target = Array[int]([0, 1])
 hp = 10
-attack = 5
+attack = 4
 attack_range = 2
 defense = 0
 move_cost = 3

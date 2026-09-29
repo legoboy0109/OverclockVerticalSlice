@@ -343,3 +343,16 @@ extends Resource
 ## ★ AP-aware moves (AI._overcap): advances and HQ drives prefer the furthest tile inside the
 ## unit's soft move cap over one that pays the over-cap surcharge. Off = the old per-tile choice.
 @export var avoid_overcap_moves: bool = true
+
+## ★ Durability (AI._durability_factor, faction balance pass 2026-09-29): production values a unit's
+## offence × how many enemy hits it survives ÷ durability_reference_hits, clamped. Off = offence only.
+@export var durability_weighting: bool = true
+@export var durability_reference_hits: float = 2.0
+@export var durability_min: float = 0.5
+@export var durability_max: float = 2.0
+
+## ★ Price dependence of production value (AI._production_value). 1 = value ∝ price (the old,
+## cost-blind rule); 0 = price-independent (cheaper is better at equal fit). The reference sum
+## keeps the value on the same scale as before for a typical unit.
+@export var production_price_exponent: float = 0.5   # measured: 1 starved Solar's swarm, 0 spammed Scouts
+@export var production_reference_cost: float = 600.0

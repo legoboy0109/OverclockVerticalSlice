@@ -376,3 +376,38 @@ func test_an_advance_stays_inside_the_soft_move_cap() -> void:
 	assert_int((best.action as MoveAction).tiles_entered).override_failure_message(
 		"The Heavy paid the over-cap surcharge although an in-cap advance existed.") \
 		.is_equal(UnitTypes.HEAVY.soft_move_cap)
+
+
+# --- Durability in production value (faction balance pass, 2026-09-29) ---------------------------
+
+func _trooper_army() -> GameState:
+	var state := _state()
+	_structure(state, 0, StructureTypes.HQ, Vector2i(0, 0))
+	for i: int in 4:
+		_unit(state, 1, UnitTypes.TROOPER, Vector2i(8 + i % 2, 5 + i / 2))   # 3 damage a hit
+	return state
+
+
+func test_a_durable_unit_rates_higher_than_a_glass_cannon() -> void:
+	var state := _trooper_army()
+	var mech: UnitTypeDef = load("res://data/units/sentinel_mech.tres")   # 20 hp: ~7 hits
+	var glass: UnitTypeDef = load("res://data/units/marksman.tres")      # 3 hp: 1 hit
+	assert_float(AI._durability_factor(state, 0, mech)).is_greater(AI._durability_factor(state, 0, glass))
+	assert_float(AI._durability_factor(state, 0, glass)).is_equal(AIBalance.ai.durability_min)
+	assert_float(AI._durability_factor(state, 0, mech)).is_equal(AIBalance.ai.durability_max)
+
+
+func test_durability_is_neutral_when_switched_off() -> void:
+	var state := _trooper_army()
+	AIBalance.ai.durability_weighting = false
+	var f: float = AI._durability_factor(state, 0, load("res://data/units/marksman.tres"))
+	AIBalance.ai.durability_weighting = true
+	assert_float(f).is_equal(1.0)
+
+
+func test_a_unit_nothing_present_can_hit_is_maximally_durable() -> void:
+	var state := _state()
+	_structure(state, 0, StructureTypes.HQ, Vector2i(0, 0))
+	var lance: UnitTypeDef = load("res://data/units/lance_specialist.tres")   # hits vehicles only
+	_unit(state, 1, lance, Vector2i(9, 9))
+	assert_float(AI._durability_factor(state, 0, UnitTypes.TROOPER)).is_equal(AIBalance.ai.durability_max)

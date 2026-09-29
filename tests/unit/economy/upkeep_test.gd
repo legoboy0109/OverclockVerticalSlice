@@ -269,11 +269,11 @@ func test_entity_with_no_type_contributes_zero_rather_than_crashing() -> void:
 
 # --- Faction vehicle upkeep discount (2026-09-29) ------------------------------
 
-func test_protectorate_vehicles_cost_a_third_less_upkeep() -> void:
+func test_protectorate_vehicles_cost_half_the_upkeep() -> void:
 	var state := _state()
 	state.per_player[0].faction = Factions.GALACTIC_PROTECTORATE
 	var tank: int = UnitTypes.TANK.upkeep
-	assert_int(Upkeep.unit_upkeep(state, 0, UnitTypes.TANK)).is_equal(tank * 67 / 100)
+	assert_int(Upkeep.unit_upkeep(state, 0, UnitTypes.TANK)).is_equal(tank * 50 / 100)
 
 
 func test_the_vehicle_discount_leaves_infantry_alone() -> void:
@@ -288,7 +288,7 @@ func test_the_vehicle_discount_reaches_the_total_and_only_its_own_faction() -> v
 	state.per_player[1].faction = Factions.DEMOCRATIC_ALLIANCE
 	_add_unit(state, 0, UnitTypes.TANK, Vector2i(0, 1))
 	_add_unit(state, 1, UnitTypes.TANK, Vector2i(5, 5))
-	assert_int(Upkeep.total_upkeep(state, 0)).is_equal(UnitTypes.TANK.upkeep * 67 / 100)
+	assert_int(Upkeep.total_upkeep(state, 0)).is_equal(UnitTypes.TANK.upkeep * 50 / 100)
 	assert_int(Upkeep.total_upkeep(state, 1)).is_equal(UnitTypes.TANK.upkeep)
 
 

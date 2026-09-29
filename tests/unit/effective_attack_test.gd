@@ -41,7 +41,7 @@ func test_unresearched_owner_effective_attack_is_base_for_all_four_types() -> vo
 	# type; base attack only.
 	for entry: Array in [
 		[UnitTypes.SCOUT, 2], [UnitTypes.TROOPER, 3],
-		[UnitTypes.HEAVY, 5], [UnitTypes.SNIPER, 4],
+		[UnitTypes.HEAVY, 4], [UnitTypes.SNIPER, 4],
 	]:
 		var pair := _make_state_and_unit(entry[0])
 		assert_int(Unit.effective_attack(pair[0], pair[1])).is_equal(entry[1])
