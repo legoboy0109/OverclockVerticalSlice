@@ -388,7 +388,15 @@ static func _score_move_and_attack_candidates(lookahead: GameState, entity: Enti
 static func _score_positional_and_retreat_candidates(lookahead: GameState, unit: UnitState, best: _Candidate) -> _Candidate:
 	var nearest_enemy_dist_before: int = _nearest_live_enemy_distance(lookahead, unit.position, unit.owner)
 	var threat: _ThreatInfo = _nearest_threatening_enemy(lookahead, unit)
-	var is_wounded_and_threatened: bool = _is_wounded(unit) and threat.found
+	# ★ Builders stay home (2026-09-29). Unarmed, 3 hp and worth nothing at the front, they were
+	# nonetheless given the fighters' advance and siege drives — Unit.can_attack only asks
+	# "attacked yet this turn?", not "can it fight at all?". Measured on Highlands: 466 of 655
+	# Builder deaths were 8+ tiles from their own HQ. A Builder now only ever moves to get OUT of
+	# enemy reach, exactly as a wounded unit does; otherwise it waits by the base to build.
+	var is_builder: bool = unit.type.can_build
+	var is_wounded_and_threatened: bool = (_is_wounded(unit) or is_builder) and threat.found
+	if is_builder and not is_wounded_and_threatened:
+		return best
 
 	# Single best advance, folded once after the loop. Every straight-line advance
 	# ties at POSITIONAL_VALUE_PER_TILE_CLOSED (dist_closed == tiles_moved, AC-20),
