@@ -361,3 +361,35 @@ Alliance mirror is byte-for-byte unchanged (29/30 HQ kills, avg 55 turns).
   quick AI fix.
 - ★ **Your call:** give each map its own default round limit (e.g. Crossroads 120,
   Highlands 160), so long maps have room to finish.
+
+## Per-map round limits + push for the HQ (2026-09-28)
+
+- **Per-map round limit (user decision):** each map note carries `round_limit`: Vertical Slice
+  80, Crossroads 120, Highlands 160. Choosing a map on the setup screen switches the round limit
+  to that map's value, and the player can still change it afterwards. Tests keep every map within the
+  setup screen's 20–200 range, and a bigger board never gets a shorter limit than a smaller one.
+- **Push for the HQ (user direction):** a unit is *ready to push* when at least 3 friendly
+  fighters (itself included) are within 3 tiles of it **and** the enemy has fewer armed
+  defenders within 4 tiles of its HQ than that group. While pushing:
+  - attacks on **unarmed non-HQ buildings** are worth 10% of their usual value, with no kill bonus;
+  - its movement goal is the enemy HQ (the "walk toward the nearest enemy thing" pull is off),
+    and each tile closed on the HQ is worth 3× the normal amount;
+  - **enemy units and armed buildings (turrets) keep their full value**, since they are what
+    stands in the way.
+  Knobs: `push_group_size`, `push_defence_radius`, `push_structure_value_factor`,
+  `push_siege_multiplier` in `ai_config.gd`.
+- Results (AI mirror, 30 games per map, HQ destroyed before the limit):
+
+  | Map | Before (80 rounds) | Push AI, 80 rounds | Push AI, map's own limit |
+  |---|---|---|---|
+  | Vertical Slice | 30/30 | — | 30/30 (limit 80, avg 26 rounds) |
+  | Crossroads | 12/30 | 17/30 | 21/30 (limit 120, avg 54 rounds) |
+  | Highlands | 8/30 | 8/30 | 16/30 (limit 160, avg 78 rounds) |
+
+### Findings to review
+- ⚠ **The push helps on Crossroads, but not measurably on Highlands.** There, the gain comes from
+  the longer limit alone. Structure churn is still high on both big maps (Highlands: ~300
+  Barracks and ~230 Factories built per 30 games). Worth a dedicated look at *why* groups rarely
+  form on Highlands, e.g. whether the ridges split them before they reach 3.
+- The simulator's own safety cap was raised from 200 to 402 player turns, so a 160-round map
+  ends on its own limit.

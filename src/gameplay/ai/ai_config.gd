@@ -312,3 +312,18 @@ extends Resource
 ## mass_radius tiles of where it lands. Otherwise it holds just outside range for the army.
 @export var mass_radius: int = 3
 @export var mass_minimum: int = 2
+
+## ★ Push for the HQ (user direction 2026-09-28: "prioritize pushing to the HQ instead of
+## destroying other buildings when the AI has a group of units ready and there is an opening").
+## A unit is READY TO PUSH when at least push_group_size friendly fighters (itself included) stand
+## within mass_radius of it, AND the enemy has fewer armed defenders within push_defence_radius of
+## its HQ than that group. While pushing, an attack on an unarmed non-HQ building is worth only
+## push_structure_value_factor of its usual value and never gets the lethal floor, and each tile
+## closed on the enemy HQ is worth push_siege_multiplier × siege_value_per_tile_closed. Enemy units
+## and armed buildings keep their full value — they are what stands in the way.
+## Measured reason: big-map armies spent the game razing and re-razing Barracks and Factories
+## (one 30-game Highlands batch: 265 Barracks, 162 Factories rebuilt) instead of the HQ.
+@export var push_group_size: int = 3
+@export var push_defence_radius: int = 4
+@export var push_structure_value_factor: float = 0.1
+@export var push_siege_multiplier: float = 3.0

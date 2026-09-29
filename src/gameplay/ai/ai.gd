@@ -329,13 +329,14 @@ static func _score_move_and_attack_candidates(lookahead: GameState, entity: Enti
 	var enemy_hq: StructureState = _enemy_hq(lookahead, entity.owner)
 	var axis_horizontal: bool = _axis_is_horizontal(_own_hq(lookahead, entity.owner), enemy_hq)
 	var local := _Candidate.new()
+	var pushing: bool = entity is UnitState and _push_ready(lookahead, entity as UnitState, enemy_hq)
 
 	# Stationary (zero-move) attacks from the entity's real position.
 	for tr: Combat.TargetResult in Combat.legal_targets(lookahead, entity):
 		var target: EntityState = lookahead.entity_at(tr.tile)
 		var cost: int = _attack_ap_cost_for(entity)
 		local = _consider_attack(lookahead, entity, target, entity.position, tr.tile, cost, local, \
-			enemy_hq, axis_horizontal)
+			enemy_hq, axis_horizontal, pushing)
 
 	# Move+attack combos — every reachable tile, scored via legal_targets_from
 	# at the combined move + attack AP cost (Edge Cases, AC-21). Structures
@@ -347,7 +348,7 @@ static func _score_move_and_attack_candidates(lookahead: GameState, entity: Enti
 				var target: EntityState = lookahead.entity_at(tr.tile)
 				var cost: int = r.min_cost + _attack_ap_cost_for(unit)
 				local = _consider_attack(lookahead, unit, target, r.tile, tr.tile, cost, local, \
-					enemy_hq, axis_horizontal)
+					enemy_hq, axis_horizontal, pushing)
 
 		# Bare, non-attacking repositioning (Story 004: positional/retreat,
 		# Edge Cases). Tiles-normalized, NOT AP-cost-divided (the documented
@@ -427,6 +428,10 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 	var siege_dist_before: int = -1
 	if hq != null:
 		siege_dist_before = lookahead.grid.manhattan_distance(unit.position, hq.position)
+	var siege_rate: float = AIBalance.ai.siege_value_per_tile_closed
+	var pushing: bool = _push_ready(lookahead, unit, hq)
+	if pushing:
+		siege_rate *= AIBalance.ai.push_siege_multiplier
 	var siege_found: bool = false
 	var siege_tile: Vector2i = Vector2i.ZERO
 	var siege_tiles_moved: int = 0
@@ -440,7 +445,7 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 		var tiles_moved: int = _tiles_moved_for(unit, r.min_cost)
 		if tiles_moved <= 0:
 			continue # Defensive — reachable() never returns the start tile itself.
-		if not Combat.legal_targets_from(lookahead, unit, r.tile).is_empty():
+		if _has_live_target_from(lookahead, unit, r.tile, pushing):
 			continue # Edge Cases/AC-20: positional scoring applies only to a
 		# ★ Mass before advancing (2026-09-28). Never step alone into guns: measured on the big
 		# maps, units crossed the long lane one at a time and were shot before they could fire
@@ -484,8 +489,7 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 			# Same strict-closure rule the advance uses, and for the same
 			# anti-oscillation reason: only tiles that genuinely make progress.
 			if hq_dist_after < siege_dist_before:
-				var s_value: float = AIBalance.ai.siege_value_per_tile_closed \
-					* float(siege_dist_before - hq_dist_after)
+				var s_value: float = siege_rate * float(siege_dist_before - hq_dist_after)
 				var s_score: float = s_value / float(tiles_moved)
 				var s_take: bool = false
 				if not siege_found:
@@ -508,6 +512,12 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 					siege_score = s_score
 					siege_ap_cost = r.min_cost
 
+		# ★ While pushing, the siege drive IS the movement goal. The nearest-enemy advance would
+		# otherwise walk the group up to the nearest building (with the setup bonus for being
+		# able to shoot it next turn) — exactly the detour the push exists to stop. Enemy units
+		# in the way are still engaged: attacks and move+attack combos are scored separately.
+		if pushing:
+			continue
 		var dist_after: int = _nearest_live_enemy_distance(lookahead, r.tile, unit.owner)
 		# Anti-oscillation: consider a bare advance ONLY if it strictly closes
 		# distance to the nearest enemy. A non-closing tile (lateral/backward) would
@@ -993,7 +1003,7 @@ static func _make_move_action(unit: UnitState, dest: Vector2i, tiles_moved: int)
 ## different entities is meaningless.
 static func _consider_attack(lookahead: GameState, attacker: EntityState, target: EntityState, \
 		from_tile: Vector2i, target_tile: Vector2i, ap_cost: int, best: _Candidate, \
-		enemy_hq: StructureState = null, axis_horizontal: bool = true) -> _Candidate:
+		enemy_hq: StructureState = null, axis_horizontal: bool = true, pushing: bool = false) -> _Candidate:
 	if not AP.can_afford(lookahead, attacker.owner, ap_cost):
 		return best
 
@@ -1029,6 +1039,12 @@ static func _consider_attack(lookahead: GameState, attacker: EntityState, target
 				value += splash_value
 			else:
 				friendly_harm += splash_value
+	# ★ Push for the HQ (see _push_ready): a group that can reach the HQ does not stop to raze
+	# a Barracks on the way. Only UNARMED buildings — a turret is a defender and keeps its value.
+	if pushing and target is StructureState and not (target as StructureState).is_hq() \
+			and (target as StructureState).type.attack <= 0:
+		value *= AIBalance.ai.push_structure_value_factor
+		is_kill = false   # no lethal floor either, or finishing one off would still outrank the HQ
 	var base_score: float = value / float(ap_cost)
 	var score: float = _action_score(base_score, is_kill) - friendly_harm / float(ap_cost)
 
@@ -1457,6 +1473,53 @@ static func _advance_is_premature(lookahead: GameState, unit: UnitState, dest: V
 		if lookahead.grid.manhattan_distance(dest, f.position) <= AIBalance.ai.mass_radius:
 			friends += 1
 	return friends < maxi(threats, AIBalance.ai.mass_minimum)
+
+
+## True when [param unit] could attack something from [param tile] — the tiles the move+attack
+## loop already scores, which positional scoring must skip. ★ While [param pushing], a tile whose
+## only targets are unarmed non-HQ buildings does NOT count: those attacks are devalued to almost
+## nothing, so skipping the tile here too would leave the group stalled beside a Barracks with no
+## way to keep walking toward the HQ.
+static func _has_live_target_from(lookahead: GameState, unit: UnitState, tile: Vector2i, pushing: bool) -> bool:
+	for tr: Combat.TargetResult in Combat.legal_targets_from(lookahead, unit, tile):
+		if not pushing:
+			return true
+		var t: EntityState = lookahead.entity_at(tr.tile)
+		if not (t is StructureState) or (t as StructureState).is_hq() or (t as StructureState).type.attack > 0:
+			return true
+	return false
+
+
+## True when [param unit] is part of a group ready to go for [param enemy_hq] and there is an
+## opening: at least [member AIConfig.push_group_size] friendly fighters (itself included) within
+## [member AIConfig.mass_radius] of it, and FEWER armed enemy defenders within
+## [member AIConfig.push_defence_radius] of the HQ than that group. See the knobs' doc for what
+## changes while pushing. Builders and unarmed units never push.
+static func _push_ready(lookahead: GameState, unit: UnitState, enemy_hq: StructureState) -> bool:
+	if enemy_hq == null or unit.type.attack <= 0 or unit.type.can_build:
+		return false
+	var group: int = 1   # itself
+	for e: EntityState in lookahead.entities():
+		if e == unit or e.owner != unit.owner or not (e is UnitState):
+			continue
+		var f: UnitState = e
+		if f.type.attack <= 0 or f.type.can_build:
+			continue
+		if lookahead.grid.manhattan_distance(unit.position, f.position) <= AIBalance.ai.mass_radius:
+			group += 1
+	if group < AIBalance.ai.push_group_size:
+		return false
+	var defenders: int = 0
+	for e: EntityState in lookahead.entities():
+		if e.owner == unit.owner or e.owner < 0 or e == enemy_hq:
+			continue
+		var armed: bool = (e as UnitState).type.attack > 0 if e is UnitState \
+			else (e as StructureState).type.attack > 0
+		if not armed:
+			continue
+		if lookahead.grid.manhattan_distance(e.position, enemy_hq.position) <= AIBalance.ai.push_defence_radius:
+			defenders += 1
+	return defenders < group
 
 
 static func _owns_empty_vehicle(lookahead: GameState, owner: int) -> bool:

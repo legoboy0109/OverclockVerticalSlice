@@ -183,3 +183,84 @@ func test_a_group_may_advance_together() -> void:
 	var scout := _unit(state, 0, UnitTypes.SCOUT, Vector2i(0, 5))
 	_unit(state, 0, UnitTypes.TROOPER, Vector2i(1, 4))
 	assert_bool(AI._advance_is_premature(state, scout, Vector2i(2, 5))).is_false()
+
+
+# --- Push for the HQ (2026-09-28) -------------------------------------------------------------
+
+const PUSH_HQ_TILE: Vector2i = Vector2i(11, 5)
+const PUSH_BARRACKS_TILE: Vector2i = Vector2i(4, 5)
+
+
+func _structure(state: GameState, owner: int, type: StructureTypeDef, pos: Vector2i) -> StructureState:
+	var st := StructureState.new()
+	st.entity_id = state.next_entity_id
+	st.owner = owner
+	st.position = pos
+	st.type = type
+	st.current_hp = type.hp
+	st.build_status = StructureState.BuildStatus.COMPLETED
+	state.entities_by_id[st.entity_id] = st
+	state.grid.place(st.entity_id, pos.x, pos.y)
+	state.next_entity_id += 1
+	return st
+
+
+## An enemy HQ far east, an enemy Barracks in easy reach, and our lead Trooper at (2,5) — with
+## [param escorts] more Troopers beside it.
+func _push_board(escorts: int) -> Array:
+	var state := _state()
+	var hq := _structure(state, 1, StructureTypes.HQ, PUSH_HQ_TILE)
+	_structure(state, 1, StructureTypes.BARRACKS, PUSH_BARRACKS_TILE)
+	var lead := _unit(state, 0, UnitTypes.TROOPER, Vector2i(2, 5))
+	for i: int in escorts:
+		_unit(state, 0, UnitTypes.TROOPER, Vector2i(1 + i % 2, 4 + 2 * (i / 2)))
+	return [state, lead, hq]
+
+
+func test_a_group_with_an_opening_is_ready_to_push() -> void:
+	var b: Array = _push_board(2)
+	assert_bool(AI._push_ready(b[0], b[1], b[2])).is_true()
+
+
+func test_a_small_group_is_not_ready_to_push() -> void:
+	var b: Array = _push_board(1)
+	assert_bool(AI._push_ready(b[0], b[1], b[2])).is_false()
+
+
+func test_no_push_when_the_hq_is_well_defended() -> void:
+	var b: Array = _push_board(2)
+	for y: int in [4, 5, 6]:
+		_unit(b[0], 1, UnitTypes.TROOPER, Vector2i(10, y))
+	assert_bool(AI._push_ready(b[0], b[1], b[2])).override_failure_message(
+		"Three defenders at the HQ against a group of three is no opening.").is_false()
+
+
+func test_a_pushing_group_walks_past_a_barracks_toward_the_hq() -> void:
+	var b: Array = _push_board(2)
+	var state: GameState = b[0]
+	var lead: UnitState = b[1]
+	var best := AI._score_move_and_attack_candidates(state, lead, 0, AI._Candidate.new())
+	assert_bool(best.action is MoveAction).override_failure_message(
+		"A pushing unit attacked instead of moving: %s" % [best.action]).is_true()
+	var dest: Vector2i = (best.action as MoveAction).to
+	assert_int(state.grid.manhattan_distance(dest, PUSH_HQ_TILE)) \
+		.is_less(state.grid.manhattan_distance(lead.position, PUSH_HQ_TILE) - 1)
+	assert_int(dest.x).override_failure_message(
+		"The push stopped short of the Barracks at %s instead of walking past it." % [dest]) \
+		.is_greater(PUSH_BARRACKS_TILE.x)
+
+
+func test_a_lone_unit_still_goes_for_the_barracks() -> void:
+	# Positive control: the same board without a group — the Barracks is the right target.
+	var b: Array = _push_board(0)
+	var state: GameState = b[0]
+	var lead: UnitState = b[1]
+	var best := AI._score_move_and_attack_candidates(state, lead, 0, AI._Candidate.new())
+	var aims_at_barracks: bool = false
+	if best.action is AttackAction:
+		aims_at_barracks = (best.action as AttackAction).target_tile == PUSH_BARRACKS_TILE
+	elif best.action is MoveAction:
+		aims_at_barracks = Combat.legal_targets_from(state, lead, (best.action as MoveAction).to).any(
+			func(tr: Combat.TargetResult) -> bool: return tr.tile == PUSH_BARRACKS_TILE)
+	assert_bool(aims_at_barracks).override_failure_message(
+		"Without a group the unit should still take the Barracks; chose %s." % [best.action]).is_true()
