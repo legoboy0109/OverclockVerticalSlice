@@ -504,7 +504,8 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 				var s_take: bool = false
 				# ★ AP priority (2026-09-29): an efficient step beats a diluted leap — see the
 				# same rule in the advance fold below.
-				var s_efficient: bool = s_score > AIBalance.ai.pass_threshold or not AIBalance.ai.efficient_moves_first
+				var s_efficient: bool = (s_score > AIBalance.ai.pass_threshold and not _overcap(unit, tiles_moved)) \
+					or not AIBalance.ai.efficient_moves_first
 				if not siege_found:
 					s_take = true
 				elif s_efficient != siege_efficient:
@@ -572,7 +573,8 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 		# dropped it and the unit stood still, although a shorter step was worth taking.
 		# Measured on Highlands: 52-70% of idle fighters. A diluted leap is still kept as the
 		# fallback when nothing efficient exists (choose_action's pass_threshold then decides).
-		var efficient: bool = score > AIBalance.ai.pass_threshold or not AIBalance.ai.efficient_moves_first
+		var efficient: bool = (score > AIBalance.ai.pass_threshold and not _overcap(unit, tiles_moved)) \
+			or not AIBalance.ai.efficient_moves_first
 		if not adv_found:
 			take = true
 		elif efficient != adv_efficient:
@@ -607,6 +609,17 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 		best = _Candidate.new(_make_move_action(unit, siege_tile, siege_tiles_moved), siege_score, siege_ap_cost, unit.entity_id)
 
 	return best
+
+
+## ★ AP-aware moves (2026-09-29): true when reaching [param tiles_moved] tiles takes [param unit]
+## past its soft move cap, where every further tile costs the doubled surcharge (a Heavy: 6 AP a
+## tile instead of 3; a 5-tile Heavy leap is 24 AP, more than a turn's budget). Positional
+## scoring is per TILE, not per AP, so without this the AI spent a turn's AP carrying one unit
+## far while the rest of its group stood still — measured on Highlands once armies grew
+## (income 1500): "out of AP" became the main reason fighters sat idle. An over-cap leap is
+## now only the fallback when no in-cap move is worth taking.
+static func _overcap(unit: UnitState, tiles_moved: int) -> bool:
+	return AIBalance.ai.avoid_overcap_moves and Movement._is_surcharged_at_depth(unit, tiles_moved)
 
 
 ## `positional_value(move)` (GDD Edge Cases, AC-20/AC-32):

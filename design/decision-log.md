@@ -586,3 +586,28 @@ measured (30 games per map); **none beat the shipped steady-pressure AI**, so th
   Mechs back in production; small map 7 → 6/30 (was 11 at the old economy; still weak there).
 - ✅ **Merged** with the income/cap/upkeep package. Open: big-map AI mirrors stall (Highlands 6/30 HQ
   kills). Attack-logic investigation is next.
+
+## Big-map attack logic (2026-09-29)
+
+Diagnosis (Highlands, new economy, `--ap-trace --idle-detail`): with real armies (~3 fighters),
+**AP became the limit**. "Couldn't move" was the top idle reason (6,359 unit-turns), nearly all
+because the side had no AP left. Fighter movement took ~80% of spent AP. Push-ready units also
+stalled for lack of AP, or were boxed in by their own crowd.
+
+- **AI fix: AP-aware moves** (`avoid_overcap_moves`, on). Moving past a unit's soft move cap
+  costs double per tile (a 5-tile Heavy move = 24 AP, more than a turn), and the AI scored moves
+  per tile, not per AP. Advances and HQ drives now take the furthest tile *inside* the cap, and
+  pay the surcharge only when nothing in-cap is worthwhile.
+
+  | | Small map | Crossroads | Highlands |
+  |---|---|---|---|
+  | Before (20 AP) | 30/30, 28 rnds | 17/30, 50 rnds | 7/30, 92 rnds |
+  | AP-aware moves (20 AP) | 28/30, 33 rnds | 19/30, 63 rnds | 9/30, 78 rnds |
+  | Before, 30 AP | — | 30/30, 50 rnds | 17/30, 79 rnds |
+  | AP-aware moves, 30 AP | — | 27/30, 44 rnds | 18/30, 54 rnds |
+
+  Differences of 2–3 games are within noise; the clearest effect is faster decisive games on
+  Highlands at 30 AP. Kept on.
+- ★ **The big lever is AP per turn** (a player-facing match setting, default 20). At 30 AP,
+  Crossroads goes from 17 to 27–30 decisive games out of 30, and Highlands from 7 to 17–18.
+  **Open decision (user):** the default AP per turn, e.g. a per-map default like round limits.
