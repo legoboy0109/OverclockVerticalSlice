@@ -203,7 +203,7 @@ so no upper clamp is needed — a future higher-attack unit lifts the ceiling wi
 
 **Worked examples:**
 - Scout → Trooper, Plain, unresearched: `max(1, 2 − 0 − 0) = 2`.
-- Heavy → Sniper, Plain: `max(1, 5 − 0 − 0) = 5` (one-shots the 3-hp Sniper).
+- Heavy → Sniper, Plain: `max(1, 4 − 0 − 0) = 4` (one-shots the 3-hp Sniper). *(Heavy attack 5 → 4 on 2026-09-29, faction balance pass.)*
 - Trooper → Heavy on Cover: `max(1, 3 − 1 − 0) = 2`.
 - Floor case (future unit, `defense 2`, on Cover, researched Scout attack 3):
   `max(1, 3 − 1 − 2) = max(1, 0) = 1` — the floor rescues an otherwise-zero hit.
@@ -217,7 +217,7 @@ check:
 |---|---|---|---|---|
 | Scout (2) | 2 | 3 | 5 | 2 |
 | Trooper (3) | 1 | 2 | 4 | 1 |
-| Heavy (5) | 1 | 2 | 2 | 1 |
+| Heavy (4) | 1 | 2 | 3 | 1 |
 | Sniper (4) | 1 | 2 | 3 | 1 |
 
 *On Cover (`COVER_DR = 1`):*
@@ -226,7 +226,7 @@ check:
 |---|---|---|---|---|
 | Scout (dmg 1) | 3 | 6 | 10 | 3 |
 | Trooper (dmg 2) | 2 | 3 | 5 | 2 |
-| Heavy (dmg 4) | 1 | 2 | 3 | 1 |
+| Heavy (dmg 3) | 1 | 2 | 4 | 1 |
 | Sniper (dmg 3) | 1 | 2 | 4 | 1 |
 
 > ★ **2026-09-29 (user decision): Sniper attack 6 → 4, cost 500 → 550.** At 6 it killed a Trooper

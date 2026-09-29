@@ -94,8 +94,8 @@ func test_heavy_vs_defense_zero_sniper_on_plain_deals_full_attack() -> void:
 	var state := _make_state()
 	var heavy := _make_unit(1, 0, UnitTypes.HEAVY, Vector2i(0, 0))
 	var sniper := _make_unit(2, 1, UnitTypes.SNIPER, Vector2i(1, 0))
-	# Act / Assert
-	assert_int(Combat.damage(state, heavy, sniper)).is_equal(5)
+	# Act / Assert — the real roster Heavy deals its full attack (4 since 2026-09-29).
+	assert_int(Combat.damage(state, heavy, sniper)).is_equal(UnitTypes.HEAVY.attack)
 
 
 func test_scout_vs_trooper_no_cover_no_defense_deals_full_attack() -> void:
@@ -172,7 +172,7 @@ func test_trooper_vs_defense_zero_unit_on_plain_deals_full_damage() -> void:
 func test_defense_alone_reduces_unit_damage_additively() -> void:
 	# Arrange — atk 5 vs a defense-2 unit defender, no cover: 5 - 0 - 2 = 3.
 	var state := _make_state()
-	var heavy := _make_unit(1, 0, UnitTypes.HEAVY, Vector2i(0, 0))
+	var heavy := _make_unit(1, 0, _heavy5(), Vector2i(0, 0))
 	var defender_type := _make_unit_type(0, 2)
 	var defender := _make_unit(2, 1, defender_type, Vector2i(1, 0))
 	# Act / Assert
@@ -219,12 +219,12 @@ func test_defense_two_structure_on_cover_identical_to_plain() -> void:
 	# Plain (cover contributes 0 for a structure defender).
 	var cover_tile := Vector2i(1, 0)
 	var state_cover := _make_state([cover_tile])
-	var heavy_cover := _make_unit(1, 0, UnitTypes.HEAVY, Vector2i(0, 0))
+	var heavy_cover := _make_unit(1, 0, _heavy5(), Vector2i(0, 0))
 	var hq_on_cover := _make_structure(2, 1, 2, cover_tile)
 
 	var plain_tile := Vector2i(1, 0)
 	var state_plain := _make_state()
-	var heavy_plain := _make_unit(1, 0, UnitTypes.HEAVY, Vector2i(0, 0))
+	var heavy_plain := _make_unit(1, 0, _heavy5(), Vector2i(0, 0))
 	var hq_on_plain := _make_structure(2, 1, 2, plain_tile)
 
 	# Act / Assert
@@ -291,7 +291,7 @@ func test_preview_damage_equals_committed_damage_for_unit_and_structure_defender
 	var defender_type := _make_unit_type(0, 2)
 	var unit_defender := _make_unit(2, 1, defender_type, cover_tile)
 	var hq := _make_structure(3, 1, 2, cover_tile)
-	var heavy := _make_unit(4, 0, UnitTypes.HEAVY, Vector2i(0, 0))
+	var heavy := _make_unit(4, 0, _heavy5(), Vector2i(0, 0))
 
 	# Act / Assert
 	assert_int(Combat.preview_damage(state, sniper, unit_defender)).is_equal(
@@ -305,7 +305,7 @@ func test_preview_damage_equals_committed_damage_for_unit_and_structure_defender
 func test_preview_damage_is_pure_repeated_calls_return_identical_result() -> void:
 	# Arrange
 	var state := _make_state()
-	var heavy := _make_unit(1, 0, UnitTypes.HEAVY, Vector2i(0, 0))
+	var heavy := _make_unit(1, 0, _heavy5(), Vector2i(0, 0))
 	var sniper := _make_unit(2, 1, UnitTypes.SNIPER, Vector2i(1, 0))
 	# Act
 	var first_call := Combat.preview_damage(state, heavy, sniper)
@@ -313,3 +313,11 @@ func test_preview_damage_is_pure_repeated_calls_return_identical_result() -> voi
 	# Assert
 	assert_int(first_call).is_equal(second_call)
 	assert_int(first_call).is_equal(5)
+
+
+## Pinned stand-in for the Heavy at attack 5: these tests check combat arithmetic, not the
+## Heavy's balance (its attack went 5 -> 4 on 2026-09-29).
+func _heavy5() -> UnitTypeDef:
+	var t: UnitTypeDef = UnitTypes.HEAVY.duplicate()
+	t.attack = 5
+	return t

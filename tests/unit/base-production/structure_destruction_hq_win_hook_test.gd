@@ -127,7 +127,7 @@ func test_hq_lethally_hit_resolution_raises_is_hq_win_signal_and_run_win_check_s
 	# Arrange -- player 0's Heavy adjacent to player 1's real HQ (current_hp 1 so
 	# the single hit is lethal); Heavy attack 5, HQ defense 2, range 1.
 	var state := _make_state()
-	var heavy := _make_unit(1, 0, UnitTypes.HEAVY, Vector2i(3, 3))
+	var heavy := _make_unit(1, 0, _heavy5(), Vector2i(3, 3))
 	var hq := _make_structure(2, 1, Vector2i(4, 3), StructureTypes.HQ, 1)
 	_place(state, heavy)
 	_place(state, hq)
@@ -156,7 +156,7 @@ func test_non_hq_structure_lethally_hit_raises_no_win_signal() -> void:
 	# Arrange -- player 0's Heavy adjacent to player 1's real (non-HQ) Defensive
 	# Structure, current_hp 1 so lethal.
 	var state := _make_state()
-	var heavy := _make_unit(1, 0, UnitTypes.HEAVY, Vector2i(3, 3))
+	var heavy := _make_unit(1, 0, _heavy5(), Vector2i(3, 3))
 	var struct := _make_structure(2, 1, Vector2i(4, 3), StructureTypes.DEFENSIVE_STRUCTURE, 1)
 	_place(state, heavy)
 	_place(state, struct)
@@ -185,7 +185,7 @@ func test_structure_defender_is_cover_immune_unit_on_same_cover_is_not() -> void
 	# (attack 5). Structures are cover-immune, so the HQ mitigates exactly its
 	# own defense (2), never defense + cover.
 	var state := _make_state()
-	var heavy := _make_unit(1, 0, UnitTypes.HEAVY, Vector2i(3, 3))
+	var heavy := _make_unit(1, 0, _heavy5(), Vector2i(3, 3))
 	var cover_tile := Vector2i(4, 3)
 	state.grid.terrain[state.grid.index(cover_tile.x, cover_tile.y)] = GridState.Terrain.COVER
 	var hq := _make_structure(2, 1, cover_tile, StructureTypes.HQ)
@@ -214,3 +214,11 @@ func test_structure_defender_is_cover_immune_unit_on_same_cover_is_not() -> void
 	# confers nothing to it) -- move the HQ's tile to Plain and re-measure.
 	var hq_on_plain := _make_structure(4, 1, Vector2i(6, 6), StructureTypes.HQ) # (6,6) is Plain
 	assert_int(Combat.damage(state, heavy, hq_on_plain)).is_equal(Combat.damage(state, heavy, hq))
+
+
+## Pinned stand-in for the Heavy at attack 5: these tests check combat arithmetic, not the
+## Heavy's balance (its attack went 5 -> 4 on 2026-09-29).
+func _heavy5() -> UnitTypeDef:
+	var t: UnitTypeDef = UnitTypes.HEAVY.duplicate()
+	t.attack = 5
+	return t

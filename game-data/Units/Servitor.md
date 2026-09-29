@@ -12,7 +12,7 @@ move_cost: 2
 soft_move_cap: 3
 produce_cost: 200
 production_turns: 1
-upkeep: 230
+upkeep: 110
 counts_toward_cap: false
 can_counterattack: false
 can_build: false
@@ -37,6 +37,9 @@ art_id: trooper
 ---
 
 ## Notes
+
+- **2026-09-29 (faction balance pass):** upkeep 230 → 110. It cost more per turn to keep than to
+  build, which contradicted the Protectorate's "cheap machines that never run out".
 
 ★ Stats from `design/gdd/factions/galactic-protectorate.md`. ⚠ Placeholder art borrowed from `trooper` — looks identical to it on the board.
 

@@ -625,3 +625,45 @@ stalled for lack of AP, or were boxed in by their own crowd.
   (was 22), Union 7, Protectorate 7 (was 10), Empire 10 (was 15). **52/150, down from ~68**: more
   AP favours the Alliance on that map. (The 20-AP comparison figures predate the AP-aware-moves
   change, so the comparison is approximate.)
+
+## Faction balance pass (2026-09-29)
+
+Measured: each faction vs the Alliance, 30 games per map on all three maps (90 each), at the
+shipped settings. Target 40–60% (36–54 of 90).
+
+### What was really wrong: two AI flaws, then one unit
+1. **The AI ignored durability.** It rated a unit by the damage it deals, never by how long it
+   lasts, so every faction spammed its glass cannons (Marksmen, Inquisitors) and under-built its
+   durable units (mechs, Knights, walkers). **Fix:** production scales a unit's offence by the enemy
+   hits it survives (÷2, clamped 0.5–2.0, `durability_*` knobs), and the same scaling applies to
+   ability-valued units. Before that was added they escaped the penalty: Solar built 1,233
+   Volunteers, the Independents 920 Saboteurs.
+2. **The AI was blind to cost-efficiency.** Value ∝ price, divided by lifetime cost, so price
+   cancelled out. A swarm faction (Solar) could not be played once durability counted.
+   **Fix:** value ∝ price^0.5 (`production_price_exponent`). 1 starved Solar; 0 made the Alliance
+   spam 3,068 Scouts and collapsed the Protectorate.
+3. **With the AI fixed, the Heavy was the best buy in the game** (10 hp, 5 attack, range 2,
+   Fortify, 700) and the top killer against every faction. **Attack 5 → 4.** (Health 10 → 8 was
+   also tested and did worse.) Stats, not price: a pricier unit looks *more* valuable to the AI.
+- **Protectorate:** Servitor upkeep 230 → 110 (it cost more to keep than to build, which contradicts
+  "cheap machines that never run out"), and its vehicle upkeep discount −33% → −50%.
+- ✗ **Tried and dropped: coverage weighting** (discount enemies our army already covers). It had no
+  measurable effect and slowed the AI.
+
+### Result (faction wins vs Alliance, of 30 per map; before → after)
+
+| Faction | Small | Crossroads | Highlands | Total /90 |
+|---|---|---|---|---|
+| Solar Federation | 10 → 13 | 14 → 11 | 23 → 11 | 47 → **35** |
+| Independents | 9 → 14 | 14 → 9 | 28 → 25 | 51 → **48** |
+| Machinist's Union | 6 → 16 | 7 → 9 | 17 → 19 | 30 → **44** |
+| Galactic Protectorate | 8 → 9 | 7 → 14 | 5 → 20 | 20 → **43** |
+| Holy Cosmic Empire | 11 → 20 | 10 → 9 | 5 → 9 | 26 → **38** |
+
+AI mirror (decisive of 30): Vertical Slice 27, Crossroads 28, Highlands 21. Armies grew (3.7–3.8
+fighters) and groups form on 40–56% of turns. AI thinking time ~0.1 s a turn (worst ~0.9 s).
+
+### Findings to review
+- Map-level outliers remain: Independents strong on Highlands (25/30); Empire (9) and Solar (11)
+  weak there. Solar is at the bottom edge overall (35/90).
+- All measurements are AI vs AI. How each faction feels in human hands is untested.

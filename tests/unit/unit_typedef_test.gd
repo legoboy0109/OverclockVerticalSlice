@@ -30,7 +30,7 @@ func test_unit_types_trooper_matches_stat_table() -> void:
 
 func test_unit_types_heavy_matches_stat_table() -> void:
 	assert_int(UnitTypes.HEAVY.hp).is_equal(10)
-	assert_int(UnitTypes.HEAVY.attack).is_equal(5)
+	assert_int(UnitTypes.HEAVY.attack).is_equal(4)  # 2026-09-29: 5 -> 4 (faction balance pass)
 	assert_int(UnitTypes.HEAVY.attack_range).is_equal(2)
 	assert_int(UnitTypes.HEAVY.move_cost).is_equal(3)
 	assert_int(UnitTypes.HEAVY.soft_move_cap).is_equal(2)

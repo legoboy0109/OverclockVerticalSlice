@@ -5,7 +5,7 @@ can_target:
 - infantry
 - ground_vehicle
 hp: 10
-attack: 5
+attack: 4
 attack_range: 2
 defense: 0
 move_cost: 3
@@ -35,5 +35,9 @@ targets_crew: false
 ---
 
 ## Notes
+
+- **2026-09-29 (faction balance pass):** attack 5 → 4. Once the AI began valuing durability, the
+  Heavy (10 hp, 5 attack, range 2, Fortify, 700) was the best buy in the game and the top killer
+  against every faction. At 4 the faction matrix landed within 40–60% for every faction.
 
 Design notes for this unit go here — the game ignores everything below the properties.

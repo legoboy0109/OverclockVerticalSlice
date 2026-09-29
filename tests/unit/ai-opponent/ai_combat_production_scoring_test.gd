@@ -276,25 +276,51 @@ func test_action_score_hq_siege_now_outscores_killing_a_unit() -> void:
 	).is_greater(kill)
 # --- AC-14: production_value + 3-band REACHABILITY_MULTIPLIER --------------
 
+## ★ 2026-09-29: production value is price^a × reference^(1−a) × multiplier (AIConfig
+## production_price_exponent, shipped 0.5) — no longer simply price × multiplier.
+func _expected_production_value(unit_type: UnitTypeDef, multiplier: float) -> float:
+	var a: float = AIBalance.ai.production_price_exponent
+	return pow(float(unit_type.produce_cost), a) * pow(AIBalance.ai.production_reference_cost, 1.0 - a) * multiplier
+
+
+func test_production_value_at_exponent_one_is_the_old_price_rule() -> void:
+	var unit_type := _make_trooper_type()
+	var saved: float = AIBalance.ai.production_price_exponent
+	AIBalance.ai.production_price_exponent = 1.0
+	var value: float = AI._production_value(unit_type, 0.9)
+	AIBalance.ai.production_price_exponent = saved
+	assert_float(value).is_equal_approx(float(unit_type.produce_cost) * 0.9, 0.0001)
+
+
+func test_a_cheaper_unit_is_worth_more_per_credit_at_equal_fit() -> void:
+	# The point of lowering the exponent: the AI can now see cost-efficiency.
+	var cheap := _make_trooper_type()
+	var dear := _make_trooper_type()
+	dear.produce_cost = cheap.produce_cost * 3
+	var per_credit_cheap: float = AI._production_value(cheap, 1.0) / float(cheap.produce_cost)
+	var per_credit_dear: float = AI._production_value(dear, 1.0) / float(dear.produce_cost)
+	assert_float(per_credit_cheap).is_greater(per_credit_dear)
+
+
 func test_production_value_isolated_band_is_produce_cost_times_0_9() -> void:
 	# ★ S6-05: _production_value stays CREDIT-denominated (the conversion to AP-equivalent
 	# happens at the call site via AI.credits_to_ap), so it scales with produce_cost.
 	# Derived rather than restated so the next rescale cannot break it.
 	var unit_type := _make_trooper_type()
 	var value: float = AI._production_value(unit_type, 0.9)
-	assert_float(value).is_equal_approx(float(unit_type.produce_cost) * 0.9, 0.0001)
+	assert_float(value).is_equal_approx(_expected_production_value(unit_type, 0.9), 0.0001)
 
 
 func test_production_value_in_contact_band_is_produce_cost_times_1_0() -> void:
 	var unit_type := _make_trooper_type()
 	var value: float = AI._production_value(unit_type, 1.0)
-	assert_float(value).is_equal_approx(float(unit_type.produce_cost) * 1.0, 0.0001)
+	assert_float(value).is_equal_approx(_expected_production_value(unit_type, 1.0), 0.0001)
 
 
 func test_production_value_reachable_band_is_produce_cost_times_1_1() -> void:
 	var unit_type := _make_trooper_type()
 	var value: float = AI._production_value(unit_type, 1.1)
-	assert_float(value).is_equal_approx(float(unit_type.produce_cost) * 1.1, 0.0001)
+	assert_float(value).is_equal_approx(_expected_production_value(unit_type, 1.1), 0.0001)
 
 
 func test_reachability_multiplier_selects_reachable_band_when_enemy_in_range() -> void:
@@ -367,7 +393,7 @@ func test_production_action_score_trooper_reachable_this_turn_is_exactly_1_10() 
 	var score: float = AI._action_score(value / denom, false)
 
 	# Assert
-	assert_float(value).is_equal_approx(4.4, 0.0001)
+	assert_float(value).is_equal_approx(AI.credits_to_ap(_expected_production_value(unit_type, 1.1)), 0.0001)
 	assert_float(score).is_equal_approx(value / denom, 0.0001)
 	# ★ And the property that actually matters: it still clears the pass bar.
 	assert_bool(score > AIBalance.ai.pass_threshold).is_true()
