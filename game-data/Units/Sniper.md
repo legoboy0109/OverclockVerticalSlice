@@ -5,12 +5,12 @@ can_target:
 - infantry
 - ground_vehicle
 hp: 3
-attack: 6
+attack: 4
 attack_range: 3
 defense: 0
 move_cost: 2
 soft_move_cap: 3
-produce_cost: 500
+produce_cost: 550
 production_turns: 2
 upkeep: 200
 counts_toward_cap: true
@@ -36,3 +36,8 @@ targets_crew: false
 ## Notes
 
 Design notes for this unit go here — the game ignores everything below the properties.
+
+- **2026-09-29:** attack 6 → 4 and cost 500 → 550. At 6 it one-shot Troopers from out of their
+  reach, and AI games turned into Sniper duels where armies never formed. It still one-shots
+  Snipers, Scouts and Builders. ⚠ Raising the cost further (600) made the AI build *more*
+  Snipers, because the AI currently rates units partly by price.

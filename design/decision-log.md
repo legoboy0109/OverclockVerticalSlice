@@ -419,3 +419,39 @@ Measured with the simulator's new `--push-trace` (Highlands, 80 rounds, 30 games
 - **Builders are a big money drain:** about a third of all kills are Builders (Sniper→Builder 558),
   and the AI keeps replacing them (1,163 built even with the one-at-a-time cap).
 - ★ **Open decision (user):** whether to change the Sniper, e.g. attack 6 → 4.
+
+## Sniper rebalance + Builders stay home (2026-09-29)
+
+- **Sniper: attack 6 → 4, cost 500 → 550 (user decision).** It still one-shots Snipers, Scouts
+  and Builders, but takes 2 hits to kill a Trooper and 3 to kill a Heavy. The combat GDD
+  shots-to-kill tables are updated.
+  - Cost was tested at 500 / 550 / 600 (with attack 4 and the Builder fix, 80 rounds, 30 games):
+    groups of 3+ formed on 38/34/4% of Crossroads turns and 43/36/7% of Highlands turns.
+    **At 600 the AI went back to mass-building Snipers.** 550 is the "slight" increase.
+  - ⚠ **Why 600 backfired — an AI flaw, recorded, not yet fixed:** the AI rates a unit as
+    *price × how well it fits the matchup* (`AI._production_value`), so a pricier unit looks
+    *more* valuable to it. Any future price change can move AI behaviour the wrong way until
+    the AI rates units by what they do, not by what they cost.
+- **Builders stay home (AI fix, my call).** Builders were getting the fighters' "advance" and
+  "go for the HQ" orders. The check only asked "has it attacked yet this turn?", never
+  "can it fight?". 466 of 655 Builder deaths were 8+ tiles from their own HQ. Now a Builder
+  only moves to get *out* of enemy reach, and otherwise waits by the base.
+  - Builder fix alone (Highlands, 80 rounds): Builders built 1,163 → 662, Builders killed 655 → 202.
+  - Everything together: Builders built ~400 and killed ~50–75 per 30 games, down from 1,163 and 655.
+- **Faction balance check** (each faction vs the Alliance, small map, 30 games each): the faction
+  won Protectorate 12, Empire 16, Independents 8, Union 5, Solar 7 — **48/150 (32%), vs ~30%
+  before.** The weaker Sniper did not sink the Alliance; it builds Heavies instead.
+- **Final check** (all changes, each map's own round limit, 30 games each):
+
+  | Map | HQ kills before | HQ kills now | Group of 3+ (turns) | Builders built / killed |
+  |---|---|---|---|---|
+  | Vertical Slice (80) | 30/30 | 26/30 (avg 24 rounds) | 43% | 284 / 55 |
+  | Crossroads (120) | 21/30 | 18/30 (avg 30 rounds) | 36% (was ~4%) | 425 / 57 |
+  | Highlands (160) | 16/30 | 13/30 (avg 48 rounds) | 47% (was ~6%) | 426 / 85 (was 1,163 / 655) |
+
+### Findings to review
+- ⚠ **Armies now form, but slightly fewer games end by HQ kill.** On Highlands a group is ready to
+  push on 44% of turns, yet only ~35% of fighters are ever in the enemy's half. Both sides now
+  have real armies to defend with, and ready groups seem to advance slowly. Unverified guess: the
+  shared per-turn AP pool is spent on building, production and research before the army moves.
+  Next step, if wanted: tally AP spent by category in the simulator.

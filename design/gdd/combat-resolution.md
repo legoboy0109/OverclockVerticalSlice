@@ -218,7 +218,7 @@ check:
 | Scout (2) | 2 | 3 | 5 | 2 |
 | Trooper (3) | 1 | 2 | 4 | 1 |
 | Heavy (5) | 1 | 2 | 2 | 1 |
-| Sniper (6) | 1 | 1 | 2 | 1 |
+| Sniper (4) | 1 | 2 | 3 | 1 |
 
 *On Cover (`COVER_DR = 1`):*
 
@@ -227,7 +227,12 @@ check:
 | Scout (dmg 1) | 3 | 6 | 10 | 3 |
 | Trooper (dmg 2) | 2 | 3 | 5 | 2 |
 | Heavy (dmg 4) | 1 | 2 | 3 | 1 |
-| Sniper (dmg 5) | 1 | 2 | 2 | 1 |
+| Sniper (dmg 3) | 1 | 2 | 4 | 1 |
+
+> ★ **2026-09-29 (user decision): Sniper attack 6 → 4, cost 500 → 550.** At 6 it killed a Trooper
+> in one shot from beyond the Trooper's reach, and AI mirrors on big maps became a one-for-one
+> Sniper duel in which no army ever formed (750 Sniper-kills-Sniper in 30 Highlands games).
+> Measured alternatives and results: `design/decision-log.md`, "Why groups don't form on Highlands".
 
 The matrix is monotonic — Cover never lowers time-to-kill, and a stronger attacker never needs more
 shots than a weaker one against the same target. Cover roughly doubles a Scout's time-to-kill (an
@@ -530,7 +535,7 @@ Presentation, layout, and input flow are owned by GDDs #9 and #10; this system p
   **WHEN** resolved, **THEN** damage clamps to `MIN_DAMAGE = 1`, never 0/negative.
 - **GIVEN** a Trooper (atk 3) attacks a `defense 0` **unit** defender on Cover, **THEN** damage = 2; **the same
   Trooper vs the same unit defender off Cover**, **THEN** damage = 3.
-- **GIVEN** atk 5 vs a `defense 2` **unit** defender, no cover, **THEN** damage = 3; **GIVEN** Sniper atk 6 vs a
+- **GIVEN** atk 5 vs a `defense 2` **unit** defender, no cover, **THEN** damage = 3; **GIVEN** an atk 6 attacker vs a
   `defense 2` **unit** defender on Cover, **THEN** damage = 6 − 1 − 2 = 3 (cover + defense stack additively for units).
 - **GIVEN** a researched Trooper (`effective_attack` fixture = 4), **THEN** damage = 4, not base 3.
 

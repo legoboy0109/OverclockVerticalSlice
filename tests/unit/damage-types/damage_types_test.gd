@@ -42,6 +42,7 @@ func _unit(state: GameState, owner: int, type: UnitTypeDef, pos: Vector2i) -> Un
 # A 6-attack, 0-defence gunner of the given damage type.
 func _gun(dtype: int, shape: int = UnitTypeDef.AreaShape.SINGLE) -> UnitTypeDef:
 	var t: UnitTypeDef = UnitTypes.SNIPER.duplicate()
+	t.attack = 6   # pinned: these tests check resistance arithmetic, not the Sniper's balance
 	t.damage_type = dtype
 	t.area_shape = shape
 	return t
