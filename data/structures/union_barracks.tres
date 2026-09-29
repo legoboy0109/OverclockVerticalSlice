@@ -1,5 +1,5 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=5 format=3]
-; GENERATED from game-data/Structures/Union Barracks.md — edit the note, then run: python3 tools/vault/build_data.py
+; GENERATED from game-data/Structures/Collective Barracks.md — edit the note, then run: python3 tools/vault/build_data.py
 ; source-sha256: 13f4862b4a799404e9daac80945fc932509fe421d5a906d14e80f89fdacfd5fd
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
@@ -9,7 +9,7 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Union Barracks"
+display_name = "Collective Barracks"
 buildable = false
 art_id = &"barracks"
 counts_as = []

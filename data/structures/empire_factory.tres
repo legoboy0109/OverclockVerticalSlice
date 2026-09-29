@@ -1,5 +1,5 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=5 format=3]
-; GENERATED from game-data/Structures/Empire Factory.md — edit the note, then run: python3 tools/vault/build_data.py
+; GENERATED from game-data/Structures/Order Factory.md — edit the note, then run: python3 tools/vault/build_data.py
 ; source-sha256: 003a0bca412e2b36975eb54dd51c3af512e493c271259f7b764cc441e3996612
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
@@ -9,7 +9,7 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Empire Factory"
+display_name = "Order Factory"
 buildable = false
 art_id = &"factory"
 counts_as = []

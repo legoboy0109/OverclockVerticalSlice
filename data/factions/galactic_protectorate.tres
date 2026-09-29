@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="FactionDef" load_steps=18 format=3]
 ; GENERATED from game-data/Factions/Trappist Autonomous Mandate.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: f122736abc3f79136f8c7b3ba37a1edf3289433fe7234b5f06f1a38e1c90dbcb
+; source-sha256: a98bb557068b45240d0317e57788d5ecc05f13fefb2678e3be0ead171f132257
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/structures/protectorate_barracks.tres" id="2"]

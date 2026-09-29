@@ -1,5 +1,5 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=6 format=3]
-; GENERATED from game-data/Structures/Protectorate Barracks.md — edit the note, then run: python3 tools/vault/build_data.py
+; GENERATED from game-data/Structures/Mandate Barracks.md — edit the note, then run: python3 tools/vault/build_data.py
 ; source-sha256: b64395720e3456c79a833c475cbde388efe7eba837e3fed3ff51c34ac83c56ee
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
@@ -10,7 +10,7 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Protectorate Barracks"
+display_name = "Mandate Barracks"
 buildable = false
 art_id = &"barracks"
 counts_as = []

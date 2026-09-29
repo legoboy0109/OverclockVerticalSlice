@@ -4,9 +4,9 @@ description: 'Cheap, fast, numerous: a mobile citizen army of specialists that w
 playable: true
 hq: null
 structures:
-- '[[Solar Barracks]]'
-- '[[Solar Factory]]'
-- '[[Solar Airfield]]'
+- '[[Front Barracks]]'
+- '[[Front Factory]]'
+- '[[Front Airfield]]'
 - '[[Research Lab]]'
 - '[[Autonomous Defence Node]]'
 techs: []

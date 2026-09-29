@@ -4,11 +4,11 @@ description: 'Robots and specialists: cheap machines that never run out, elite h
 playable: true
 hq: null
 structures:
-- '[[Protectorate Barracks]]'
-- '[[Protectorate Factory]]'
-- '[[Protectorate Airfield]]'
+- '[[Mandate Barracks]]'
+- '[[Mandate Factory]]'
+- '[[Mandate Airfield]]'
 - '[[Research Lab]]'
-- '[[Protectorate Defence]]'
+- '[[Mandate Defence]]'
 techs:
 - '[[Attack Tech]]'
 - '[[Defense Tech]]'

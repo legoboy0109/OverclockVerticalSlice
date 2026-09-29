@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="FactionDef" load_steps=20 format=3]
-; GENERATED from game-data/Factions/Holy Cosmic Empire.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 0dcb70ab8362edc5945a42e50978659495fa3508f0cbcea84b79f228979f7baf
+; GENERATED from game-data/Factions/Order of the Ninth Descent.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 47ab7a333bf469842080608bad2f99767de2c09af7b8b9a48caf2c1e18bd8f24
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/structures/empire_barracks.tres" id="2"]
@@ -24,7 +24,7 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Holy Cosmic Empire"
+display_name = "Order of the Ninth Descent"
 description = "A hierarchy that grows stronger with every battle — and falls apart if its Cathedral does."
 playable = true
 structures = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")]

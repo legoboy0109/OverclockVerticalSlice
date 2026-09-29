@@ -4,9 +4,9 @@ description: 'Weak early, overwhelming late: crews for the best machines in the 
 playable: true
 hq: null
 structures:
-- '[[Union Barracks]]'
-- '[[Union Factory]]'
-- '[[Union Airfield]]'
+- '[[Collective Barracks]]'
+- '[[Collective Factory]]'
+- '[[Collective Airfield]]'
 - '[[Research Lab]]'
 - '[[Bulwark]]'
 techs: []

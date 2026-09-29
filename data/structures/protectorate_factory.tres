@@ -1,5 +1,5 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=6 format=3]
-; GENERATED from game-data/Structures/Protectorate Factory.md — edit the note, then run: python3 tools/vault/build_data.py
+; GENERATED from game-data/Structures/Mandate Factory.md — edit the note, then run: python3 tools/vault/build_data.py
 ; source-sha256: 7b0b0ce6bd6aa86a43bd944482c691a1bac6ee49fdbacb52eab1bdda9172f5cf
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
@@ -10,7 +10,7 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Protectorate Factory"
+display_name = "Mandate Factory"
 buildable = false
 art_id = &"factory"
 counts_as = []

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="FactionDef" load_steps=8 format=3]
 ; GENERATED from game-data/Factions/Ross Foundry Collective.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 8293a82e116ab283abcdc93e14f581cc876499bbea93758da941bc63c5e08626
+; source-sha256: 85cfc14225f004fb608d71823324f83a1237ebb5f714f6ea9c4394b579b55fef
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/structures/union_barracks.tres" id="2"]

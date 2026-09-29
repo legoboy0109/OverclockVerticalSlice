@@ -1,5 +1,5 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=4 format=3]
-; GENERATED from game-data/Structures/Union Airfield.md — edit the note, then run: python3 tools/vault/build_data.py
+; GENERATED from game-data/Structures/Collective Airfield.md — edit the note, then run: python3 tools/vault/build_data.py
 ; source-sha256: 14ce6f1ce0d07bfce16398ec43d24a4611aeeb02dc41d4ae707bfd095170aa88
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
@@ -8,7 +8,7 @@
 
 [resource]
 script = ExtResource("1")
-display_name = "Union Airfield"
+display_name = "Collective Airfield"
 buildable = false
 art_id = &"airfield"
 counts_as = []
