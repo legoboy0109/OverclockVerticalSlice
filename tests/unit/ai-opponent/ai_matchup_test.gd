@@ -235,19 +235,27 @@ func test_no_push_when_the_hq_is_well_defended() -> void:
 		"Three defenders at the HQ against a group of three is no opening.").is_false()
 
 
-func test_a_pushing_group_walks_past_a_barracks_toward_the_hq() -> void:
+func test_a_pushing_group_heads_for_the_hq_not_the_barracks() -> void:
+	# ★ Rewritten 2026-09-29: this used to demand a single leap PAST the Barracks. With AP-aware
+	# moves the unit stays inside its soft move cap and walks on next turn, so the leap is gone —
+	# what matters is that the move it takes is the HQ drive, not a step toward hitting the Barracks.
 	var b: Array = _push_board(2)
 	var state: GameState = b[0]
 	var lead: UnitState = b[1]
 	var best := AI._score_move_and_attack_candidates(state, lead, 0, AI._Candidate.new())
 	assert_bool(best.action is MoveAction).override_failure_message(
 		"A pushing unit attacked instead of moving: %s" % [best.action]).is_true()
-	var dest: Vector2i = (best.action as MoveAction).to
-	assert_int(state.grid.manhattan_distance(dest, PUSH_HQ_TILE)) \
-		.is_less(state.grid.manhattan_distance(lead.position, PUSH_HQ_TILE) - 1)
-	assert_int(dest.x).override_failure_message(
-		"The push stopped short of the Barracks at %s instead of walking past it." % [dest]) \
-		.is_greater(PUSH_BARRACKS_TILE.x)
+	var mv: MoveAction = best.action
+	var before: int = state.grid.manhattan_distance(lead.position, PUSH_HQ_TILE)
+	var after: int = state.grid.manhattan_distance(mv.to, PUSH_HQ_TILE)
+	assert_int(after).is_less(before)
+	# Scored as the push's HQ drive (siege rate × push multiplier per tile), which a
+	# move-to-attack-the-Barracks combo could never match once buildings are devalued.
+	var drive: float = AIBalance.ai.siege_value_per_tile_closed * AIBalance.ai.push_siege_multiplier \
+		* float(before - after) / float(mv.tiles_entered)
+	assert_float(best.score).override_failure_message(
+		"The chosen move (%s, score %.2f) is not the HQ drive (%.2f)." % [mv.to, best.score, drive]) \
+		.is_equal_approx(drive, 0.001)
 
 
 func test_a_lone_unit_still_goes_for_the_barracks() -> void:
@@ -349,3 +357,22 @@ func test_an_efficient_step_beats_a_diluted_leap() -> void:
 	assert_float(best.score).override_failure_message(
 		"The chosen advance (%s, score %.2f) is below the bar although a clean step east exists." \
 			% [(best.action as MoveAction).to, best.score]).is_greater(AIBalance.ai.pass_threshold)
+
+
+func test_an_advance_stays_inside_the_soft_move_cap() -> void:
+	# An open lane: the old per-tile fold carried a Heavy past its soft cap (2), paying the
+	# doubled surcharge for every extra tile. Now it takes the furthest in-cap tile.
+	var state := _state()
+	var harmless: UnitTypeDef = UnitTypes.TROOPER.duplicate()
+	harmless.can_target = []
+	_unit(state, 1, harmless, Vector2i(11, 5))
+	var heavy := _unit(state, 0, UnitTypes.HEAVY, Vector2i(0, 5))
+	# Control: rule off -> the leap goes past the cap.
+	AIBalance.ai.avoid_overcap_moves = false
+	var old_best := AI._score_positional_and_retreat_candidates(state, heavy, AI._Candidate.new())
+	AIBalance.ai.avoid_overcap_moves = true
+	assert_int((old_best.action as MoveAction).tiles_entered).is_greater(UnitTypes.HEAVY.soft_move_cap)
+	var best := AI._score_positional_and_retreat_candidates(state, heavy, AI._Candidate.new())
+	assert_int((best.action as MoveAction).tiles_entered).override_failure_message(
+		"The Heavy paid the over-cap surcharge although an in-cap advance existed.") \
+		.is_equal(UnitTypes.HEAVY.soft_move_cap)

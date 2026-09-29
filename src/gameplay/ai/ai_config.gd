@@ -339,3 +339,7 @@ extends Resource
 ## limits it; Credits (army size) are. See design/decision-log.md.
 @export var efficient_moves_first: bool = true
 @export var fortify_hold_rule: int = 2
+
+## ★ AP-aware moves (AI._overcap): advances and HQ drives prefer the furthest tile inside the
+## unit's soft move cap over one that pays the over-cap surcharge. Off = the old per-tile choice.
+@export var avoid_overcap_moves: bool = true
