@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Partisan.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 4122155d1773f601e9db9385b0e006eb015014c288dd9689059d52652f79016a
+; source-sha256: 93fa6e27d57b3e1078d30c08fb0578f75cb7d5214d4bb838f96e5f0da958bfb0
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/abilities/fortify.tres" id="2"]
@@ -18,7 +18,7 @@ move_cost = 1
 soft_move_cap = 3
 produce_cost = 300
 production_turns = 1
-upkeep = 150
+upkeep = 110
 counts_toward_cap = true
 can_counterattack = false
 can_build = false

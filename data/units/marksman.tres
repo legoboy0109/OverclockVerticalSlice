@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Marksman.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: a0297e742b3667fe12255558a3852fdfd3c49a28f1262cef2ce67ad84e1e42fc
+; source-sha256: 5f425a18a464381aa3357b1f7b15daa9efde3a3a2ee10019f670395bb8dad574
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -17,7 +17,7 @@ move_cost = 1
 soft_move_cap = 3
 produce_cost = 600
 production_turns = 2
-upkeep = 200
+upkeep = 150
 counts_toward_cap = true
 can_counterattack = false
 can_build = false

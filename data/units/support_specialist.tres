@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Support Specialist.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 870dbf93fbc8b818c6afbcf5e0c08785e4c06a59fb4bb72468143d76e37a4764
+; source-sha256: bbf1ad299d4f16769dc7fd465a7ee9b2e30d12e8a66fc368d48233a8e18d1ae5
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/abilities/repair.tres" id="2"]
@@ -18,7 +18,7 @@ move_cost = 2
 soft_move_cap = 3
 produce_cost = 600
 production_turns = 1
-upkeep = 300
+upkeep = 230
 counts_toward_cap = true
 can_counterattack = false
 can_build = false

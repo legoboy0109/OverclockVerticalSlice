@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Missile Team.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: db468c436d6d56357d3cbd2ea9128a6a2e4ce845823b633f9ad6ca5d9872ac69
+; source-sha256: 91f19feb580c226983cbcc78c121fece974fbd9faf32f141aae90ed38a283e7c
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -17,7 +17,7 @@ move_cost = 1
 soft_move_cap = 3
 produce_cost = 500
 production_turns = 1
-upkeep = 150
+upkeep = 110
 counts_toward_cap = true
 can_counterattack = false
 can_build = false

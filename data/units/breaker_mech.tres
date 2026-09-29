@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Breaker Mech.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 9be82cfd1b72fe6b605d631c425facf34c89651c59171898b3f9fbc94b978550
+; source-sha256: 1bfd04e54d62f113d9a43a7b9ebcc01450849e10b09dd2a9e9ff4b6a423c2777
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -17,7 +17,7 @@ move_cost = 2
 soft_move_cap = 3
 produce_cost = 1500
 production_turns = 2
-upkeep = 600
+upkeep = 900
 counts_toward_cap = false
 can_counterattack = false
 can_build = false

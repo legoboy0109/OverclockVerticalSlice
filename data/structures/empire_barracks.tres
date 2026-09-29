@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=6 format=3]
 ; GENERATED from game-data/Structures/Empire Barracks.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 5e1b8e50fa719f9822184e244fdb9be750eb2b611b84a2b272c0bc9d491e50ff
+; source-sha256: 0dcfa1e085d18202f9754b3e2ea4b7d45e553c850998bf4ac6e78b0241639ab5
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/levy.tres" id="2"]
@@ -19,7 +19,7 @@ build_cost = 600
 build_time = 2
 upkeep = 100
 max_count = 3
-cap_bonus = 2
+cap_bonus = 4
 production_cap = 4
 producible_types = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5")]
 attack = 0

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Interceptor.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: e21f8949afa0fea2c579339f4384359ed078acef4ba8656f4a0fee56850da5ef
+; source-sha256: d3a06de5ae35696bc41a4fd8a03adf3f39fa59a414c42bae0486ab748b10b6a0
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -17,7 +17,7 @@ move_cost = 1
 soft_move_cap = 8
 produce_cost = 1100
 production_turns = 2
-upkeep = 400
+upkeep = 600
 counts_toward_cap = false
 can_counterattack = false
 can_build = false

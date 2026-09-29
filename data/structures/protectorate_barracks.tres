@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=6 format=3]
 ; GENERATED from game-data/Structures/Protectorate Barracks.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: b8d32e7babad0bffb72311eab4f0bbc7797bca828f0953b01512e5ecb34950ad
+; source-sha256: b64395720e3456c79a833c475cbde388efe7eba837e3fed3ff51c34ac83c56ee
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/servitor.tres" id="2"]
@@ -19,7 +19,7 @@ build_cost = 600
 build_time = 2
 upkeep = 100
 max_count = 2
-cap_bonus = 2
+cap_bonus = 4
 production_cap = 4
 producible_types = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5")]
 attack = 0

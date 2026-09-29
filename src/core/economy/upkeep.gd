@@ -117,11 +117,19 @@ static func apply_turn_economy(state: GameState, player: int) -> void:
 ## ★ The granularity term is load-bearing rather than cosmetic — see
 ## [member EconomyConfig.upkeep_granularity] for why a bare `ceil(cost / divisor)`
 ## silently drifts low after the ×100 Credit rescale.
-static func default_upkeep(produce_cost: int) -> int:
+##
+## ★ 2026-09-29 (user decision): scaled by unit class — infantry pay
+## [member EconomyConfig.infantry_upkeep_pct] of the price-derived figure, vehicles (ground
+## and air) [member EconomyConfig.vehicle_upkeep_pct] — so infantry keep a late-game role
+## beyond piloting. The scaled figure is rounded to the nearest 10, halves up.
+static func default_upkeep(produce_cost: int, unit_class: int = UnitTypeDef.UnitClass.INFANTRY) -> int:
 	var cfg: EconomyConfig = Balance.economy
 	var step: int = maxi(1, cfg.upkeep_granularity)
 	var divisor: int = maxi(1, cfg.upkeep_divisor)
-	return int(ceil(float(produce_cost) / float(divisor * step))) * step
+	var base: int = int(ceil(float(produce_cost) / float(divisor * step))) * step
+	var pct: int = cfg.infantry_upkeep_pct if unit_class == UnitTypeDef.UnitClass.INFANTRY \
+		else cfg.vehicle_upkeep_pct
+	return int(floor(float(base * pct) / 1000.0 + 0.5)) * 10
 
 
 ## [DisbandAction]'s [code]validate()[/code] handler (UR-7). Rejects anything that is

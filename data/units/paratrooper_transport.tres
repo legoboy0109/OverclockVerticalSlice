@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Paratrooper Transport.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: bf1ef2c1a2ccc3ea4168c192785d06376d1d26f22f0faa92a5474caa72c9c8da
+; source-sha256: 849d852b33123c58e874b5e654004c0790a7e23f883dba64f79f9fe2139a679c
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/abilities/paradrop.tres" id="2"]
@@ -18,7 +18,7 @@ move_cost = 1
 soft_move_cap = 8
 produce_cost = 1300
 production_turns = 2
-upkeep = 400
+upkeep = 600
 counts_toward_cap = false
 can_counterattack = false
 can_build = false

@@ -555,3 +555,26 @@ measured (30 games per map); **none beat the shipped steady-pressure AI**, so th
     1,600 Credits, range 5, 16 hp). Nothing the Empire fields reaches past 3, so Artillery shells
     it from out of reach (it landed the killing blow on the HQ in 11 games; the Alliance won by
     HQ kill 23 times, was 11). Game length unchanged (~50 rounds), so it isn't about promotion time.
+
+### Follow-up (same day): cap 16, cheaper infantry, dearer vehicles (user decision)
+- **Infantry cap 16:** each Barracks now adds +4 (was +2), 4 + 3×4. `cap_hard_ceiling` 14 → 18.
+- **Upkeep by class:** infantry ×0.75, vehicles (ground and air) ×1.5, rounded to the nearest 10
+  with halves up. Encoded in `Upkeep.default_upkeep` (`infantry_upkeep_pct`, `vehicle_upkeep_pct`)
+  and applied to every unit note. E.g. Trooper 200 → 150, Heavy 300 → 230, Tank 500 → 750.
+- **Faction check** (faction wins of 30 vs the Alliance; old economy → income only → full package):
+
+  | Faction | Small map | Crossroads |
+  |---|---|---|
+  | Solar Federation | 6 → 7 → 8 | 9 → 7 → 13 |
+  | Independents | 8 → 10 → 8 | 18 → 25 → 22 |
+  | Machinist's Union | 5 → 6 → 8 | 8 → 6 → 8 |
+  | Galactic Protectorate | 11 → 14 → **7** | 8 → 9 → **5** |
+  | Holy Cosmic Empire | 16 → 11 → 11 | 19 → 4 → **15** |
+
+  - ✅ The Empire's collapse is mostly fixed by the dearer vehicle upkeep, since Artillery is now costly to keep.
+  - ⚠ The **Protectorate is hit**: it built 26 Lance Tanks on Crossroads at the old economy, and
+    almost none now.
+- **AI mirror:** armies are real at last (~3.3 fighters, groups of 3+ on 31–47% of turns), but
+  **big maps stall**. HQ kills: Vertical Slice 30/30 (28 rounds), Crossroads 17/30 (was 23),
+  **Highlands 6/30** (was 27); 24 Highlands games ran to the round limit. Ready groups meet an
+  equally big army mid-map (only 12% of fighters ever reach the enemy half).

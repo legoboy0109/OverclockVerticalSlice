@@ -87,6 +87,13 @@ extends Resource
 ## than for its own sake — the army size is the number with a felt meaning.
 @export var upkeep_divisor: int = 3
 
+## ★ 2026-09-29 (user decision): class scaling on the derived upkeep convention
+## ([method Upkeep.default_upkeep]). Cheaper infantry and dearer vehicles, so that with the
+## infantry cap raised to 16 upkeep — not the cap — still limits army size, and infantry keep a
+## late-game niche besides piloting. Percent of the price-derived figure.
+@export var infantry_upkeep_pct: int = 75
+@export var vehicle_upkeep_pct: int = 150
+
 ## Rounding step for derived upkeep. ★ LOAD-BEARING, not cosmetic: before the ×100
 ## Credit rescale the derivation was a bare `ceil(produce_cost / 3)`, and it produced
 ## the intended 1/2/2/3 only because `ceil` rounded hard on single-digit numbers. At

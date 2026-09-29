@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Pilot.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 775343cd3b5f9535a2e3eab23438425a8edb22d42798f0489c01a6c9b8c46749
+; source-sha256: f3d9de6f2bee2c0821f518beb139a87eac374ed009f3eab8f855ad99dbfdd54d
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -17,7 +17,7 @@ move_cost = 1
 soft_move_cap = 3
 produce_cost = 200
 production_turns = 1
-upkeep = 100
+upkeep = 80
 counts_toward_cap = true
 can_counterattack = false
 can_build = false

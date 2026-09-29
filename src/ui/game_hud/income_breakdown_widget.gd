@@ -36,7 +36,7 @@
 ## income.bind(reader)
 ## income.configure(HudBalance.hud, local_player)
 ## credits_counter.add_child(income)   # anchored to the counter (Story 004)
-## income.open_preview(Upkeep.default_upkeep(unit_type.produce_cost))  # AC-20
+## income.open_preview(unit_type.upkeep)  # AC-20 — the unit's authored upkeep
 ## [/codeblock]
 class_name IncomeBreakdownWidget
 extends HudReactiveControl

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Lance Team.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 54e7bfc0c972d0d79e383c943441c57107e2eebce72319db461378a19a28d060
+; source-sha256: 2af9db3864e09e362078d68ec3cef180ca617625b2acc3ea0be7be24f5bc109a
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -17,7 +17,7 @@ move_cost = 1
 soft_move_cap = 3
 produce_cost = 400
 production_turns = 1
-upkeep = 200
+upkeep = 150
 counts_toward_cap = true
 can_counterattack = false
 can_build = false

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Fighter.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 6bc8904e74d88d84a324cac03d18a6da4ecce62483158b9fd4f13c0966165b1e
+; source-sha256: e3d3ce97dd02593e1d262cffcf53cb498d72e7740ff600e0250a9f31ba86bdf6
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -17,7 +17,7 @@ move_cost = 1
 soft_move_cap = 8
 produce_cost = 1200
 production_turns = 2
-upkeep = 400
+upkeep = 600
 counts_toward_cap = false
 can_counterattack = false
 can_build = false

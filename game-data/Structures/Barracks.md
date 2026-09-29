@@ -6,7 +6,7 @@ build_cost: 600
 build_time: 2
 upkeep: 100
 max_count: 3
-cap_bonus: 2
+cap_bonus: 4
 production_cap: 4
 produces:
 - '[[Scout]]'

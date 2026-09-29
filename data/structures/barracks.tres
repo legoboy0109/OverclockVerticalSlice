@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=6 format=3]
 ; GENERATED from game-data/Structures/Barracks.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: f24af83e18d500ab34f9326fbca234c4d16f747134a561942423c108f948831c
+; source-sha256: 7052fe7c4694f0cd4cd3368d405cecd3f5649e2fa157355d5de8ee0208e0d821
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/scout.tres" id="2"]
@@ -19,7 +19,7 @@ build_cost = 600
 build_time = 2
 upkeep = 100
 max_count = 3
-cap_bonus = 2
+cap_bonus = 4
 production_cap = 4
 producible_types = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5")]
 attack = 0

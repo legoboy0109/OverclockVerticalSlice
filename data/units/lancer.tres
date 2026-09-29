@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Lancer.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: b3d53a55903c46fff47f99b89d68e0a69ce1103a5c7c89484b000336ef012ef7
+; source-sha256: 85219077e82c9dbc938183c38e21d4b8fda4ae6c3b1a111bcfc677352b8bb5fe
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -17,7 +17,7 @@ move_cost = 2
 soft_move_cap = 3
 produce_cost = 1500
 production_turns = 2
-upkeep = 500
+upkeep = 750
 counts_toward_cap = false
 can_counterattack = false
 can_build = false

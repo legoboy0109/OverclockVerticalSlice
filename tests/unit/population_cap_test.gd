@@ -91,12 +91,13 @@ func test_opponents_barracks_do_not_raise_your_cap() -> void:
 		.is_equal(StructureBalance.base_production.base_infantry_cap)
 
 
-func test_full_build_out_ceiling_is_ten() -> void:
-	# ★ The Alliance baseline the whole design is balanced against: 4 base + 3 Barracks x 2.
+func test_full_build_out_ceiling_is_sixteen() -> void:
+	# ★ The Alliance baseline the whole design is balanced against: 4 base + 3 Barracks x 4
+	# (was x 2 = 10 until 2026-09-29, when income rose to 1500 — user decision).
 	var state := _state()
 	for i: int in range(StructureTypes.BARRACKS.max_count):
 		_add_barracks(state, 0, Vector2i(i, 1))
-	assert_int(Population.effective_cap(state, 0)).is_equal(10)
+	assert_int(Population.effective_cap(state, 0)).is_equal(16)
 
 
 func test_cap_never_exceeds_the_hard_ceiling() -> void:
@@ -252,7 +253,7 @@ func test_the_cap_sits_just_above_what_upkeep_can_sustain_on_a_realistic_build()
 	# A fully-researched economy, minus a realistic structure upkeep burden.
 	state.per_player[0].economy_tier = Balance.economy.max_economy_tier
 	var for_army: int = Credits.credit_income(state, 0) - Upkeep.total_upkeep(state, 0)
-	var mean_infantry_upkeep: int = 200  # roster mean, unit-upkeep.md
+	var mean_infantry_upkeep: int = UnitTypes.TROOPER.upkeep  # the roster's typical infantry (150 since 2026-09-29)
 	var sustainable: int = for_army / mean_infantry_upkeep
 
 	var msg: String = "cap (%d) must exceed the sustainable army (%d) - otherwise upkeep never binds and the cap does all the work" % [cap, sustainable]
