@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Sniper.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 6a0f590b5d62230e3db5d403065877a89f674123ee92c1dc7f701e9ae7c4d260
+; source-sha256: a591a09550bd4d638cf474faf6af308dbbf591fba04b391cefdd8d92e224330a
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -10,12 +10,12 @@ display_name = "Sniper"
 unit_class = 0
 can_target = Array[int]([0, 1])
 hp = 3
-attack = 6
+attack = 4
 attack_range = 3
 defense = 0
 move_cost = 2
 soft_move_cap = 3
-produce_cost = 500
+produce_cost = 550
 production_turns = 2
 upkeep = 200
 counts_toward_cap = true

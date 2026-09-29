@@ -264,3 +264,35 @@ func test_a_lone_unit_still_goes_for_the_barracks() -> void:
 			func(tr: Combat.TargetResult) -> bool: return tr.tile == PUSH_BARRACKS_TILE)
 	assert_bool(aims_at_barracks).override_failure_message(
 		"Without a group the unit should still take the Barracks; chose %s." % [best.action]).is_true()
+
+
+# --- Builders stay out of the fight (2026-09-29) ------------------------------------------------
+
+func test_a_safe_builder_does_not_march_toward_the_enemy() -> void:
+	var state := _state()
+	_structure(state, 1, StructureTypes.HQ, PUSH_HQ_TILE)
+	var builder := _unit(state, 0, UnitTypes.BUILDER, Vector2i(1, 5))
+	var best := AI._score_positional_and_retreat_candidates(state, builder, AI._Candidate.new())
+	assert_object(best.action).override_failure_message(
+		"A Builder with no enemy in reach was given a move (%s)." % [best.action]).is_null()
+
+
+func test_a_safe_fighter_on_the_same_tile_does_advance() -> void:
+	# Positive control for the test above: the board does offer an advance, to a fighter.
+	var state := _state()
+	_structure(state, 1, StructureTypes.HQ, PUSH_HQ_TILE)
+	var trooper := _unit(state, 0, UnitTypes.TROOPER, Vector2i(1, 5))
+	var best := AI._score_positional_and_retreat_candidates(state, trooper, AI._Candidate.new())
+	assert_bool(best.action is MoveAction).is_true()
+
+
+func test_a_threatened_builder_retreats_out_of_reach() -> void:
+	var state := _state()
+	var sniper := _unit(state, 1, UnitTypes.SNIPER, Vector2i(6, 5))
+	var builder := _unit(state, 0, UnitTypes.BUILDER, Vector2i(4, 5))
+	var best := AI._score_positional_and_retreat_candidates(state, builder, AI._Candidate.new())
+	assert_bool(best.action is MoveAction).override_failure_message(
+		"A Builder inside a Sniper's reach did not move away.").is_true()
+	var dest: Vector2i = (best.action as MoveAction).to
+	assert_int(state.grid.manhattan_distance(dest, sniper.position)) \
+		.is_greater(state.grid.manhattan_distance(builder.position, sniper.position))

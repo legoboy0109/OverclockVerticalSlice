@@ -180,11 +180,14 @@ func test_defense_alone_reduces_unit_damage_additively() -> void:
 
 
 func test_cover_and_defense_stack_additively_not_max_or_min() -> void:
-	# Arrange — Sniper atk 6 vs a defense-2 unit defender on Cover: 6 - 1 - 2 = 3
-	# (proves additive stacking, not max/min of the two terms).
+	# Arrange — an atk 6 attacker vs a defense-2 unit defender on Cover: 6 - 1 - 2 = 3
+	# (proves additive stacking, not max/min of the two terms). The attack is pinned to 6 so
+	# this checks the stacking rule, not current Sniper balance (6 -> 4 on 2026-09-29).
 	var cover_tile := Vector2i(1, 0)
 	var state := _make_state([cover_tile])
-	var sniper := _make_unit(1, 0, UnitTypes.SNIPER, Vector2i(0, 0))
+	var gun_type: UnitTypeDef = UnitTypes.SNIPER.duplicate()
+	gun_type.attack = 6
+	var sniper := _make_unit(1, 0, gun_type, Vector2i(0, 0))
 	var defender_type := _make_unit_type(0, 2)
 	var defender := _make_unit(2, 1, defender_type, cover_tile)
 	# Act / Assert

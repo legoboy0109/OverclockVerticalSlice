@@ -41,7 +41,7 @@ func test_unresearched_owner_effective_attack_is_base_for_all_four_types() -> vo
 	# type; base attack only.
 	for entry: Array in [
 		[UnitTypes.SCOUT, 2], [UnitTypes.TROOPER, 3],
-		[UnitTypes.HEAVY, 5], [UnitTypes.SNIPER, 6],
+		[UnitTypes.HEAVY, 5], [UnitTypes.SNIPER, 4],
 	]:
 		var pair := _make_state_and_unit(entry[0])
 		assert_int(Unit.effective_attack(pair[0], pair[1])).is_equal(entry[1])
@@ -61,8 +61,9 @@ func test_researched_owner_effective_attack_is_base_plus_granted_bonus() -> void
 func test_researched_effective_attack_tracks_granted_bonus_not_hardcoded() -> void:
 	# Arrange
 	var pair := _make_state_and_unit(UnitTypes.SNIPER, 3)
-	# Act / Assert — base 6 + granted 3 = 9 (would be 7 if +1 were hardcoded).
-	assert_int(Unit.effective_attack(pair[0], pair[1])).is_equal(9)
+	# Act / Assert — base 4 + granted 3 = 7 (would be 5 if +1 were hardcoded).
+	assert_int(Unit.effective_attack(pair[0], pair[1])).is_equal(UnitTypes.SNIPER.attack + 3)
+	assert_int(Unit.effective_attack(pair[0], pair[1])).is_not_equal(UnitTypes.SNIPER.attack + 1)
 
 
 # --- AC-3: live fold — a tech completing after the unit exists changes the result --

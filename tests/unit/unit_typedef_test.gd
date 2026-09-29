@@ -40,11 +40,11 @@ func test_unit_types_heavy_matches_stat_table() -> void:
 
 func test_unit_types_sniper_matches_stat_table() -> void:
 	assert_int(UnitTypes.SNIPER.hp).is_equal(3)
-	assert_int(UnitTypes.SNIPER.attack).is_equal(6)
+	assert_int(UnitTypes.SNIPER.attack).is_equal(4)  # 2026-09-29: 6 -> 4 (the one-shot Sniper duel)
 	assert_int(UnitTypes.SNIPER.attack_range).is_equal(3)
 	assert_int(UnitTypes.SNIPER.move_cost).is_equal(2)
 	assert_int(UnitTypes.SNIPER.soft_move_cap).is_equal(3)
-	assert_int(UnitTypes.SNIPER.produce_cost).is_equal(500)  # ★ S6-02: ×100 Credit rescale
+	assert_int(UnitTypes.SNIPER.produce_cost).is_equal(550)  # 2026-09-29: 500 -> 550
 
 
 # AC-2: defense defaults to 0 for all four roster-wide (Rule 3a).
