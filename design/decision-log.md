@@ -393,3 +393,29 @@ Alliance mirror is byte-for-byte unchanged (29/30 HQ kills, avg 55 turns).
   form on Highlands, e.g. whether the ridges split them before they reach 3.
 - The simulator's own safety cap was raised from 200 to 402 player turns, so a 160-round map
   ends on its own limit.
+
+## Why groups don't form on Highlands (investigation, 2026-09-28)
+
+Measured with the simulator's new `--push-trace` (Highlands, 80 rounds, 30 games each).
+- **It isn't the ridges. The AI barely has an army:** 1.8 fighters per side on an average turn,
+  and a group of 3+ on only 6% of turns. That is far below the unit cap (~10).
+- **Cause (Alliance): the Sniper.** Attack 6 at range 3 kills a Sniper, Trooper, Scout or Builder
+  in one shot, from beyond their reach. Both sides build almost only Snipers (1,084 in 30 games),
+  and **Sniper-kills-Sniper happened 750 times**. Every new unit dies on arrival, so nothing
+  accumulates.
+- **Balance experiments** (vault untouched, via `--unit-stat=sniper.attack=4` etc.):
+
+  | Sniper change | HQ kills | Group of 3+ | What the AI built instead |
+  |---|---|---|---|
+  | none (attack 6, range 3, cost 500) | 8/30 | 6% | Snipers |
+  | attack 5 | 10/30 | 4% | still mostly Snipers |
+  | **attack 4** | **17/30** | **20%** | mostly Heavies |
+  | cost 800 | 5/30 | 3% | Snipers + Heavies |
+  | range 2 | 2/30 | 9% | even more Snipers |
+
+- **Other factions show the same thin-army pattern** (groups of 3+: Empire 2%, Union 8%) but
+  still finish games (Empire 25/30, Union 29/30). The Empire has its own one-for-one duel
+  (Inquisitor kills Inquisitor 254 times).
+- **Builders are a big money drain:** about a third of all kills are Builders (Sniper→Builder 558),
+  and the AI keeps replacing them (1,163 built even with the one-at-a-time cap).
+- ★ **Open decision (user):** whether to change the Sniper, e.g. attack 6 → 4.

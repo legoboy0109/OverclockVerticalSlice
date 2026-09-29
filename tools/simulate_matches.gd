@@ -139,6 +139,11 @@ var _built: Dictionary = {}
 var _factions: Array[FactionDef] = [Factions.DEMOCRATIC_ALLIANCE, Factions.DEMOCRATIC_ALLIANCE]
 var _abilities: Dictionary = {}
 var _dump_turn: int = -1
+## Diagnostic (2026-09-28): --push-trace prints a SIM_PUSH row at the start of every turn — the
+## active side's fighters, its largest group, units ready to push, and defenders at the enemy HQ.
+var _push_trace: bool = false
+## With --push-trace: "attacker type>victim type" -> kills, printed as SIM_KILL rows.
+var _kills: Dictionary = {}
 var _max_rounds_override: int = 0
 
 ## ★ S7-13 — force which seat moves first, for every game in the batch. -1 = the default
@@ -184,6 +189,16 @@ func _parse_args() -> void:
 			_plain_map = true
 		elif arg.begins_with("--max-rounds="):
 			_max_rounds_override = maxi(0, int(arg.split("=")[1]))
+		elif arg.begins_with("--unit-stat="):
+			# Balance experiment without touching the vault: --unit-stat=sniper.attack=5 (repeatable).
+			# Mutates the loaded resource, which every reference shares, for this run only.
+			var spec: PackedStringArray = arg.split("=")
+			var unit_and_prop: PackedStringArray = spec[1].split(".")
+			var ut: UnitTypeDef = load("res://data/units/%s.tres" % unit_and_prop[0])
+			ut.set(unit_and_prop[1], int(spec[2]))
+			print("SIM_UNIT_STAT,%s,%s,%d" % [unit_and_prop[0], unit_and_prop[1], int(ut.get(unit_and_prop[1]))])
+		elif arg == "--push-trace":
+			_push_trace = true
 		elif arg.begins_with("--dump-turn="):
 			# Diagnostic: print every entity's position at this turn (SIM_POS rows).
 			_dump_turn = int(arg.split("=")[1])
@@ -261,6 +276,8 @@ func _run() -> void:
 		print("SIM_BUILT,%s,%d" % [key, _built[key]])
 	for key: String in _abilities:
 		print("SIM_ABILITY,%s,%d" % [key, _abilities[key]])
+	for key: String in _kills:
+		print("SIM_KILL,%s,%d" % [key, _kills[key]])
 	print("SIM_DONE")
 	get_tree().quit()
 
@@ -276,6 +293,8 @@ func _play(game: int, favoured: int, handicap: int, variant: int) -> void:
 	while state.match_status != GameState.MatchStatus.GAME_OVER and turn < MAX_TURNS:
 		turn += 1
 		_snapshot(game, favoured, handicap, variant, turn, state)
+		if _push_trace:
+			_trace_push(game, turn, state)
 		if turn == _dump_turn:
 			for e: EntityState in state.entities():
 				var tname: String = e.type.display_name if e.get("type") != null else "?"
@@ -315,7 +334,17 @@ func _run_one_turn(state: GameState, game: int = 0, turn: int = 0, favoured: int
 		var action: Action = AI.choose_action(state, economy_investments)
 		if action == null:
 			break
+		var victim_key: String = ""
+		var victim_id: int = -1
+		if _push_trace and action is AttackAction:
+			var atk: EntityState = state.entity_at((action as AttackAction).attacker_tile)
+			var vic: EntityState = state.entity_at((action as AttackAction).target_tile)
+			if atk != null and vic != null:
+				victim_id = vic.entity_id
+				victim_key = "%s>%s" % [atk.type.display_name, vic.type.display_name]
 		var result: ActionResult = state.apply_action(action)
+		if result.ok and victim_id >= 0 and not state.entities_by_id.has(victim_id):
+			_kills[victim_key] = _kills.get(victim_key, 0) + 1
 		if result.ok and action is ProduceAction:
 			var key: String = (action as ProduceAction).unit_type.display_name
 			_produced[key] = _produced.get(key, 0) + 1
@@ -488,3 +517,43 @@ func _bonus_tile(own_hq: Vector2i, index: int, variant: int) -> Vector2i:
 	var dy: int = _VARIANT_Y_OFFSETS[variant % _VARIANT_Y_OFFSETS.size()]
 	return Vector2i(own_hq.x + dir * (1 + index), own_hq.y + dy)
 
+
+
+## SIM_PUSH,game,turn,player,fighters,largest_group,ready,defenders,avg_hq_dist,in_enemy_half —
+## why a push does or does not happen. Groups are counted the way AI._push_ready counts them
+## (fighters within mass_radius of a unit, itself included).
+func _trace_push(game: int, turn: int, state: GameState) -> void:
+	var p: int = state.active_player
+	var hq: StructureState = AI._enemy_hq(state, p)
+	var own: StructureState = AI._own_hq(state, p)
+	if hq == null or own == null:
+		return
+	var fighters: Array[UnitState] = []
+	for e: EntityState in state.entities():
+		if e is UnitState and e.owner == p and (e as UnitState).type.attack > 0 and not (e as UnitState).type.can_build:
+			fighters.append(e)
+	var largest: int = 0
+	var ready: int = 0
+	var dist_sum: int = 0
+	var forward: int = 0
+	for u: UnitState in fighters:
+		var g: int = 0
+		for f: UnitState in fighters:
+			if state.grid.manhattan_distance(u.position, f.position) <= AIBalance.ai.mass_radius:
+				g += 1
+		largest = maxi(largest, g)
+		if AI._push_ready(state, u, hq):
+			ready += 1
+		var d: int = state.grid.manhattan_distance(u.position, hq.position)
+		dist_sum += d
+		if d < state.grid.manhattan_distance(u.position, own.position):
+			forward += 1
+	var defenders: int = 0
+	for e: EntityState in state.entities():
+		if e.owner == p or e.owner < 0 or e == hq:
+			continue
+		var armed: bool = (e as UnitState).type.attack > 0 if e is UnitState else (e as StructureState).type.attack > 0
+		if armed and state.grid.manhattan_distance(e.position, hq.position) <= AIBalance.ai.push_defence_radius:
+			defenders += 1
+	print("SIM_PUSH,%d,%d,%d,%d,%d,%d,%d,%.1f,%d" % [game, turn, p, fighters.size(), largest, ready,
+		defenders, float(dist_sum) / maxf(1.0, float(fighters.size())), forward])
