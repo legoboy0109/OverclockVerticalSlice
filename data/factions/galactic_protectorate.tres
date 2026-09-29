@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="FactionDef" load_steps=18 format=3]
 ; GENERATED from game-data/Factions/Galactic Protectorate.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: c8bab08f7dc9309d6fb93556052feecbb6481a1c278c9412882fceede9c3d855
+; source-sha256: 59d3ebde1e24a2e8cd57b5017a408733aaa9ac8c9a94272b8b5db0fd6b43210f
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/structures/protectorate_barracks.tres" id="2"]
@@ -31,6 +31,7 @@ infantry_cap_delta = -1
 base_income_delta = 0
 econ_tier_bonus_delta = 0
 upkeep_pct_delta = 0
+vehicle_upkeep_pct_delta = -33
 unit_deltas = []
 promotes = false
 rank_requires_support = false

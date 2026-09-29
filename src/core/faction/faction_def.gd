@@ -40,6 +40,10 @@ extends Resource
 @export var econ_tier_bonus_delta: int = 0
 ## D9 — percent added to total upkeep (e.g. 20 = +20%). Floored so upkeep never goes negative.
 @export var upkeep_pct_delta: int = 0
+## Percent added to the upkeep of this faction's VEHICLES only (ground and air), applied per unit
+## before [member upkeep_pct_delta]. ★ 2026-09-29 (user decision): the Protectorate gets −33 —
+## vehicle upkeep rose ×1.5 for everyone, and it is the faction whose identity is vehicles.
+@export var vehicle_upkeep_pct_delta: int = 0
 
 ## This faction's units earn merit and rank up (promotion-veterancy.md PV-8: the Holy Cosmic
 ## Empire only, in the current design). Off for everyone else, so all merit logic is inert.

@@ -14,6 +14,7 @@ infantry_cap_delta: -1
 base_income_delta: -200
 econ_tier_bonus_delta: -100
 upkeep_pct_delta: 0
+vehicle_upkeep_pct_delta: 0
 unit_changes: []
 promotes: false
 rank_requires_support: false

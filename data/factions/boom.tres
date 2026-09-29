@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="FactionDef" load_steps=3 format=3]
 ; GENERATED from game-data/Factions/Boom.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: e7c473d22e9b92e51a1d52499a46e5600356dd12612105a20c9174a36c46ffb6
+; source-sha256: 2602b68a2c60d36045111f568bddaa3057118df795a222248614eb89bb744ac0
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Script" path="res://src/core/faction/faction_unit_delta.gd" id="2"]
@@ -16,6 +16,7 @@ infantry_cap_delta = 0
 base_income_delta = 0
 econ_tier_bonus_delta = 0
 upkeep_pct_delta = 0
+vehicle_upkeep_pct_delta = 0
 unit_deltas = []
 promotes = false
 rank_requires_support = false

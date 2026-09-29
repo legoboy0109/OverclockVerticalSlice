@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="FactionDef" load_steps=18 format=3]
 ; GENERATED from game-data/Factions/Democratic Alliance.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: a3234d4c72f0e95de0e185ea7063e4073119e71950c3e64d25f60045ebdd6558
+; source-sha256: f789fcfb37ed24ce8f5189120f798ae094ef060f0689e41bfb9cbb7871377ea5
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/structures/hq.tres" id="2"]
@@ -32,6 +32,7 @@ infantry_cap_delta = 0
 base_income_delta = 0
 econ_tier_bonus_delta = 0
 upkeep_pct_delta = 0
+vehicle_upkeep_pct_delta = 0
 unit_deltas = []
 promotes = false
 rank_requires_support = false

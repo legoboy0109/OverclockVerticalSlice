@@ -47,6 +47,15 @@ extends RefCounted
 ## "pays from the turn after it was produced" falls straight out of the ordering.
 ##
 ## Pure and side-effect free. O(n) over entities.
+## What one [param unit_type] costs [param player] per turn before the faction's all-upkeep
+## percentage: its authored upkeep, with the faction's vehicle discount or surcharge
+## ([method Faction.vehicle_upkeep_pct_delta]) for anything that is not infantry. Floored at 0.
+static func unit_upkeep(state: GameState, player: int, unit_type: UnitTypeDef) -> int:
+	if unit_type.unit_class == UnitTypeDef.UnitClass.INFANTRY:
+		return unit_type.upkeep
+	return maxi(0, unit_type.upkeep * (100 + Faction.vehicle_upkeep_pct_delta(state, player)) / 100)
+
+
 static func total_upkeep(state: GameState, player: int) -> int:
 	var total: int = 0
 	for e: EntityState in state.entities():
@@ -61,11 +70,11 @@ static func total_upkeep(state: GameState, player: int) -> int:
 			# and crashing the whole economy step over one malformed entity is worse.
 			if u.type == null:
 				continue
-			total += u.type.upkeep
+			total += unit_upkeep(state, player, u.type)
 			# TP-10: a carried unit still exists, and is still paid for.
 			for c: UnitState in Unit.all_carried(u):
 				if c.type != null:
-					total += c.type.upkeep
+					total += unit_upkeep(state, player, c.type)
 		elif e is StructureState:
 			var st: StructureState = e as StructureState
 			if st.type == null:

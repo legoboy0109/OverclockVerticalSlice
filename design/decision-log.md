@@ -578,3 +578,11 @@ measured (30 games per map); **none beat the shipped steady-pressure AI**, so th
   **big maps stall**. HQ kills: Vertical Slice 30/30 (28 rounds), Crossroads 17/30 (was 23),
   **Highlands 6/30** (was 27); 24 Highlands games ran to the round limit. Ready groups meet an
   equally big army mid-map (only 12% of fighters ever reach the enemy half).
+- **Protectorate vehicle upkeep discount (user decision):** new faction property
+  `vehicle_upkeep_pct_delta`, which applies to vehicles only, per unit, before the faction's all-upkeep
+  percentage. The Protectorate gets −33 (≈ its vehicles' pre-×1.5 upkeep); every other faction 0.
+  The AI's lifetime-cost estimate uses the real per-faction upkeep, so it builds the discounted
+  vehicles. Result vs the Alliance: Crossroads 5 → **10**/30 (8 at the old economy), with Sentinel
+  Mechs back in production; small map 7 → 6/30 (was 11 at the old economy; still weak there).
+- ✅ **Merged** with the income/cap/upkeep package. Open: big-map AI mirrors stall (Highlands 6/30 HQ
+  kills). Attack-logic investigation is next.

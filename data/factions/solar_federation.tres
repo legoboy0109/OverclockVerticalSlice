@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="FactionDef" load_steps=8 format=3]
 ; GENERATED from game-data/Factions/Solar Federation.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: ed960b4259c9229c77af59fa6e9f0b33f60b466c25d267fa1d1f8bca1c4dedbf
+; source-sha256: 242e52699df360d23a0e1d5ddf8883289fff6ea57f9e6f2b50766114b17f1e99
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/structures/solar_barracks.tres" id="2"]
@@ -21,6 +21,7 @@ infantry_cap_delta = 1
 base_income_delta = -200
 econ_tier_bonus_delta = -100
 upkeep_pct_delta = 0
+vehicle_upkeep_pct_delta = 0
 unit_deltas = []
 promotes = false
 rank_requires_support = false

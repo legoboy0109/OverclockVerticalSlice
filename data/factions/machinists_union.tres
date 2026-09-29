@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="FactionDef" load_steps=8 format=3]
 ; GENERATED from game-data/Factions/Machinist's Union.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 8ca68782d348a37b4aaea02119672cb495e6496f7ff9c567bcc781b7c72de0f2
+; source-sha256: 8293a82e116ab283abcdc93e14f581cc876499bbea93758da941bc63c5e08626
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/structures/union_barracks.tres" id="2"]
@@ -21,6 +21,7 @@ infantry_cap_delta = 0
 base_income_delta = -300
 econ_tier_bonus_delta = 200
 upkeep_pct_delta = 0
+vehicle_upkeep_pct_delta = 0
 unit_deltas = []
 promotes = false
 rank_requires_support = false
