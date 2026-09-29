@@ -37,7 +37,9 @@ const HQ_B: Vector2i = Vector2i(9, 5)
 ## Bound on turns per game, so a stalemate cannot hang the batch. Games that hit this
 ## are reported as CAPPED and excluded from closeout statistics — a capped game has no
 ## meaningful "closeout length".
-const MAX_TURNS: int = 200
+## ⚠ Player turns, not rounds: two per round. Must exceed 2 × MatchSettings.ROUNDS_MAX, or a map
+## with a long round limit (Highlands 160) is cut off by this safety net instead of its own limit.
+const MAX_TURNS: int = 2 * 200 + 2
 
 ## Starting bonus units granted to one side, in each direction plus symmetric. This is
 ## the axis that produces both close and decided games from a deterministic AI.
@@ -219,7 +221,7 @@ func _parse_args() -> void:
 	print("SIM_MAP,%s,%dx%d" % [VSMap.data().display_name, VSMap.WIDTH, VSMap.HEIGHT])
 	print("SIM_TERRAIN,cover_tiles=%d,of=%d,plain=%s,max_rounds=%d" % [
 		0 if _plain_map else VSMap.COVER_TILES.size(), VSMap.WIDTH * VSMap.HEIGHT, str(_plain_map),
-		_max_rounds_override if _max_rounds_override > 0 else VerticalSliceRoot.VS_MAX_ROUNDS
+		_max_rounds_override if _max_rounds_override > 0 else VSMap.data().default_round_limit
 	])
 
 
@@ -423,7 +425,7 @@ func _build_match(favoured: int, handicap: int, variant: int) -> GameState:
 	# faction — a mirror is what this harness measures — and the economy is the shipped one.
 	Balance.reset()
 	var max_rounds: int = _max_rounds_override if _max_rounds_override > 0 \
-		else VerticalSliceRoot.VS_MAX_ROUNDS
+		else map.default_round_limit
 	var state: GameState = MatchSetup.build(map, _factions, starting_player, max_rounds, [0, 1])
 
 	# ★ S5-04 mirror seeding: BOTH players get the same unit at mirrored tiles, so

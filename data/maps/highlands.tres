@@ -1,12 +1,13 @@
 [gd_resource type="Resource" script_class="MapDefinition" load_steps=2 format=3]
 ; GENERATED from game-data/Maps/Highlands.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: c0018d8b97fb0c86ae4f85c21d6636b81f500765056afa7e7ee81d92c5325089
+; source-sha256: 043cfa67e5e335762f7153bf63509e4b93003c76518240cc2f5a35a6901706d1
 
 [ext_resource type="Script" path="res://src/core/grid/map_definition.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
 display_name = "Highlands"
+default_round_limit = 160
 description = "The largest board: two ridges with passes, rough foothills that stop vehicles, and cover in the passes."
 width = 24
 height = 16

@@ -62,3 +62,19 @@ func test_every_map_seats_both_starting_builders() -> void:
 func test_every_map_is_in_the_vault() -> void:
 	for m: MapDefinition in Maps.all():
 		assert_str(FileAccess.get_file_as_string(m.resource_path)).contains("; GENERATED from game-data/Maps/")
+
+
+func test_every_map_has_a_round_limit_the_setup_screen_accepts() -> void:
+	for m: MapDefinition in Maps.all():
+		assert_int(m.default_round_limit).override_failure_message(
+			"%s's round_limit is outside what the setup screen allows." % m.display_name) \
+			.is_between(MatchSettings.ROUNDS_MIN, MatchSettings.ROUNDS_MAX)
+
+
+func test_a_bigger_board_never_gets_a_shorter_game() -> void:
+	for a: MapDefinition in Maps.all():
+		for b: MapDefinition in Maps.all():
+			if a.width * a.height > b.width * b.height:
+				assert_int(a.default_round_limit).override_failure_message(
+					"%s is bigger than %s but has a shorter round limit." % [a.display_name, b.display_name]) \
+					.is_greater_equal(b.default_round_limit)
