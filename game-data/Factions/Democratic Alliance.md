@@ -22,6 +22,7 @@ techs:
 infantry_cap_delta: 0
 base_income_delta: 0
 upkeep_pct_delta: 0
+vehicle_upkeep_pct_delta: 0
 unit_changes: []
 promotes: false
 rank_requires_support: false

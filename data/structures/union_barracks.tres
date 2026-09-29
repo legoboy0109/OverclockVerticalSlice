@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=5 format=3]
 ; GENERATED from game-data/Structures/Union Barracks.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: dd42c188f2e0adf6603653766042a0863ed9ffa8e7cb972675c46bb660aa5685
+; source-sha256: 13f4862b4a799404e9daac80945fc932509fe421d5a906d14e80f89fdacfd5fd
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/machinist.tres" id="2"]
@@ -18,7 +18,7 @@ build_cost = 600
 build_time = 2
 upkeep = 100
 max_count = 2
-cap_bonus = 2
+cap_bonus = 4
 production_cap = 4
 producible_types = [ExtResource("2"), ExtResource("3"), ExtResource("4")]
 attack = 0

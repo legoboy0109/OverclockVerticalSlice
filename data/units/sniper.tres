@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Sniper.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: a591a09550bd4d638cf474faf6af308dbbf591fba04b391cefdd8d92e224330a
+; source-sha256: e08d9204b20d2cf9d500464e41ec80e224f1e2699b26df63159396664510b8c8
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -17,7 +17,7 @@ move_cost = 2
 soft_move_cap = 3
 produce_cost = 550
 production_turns = 2
-upkeep = 200
+upkeep = 150
 counts_toward_cap = true
 can_counterattack = false
 can_build = false

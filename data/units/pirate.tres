@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Pirate.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: a1ac3b97ddb555a653e3c5efef051eda57a274fe15abc752382e0d30f7773af6
+; source-sha256: 55024b8c8de9898a679b373d364a0a6f4bc0cbbf1fa5b1cb9b2ffcd3c95adab5
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/abilities/capture_vehicle.tres" id="2"]
@@ -18,7 +18,7 @@ move_cost = 1
 soft_move_cap = 3
 produce_cost = 500
 production_turns = 1
-upkeep = 200
+upkeep = 150
 counts_toward_cap = true
 can_counterattack = false
 can_build = false

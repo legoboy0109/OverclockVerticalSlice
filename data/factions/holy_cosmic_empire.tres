@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="FactionDef" load_steps=20 format=3]
 ; GENERATED from game-data/Factions/Holy Cosmic Empire.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 82261610802a27a7b85bbd36947ee74dc0b03dce1d45b25560f95a4294b6f950
+; source-sha256: 0dcb70ab8362edc5945a42e50978659495fa3508f0cbcea84b79f228979f7baf
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/structures/empire_barracks.tres" id="2"]
@@ -33,6 +33,7 @@ infantry_cap_delta = 0
 base_income_delta = 0
 econ_tier_bonus_delta = 0
 upkeep_pct_delta = 0
+vehicle_upkeep_pct_delta = 0
 unit_deltas = []
 promotes = true
 rank_requires_support = true

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Volunteer.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 48b0fac48423ad8b6cdf4b5dd82e1b183074cdef090ddc36ce283f0c75334298
+; source-sha256: a8e0f3a91af87c9ee6daede140efa74deda19a37e744c912a4eae0f46e076fa6
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/abilities/self_destruct.tres" id="2"]
@@ -18,7 +18,7 @@ move_cost = 1
 soft_move_cap = 4
 produce_cost = 300
 production_turns = 1
-upkeep = 100
+upkeep = 80
 counts_toward_cap = true
 can_counterattack = false
 can_build = false

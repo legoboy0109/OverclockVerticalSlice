@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Demolitions Specialist.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 1792473e04b746ccdb70933dddd1bfbb3b165091368d3175bf9eed7c3ed34e75
+; source-sha256: 002c620b06c1e4defd2e23e0dce18d4ac5d36078cad12e4d3d975172665ad580
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/abilities/demolish.tres" id="2"]
@@ -18,7 +18,7 @@ move_cost = 2
 soft_move_cap = 3
 produce_cost = 600
 production_turns = 1
-upkeep = 300
+upkeep = 230
 counts_toward_cap = true
 can_counterattack = false
 can_build = false

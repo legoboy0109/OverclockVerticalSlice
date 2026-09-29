@@ -179,6 +179,7 @@ KINDS: dict[str, Kind] = {
         Field("base_income_delta", "int", 0, lo=-500, hi=1000, help="Added to base Credit income per turn"),
         Field("econ_tier_bonus_delta", "int", 0, lo=-400, hi=500, help="Added to each economy tier's bonus"),
         Field("upkeep_pct_delta", "int", 0, lo=-50, hi=100, help="Percent added to all upkeep"),
+        Field("vehicle_upkeep_pct_delta", "int", 0, lo=-90, hi=200, help="Percent added to vehicle (ground and air) upkeep only"),
         Field("unit_changes", "deltas", []),
         Field("promotes", "bool", False, help="Units earn merit and rank up (Empire only, for now)"),
         Field("rank_requires_support", "bool", False, help="Ranks drop without a support structure"),

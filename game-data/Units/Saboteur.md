@@ -12,7 +12,7 @@ move_cost: 1
 soft_move_cap: 3
 produce_cost: 500
 production_turns: 1
-upkeep: 200
+upkeep: 150
 counts_toward_cap: true
 can_counterattack: false
 can_build: false

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Machinist.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: a9a0f035e24caddc7cf8383e32edf66426b85f2f84600058a9342d5a46db48a6
+; source-sha256: cba40255ca1bf0c2a3237a7c39ed3c4753bbe0c58d0a56be16626c334552f67f
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -17,7 +17,7 @@ move_cost = 2
 soft_move_cap = 3
 produce_cost = 300
 production_turns = 1
-upkeep = 150
+upkeep = 110
 counts_toward_cap = true
 can_counterattack = false
 can_build = false

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Levy.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 21436f47558aa26660041cd7e0f3d7c8fc45c109e69fccacf8d5a6f2a617175f
+; source-sha256: 87df7b991d007c321fe0a8e49728dfb270e2bc45e36c0c4fd85c67ad04a7be96
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -17,7 +17,7 @@ move_cost = 2
 soft_move_cap = 3
 produce_cost = 300
 production_turns = 1
-upkeep = 200
+upkeep = 150
 counts_toward_cap = true
 can_counterattack = false
 can_build = false

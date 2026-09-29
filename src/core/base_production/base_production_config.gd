@@ -31,7 +31,8 @@ extends Resource
 ## Absolute ceiling on the infantry cap regardless of Barracks or tech. ★ With
 ## `max_count` now hard-capping Barracks this rarely binds — it is retained as a
 ## backstop against a faction authored with an extreme combination, not as a routine dial.
-@export var cap_hard_ceiling: int = 14
+## ★ 2026-09-29: 14 → 18 when the cap itself rose to 16 (Barracks +4 each, user decision).
+@export var cap_hard_ceiling: int = 18
 
 ## How far from a producer a newly-produced unit may be placed, in manhattan steps
 ## (`base-production.md` Rule 4).

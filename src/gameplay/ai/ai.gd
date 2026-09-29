@@ -1300,7 +1300,7 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 			# ★ Denominator uses LIFETIME cost, not the purchase price -- otherwise the AI
 			# under-prices every unit and over-builds into the deficit lock.
 			var denom: float = float(BaseProduction.effective_produce_ap_cost(lookahead, producer.owner)) \
-				+ credits_to_ap(lifetime_credit_cost(unit_type))
+				+ credits_to_ap(lifetime_credit_cost(unit_type, lookahead, producer.owner))
 			var score: float = _action_score(value / denom, false)
 			var take: bool = _is_better(score, cost, producer.entity_id, \
 				local.score, local.ap_cost, local.entity_id)
@@ -1335,8 +1335,14 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 ##
 ## Uses [member AIConfig.economy_horizon] as the assumed remaining lifetime, reusing the
 ## same horizon the economy projection already uses rather than inventing a second one.
-static func lifetime_credit_cost(unit_type: UnitTypeDef) -> float:
-	return float(unit_type.produce_cost) + float(unit_type.upkeep) * float(AIBalance.ai.economy_horizon)
+## ★ 2026-09-29: with [param state] and [param owner], upkeep is what THIS player really pays
+## (faction vehicle discount and all-upkeep percentage) — otherwise the Protectorate's AI would
+## price its discounted vehicles at full cost and never build them.
+static func lifetime_credit_cost(unit_type: UnitTypeDef, state: GameState = null, owner: int = -1) -> float:
+	var upkeep: float = float(unit_type.upkeep)
+	if state != null and owner >= 0:
+		upkeep = float(Upkeep.unit_upkeep(state, owner, unit_type) * (100 + Faction.upkeep_pct_delta(state, owner)) / 100)
+	return float(unit_type.produce_cost) + upkeep * float(AIBalance.ai.economy_horizon)
 
 
 ## ★ Faction-aware AI (2026-09-28, faction-identity.md OQ-15): how well [param unit_type]

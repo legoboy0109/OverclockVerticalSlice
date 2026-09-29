@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=7 format=3]
 ; GENERATED from game-data/Structures/Independents Barracks.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 7f501f9cc8954aea5ed3e26b3b7c50d4810e484f491642cd6e908645518aa8b2
+; source-sha256: d60caf0dfcaef9e1d823eb6067f0314a21ac9f54a42284155ece0b8e8b9bd81b
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/partisan.tres" id="2"]
@@ -20,7 +20,7 @@ build_cost = 900
 build_time = 2
 upkeep = 100
 max_count = 2
-cap_bonus = 2
+cap_bonus = 4
 production_cap = 4
 producible_types = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")]
 attack = 0

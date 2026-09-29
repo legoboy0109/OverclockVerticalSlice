@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Cathedral Tank.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 18fb93d0e0e3a95dd2b5a994a911929e73a8b521ec9c93f1da1f399d4a48032d
+; source-sha256: 837497780079a226b7de71f6b0b1d92812c63ca382eedf04b0cd7c0cae097767
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -17,7 +17,7 @@ move_cost = 2
 soft_move_cap = 3
 produce_cost = 1900
 production_turns = 2
-upkeep = 600
+upkeep = 900
 counts_toward_cap = false
 can_counterattack = false
 can_build = false

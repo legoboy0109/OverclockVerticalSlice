@@ -71,17 +71,25 @@ func test_shipped_roster_upkeep_matches_the_derived_convention() -> void:
 	# values only because ceil rounded hard on single digits. UPKEEP_GRANULARITY
 	# restores that; if it is ever removed these four drift low and the sustainable
 	# army silently rises past the population cap.
-	assert_int(UnitTypes.SCOUT.upkeep).is_equal(Upkeep.default_upkeep(UnitTypes.SCOUT.produce_cost))
-	assert_int(UnitTypes.TROOPER.upkeep).is_equal(Upkeep.default_upkeep(UnitTypes.TROOPER.produce_cost))
-	assert_int(UnitTypes.SNIPER.upkeep).is_equal(Upkeep.default_upkeep(UnitTypes.SNIPER.produce_cost))
-	assert_int(UnitTypes.HEAVY.upkeep).is_equal(Upkeep.default_upkeep(UnitTypes.HEAVY.produce_cost))
+	assert_int(UnitTypes.SCOUT.upkeep).is_equal(Upkeep.default_upkeep(UnitTypes.SCOUT.produce_cost, UnitTypes.SCOUT.unit_class))
+	assert_int(UnitTypes.TROOPER.upkeep).is_equal(Upkeep.default_upkeep(UnitTypes.TROOPER.produce_cost, UnitTypes.TROOPER.unit_class))
+	assert_int(UnitTypes.SNIPER.upkeep).is_equal(Upkeep.default_upkeep(UnitTypes.SNIPER.produce_cost, UnitTypes.SNIPER.unit_class))
+	assert_int(UnitTypes.HEAVY.upkeep).is_equal(Upkeep.default_upkeep(UnitTypes.HEAVY.produce_cost, UnitTypes.HEAVY.unit_class))
 
 
-func test_shipped_roster_upkeep_is_100_200_200_300() -> void:
-	assert_int(UnitTypes.SCOUT.upkeep).is_equal(100)
-	assert_int(UnitTypes.TROOPER.upkeep).is_equal(200)
-	assert_int(UnitTypes.SNIPER.upkeep).is_equal(200)
-	assert_int(UnitTypes.HEAVY.upkeep).is_equal(300)
+func test_shipped_roster_upkeep_is_80_150_150_230() -> void:
+	# 2026-09-29: infantry upkeep ×0.75 (was 100/200/200/300) — user decision.
+	assert_int(UnitTypes.SCOUT.upkeep).is_equal(80)
+	assert_int(UnitTypes.TROOPER.upkeep).is_equal(150)
+	assert_int(UnitTypes.SNIPER.upkeep).is_equal(150)
+	assert_int(UnitTypes.HEAVY.upkeep).is_equal(230)
+
+
+func test_vehicles_pay_more_upkeep_than_the_price_formula_alone() -> void:
+	# The other half of the 2026-09-29 decision: vehicles ×1.5.
+	assert_int(UnitTypes.TANK.upkeep).is_equal(
+		Upkeep.default_upkeep(UnitTypes.TANK.produce_cost, UnitTypes.TANK.unit_class))
+	assert_int(UnitTypes.TANK.upkeep).is_equal(750)
 
 
 func test_every_entity_upkeep_is_non_negative() -> void:
@@ -139,10 +147,10 @@ func test_destroyed_entity_contributes_nothing_from_that_moment() -> void:
 
 func test_total_upkeep_sums_units_and_structures() -> void:
 	var state := _state()
-	_add_unit(state, 0, UnitTypes.SCOUT, Vector2i(0, 1))     # 100
-	_add_unit(state, 0, UnitTypes.HEAVY, Vector2i(1, 1))     # 300
+	_add_unit(state, 0, UnitTypes.SCOUT, Vector2i(0, 1))     # 80
+	_add_unit(state, 0, UnitTypes.HEAVY, Vector2i(1, 1))     # 230
 	_add_structure(state, 0, StructureTypes.RESEARCH_LAB, Vector2i(2, 1))  # 200
-	assert_int(Upkeep.total_upkeep(state, 0)).is_equal(600)
+	assert_int(Upkeep.total_upkeep(state, 0)).is_equal(510)
 
 
 func test_total_upkeep_counts_only_the_named_players_entities() -> void:
@@ -166,7 +174,7 @@ func test_net_credit_income_is_gross_minus_upkeep() -> void:
 func test_net_credit_income_goes_negative_when_upkeep_exceeds_income() -> void:
 	var state := _state()
 	for i: int in range(12):
-		_add_unit(state, 0, UnitTypes.HEAVY, Vector2i(i, 3))  # 12 x 300 = 3600 > 1000
+		_add_unit(state, 0, UnitTypes.HEAVY, Vector2i(i, 3))  # 12 x 230 = 2760 > 1500
 	assert_int(Upkeep.net_credit_income(state, 0)).is_less(0)
 
 
@@ -257,3 +265,36 @@ func test_entity_with_no_type_contributes_zero_rather_than_crashing() -> void:
 	# And the whole economy step still completes.
 	Upkeep.apply_turn_economy(state, 0)
 	assert_int(state.per_player[0].current_credits).is_equal(Credits.credit_income(state, 0))
+
+
+# --- Faction vehicle upkeep discount (2026-09-29) ------------------------------
+
+func test_protectorate_vehicles_cost_a_third_less_upkeep() -> void:
+	var state := _state()
+	state.per_player[0].faction = Factions.GALACTIC_PROTECTORATE
+	var tank: int = UnitTypes.TANK.upkeep
+	assert_int(Upkeep.unit_upkeep(state, 0, UnitTypes.TANK)).is_equal(tank * 67 / 100)
+
+
+func test_the_vehicle_discount_leaves_infantry_alone() -> void:
+	var state := _state()
+	state.per_player[0].faction = Factions.GALACTIC_PROTECTORATE
+	assert_int(Upkeep.unit_upkeep(state, 0, UnitTypes.TROOPER)).is_equal(UnitTypes.TROOPER.upkeep)
+
+
+func test_the_vehicle_discount_reaches_the_total_and_only_its_own_faction() -> void:
+	var state := _state()
+	state.per_player[0].faction = Factions.GALACTIC_PROTECTORATE
+	state.per_player[1].faction = Factions.DEMOCRATIC_ALLIANCE
+	_add_unit(state, 0, UnitTypes.TANK, Vector2i(0, 1))
+	_add_unit(state, 1, UnitTypes.TANK, Vector2i(5, 5))
+	assert_int(Upkeep.total_upkeep(state, 0)).is_equal(UnitTypes.TANK.upkeep * 67 / 100)
+	assert_int(Upkeep.total_upkeep(state, 1)).is_equal(UnitTypes.TANK.upkeep)
+
+
+func test_the_ai_prices_a_discounted_vehicle_at_what_it_really_costs() -> void:
+	var state := _state()
+	state.per_player[0].faction = Factions.GALACTIC_PROTECTORATE
+	state.per_player[1].faction = Factions.DEMOCRATIC_ALLIANCE
+	assert_float(AI.lifetime_credit_cost(UnitTypes.TANK, state, 0)) \
+		.is_less(AI.lifetime_credit_cost(UnitTypes.TANK, state, 1))

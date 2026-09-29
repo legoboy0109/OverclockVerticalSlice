@@ -51,7 +51,11 @@ extends Resource
 ## Flat Credit income every player earns each turn regardless of board state.
 ## ★ The board no longer contributes to income at all — this plus the tier term
 ## is the whole formula.
-@export var base_income: int = 1000
+## ★ 2026-09-29 (user decision): 1000 → 1500. At 1000 the AI fielded under 2 fighters at a time,
+## so armies never formed groups and big-map games dragged on (Highlands HQ kills averaged 84
+## rounds). At 1500: Crossroads 28/30 decisive in ~34 rounds, Highlands 25/30 in ~51, and groups
+## of 3+ on 17-31% of turns (design/decision-log.md, "Army size is the real lever").
+@export var base_income: int = 1500
 
 ## Credit income added per completed economy research tier.
 @export var econ_tier_bonus: int = 500
@@ -82,6 +86,13 @@ extends Resource
 ## faster games. ★ Tune this to hit a TARGET EQUILIBRIUM ARMY of 7-9 units rather
 ## than for its own sake — the army size is the number with a felt meaning.
 @export var upkeep_divisor: int = 3
+
+## ★ 2026-09-29 (user decision): class scaling on the derived upkeep convention
+## ([method Upkeep.default_upkeep]). Cheaper infantry and dearer vehicles, so that with the
+## infantry cap raised to 16 upkeep — not the cap — still limits army size, and infantry keep a
+## late-game niche besides piloting. Percent of the price-derived figure.
+@export var infantry_upkeep_pct: int = 75
+@export var vehicle_upkeep_pct: int = 150
 
 ## Rounding step for derived upkeep. ★ LOAD-BEARING, not cosmetic: before the ×100
 ## Credit rescale the derivation was a bare `ceil(produce_cost / 3)`, and it produced

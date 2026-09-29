@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Guard.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 662a6597e3a143d416d8239c5d079b6ff74025285faaf61ea066a2850f4315eb
+; source-sha256: 82d4986ce1c7e18444d3b9a94a5ae455012c19601de2b1615568e59e39480c51
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/abilities/fortify.tres" id="2"]
@@ -18,7 +18,7 @@ move_cost = 2
 soft_move_cap = 3
 produce_cost = 350
 production_turns = 1
-upkeep = 200
+upkeep = 150
 counts_toward_cap = true
 can_counterattack = false
 can_build = false

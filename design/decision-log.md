@@ -531,3 +531,58 @@ measured (30 games per map); **none beat the shipped steady-pressure AI**, so th
   Groups form on their own and games get much shorter. Gathering still didn't beat pressure
   there (Crossroads 25/30, Highlands 21/30). **Open decision (user): raise base income?** It also
   changes human play (bigger armies, faster games). Faction balance at higher income is not yet measured.
+
+## Base income 1000 → 1500 (user decision, 2026-09-29) — ⏸ on branch, awaiting two calls
+
+- Set in `EconomyConfig.base_income`. The income curve becomes 1500 / 2000 / 2500 / 3000 by tier.
+- ⚠ **Unit cap vs upkeep rule breaks.** `population_cap_test` guards "the cap sits just above the
+  army upkeep can sustain", so upkeep is what limits army size. At a fully researched economy the
+  sustainable army is now 11 against a cap of 10, so the cap would do the limiting. **User call:**
+  raise the base infantry cap 4 → 6 (cap 12), or accept a cap-limited late game.
+- **Faction check** (each faction vs the Alliance, 30 games each; faction wins, old → new income):
+
+  | Faction | Small map | Crossroads |
+  |---|---|---|
+  | Solar Federation | 6 → 7 | 9 → 7 |
+  | Independents | 8 → 10 | 18 → 25 |
+  | Machinist's Union | 5 → 6 | 8 → 6 |
+  | Galactic Protectorate | 11 → 14 | 8 → 9 |
+  | Holy Cosmic Empire | 16 → 11 | **19 → 4** |
+  | **Total** | 46 → 48 /150 | 62 → 51 /150 |
+
+  - Independents gain because their flat −200 income penalty shrinks from 20% to 13% of base.
+  - **Empire collapse (Crossroads):** the Alliance can now afford Artillery (3 → 38 built;
+    1,600 Credits, range 5, 16 hp). Nothing the Empire fields reaches past 3, so Artillery shells
+    it from out of reach (it landed the killing blow on the HQ in 11 games; the Alliance won by
+    HQ kill 23 times, was 11). Game length unchanged (~50 rounds), so it isn't about promotion time.
+
+### Follow-up (same day): cap 16, cheaper infantry, dearer vehicles (user decision)
+- **Infantry cap 16:** each Barracks now adds +4 (was +2), 4 + 3×4. `cap_hard_ceiling` 14 → 18.
+- **Upkeep by class:** infantry ×0.75, vehicles (ground and air) ×1.5, rounded to the nearest 10
+  with halves up. Encoded in `Upkeep.default_upkeep` (`infantry_upkeep_pct`, `vehicle_upkeep_pct`)
+  and applied to every unit note. E.g. Trooper 200 → 150, Heavy 300 → 230, Tank 500 → 750.
+- **Faction check** (faction wins of 30 vs the Alliance; old economy → income only → full package):
+
+  | Faction | Small map | Crossroads |
+  |---|---|---|
+  | Solar Federation | 6 → 7 → 8 | 9 → 7 → 13 |
+  | Independents | 8 → 10 → 8 | 18 → 25 → 22 |
+  | Machinist's Union | 5 → 6 → 8 | 8 → 6 → 8 |
+  | Galactic Protectorate | 11 → 14 → **7** | 8 → 9 → **5** |
+  | Holy Cosmic Empire | 16 → 11 → 11 | 19 → 4 → **15** |
+
+  - ✅ The Empire's collapse is mostly fixed by the dearer vehicle upkeep, since Artillery is now costly to keep.
+  - ⚠ The **Protectorate is hit**: it built 26 Lance Tanks on Crossroads at the old economy, and
+    almost none now.
+- **AI mirror:** armies are real at last (~3.3 fighters, groups of 3+ on 31–47% of turns), but
+  **big maps stall**. HQ kills: Vertical Slice 30/30 (28 rounds), Crossroads 17/30 (was 23),
+  **Highlands 6/30** (was 27); 24 Highlands games ran to the round limit. Ready groups meet an
+  equally big army mid-map (only 12% of fighters ever reach the enemy half).
+- **Protectorate vehicle upkeep discount (user decision):** new faction property
+  `vehicle_upkeep_pct_delta`, which applies to vehicles only, per unit, before the faction's all-upkeep
+  percentage. The Protectorate gets −33 (≈ its vehicles' pre-×1.5 upkeep); every other faction 0.
+  The AI's lifetime-cost estimate uses the real per-faction upkeep, so it builds the discounted
+  vehicles. Result vs the Alliance: Crossroads 5 → **10**/30 (8 at the old economy), with Sentinel
+  Mechs back in production; small map 7 → 6/30 (was 11 at the old economy; still weak there).
+- ✅ **Merged** with the income/cap/upkeep package. Open: big-map AI mirrors stall (Highlands 6/30 HQ
+  kills). Attack-logic investigation is next.
