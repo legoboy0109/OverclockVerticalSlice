@@ -133,6 +133,7 @@ static func build(plain: bool = false) -> MapDefinition:
 	var map := MapDefinition.new()
 	map.display_name = data().display_name
 	map.default_round_limit = data().default_round_limit
+	map.default_ap_per_turn = data().default_ap_per_turn
 	map.width = WIDTH
 	map.height = HEIGHT
 	map.mode = MapDefinition.Mode.AUTHORED

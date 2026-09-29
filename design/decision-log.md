@@ -611,3 +611,17 @@ stalled for lack of AP, or were boxed in by their own crowd.
 - ★ **The big lever is AP per turn** (a player-facing match setting, default 20). At 30 AP,
   Crossroads goes from 17 to 27–30 decisive games out of 30, and Highlands from 7 to 17–18.
   **Open decision (user):** the default AP per turn, e.g. a per-map default like round limits.
+
+## Per-map AP defaults (user decision, 2026-09-29)
+
+- Map notes carry `ap_per_turn` (10–40): **Vertical Slice 20, Crossroads 30, Highlands 30**.
+  Choosing a map on the setup screen switches both the round limit and AP to its defaults; the
+  player can still change both. The simulator starts each match at the map's AP unless
+  `--econ=flat_ap_per_turn=N` overrides it. Tests: every map in range, and a bigger board never
+  starts with less AP.
+- AI mirror at the map defaults: Vertical Slice 28/30 decisive (33 rounds), **Crossroads 27/30**
+  (44), **Highlands 18/30** (54; was 7/30 at 20 AP).
+- ⚠ Faction check on Crossroads at 30 AP: faction wins vs the Alliance, Solar 14, Independents 14
+  (was 22), Union 7, Protectorate 7 (was 10), Empire 10 (was 15). **52/150, down from ~68**: more
+  AP favours the Alliance on that map. (The 20-AP comparison figures predate the AP-aware-moves
+  change, so the comparison is approximate.)

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="MapDefinition" load_steps=2 format=3]
 ; GENERATED from game-data/Maps/Crossroads.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: a52f36d7075c1b6526a2854f455969cac2e45d01dfc7e26c681a6a43c0929bb7
+; source-sha256: 3012607eff44275374428aab5f964e44b14e40dcfd372a23e7af2f1dd6335cae
 
 [ext_resource type="Script" path="res://src/core/grid/map_definition.gd" id="1"]
 
@@ -8,6 +8,7 @@
 script = ExtResource("1")
 display_name = "Crossroads"
 default_round_limit = 120
+default_ap_per_turn = 30
 description = "A mid-size board: an open centre, with rough ground and short walls on both flanks."
 width = 18
 height = 14

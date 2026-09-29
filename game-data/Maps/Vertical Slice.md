@@ -1,6 +1,7 @@
 ---
 id: vertical_slice
 round_limit: 80
+ap_per_turn: 20
 description: The original skirmish board, small and quick. The one every balance number so far was measured on.
 ---
 

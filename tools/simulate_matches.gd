@@ -147,6 +147,8 @@ var _kills: Dictionary = {}
 ## With --ap-trace: AP spent per action category, summed over the batch (SIM_AP rows), plus one
 ## SIM_APTURN row per turn: player, AP at start, AP left, how the turn ended.
 var _ap_trace: bool = false
+## --econ=flat_ap_per_turn=N given: use it instead of the map's own default AP.
+var _ap_override: bool = false
 var _ap_spent: Dictionary = {}
 ## With --ap-trace: why each fighter that could have moved did not, at the end of its turn
 ## ("pushing:" prefix when it was ready to push). Printed as SIM_IDLE rows.
@@ -212,6 +214,8 @@ func _parse_args() -> void:
 			# the BASE config, because every game's Balance.reset() copies the match economy from it.
 			var ekv: PackedStringArray = arg.trim_prefix("--econ=").split("=")
 			Balance.base_economy.set(ekv[0], int(ekv[1]))
+			if ekv[0] == "flat_ap_per_turn":
+				_ap_override = true
 			print("SIM_ECON,%s,%d" % [ekv[0], int(Balance.base_economy.get(ekv[0]))])
 		elif arg.begins_with("--ai="):
 			# AI-knob experiment for this run only: --ai=fortify_hold_rule=0 (repeatable).
@@ -493,6 +497,10 @@ func _build_match(favoured: int, handicap: int, variant: int) -> GameState:
 	# cap), so the board simulated is the board that ships. Both seats play the baseline
 	# faction — a mirror is what this harness measures — and the economy is the shipped one.
 	Balance.reset()
+	# ★ The map's own AP per turn, exactly as the setup screen would start the match — unless a
+	# run overrides it. apply_match copies the base economy, so other --econ changes survive.
+	if not _ap_override:
+		Balance.apply_match(map.default_ap_per_turn)
 	var max_rounds: int = _max_rounds_override if _max_rounds_override > 0 \
 		else map.default_round_limit
 	var state: GameState = MatchSetup.build(map, _factions, starting_player, max_rounds, [0, 1])

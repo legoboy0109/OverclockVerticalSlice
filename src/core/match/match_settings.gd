@@ -38,14 +38,17 @@ static func defaults() -> MatchSettings:
 	m.ap_per_turn = Balance.base_economy.flat_ap_per_turn
 	m.map = Maps.all()[0]
 	m.round_limit = m.map.default_round_limit
+	m.ap_per_turn = m.map.default_ap_per_turn
 	return m
 
 
-## Switches to [param new_map] and to its own default round limit — a long board needs a longer
-## game, so a limit chosen for the previous map would be the wrong starting point.
+## Switches to [param new_map] and to its own default round limit and AP per turn — a long board
+## needs a longer game and more AP to cross it, so values chosen for the previous map would be the
+## wrong starting point.
 func choose_map(new_map: MapDefinition) -> void:
 	map = new_map
 	round_limit = clampi(new_map.default_round_limit, ROUNDS_MIN, ROUNDS_MAX)
+	ap_per_turn = clampi(new_map.default_ap_per_turn, AP_MIN, AP_MAX)
 
 
 ## The settings to use now: whatever was chosen this run, else what was saved, else defaults.

@@ -78,3 +78,19 @@ func test_a_bigger_board_never_gets_a_shorter_game() -> void:
 				assert_int(a.default_round_limit).override_failure_message(
 					"%s is bigger than %s but has a shorter round limit." % [a.display_name, b.display_name]) \
 					.is_greater_equal(b.default_round_limit)
+
+
+func test_every_map_has_an_ap_per_turn_the_setup_screen_accepts() -> void:
+	for m: MapDefinition in Maps.all():
+		assert_int(m.default_ap_per_turn).override_failure_message(
+			"%s's ap_per_turn is outside what the setup screen allows." % m.display_name) \
+			.is_between(MatchSettings.AP_MIN, MatchSettings.AP_MAX)
+
+
+func test_a_bigger_board_never_gets_less_ap() -> void:
+	for a: MapDefinition in Maps.all():
+		for b: MapDefinition in Maps.all():
+			if a.width * a.height > b.width * b.height:
+				assert_int(a.default_ap_per_turn).override_failure_message(
+					"%s is bigger than %s but starts with less AP." % [a.display_name, b.display_name]) \
+					.is_greater_equal(b.default_ap_per_turn)

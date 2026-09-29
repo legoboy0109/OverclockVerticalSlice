@@ -420,8 +420,12 @@ def render(note: Note, index: dict) -> str:
         rl = note.props.get("round_limit", 80)
         if not isinstance(rl, int) or isinstance(rl, bool) or not 20 <= rl <= 200:
             raise VaultError(f"{note.rel}: round_limit must be a whole number from 20 to 200 (got {rl!r})")
+        ap = note.props.get("ap_per_turn", 20)
+        if not isinstance(ap, int) or isinstance(ap, bool) or not 10 <= ap <= 40:
+            raise VaultError(f"{note.rel}: ap_per_turn must be a whole number from 10 to 40 (got {ap!r})")
         lines += [
             f"default_round_limit = {rl}",
+            f"default_ap_per_turn = {ap}",
             f"description = {gd_str(str(note.props.get('description', '')))}",
             f"width = {mp['width']}",
             f"height = {mp['height']}",
