@@ -207,6 +207,12 @@ func _parse_args() -> void:
 			print("SIM_UNIT_STAT,%s,%s,%d" % [unit_and_prop[0], unit_and_prop[1], int(ut.get(unit_and_prop[1]))])
 		elif arg == "--idle-detail":
 			_idle_detail = true
+		elif arg.begins_with("--econ="):
+			# Economy experiment for this run only: --econ=base_income=1500 (repeatable). Set on
+			# the BASE config, because every game's Balance.reset() copies the match economy from it.
+			var ekv: PackedStringArray = arg.trim_prefix("--econ=").split("=")
+			Balance.base_economy.set(ekv[0], int(ekv[1]))
+			print("SIM_ECON,%s,%d" % [ekv[0], int(Balance.base_economy.get(ekv[0]))])
 		elif arg.begins_with("--ai="):
 			# AI-knob experiment for this run only: --ai=fortify_hold_rule=0 (repeatable).
 			var kv: PackedStringArray = arg.trim_prefix("--ai=").split("=")
