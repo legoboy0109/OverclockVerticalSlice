@@ -45,6 +45,25 @@
 > A `/propagate-design-change` pass is owed to reconcile the GDD corpus (grid-terrain,
 > movement, combat, command-action-interface, game-hud) with the projection change.
 
+> ### ★ ART-DIRECTION PIVOT — HD-2D PIXEL ART (user decision, 2026-09-29)
+> The rendering medium changes from smooth flat-vector sprites to **HD-2D**: pixel-art sprites
+> plus modern lighting (bloom on the neon, soft depth blur at the board edges, coloured light
+> pools from neon trim). The identity rules — silhouette-first, dark stage / light actors,
+> neon as the ownership and state channel — are **unchanged**; only the medium changes.
+> - **Density: "medium"** — one art pixel = **2×2 screen px**. Sprites keep their shipped
+>   file size (2× on-screen) and are drawn on a 4-file-px grid, so the renderer needs no
+>   sizing change. Chosen over fine (1 screen px — reads as "crisp", not pixel art) and
+>   chunky (3 screen px — thin units like the Sniper broke up). Comparison:
+>   `art-source/hd2d-exploration/pixel-density-compare.png`.
+> - **Pipeline:** generate smooth with SDXL → cutout → recolor → **`tools/asset-pipeline/pixelize.py`**
+>   (area downscale, ≤24-colour palette, 1-art-px dark outline). Glow masks go through
+>   `pixelize.py --mask` with the same factor so they stay aligned with the armour.
+>   "Pixel filter on generated assets" is the stated **interim** method; hand-authored pixel
+>   art may replace it later.
+> - **Scope:** sprites + lighting now. Terrain keeps its current tiles for now.
+> - **Faction looks:** approved as drafted — see §5.6.
+> - Superseded by this: §8.3's "not committed pixel-art" line.
+
 > **Visual References:** Advance Wars (readable grid tactics, unit punchiness),
 > TRON / synthwave (neon-on-dark palette), Final Fantasy Tactics (isometric projection,
 > readable painterly environments), StarCraft / StarCraft 2 (faction color identity,
@@ -417,6 +436,25 @@ No single signal is allowed to be a single point of failure (colorblind vision, 
 
 Because hue and Mass Distribution Bias are independent channels (one chromatic, one geometric), losing either one in isolation (colorblindness removes reliable hue distinction; heavy occlusion or extreme zoom-out can blur silhouette nuance) still leaves a working signal from the other, with position/context as a fallback tiebreak. No degraded viewing condition is allowed to make faction identity fully unreadable — this is the same discipline §4.4's colorblind-safety table applies to the palette, extended to the shape layer.
 
+### 5.6 Faction Visual Identities (approved 2026-09-29, HD-2D pivot)
+
+Seat hue (Rush orange / Boom cyan) still says **which player**; these say **which faction**, in
+shape, so they survive greyscale (§1 P2). Each faction's whole roster — infantry, vehicles,
+aircraft, buildings — shares its marker. Samples: `art-source/hd2d-exploration/faction-looks-sample.png`.
+
+| Faction | Look | Shape marker |
+|---|---|---|
+| **Accord of Inner Systems** | Clean, orderly standard-issue power armour — the existing base-roster art | Balanced rectangles, square shoulders |
+| **Wolf Citizens' Front** | Citizen militia: light partial plates over jumpsuits, sealed gas-mask helmets; trucks with guns bolted on | Lean, light, forward-leaning, few plates |
+| **Ross Foundry Collective** | Heavy industry: welder-mask helmets, slab armour like machine casings, hazard stripes, exhausts; enormous slow mechs | Bottom-heavy, wide, boxy |
+| **The Lightless** | Scavenger raiders: mismatched salvaged plates, blacked-out helmets, patched and bolted gear | Asymmetric, jagged, hunched |
+| **Trappist Autonomous Mandate** | Identical smooth white-shell robots; human specialists in sleek fitted suits | Rounded capsule shapes (every other faction is angular) |
+| **Order of the Ninth Descent** | Sci-fi crusaders: spire-crested sealed helmets, gothic-arch chest plates, plate tabards, halo rings, cathedral shapes on vehicles and buildings | Tall, vertical, pointed |
+
+⚠ **Order drifts medieval under SDXL** (swords, kite shields, open knight helms). Prompts must
+carry guns/energy weapons and push "sci-fi", and negate sword/shield/medieval unless the unit's
+role calls for it. Rank-visible ornament (halo that grows with rank) is a noted future idea.
+
 ### 5.4 Expression & Pose Register
 
 - **Sealed-helmet, mechanical-but-human.** Units communicate readiness and intent through **posture and armor-plate geometry**, never facial expression (§5.1 — there is no face to read). A unit "looks" alert, spent, or resolute the way a suit of powered armor would: weight distribution, stance width, weapon-ready angle — not a raised eyebrow.
@@ -555,7 +593,7 @@ Faction tokens are `rush` / `boom` / `neutral`, matching `design/registry/entiti
 
 ### 8.3 Resolution & Sprite-Size Tiers
 
-**Author flat-vector-style art at high resolution and downscale — not committed pixel-art.** §1's identity is flat vector/cel shapes (not pixel-art's dither/grid contract); hi-res-then-downscale gives one source asset that serves both 1080p and 1440p cleanly, is cheaper to future-proof for a solo pipeline, and lets the §2 glow layer keep soft falloff. Author at **~2–3× effective display size** (final multiple set by atlas budget, §8.7).
+~~Author flat-vector-style art at high resolution and downscale — not committed pixel-art.~~ **⚠ SUPERSEDED 2026-09-29 by the HD-2D pivot (top of document): sprites are now pixel art at one art px = 2×2 screen px, produced by `pixelize.py`. Author-large-then-downscale still applies to the smooth source.** §1's identity is flat vector/cel shapes (not pixel-art's dither/grid contract); hi-res-then-downscale gives one source asset that serves both 1080p and 1440p cleanly, is cheaper to future-proof for a solo pipeline, and lets the §2 glow layer keep soft falloff. Author at **~2–3× effective display size** (final multiple set by atlas budget, §8.7).
 
 | Category | On-screen | Author-at | Notes |
 |---|---|---|---|
