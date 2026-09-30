@@ -44,7 +44,8 @@ var _warning_label: Label = null
 var _scale_label: Label = null
 var _scale_slider: HSlider = null
 var _motion_button: CheckButton = null
-var _lighting_button: CheckButton = null
+var _blur_button: CheckButton = null
+var _glow_button: CheckButton = null
 var _back_button: Button = null
 
 
@@ -119,7 +120,8 @@ func _build() -> void:
 	column.add_child(_heading("DISPLAY", 20))
 	column.add_child(_scale_row())
 	column.add_child(_motion_row())
-	column.add_child(_lighting_row())
+	column.add_child(_toggle_row("Edge Blur", "_blur_button", _on_blur_toggled))
+	column.add_child(_toggle_row("Glow", "_glow_button", _on_glow_toggled))
 
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 18)
@@ -240,17 +242,19 @@ func _motion_row() -> HBoxContainer:
 	return row
 
 
-## HD-2D lighting on/off (neon halo, floor light pools, edge blur — ADR-0020). Applied
-## live: the board polls the setting each frame, like Reduced Motion.
-func _lighting_row() -> HBoxContainer:
+## An on/off row for an HD-2D lighting switch (ADR-0020): stores its [CheckButton] in
+## [param member] and wires [param handler]. Applied live — the board polls the settings
+## each frame, even behind the pause menu.
+func _toggle_row(label: String, member: String, handler: Callable) -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
-	row.add_child(_cell("Lighting Effects", ROW_LABEL_WIDTH, MenuStyle.TEXT))
-	_lighting_button = CheckButton.new()
-	_lighting_button.custom_minimum_size = Vector2(0, MenuStyle.MIN_HIT_TARGET)
-	_lighting_button.focus_mode = Control.FOCUS_ALL
-	_lighting_button.toggled.connect(_on_lighting_toggled)
-	row.add_child(_lighting_button)
+	row.add_child(_cell(label, ROW_LABEL_WIDTH, MenuStyle.TEXT))
+	var button := CheckButton.new()
+	button.custom_minimum_size = Vector2(0, MenuStyle.MIN_HIT_TARGET)
+	button.focus_mode = Control.FOCUS_ALL
+	button.toggled.connect(handler)
+	row.add_child(button)
+	set(member, button)
 	return row
 
 
@@ -343,8 +347,13 @@ func _on_motion_toggled(pressed: bool) -> void:
 	_save_and_report()
 
 
-func _on_lighting_toggled(pressed: bool) -> void:
-	_settings.lighting_effects = pressed
+func _on_blur_toggled(pressed: bool) -> void:
+	_settings.edge_blur = pressed
+	_save_and_report()
+
+
+func _on_glow_toggled(pressed: bool) -> void:
+	_settings.glow_effects = pressed
 	_save_and_report()
 
 
@@ -413,8 +422,10 @@ func _refresh_display_labels() -> void:
 		_scale_label.text = "%d%%" % roundi(_settings.ui_scale * 100.0)
 	if _motion_button != null:
 		_motion_button.set_pressed_no_signal(_settings.reduced_motion)
-	if _lighting_button != null:
-		_lighting_button.set_pressed_no_signal(_settings.lighting_effects)
+	if _blur_button != null:
+		_blur_button.set_pressed_no_signal(_settings.edge_blur)
+	if _glow_button != null:
+		_glow_button.set_pressed_no_signal(_settings.glow_effects)
 
 
 # --- Testable model -----------------------------------------------------------
@@ -452,12 +463,12 @@ func reduced_motion() -> bool:
 	return _settings.reduced_motion
 
 
-## Whether HD-2D lighting is on (see [member GameSettings.lighting_effects]).
-func lighting_effects() -> bool:
-	return _settings.lighting_effects
+## Flips the Edge Blur toggle as a player would (drives the real [CheckButton], so the
+## handler and the save run). For tests.
+func toggle_blur(on: bool) -> void:
+	_blur_button.button_pressed = on
 
 
-## Flips the lighting toggle as a player would (drives the real [CheckButton], so the
-## handler, the save and the label refresh all run). For tests.
-func toggle_lighting(on: bool) -> void:
-	_lighting_button.button_pressed = on
+## Flips the Glow toggle as a player would. For tests.
+func toggle_glow(on: bool) -> void:
+	_glow_button.button_pressed = on

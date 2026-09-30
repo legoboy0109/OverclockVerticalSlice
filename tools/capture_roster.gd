@@ -41,9 +41,10 @@ func _run() -> void:
 	for i: int in 8:
 		await get_tree().process_frame
 	# --flat renders with the HD-2D lighting off, through the SAME path the Settings toggle
-	# uses (GameSettings.lighting_effects, not saved), for before/after comparisons.
+	# uses (GameSettings.edge_blur + glow_effects, not saved), for before/after comparisons.
 	if OS.get_cmdline_user_args().has("--flat") and slice.get("_lighting") != null:
-		Settings.settings.lighting_effects = false
+		Settings.settings.edge_blur = false
+		Settings.settings.glow_effects = false
 		slice._lighting.apply_setting()
 	var st: GameState = slice.state()
 	var ids: PackedStringArray = _arg("--units", "trooper").split(",")

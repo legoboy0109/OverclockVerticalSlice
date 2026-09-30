@@ -182,24 +182,25 @@ func test_a_missing_settings_file_is_a_first_run_not_an_error() -> void:
 	assert_bool(loaded.reduced_motion).is_false()
 
 
-func test_lighting_effects_defaults_on_and_survives_a_round_trip_off() -> void:
+func test_blur_and_glow_default_on_and_survive_a_round_trip_independently() -> void:
 	# Arrange
 	var s := _fresh()
-	assert_bool(s.lighting_effects).is_true()
-	# Act
-	s.lighting_effects = false
+	assert_bool(s.edge_blur).is_true()
+	assert_bool(s.glow_effects).is_true()
+	# Act — only the blur off
+	s.edge_blur = false
 	assert_int(s.save()).is_equal(OK)
 	var loaded := GameSettings.new()
 	loaded.load_saved()
 	# Assert
-	assert_bool(loaded.lighting_effects).is_false()
+	assert_bool(loaded.edge_blur).is_false()
+	assert_bool(loaded.glow_effects).is_true()
 	assert_bool(loaded.has_overrides()).is_true()
 	_fresh().save()
 
 
-func test_a_settings_file_older_than_the_lighting_option_keeps_lighting_on() -> void:
-	# Arrange — a file written before lighting_effects existed has no such key; it must
-	# not read as "the player switched lighting off".
+func test_a_settings_file_older_than_the_lighting_options_keeps_them_on() -> void:
+	# Arrange — a file with neither key must not read as "the player turned lighting off".
 	var cfg := ConfigFile.new()
 	cfg.set_value("display", "reduced_motion", true)
 	cfg.save(GameSettings.PATH)
@@ -207,15 +208,33 @@ func test_a_settings_file_older_than_the_lighting_option_keeps_lighting_on() -> 
 	var loaded := GameSettings.new()
 	loaded.load_saved()
 	# Assert
-	assert_bool(loaded.lighting_effects).is_true()
+	assert_bool(loaded.edge_blur).is_true()
+	assert_bool(loaded.glow_effects).is_true()
 	_fresh().save()
 
 
-func test_reset_turns_lighting_back_on() -> void:
+func test_the_old_single_lighting_switch_off_carries_into_both() -> void:
+	# Arrange — the short-lived combined "lighting_effects" switch (2026-09-30). A player
+	# who turned it off must not get lighting back when it split into two options.
+	var cfg := ConfigFile.new()
+	cfg.set_value("display", "lighting_effects", false)
+	cfg.save(GameSettings.PATH)
+	# Act
+	var loaded := GameSettings.new()
+	loaded.load_saved()
+	# Assert
+	assert_bool(loaded.edge_blur).is_false()
+	assert_bool(loaded.glow_effects).is_false()
+	_fresh().save()
+
+
+func test_reset_turns_blur_and_glow_back_on() -> void:
 	var s := _fresh()
-	s.lighting_effects = false
+	s.edge_blur = false
+	s.glow_effects = false
 	s.reset_to_defaults()
-	assert_bool(s.lighting_effects).is_true()
+	assert_bool(s.edge_blur).is_true()
+	assert_bool(s.glow_effects).is_true()
 
 
 # ==============================================================================

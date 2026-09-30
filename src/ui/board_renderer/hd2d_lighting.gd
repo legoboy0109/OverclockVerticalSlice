@@ -36,14 +36,15 @@ const EDGE_BLUR_SHADER_PATH: String = "res://src/ui/board_renderer/edge_blur.gds
 ## Mip level at the very screen edge.
 const EDGE_BLUR_MAX_LOD: float = 2.5
 
-## Emitted when [member GameSettings.lighting_effects] changes, so the owner can re-apply
-## the per-actor effects (halo, pools) that this node does not own.
-signal lighting_toggled(on: bool)
+## Emitted when [member GameSettings.glow_effects] changes, so the owner can re-apply the
+## per-actor effects (halo, pools) that this node does not own.
+signal glow_toggled(on: bool)
 
 var _blur_layer: CanvasLayer = null
 var _blur_material: ShaderMaterial = null
-## The last applied setting, so the poll only acts on a change.
-var _on: bool = true
+## The last applied settings, so the poll only acts on a change.
+var _blur_on: bool = true
+var _glow_on: bool = true
 
 
 func _ready() -> void:
@@ -70,20 +71,19 @@ func _process(_delta: float) -> void:
 	apply_setting()
 
 
-## Reads [member GameSettings.lighting_effects] and, if it changed, switches the blur
-## and emits [signal lighting_toggled]. Polled every frame; call it once after
-## connecting the signal so a saved "off" applies before the first frame.
+## Reads [member GameSettings.edge_blur] / [member GameSettings.glow_effects] and applies
+## whichever changed: the blur here, the glow via [signal glow_toggled]. Polled every
+## frame; call it once after connecting the signal so a saved "off" applies before the
+## first frame.
 func apply_setting() -> void:
-	var on: bool = Settings.settings == null or Settings.settings.lighting_effects
-	if on != _on:
-		_on = on
-		set_enabled(on)
-		lighting_toggled.emit(on)
-
-
-## Whether lighting is currently applied (the last value read from settings).
-func is_on() -> bool:
-	return _on
+	var blur: bool = Settings.settings == null or Settings.settings.edge_blur
+	var glow: bool = Settings.settings == null or Settings.settings.glow_effects
+	if blur != _blur_on:
+		_blur_on = blur
+		set_blur_enabled(blur)
+	if glow != _glow_on:
+		_glow_on = glow
+		glow_toggled.emit(glow)
 
 
 ## Sets the blur bands to the HUD's reserved top/bottom screen margins, in pixels.
@@ -94,8 +94,7 @@ func set_bands(top_px: float, bottom_px: float) -> void:
 	_blur_material.set_shader_parameter(&"bottom_band_px", bottom_px)
 
 
-## Turns the edge blur on or off (e.g. a future graphics setting, or a capture that
-## wants the flat look).
-func set_enabled(enabled: bool) -> void:
+## Shows or hides the edge blur ([member GameSettings.edge_blur] drives it).
+func set_blur_enabled(enabled: bool) -> void:
 	if _blur_layer != null:
 		_blur_layer.visible = enabled

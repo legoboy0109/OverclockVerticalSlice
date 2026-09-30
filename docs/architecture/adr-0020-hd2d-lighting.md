@@ -49,12 +49,14 @@ hardware floor (technical-preferences.md).
 - Any future shader on a canvas item: fragment `COLOR` already includes the texture — multiply a
   resample by a vertex-captured modulate, not by `COLOR` (the first `pixel_sharp` build squared the
   texture and turned rush orange deep red).
-- **Player toggle (2026-09-30, user request):** Settings → Display → "Lighting Effects"
-  (`GameSettings.lighting_effects`, default on, saved; an older settings file without the key reads
-  as ON). One switch for all three effects. `Hd2dLighting` polls it with `PROCESS_MODE_ALWAYS` —
-  Settings is opened from the pause menu, where the slice's own `_process` is frozen — switches the
-  blur and emits `lighting_toggled`; the slice sets `EntitySpriteFeed.lighting_enabled` and re-syncs
-  (off = the plain trim mask and hidden pools, i.e. the pre-lighting look).
+- **Player toggles (2026-09-30, user request):** Settings → Display → **"Edge Blur"**
+  (`GameSettings.edge_blur`) and **"Glow"** (`GameSettings.glow_effects`: neon halo + floor light
+  pools), independent, both default on, saved. Split from a single "Lighting Effects" switch the same
+  day; a settings file carrying that old `lighting_effects=false` loads with BOTH off, and a file
+  with none of the keys loads with both on. `Hd2dLighting` polls them with `PROCESS_MODE_ALWAYS`
+  (Settings is opened from the pause menu, where the slice's own `_process` is frozen), shows/hides
+  the blur itself, and emits `glow_toggled`; the slice sets `EntitySpriteFeed.glow_enabled` and
+  re-syncs (off = the plain trim mask and hidden pools, i.e. the pre-lighting look).
 - The halo costs a one-off CPU bake per glow mask the first time that type appears (cached after).
 
 ## Alternatives Rejected

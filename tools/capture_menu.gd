@@ -35,6 +35,15 @@ func _run() -> void:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 	_shot("03-settings")
+	# ...and scrolled to the bottom, where the DISPLAY toggles live (below the fold at 900 px).
+	var scroll := screen.find_children("*", "ScrollContainer", true, false)
+	if not scroll.is_empty():
+		(scroll[0] as ScrollContainer).scroll_vertical = 100000
+		for i: int in 4:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		_shot("03b-settings-display")
+		(scroll[0] as ScrollContainer).scroll_vertical = 0
 
 	# Override two bindings so the "changed" marking and the live reset affordance
 	# are both visible — the default state shows neither.
