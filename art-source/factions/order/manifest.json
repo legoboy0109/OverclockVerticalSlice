@@ -11,10 +11,45 @@
   {
    "id": "knight",
    "kind": "unit",
-   "raw": "art-source/generated/order/knight_2.png",
+   "raw": "art-source/generated/order/knight_clean.png",
    "axis": "h",
    "px": 148,
-   "promote": 42
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "touches": {
+    "headroom": 3,
+    "halo": [
+     12,
+     4.2,
+     4.5,
+     1.6
+    ],
+    "bone": [
+     [
+      12,
+      13
+     ],
+     [
+      11,
+      14
+     ],
+     [
+      13,
+      14
+     ],
+     [
+      12,
+      15
+     ]
+    ],
+    "accent": [
+     [
+      12,
+      14
+     ]
+    ]
+   }
   },
   {
    "id": "confessor",

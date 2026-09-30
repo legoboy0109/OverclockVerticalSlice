@@ -68,5 +68,17 @@
  "ornate": {
   "knight_ornate": "(holding a large sci-fi plasma rifle in both hands:1.5), (tall crested spire helmet with a swept-back fin:1.4), (huge spiked gothic pauldrons:1.3), (orange armor tabard plate with a bone-white starburst sigil:1.3), (small reliquary shrine mounted on the back:1.2), massive armored space marine veteran",
   "levy_ornate": "(holding a compact sci-fi laser carbine in both hands:1.5), (simple spire-crested helmet:1.3), (short orange armor tabard plate with a bone-white starburst sigil:1.3), (prayer-seal badges on the shoulders:1.2), small conscript space trooper, light plate armor"
+ },
+ "clean_head": "single full-body figure, sci-fi gothic crusader soldier,",
+ "clean_tail": "mostly mid slate-grey #6E7C99 matte armor over the whole body, cool neutral grey plates with darker #3E4860 facets, hot orange-red #FF5A2E color blocks ONLY on the chest plate and the tops of the pauldrons, grey arms and grey legs, sealed faceless helmet, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, chunky proportions, three-quarter view, plain flat light grey background, centered, whole body visible with margin",
+ "clean_neg_extra": "(sword:1.6), (blade:1.5), (axe:1.5), (mace:1.5), (spear:1.4), (shield:1.5), (cape:1.4), (cloak:1.4), medieval, fantasy, chainmail, cross, crucifix, plume, feather, face, multiple figures, character sheet, turnaround, views, parts, pieces, orange arms, orange legs, all orange, brown, rust",
+ "clean_size": [
+  "--width",
+  "832",
+  "--height",
+  "1216"
+ ],
+ "clean": {
+  "knight_clean": "(holding a heavy sci-fi plasma rifle:1.4), (very tall pointed spire crest on the helmet:1.4), (huge pointed gothic pauldrons:1.3), (long armored plate tabard to the knees:1.2), massive bulky armored veteran, wide heavy stance"
  }
 }
