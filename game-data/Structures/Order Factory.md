@@ -1,7 +1,6 @@
 ---
 id: empire_factory
 buildable: false
-art_id: factory
 counts_as: []
 hp: 14
 build_cost: 1000

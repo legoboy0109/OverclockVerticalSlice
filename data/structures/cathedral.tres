@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Structures/Cathedral.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 9d81cf8a8fcdfe1abc8eb7e6760201a71438428ab447ba51b6d1c516141136b2
+; source-sha256: fd10dc40a726b53be053abc12c4b0c2c1a4a0dbca06b1d25893453436b056c3d
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/structures/research_lab.tres" id="2"]
@@ -9,7 +9,7 @@
 script = ExtResource("1")
 display_name = "Cathedral"
 buildable = false
-art_id = &"research_lab"
+art_id = &""
 counts_as = [ExtResource("2")]
 hp = 12
 build_cost = 900

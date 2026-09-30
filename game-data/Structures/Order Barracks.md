@@ -1,7 +1,6 @@
 ---
 id: empire_barracks
 buildable: false
-art_id: barracks
 counts_as: []
 hp: 14
 build_cost: 600

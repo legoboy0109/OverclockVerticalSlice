@@ -80,7 +80,7 @@ SLATE_HUE, SLATE_SAT = 221.0, 0.26
 RUSH_HUE = 20.0
 
 
-def palette_lock(im: Image.Image) -> Image.Image:
+def palette_lock(im: Image.Image, structure: bool = False) -> Image.Image:
     """Force a raw render onto the house palette: slate armour, rush-orange accent.
 
     SDXL paints "slate grey" as warm brown-grey and "orange" anywhere from red-brown to
@@ -99,6 +99,11 @@ def palette_lock(im: Image.Image) -> Image.Image:
     # Lift accent value: renders shade the trim so dark that the anchor hue reads
     # red-brown, not the Trooper's orange. Armour value is untouched.
     v2 = np.where(accent, 0.55 + 0.45 * v, v)
+    if structure:
+        # Art bible §5.1: "the stage is dark so the actors can be light" — structures
+        # stay near-black #1B2130 (v .19) with facets lifted to #33405A (v .35). SDXL
+        # paints gothic stone pale, so compress plating value into that band.
+        v2 = np.where(accent, v2, 0.12 + 0.26 * v)
     a[..., :3] = np.clip(_from_hsv(h2, s2, v2) * 255.0 + 0.5, 0, 255).astype(np.uint8)
     return Image.fromarray(a, "RGBA")
 
@@ -200,7 +205,7 @@ def build(asset: dict, dry: bool, tmp: str) -> list[str]:
     if asset.get("flatten"):
         raw = flatten_background(raw, os.path.join(tmp, f"{aid}_flat.png"))
     im, _ = cutout(raw, tol=int(asset.get("tol", 22)), largest_only=True)
-    master = palette_lock(_fit(trim(im), asset["axis"], asset["px"]))
+    master = palette_lock(_fit(trim(im), asset["axis"], asset["px"]), structure=asset["kind"] == "struct")
     clean_path = os.path.join(CLEANED, f"{aid}_rush_hd2d_clean.png")
     if not dry:
         master.save(clean_path)

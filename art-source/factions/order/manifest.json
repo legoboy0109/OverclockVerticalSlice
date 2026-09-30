@@ -74,6 +74,38 @@
    "axis": "w",
    "px": 164,
    "promote": 42
+  },
+  {
+   "id": "empire_barracks",
+   "kind": "struct",
+   "raw": "art-source/generated/order/empire_barracks_2.png",
+   "axis": "w",
+   "px": 256,
+   "flatten": true
+  },
+  {
+   "id": "empire_factory",
+   "kind": "struct",
+   "raw": "art-source/generated/order/empire_factory_2.png",
+   "axis": "w",
+   "px": 256,
+   "flatten": true
+  },
+  {
+   "id": "empire_airfield",
+   "kind": "struct",
+   "raw": "art-source/generated/order/empire_airfield.png",
+   "axis": "w",
+   "px": 256,
+   "flatten": true
+  },
+  {
+   "id": "cathedral",
+   "kind": "struct",
+   "raw": "art-source/generated/order/cathedral_6.png",
+   "axis": "w",
+   "px": 256,
+   "flatten": true
   }
  ]
 }

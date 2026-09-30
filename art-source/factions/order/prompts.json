@@ -40,5 +40,20 @@
  "air": {
   "seraph": "(heavy gunship with six wing blades arranged like a seraph:1.4), (pointed gothic spire nose:1.3), underslung cannons, hovering",
   "dominion": "(sleek fast interceptor jet:1.4), (swept pointed gothic arch wings:1.3), tall tail fin shaped like a spire, sharp needle nose"
+ },
+ "structs_head": "single isolated flat cel-shaded isometric sci-fi gothic building on a flat diamond base-plate, 2:1 dimetric projection,",
+ "structs_tail": "dark charcoal slate matte plating, thin hot orange-red #FF5A2E neon trim lines along the arches, spires and base-plate rim, large simple panel shapes, hard clean edges, no greeble, flat painted illustration, plain flat light grey background, whole building visible with wide margin, centered",
+ "structs_neg_extra": "multiple buildings, city, town, street, landscape, terrain, trees, people, vehicles, sky, clouds, ground plane, road, blueprint, floor plan, views, cropped, dark background, medieval, stone bricks, wood",
+ "structs_size": [
+  "--width",
+  "1024",
+  "--height",
+  "1024"
+ ],
+ "structs": {
+  "empire_barracks": "(gothic chapel barracks with a tall pointed arched doorway:1.4), (small pointed spires on the corners:1.3), compact blocky hall",
+  "empire_factory": "(gothic foundry hall with a huge pointed-arch vehicle bay door:1.4), (tall bell tower chimney:1.3), wide heavy building",
+  "empire_airfield": "(flat landing pad platform with a gothic arched hangar:1.4), (slender spire control tower:1.3), wide low building",
+  "cathedral": "(isometric three-quarter view from above of a tall sci-fi gothic cathedral:1.5), (twin tall pointed spires:1.4), round rose window, flying buttresses, compact footprint"
  }
 }

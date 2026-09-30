@@ -1,7 +1,6 @@
 ---
 id: empire_airfield
 buildable: false
-art_id: airfield
 counts_as: []
 hp: 12
 build_cost: 1200
