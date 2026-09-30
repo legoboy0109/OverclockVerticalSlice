@@ -1,0 +1,170 @@
+{
+ "assets": [
+  {
+   "id": "builder",
+   "kind": "unit",
+   "raw": "art-source/factions/accord/sources/builder_rush.png",
+   "clean": true,
+   "axis": "w",
+   "px": 0,
+   "promote": 30.2
+  },
+  {
+   "id": "scout",
+   "kind": "unit",
+   "raw": "art-source/factions/accord/sources/scout_rush.png",
+   "clean": true,
+   "axis": "w",
+   "px": 0,
+   "promote": 30.2
+  },
+  {
+   "id": "trooper",
+   "kind": "unit",
+   "raw": "art-source/factions/accord/sources/trooper_rush.png",
+   "clean": true,
+   "axis": "h",
+   "px": 0,
+   "promote": 30.2
+  },
+  {
+   "id": "heavy",
+   "kind": "unit",
+   "raw": "art-source/factions/accord/sources/heavy_rush.png",
+   "clean": true,
+   "axis": "h",
+   "px": 0,
+   "promote": 30.2
+  },
+  {
+   "id": "sniper",
+   "kind": "unit",
+   "raw": "art-source/factions/accord/sources/sniper_rush.png",
+   "clean": true,
+   "axis": "h",
+   "px": 0,
+   "promote": 30.2,
+   "smooth": 3,
+   "keep_accent": 0.25
+  },
+  {
+   "id": "hq",
+   "kind": "struct",
+   "raw": "art-source/factions/accord/sources/hq_rush.png",
+   "clean": true,
+   "axis": "w",
+   "px": 0,
+   "keep_accent": 0.25
+  },
+  {
+   "id": "barracks",
+   "kind": "struct",
+   "raw": "art-source/factions/accord/sources/barracks_rush.png",
+   "clean": true,
+   "axis": "w",
+   "px": 0,
+   "keep_accent": 0.25
+  },
+  {
+   "id": "factory",
+   "kind": "struct",
+   "raw": "art-source/factions/accord/sources/factory_rush.png",
+   "clean": true,
+   "axis": "w",
+   "px": 0,
+   "keep_accent": 0.25
+  },
+  {
+   "id": "defensive_structure",
+   "kind": "struct",
+   "raw": "art-source/factions/accord/sources/defensive_structure_rush.png",
+   "clean": true,
+   "axis": "w",
+   "px": 0,
+   "keep_accent": 0.25
+  },
+  {
+   "id": "research_lab",
+   "kind": "struct",
+   "raw": "art-source/factions/accord/sources/research_lab_rush.png",
+   "clean": true,
+   "axis": "w",
+   "px": 0,
+   "keep_accent": 0.25
+  },
+  {
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "tank",
+   "kind": "unit",
+   "axis": "w",
+   "px": 176,
+   "raw": "art-source/generated/accord/tank.png",
+   "smooth": 3
+  },
+  {
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "transport",
+   "kind": "unit",
+   "axis": "w",
+   "px": 176,
+   "raw": "art-source/generated/accord/transport.png"
+  },
+  {
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "fighter",
+   "kind": "air",
+   "axis": "w",
+   "px": 164,
+   "raw": "art-source/generated/accord/fighter_3.png"
+  },
+  {
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "bomber",
+   "kind": "air",
+   "axis": "w",
+   "px": 184,
+   "raw": "art-source/generated/accord/bomber_3.png",
+   "smooth": 3
+  },
+  {
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "helicopter",
+   "kind": "air",
+   "axis": "w",
+   "px": 172,
+   "raw": "art-source/generated/accord/helicopter.png",
+   "smooth": 3
+  },
+  {
+   "id": "airfield",
+   "kind": "struct",
+   "axis": "w",
+   "px": 256,
+   "raw": "art-source/generated/accord/airfield_4.png",
+   "flatten": true,
+   "keep_accent": 0.25
+  },
+  {
+   "id": "artillery",
+   "kind": "unit",
+   "axis": "w",
+   "px": 184,
+   "raw": "art-source/generated/accord/artillery_5.png",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "smooth": 3,
+   "tol": 30
+  }
+ ]
+}
