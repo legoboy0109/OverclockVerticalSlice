@@ -345,6 +345,9 @@ func _refresh_entity(entity: EntityState) -> void:
 	# check in there, which would skip it.
 	_refresh_body_tint(entity, sprite)
 	_refresh_glow(entity, sprite, facing)
+	# HD-2D floor pool in the owner's hue (re-applied each sync: the fitted scale can
+	# change with the texture, and the pool is sized in screen pixels).
+	EntityLightPools.ensure(sprite, EntityGlow.hue_for(_faction_for(entity.owner)))
 
 
 ## Derives, stores and returns [param entity]'s current facing. An entity seen for
@@ -797,6 +800,11 @@ func power_down(entity_id: int) -> void:
 		EntityTransforms.DEATH_ECHO_SEC
 	)
 
+	# The floor light pool goes out with the glow — light leads the body (§8.5).
+	EntityLightPools.fade_out(
+		sprite, tween, EntityTransforms.DEATH_ECHO_SEC * EntityTransforms.DEATH_GLOW_FRACTION
+	)
+
 	# self_modulate, never modulate: modulate would drag the glow child down with
 	# the body on the same curve, and the light is supposed to lead.
 	var wreck: Sprite2D = _build_wreck(entity_id, sprite)
@@ -1021,10 +1029,11 @@ func _refresh_glow(entity: EntityState, sprite: Sprite2D, facing: String) -> voi
 			&"faction_hue", EntityGlow.hue_for(_faction_for(entity.owner))
 		)
 	# The mask matches its sprite pixel-for-pixel, so it shares the parent's local
-	# frame exactly — same offset, no scale of its own (the parent already carries
-	# the 2x-art scale).
-	glow.texture = load(path)
-	glow.offset = sprite.offset
+	# frame exactly — no scale of its own (the parent already carries the 2x-art
+	# scale). The HD-2D halo pads the mask on every side, so the offset shifts by the
+	# same padding and the rim still registers with the armour (EntityGlow.halo_*).
+	glow.texture = EntityGlow.halo_texture(path)
+	glow.offset = EntityGlow.halo_offset(sprite.offset)
 
 	var destroyed: bool = EntitySpriteCatalog.state_token(entity) == EntitySpriteCatalog.STATE_DESTROYED
 	var pulse_base: float = EntityGlow.resting_pulse(destroyed)

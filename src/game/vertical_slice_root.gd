@@ -271,6 +271,7 @@ func _ready() -> void:
 	_build_hud()
 	_build_cursor()
 	_build_status_overlay()
+	_build_lighting()
 	_ai_driver = AITurnDriver.new()
 	add_child(_ai_driver)
 	# Re-sync sprites + pick regions on every commit (an AI turn drives many).
@@ -469,6 +470,8 @@ func _build_command_interface() -> void:
 func _build_hud() -> void:
 	_buildables = _buildable_roster()
 	_hud = GameHud.new()
+	# Above the HD-2D edge-blur layer (Hd2dLighting), so HUD text is never blurred.
+	_hud.layer = Hd2dLighting.HUD_CANVAS_LAYER
 	# Hand the roster to the HUD so its Build affordability set matches what KEY_B
 	# actually places (the widget would otherwise fall back to the same default).
 	_hud.assemble(_reader, HudBalance.hud, _cmd, _board, LOCAL_PLAYER, _buildables)
@@ -506,6 +509,20 @@ func _buildable_roster() -> Array[StructureTypeDef]:
 	return Faction.buildable(_state, LOCAL_PLAYER).duplicate() if _state != null else StructureTypes.BUILDABLE.duplicate()
 
 
+# --- HD-2D lighting ------------------------------------------------------------
+
+## The screen-level HD-2D effects (bloom + edge blur). See [Hd2dLighting].
+var _lighting: Hd2dLighting = null
+
+
+## Builds the HD-2D bloom and edge blur. The blur bands are exactly the HUD's reserved
+## margins, so the blur only ever covers board that is already under the HUD.
+func _build_lighting() -> void:
+	_lighting = Hd2dLighting.new()
+	add_child(_lighting)
+	_lighting.set_bands(CAMERA_HUD_TOP_MARGIN_PX, CAMERA_HUD_BOTTOM_MARGIN_PX)
+
+
 # --- Status / legend overlay (screen space; provisional scene glue) ----------
 
 ## Builds the screen-space status overlay: a [CanvasLayer] (so it renders in screen
@@ -514,6 +531,7 @@ func _buildable_roster() -> Array[StructureTypeDef]:
 ## the placeholder markers.
 func _build_status_overlay() -> void:
 	_status_layer = CanvasLayer.new()
+	_status_layer.layer = Hd2dLighting.HUD_CANVAS_LAYER   # above the HD-2D edge blur
 	add_child(_status_layer)
 	_status_label = Label.new()
 	# Bottom-centre, in the camera's reserved bottom band — clear of the board and of

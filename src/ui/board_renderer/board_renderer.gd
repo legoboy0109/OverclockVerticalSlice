@@ -388,6 +388,9 @@ var glyph_offsets: GlyphOffsets = null
 ## comment for why this is programmatic rather than a [code].tscn[/code].
 func _ready() -> void:
 	floor_layer = _build_iso_tilemap_layer("FloorTileMapLayer", FLOOR_Z_INDEX)
+	# HD-2D: the floor receives the actors' coloured light pools (EntityLightPools);
+	# default bit kept so any future global light still reaches it.
+	floor_layer.light_mask = 1 | EntityLightPools.FLOOR_LIGHT_MASK
 	overlay_layer = _build_iso_tilemap_layer("OverlayTileMapLayer", OVERLAY_Z_INDEX)
 	_build_overlay_tile_source()
 	# Added AFTER the overlay layer on purpose — see CURSOR_Z_INDEX.
@@ -626,6 +629,8 @@ func _add_cover_prop(tile: Vector2i) -> void:
 	prop.texture = texture
 	prop.centered = false
 	prop.scale = Vector2.ONE * TILE_LAYER_SCALE
+	# Cover is terrain: it catches the HD-2D floor light pools like the floor does.
+	prop.light_mask = 1 | EntityLightPools.FLOOR_LIGHT_MASK
 	var size: Vector2 = texture.get_size()
 	# ★ S8-10: the inset is divided by the draw scale because Sprite2D.offset is applied in
 	# TEXTURE space, pre-scale, while the inset is authored in SCREEN pixels — the same reason

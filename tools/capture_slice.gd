@@ -146,8 +146,11 @@ func _run() -> void:
 	# --- Cancel Build's arm-then-confirm gate, and the cost echo ---------------
 	# Both are /ux-review blocking fixes: the gate the Hold-to-Confirm Refund pattern
 	# requires, and the projected-cost echo the GDD promised and nothing ever drove.
-	if slice.has_method("begin_build_preview"):
-		slice.begin_build_preview(slice.selected_buildable())
+	# (selected_buildable() was removed with the faction framework; the first entry of
+	# the local player's buildable roster is the same "some legal structure" it gave.)
+	var roster: Array = slice._buildable_roster() if slice.has_method("_buildable_roster") else []
+	if slice.has_method("begin_build_preview") and not roster.is_empty():
+		slice.begin_build_preview(roster[0])
 		for i: int in 20:
 			await get_tree().process_frame
 		await RenderingServer.frame_post_draw
@@ -294,12 +297,14 @@ func _run() -> void:
 			await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		_shot("05-paused")
-		# ...and the destructive confirm, which is the gate that matters.
-		slice._pause._open_confirm(PauseMenu.Confirm.QUIT)
+		# ...and the destructive confirm, which is the gate that matters. (Quit became the
+		# non-destructive "Save & Quit" with save/load, 2026-09-29; RESTART is the one
+		# that still throws the match away.)
+		slice._pause._open_confirm(PauseMenu.Confirm.RESTART)
 		for i: int in 4:
 			await get_tree().process_frame
 		await RenderingServer.frame_post_draw
-		_shot("06-pause-quit-confirm")
+		_shot("06-pause-restart-confirm")
 		get_tree().paused = false
 	print("done")
 	get_tree().quit()
