@@ -1,0 +1,14 @@
+{
+ "style": "flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, chunky proportions, mostly mid slate-grey armor with a few hot orange-red panels, plain flat light grey background, centered, whole subject visible with margin",
+ "negative": "multiple figures, character sheet, turnaround, multiple views, text, watermark, face, skin, cropped",
+ "tests": {
+  "lance_team":   ["portrait", "single full-body lean sci-fi citizen militia soldier in a sealed gas-mask helmet, carrying a long shoulder-mounted rocket launcher tube on the right shoulder"],
+  "lance_spec":   ["portrait", "single full-body sci-fi anti-armour specialist in a sleek fitted suit and sealed helmet, holding a very long thin energy lance weapon pointing forward"],
+  "marksman":     ["portrait", "single full-body hunched sci-fi scavenger sniper in mismatched salvaged armor and a blacked-out helmet, holding a very long sniper rifle vertically upright beside the body"],
+  "knight":       ["portrait", "single full-body sci-fi gothic crusader power-armour soldier, tall pointed spire crest on a sealed helmet, a thin glowing halo ring floating behind the head, holding a heavy plasma rifle, no sword, no shield"],
+  "missile_team": ["portrait", "single full-body lean wiry scavenger raider soldier in patched asymmetric salvaged armor, carrying a shoulder-mounted missile launcher"],
+  "capsule_mech": ["landscape", "single squat four-legged combat robot walker with a smooth rounded capsule-shaped pill body, white-grey egg-smooth shell panels, isometric three-quarter view from above"],
+  "artillery":    ["landscape", "single self-propelled artillery vehicle with a very long barrel pointing steeply up at the sky, boxy hull on tank treads, isometric three-quarter view from above"],
+  "cathedral":    ["square", "single sci-fi gothic cathedral building on a flat diamond base plate, twin tall pointed spires, dark charcoal plating with thin orange neon trim, isometric 2:1 dimetric view"]
+ }
+}

@@ -20,6 +20,8 @@ Manifest (JSON):
   kind  = unit | air | struct. `air` is drawn high over a ground shadow, like the
           placeholders (make_placeholder_sprites.py): the renderer anchors bottom-centre,
           so the shadow is the ground contact and the gap above it is the height cue.
+  cutter = "birefnet" to cut out with the BiRefNet AI model via ComfyUI (comfyui_cutout.py)
+          instead of cutout.py's flood fill; crop/flatten/tol then do not matter.
   tol   = cutout.py background tolerance (default 22); raise for soft ground shadows.
   accent_sat = palette-lock accent saturation gate (default 0.25); raise to stop browns
           turning orange.
@@ -61,7 +63,7 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from cutout import cutout, trim  # noqa: E402
+from cutout import _keep_largest, cutout, trim  # noqa: E402
 from glow_mask import glow_mask  # noqa: E402
 from pixelize import OUTLINE_RGB, pixelize, pixelize_mask  # noqa: E402
 from recolor import (ACCENT_HUE_MAX, ACCENT_HUE_WRAP_MIN, ACCENT_SAT_MIN,  # noqa: E402
@@ -380,7 +382,18 @@ def build(asset: dict, dry: bool, tmp: str) -> list[str]:
         # no keying, no resize — re-keying a transparent image eats dark armour.
         im = Image.open(raw).convert("RGBA")
     else:
-        im, _ = cutout(raw, tol=int(asset.get("tol", 22)), largest_only=True)
+        if asset.get("cutter") == "birefnet":
+            # AI segmentation via ComfyUI (comfyui_cutout.py): survives gradients,
+            # ground slabs and light-on-light that break the flood fill. Its soft
+            # edge is cut at alpha 40 first, or faint haze bridges a separate prop
+            # (a figure beside a walker) into the "largest" blob.
+            from comfyui_cutout import cutout_bytes
+            import io
+            a = np.asarray(Image.open(io.BytesIO(cutout_bytes(raw))).convert("RGBA")).copy()
+            a[..., 3] = np.where(a[..., 3] < 40, 0, a[..., 3])
+            im = Image.fromarray(_keep_largest(a), "RGBA")
+        else:
+            im, _ = cutout(raw, tol=int(asset.get("tol", 22)), largest_only=True)
         im = _fit(trim(im), asset["axis"], asset["px"])
     master = im if asset.get("lock") is False else palette_lock(
         im, structure=asset["kind"] == "struct",
