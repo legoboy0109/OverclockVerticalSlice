@@ -1,0 +1,17 @@
+{
+ "head": "single full-body figure, sci-fi gothic crusader soldier,",
+ "tail": "mid slate-grey #6E7C99 matte armor plates, orange-red #FF5A2E trim panels on shoulders and chest, sealed faceless helmet, flat cel-shaded 2D game sprite, flat colors, hard clean edges, chunky proportions, three-quarter view, plain flat light grey background, centered, whole body visible with margin",
+ "neg_extra": "sword, blade, shield, medieval, fantasy, chainmail, plume, feather, spear, axe, mace, face, multiple figures, character sheet, turnaround, views, parts, pieces",
+ "units": {
+  "levy": "(tall pointed spire crest on the helmet:1.4), (thin golden halo ring behind the head:1.3), humble small conscript, light plate armor, short plate tabard, compact laser carbine",
+  "knight": "veteran crusader heavy trooper, big armored bulk, very tall pointed spire-crested helmet, huge pointed gothic shoulder pauldrons, gothic pointed-arch chest plate, long plate tabard to the knees, thin halo ring floating behind the head, heavy plasma rifle, towering upright stance",
+  "confessor": "(tall pointed mitre helmet:1.5), (halo ring behind the head:1.3), (long plate robe down to the feet:1.3), battle priest, holding a tall staff topped with a lantern",
+  "inquisitor": "(very tall narrow pointed spire helmet:1.4), (long coat of armor plates to the shins:1.3), (very long thin sniper rifle held upright:1.3), tall thin marksman, halo ring behind the head"
+ },
+ "size": [
+  "--width",
+  "832",
+  "--height",
+  "1216"
+ ]
+}

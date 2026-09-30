@@ -1,0 +1,36 @@
+{
+ "assets": [
+  {
+   "id": "levy",
+   "kind": "unit",
+   "raw": "art-source/generated/order/levy_4.png",
+   "axis": "h",
+   "px": 124,
+   "promote": 45
+  },
+  {
+   "id": "knight",
+   "kind": "unit",
+   "raw": "art-source/generated/order/knight_2.png",
+   "axis": "h",
+   "px": 148,
+   "promote": 42
+  },
+  {
+   "id": "confessor",
+   "kind": "unit",
+   "raw": "art-source/generated/order/confessor_6.png",
+   "axis": "h",
+   "px": 136,
+   "promote": 45
+  },
+  {
+   "id": "inquisitor",
+   "kind": "unit",
+   "raw": "art-source/generated/order/inquisitor_4.png",
+   "axis": "h",
+   "px": 156,
+   "promote": 45
+  }
+ ]
+}

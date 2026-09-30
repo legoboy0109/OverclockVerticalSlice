@@ -35,7 +35,6 @@ targets_crew: false
 crew_bonus_attack: 0
 crew_bonus_move_cost: 0
 starting_merit: 0
-art_id: builder
 ---
 
 ## Notes

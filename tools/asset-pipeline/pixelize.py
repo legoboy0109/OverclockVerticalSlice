@@ -5,7 +5,7 @@ The HD-2D pivot (2026-09-29) keeps the generate -> cutout -> recolor pipeline an
 this as the LAST step: a smooth render goes in, a sprite drawn on a coarse pixel grid
 comes out, at the SAME file scale the renderer already loads.
 
-    python3 tools/asset-pipeline/pixelize.py <src.png> <dst.png> [--factor 4] [--colors 24]
+    python3 tools/asset-pipeline/pixelize.py <src.png> <dst.png> [--factor 4] [--colors 12]
     python3 tools/asset-pipeline/pixelize.py <mask.png> <dst.png> --mask
 
 ★ Why the output is upscaled back instead of shipped tiny: sprites ship at 2x their
@@ -30,7 +30,7 @@ from __future__ import annotations
 import argparse
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 # Outline ink: darker than every stage tile (void #0A0E17 excepted) so it reads as an
 # edge on the lit floor without adding a hue. Near-black blue, matching the stage family.
@@ -57,30 +57,43 @@ def _up(a: np.ndarray, factor: int) -> np.ndarray:
     return a.repeat(factor, axis=0).repeat(factor, axis=1)
 
 
-def pixelize(im: Image.Image, factor: int = 4, colors: int = 24,
-             alpha_cut: float = 0.45, outline: bool = True) -> Image.Image:
-    """Pixelize an RGBA sprite. See module doc for geometry guarantees."""
-    a = _canvas(np.asarray(im.convert("RGBA"), dtype=np.float32) / 255.0, factor)
-    alpha = a[..., 3:4]
-    # Premultiply before averaging, or the transparent field's leftover RGB (the grey
-    # studio background cutout.py keyed out) bleeds a light fringe into every edge.
-    small_pm = _box_down(a[..., :3] * alpha, factor)
-    small_a = _box_down(alpha, factor)
-    solid = small_a[..., 0] >= alpha_cut
-    rgb = np.where(small_a > 1e-6, small_pm / np.maximum(small_a, 1e-6), 0.0)
-    rgb8 = (np.clip(rgb, 0, 1) * 255 + 0.5).astype(np.uint8)
+def pixelize(im: Image.Image, factor: int = 4, colors: int = 12,
+             alpha_cut: float = 0.45, outline: bool = True, smooth: int = 7) -> Image.Image:
+    """Pixelize an RGBA sprite. See module doc for geometry guarantees.
 
-    # Quantize ONLY the opaque cells — letting the transparent field in wastes a
-    # palette slot on it and drags edge colours toward it.
-    if solid.any() and colors > 0:
-        px = rgb8[solid].reshape(1, -1, 3)
-        q = Image.fromarray(px, "RGB").quantize(
-            colors, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).convert("RGB")
-        rgb8[solid] = np.asarray(q).reshape(-1, 3)
-
-    out = np.zeros((*solid.shape, 4), dtype=np.uint8)
-    out[..., :3] = rgb8
-    out[..., 3] = np.where(solid, 255, 0)
+    Method (chosen 2026-09-29 against area-average at 24 and 12 colours, and majority
+    without pre-smoothing — comparison in .agent/notes.md): median-smooth the render,
+    quantize it at FULL resolution to `colors`, then give each cell the MAJORITY
+    palette colour of its pixels. Averaging invents in-between colours at every panel
+    edge, which read as mud; majority keeps panels flat. The median pass removes the
+    render's surface noise first, which otherwise wins majorities as speckle.
+    """
+    src = im.convert("RGBA")
+    if smooth > 1:
+        rgb = src.convert("RGB").filter(ImageFilter.MedianFilter(smooth))
+        rgb.putalpha(src.getchannel("A"))
+        src = rgb
+    a = _canvas(np.asarray(src), factor)
+    alpha = a[..., 3]
+    opaque = alpha > 110
+    h, w = alpha.shape
+    gh, gw = h // factor, w // factor
+    out = np.zeros((gh, gw, 4), dtype=np.uint8)
+    if opaque.any():
+        # Quantize ONLY opaque pixels — the keyed-out field would steal a palette slot.
+        q = Image.fromarray(a[..., :3][opaque].reshape(1, -1, 3).astype(np.uint8), "RGB").quantize(
+            colors, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
+        n = len(q.getpalette()) // 3
+        pal = np.array(q.getpalette()[: n * 3], dtype=np.uint8).reshape(-1, 3)
+        idx = np.full(alpha.shape, -1, dtype=np.int64)
+        idx[opaque] = np.asarray(q).reshape(-1)
+        cells = idx.reshape(gh, factor, gw, factor).transpose(0, 2, 1, 3).reshape(gh, gw, -1)
+        # Per-cell majority via one-hot counts (vectorised; -1 = transparent, ignored).
+        counts = np.stack([(cells == k).sum(axis=2) for k in range(len(pal))], axis=2)
+        filled = counts.sum(axis=2) >= alpha_cut * factor * factor
+        out[filled, :3] = pal[counts.argmax(axis=2)[filled]]
+        out[filled, 3] = 255
+    solid = out[..., 3] > 0
     if outline:
         p = np.pad(solid, 1)
         ring = (p[:-2, 1:-1] | p[2:, 1:-1] | p[1:-1, :-2] | p[1:-1, 2:]) & ~solid
@@ -109,7 +122,7 @@ def main() -> None:
     p.add_argument("src")
     p.add_argument("dst")
     p.add_argument("--factor", type=int, default=4, help="file px per art px (default 4)")
-    p.add_argument("--colors", type=int, default=24, help="palette size per sprite")
+    p.add_argument("--colors", type=int, default=12, help="palette size per sprite")
     p.add_argument("--mask", action="store_true", help="input is a glow mask")
     p.add_argument("--no-outline", action="store_true")
     args = p.parse_args()
