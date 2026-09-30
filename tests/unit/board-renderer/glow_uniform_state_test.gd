@@ -209,9 +209,13 @@ func test_glow_overlay_uses_the_mask_texture_not_the_body_sprite() -> void:
 	feed.sync(entities)
 
 	# Assert
+	# The glow draws the mask's HD-2D halo texture (built from the hue-agnostic mask),
+	# never the body sprite and never a hue-specific file.
 	var glow := _glow_of(renderer, 1)
-	assert_str(glow.texture.resource_path).contains("_glow.png")
-	assert_str(glow.texture.resource_path).not_contains("rush")
+	var mask_path: String = EntityGlow.mask_path(entities[0], EntitySpriteCatalog.DEFAULT_FACING)
+	assert_str(mask_path).contains("_glow.png")
+	assert_str(mask_path).not_contains("rush")
+	assert_object(glow.texture).is_same(EntityGlow.halo_texture(mask_path))
 
 
 func test_glow_overlay_shares_its_parents_pivot_so_it_registers_with_the_body() -> void:
@@ -227,10 +231,13 @@ func test_glow_overlay_shares_its_parents_pivot_so_it_registers_with_the_body() 
 	# Assert
 	var glow := _glow_of(renderer, 1)
 	var body: Sprite2D = glow.get_parent()
-	assert_vector(glow.offset).is_equal(body.offset)
+	# The halo pads the mask by HALO_PAD_PX on every side and the offset moves back by the
+	# same amount — so the rim still lands pixel-for-pixel on the armour.
+	var pad := Vector2(EntityGlow.HALO_PAD_PX, EntityGlow.HALO_PAD_PX)
+	assert_vector(glow.offset).is_equal(body.offset - pad)
 	assert_vector(glow.position).is_equal(Vector2.ZERO)
 	assert_vector(glow.scale).is_equal(Vector2.ONE)
-	assert_vector(glow.texture.get_size()).is_equal(body.texture.get_size())
+	assert_vector(glow.texture.get_size()).is_equal(body.texture.get_size() + pad * 2.0)
 
 
 # --- AC-5/AC-6: injected clock, event-driven writes --------------------------

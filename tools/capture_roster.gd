@@ -40,6 +40,9 @@ func _run() -> void:
 	add_child(slice)
 	for i: int in 8:
 		await get_tree().process_frame
+	# --flat renders with the HD-2D lighting off, for before/after comparisons.
+	if OS.get_cmdline_user_args().has("--flat") and slice.get("_lighting") != null:
+		slice._lighting.set_enabled(false)
 	var st: GameState = slice.state()
 	var ids: PackedStringArray = _arg("--units", "trooper").split(",")
 	var name: String = _arg("--out", "roster")
@@ -77,6 +80,18 @@ func _run() -> void:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 	_shot(name + "-board")
+	# --perf: average GPU frame time over 120 frames at the boot camera (render cost of
+	# the HD-2D lighting, measured against a --flat run).
+	if OS.get_cmdline_user_args().has("--perf"):
+		var vp_rid: RID = get_viewport().get_viewport_rid()
+		RenderingServer.viewport_set_measure_render_time(vp_rid, true)
+		for i: int in 30:
+			await get_tree().process_frame
+		var total: float = 0.0
+		for i: int in 120:
+			await get_tree().process_frame
+			total += RenderingServer.viewport_get_measured_render_time_gpu(vp_rid)
+		print("capture_roster: gpu_ms=%.3f" % (total / 120.0))
 
 	# Zoom onto the lineup so each sprite is judged at close range too.
 	if not placed.is_empty():
@@ -98,3 +113,4 @@ func _shot(label: String) -> void:
 	var path: String = "%s/%s.png" % [OUT, label]
 	img.save_png(ProjectSettings.globalize_path(path))
 	print("capture_roster: wrote ", path)
+

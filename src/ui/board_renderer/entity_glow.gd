@@ -104,6 +104,26 @@ const FLARE_DECAY_SEC: float = 0.45
 ## A destroyed actor emits nothing (§8.5: pulse -> 0 over the 2-4 frame beat).
 const DESTROYED_PULSE: float = 0.0
 
+## HD-2D bloom (2026-09-30) — a soft HALO baked into each glow mask at load time, so the
+## neon trim bleeds light onto the dark stage. It rides the same shader as the rim, so it
+## breathes, dims when AP is spent, and spikes with the attack flare for free.
+##
+## ★ Why not engine bloom: a WorldEnvironment glow needs rendering/viewport/hdr_2d to tell
+## the neon (≈0.54 luminance) from slate armour (≈0.48), and HDR 2D blends translucency
+## in LINEAR space — measured, it turned the move-range overlay's tan near-solid, undoing
+## its legibility tuning (ADR-0020). The baked halo changes nothing but the glow.
+##
+## Padding added round the mask, in TEXTURE px (art ships at 2x, so 16 = 8 screen px).
+const HALO_PAD_PX: int = 16
+## The blur is a downscale-then-upscale by this divisor (soft, cheap, no kernel code).
+const HALO_BLUR_DIVISOR: int = 8
+## Halo brightness relative to the rim. The blurred mask is thin (a 2-px rim spread over
+## ~16 px), so it is lifted by HALO_GAIN before this cap; the rim itself stays on top.
+const HALO_STRENGTH: float = 0.45
+const HALO_GAIN: float = 4.0
+
+static var _halo_cache: Dictionary = {}
+
 ## Glow-mask suffix. Masks carry [b]no faction token[/b] — they are greyscale
 ## "which pixels are trim" and one mask serves all three hues, which is the whole
 ## reason hue is a per-instance uniform (assets/art/README.md).
@@ -123,6 +143,40 @@ static func make_material() -> ShaderMaterial:
 	material.set_shader_parameter(&"flare_peak", FLARE_PEAK)
 	material.set_shader_parameter(&"flare_decay", FLARE_DECAY_SEC)
 	return material
+
+
+## The glow texture for mask [param mask_path]: the mask, padded by [constant
+## HALO_PAD_PX] on every side, with a blurred copy added round it as the bloom halo.
+## Built once per mask and cached. Draw it at the body's offset MINUS the padding
+## ([method halo_offset]) and the rim still lands pixel-for-pixel on the armour.
+static func halo_texture(mask_path: String) -> Texture2D:
+	if _halo_cache.has(mask_path):
+		return _halo_cache[mask_path]
+	var mask: Image = (load(mask_path) as Texture2D).get_image()
+	mask.convert(Image.FORMAT_L8)
+	var w: int = mask.get_width() + HALO_PAD_PX * 2
+	var h: int = mask.get_height() + HALO_PAD_PX * 2
+	var padded := Image.create(w, h, false, Image.FORMAT_L8)
+	padded.blit_rect(mask, Rect2i(Vector2i.ZERO, mask.get_size()), Vector2i(HALO_PAD_PX, HALO_PAD_PX))
+	var blurred: Image = padded.duplicate()
+	blurred.resize(maxi(1, w / HALO_BLUR_DIVISOR), maxi(1, h / HALO_BLUR_DIVISOR), Image.INTERPOLATE_BILINEAR)
+	blurred.resize(w, h, Image.INTERPOLATE_CUBIC)
+	var rim: PackedByteArray = padded.get_data()
+	var soft: PackedByteArray = blurred.get_data()
+	var out := PackedByteArray()
+	out.resize(rim.size())
+	for i: int in rim.size():
+		var halo: float = minf(float(soft[i]) * HALO_GAIN, 255.0) * HALO_STRENGTH
+		out[i] = maxi(rim[i], int(halo))
+	var texture := ImageTexture.create_from_image(Image.create_from_data(w, h, false, Image.FORMAT_L8, out))
+	_halo_cache[mask_path] = texture
+	return texture
+
+
+## Where a halo texture must be drawn relative to its body: the body's own offset,
+## shifted up-left by the padding, which [method halo_texture] added on every side.
+static func halo_offset(body_offset: Vector2) -> Vector2:
+	return body_offset - Vector2(HALO_PAD_PX, HALO_PAD_PX)
 
 
 ## The locked emission hue for [param faction]. Compared by reference against the
