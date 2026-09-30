@@ -138,6 +138,17 @@ var _placeholder: ImageTexture = null
 ## second material — a material per actor would break batching.
 var _glow_material: ShaderMaterial = null
 
+## Path of the sharp pixel-art sampling shader every actor BODY (and its wreck) draws
+## with — see the shader's header for why neither plain LINEAR nor NEAREST works at
+## the camera's continuous zoom.
+const PIXEL_SHARP_SHADER_PATH: String = "res://src/ui/board_renderer/pixel_sharp.gdshader"
+
+## The ONE [ShaderMaterial] every actor body and wreck shares — one material, like
+## [member _glow_material], so bodies still batch (§8.7 rule 2). It has no uniforms:
+## per-actor tint stays in [member CanvasItem.self_modulate], which the shader
+## multiplies through.
+var _body_material: ShaderMaterial = null
+
 ## Live [code]entity_id -> glow overlay Sprite2D[/code] map. Each overlay is a CHILD
 ## of that entity's base sprite, so it inherits position and draws immediately after
 ## its parent (i.e. on top) with no depth bookkeeping of its own.
@@ -310,6 +321,7 @@ func _refresh_entity(entity: EntityState) -> void:
 		# bottom-centre; Sprite2D's default centring anchors the bbox CENTRE,
 		# which art-bible §8.4 forbids as a Y-sort key.
 		sprite.centered = false
+		_apply_pixel_sharp(sprite)
 		# NO z_index is ever set here — see the class doc comment.
 		_nodes[id] = sprite
 		_board.occupant_layer.add_child(sprite)
@@ -348,6 +360,17 @@ func _update_facing(entity: EntityState) -> String:
 	_facings[id] = previous
 	_positions[id] = entity.position
 	return previous
+
+
+## Gives [param sprite] the shared sharp pixel-art material, building it on first use.
+## The shader needs LINEAR filtering (its one-pixel edge blend IS the bilinear fetch),
+## so the filter is set explicitly rather than trusted to the project default.
+func _apply_pixel_sharp(sprite: Sprite2D) -> void:
+	if _body_material == null:
+		_body_material = ShaderMaterial.new()
+		_body_material.shader = load(PIXEL_SHARP_SHADER_PATH)
+	sprite.material = _body_material
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 
 
 ## Loads the texture for [param entity] at [param facing], or returns the loud
@@ -824,6 +847,7 @@ func _build_wreck(entity_id: int, sprite: Sprite2D) -> Sprite2D:
 	var wreck := Sprite2D.new()
 	wreck.name = "Destroyed"
 	wreck.centered = false
+	_apply_pixel_sharp(wreck)
 	wreck.texture = load(path)
 	var size: Vector2 = wreck.texture.get_size()
 	# Same pivot rule as the body it replaces (INCLUDING the structure ground

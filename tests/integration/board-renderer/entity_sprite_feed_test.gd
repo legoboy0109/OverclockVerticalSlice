@@ -672,3 +672,49 @@ func test_unit_pivot_takes_no_ground_inset_because_its_contact_is_a_point() -> v
 	var drawn: Vector2 = sprite.texture.get_size() * sprite.scale
 	var bottom_centre := Vector2(top_left.x + drawn.x * 0.5, top_left.y + drawn.y)
 	assert_vector(bottom_centre).is_equal_approx(renderer.grid_to_screen(tile), Vector2(0.01, 0.01))
+
+
+func test_every_actor_body_shares_one_sharp_pixel_material() -> void:
+	# Arrange — HD-2D pixel art at the camera's continuous zoom needs the sharp-sampling
+	# shader on every body (plain LINEAR smears edges, plain NEAREST shimmers). ONE
+	# shared material, like the glow's, so bodies keep batching (§8.7 rule 2).
+	var renderer := _make_renderer()
+	var feed := _make_feed(renderer)
+	var entities: Array[EntityState] = [
+		_make_unit(1, 0, Vector2i(1, 1), UnitTypes.SCOUT),
+		_make_unit(2, 1, Vector2i(3, 3), UnitTypes.TANK),
+		_make_structure(3, 0, Vector2i(5, 5), StructureTypes.HQ),
+	]
+
+	# Act
+	feed.sync(entities)
+
+	# Assert
+	var sprites: Array[Node] = _entity_sprites(renderer)
+	assert_int(sprites.size()).is_equal(3)
+	var first: Material = (sprites[0] as Sprite2D).material
+	assert_object(first).is_not_null()
+	assert_str((first as ShaderMaterial).shader.resource_path).is_equal(EntitySpriteFeed.PIXEL_SHARP_SHADER_PATH)
+	for node: Node in sprites:
+		var sprite := node as Sprite2D
+		assert_object(sprite.material).is_same(first)
+		# The shader's edge blend IS the bilinear fetch — it must not inherit NEAREST.
+		assert_int(sprite.texture_filter).is_equal(CanvasItem.TEXTURE_FILTER_LINEAR)
+
+
+func test_glow_overlay_keeps_its_own_soft_material() -> void:
+	# Arrange — the glow is meant to stay soft (HD-2D lighting), so the sharp body
+	# material must not leak onto the additive glow child.
+	var renderer := _make_renderer()
+	var feed := _make_feed(renderer)
+	var entities: Array[EntityState] = [_make_unit(1, 0, Vector2i(1, 1), UnitTypes.TROOPER)]
+
+	# Act
+	feed.sync(entities)
+
+	# Assert
+	var body := _entity_sprites(renderer)[0] as Sprite2D
+	var glow := body.get_node_or_null(^"Glow") as Sprite2D
+	assert_object(glow).is_not_null()
+	assert_object(glow.material).is_not_same(body.material)
+	assert_bool(glow.use_parent_material).is_false()
