@@ -1,0 +1,73 @@
+{
+ "head": "single full-body figure, sci-fi citizen militia soldier,",
+ "tail": "mostly mid slate-grey #6E7C99 light armor plates over a grey padded jumpsuit, cool grey with darker #3E4860 facets, hot orange-red #FF5A2E color ONLY on the armband, shoulder plate and helmet stripe, sealed gas-mask respirator helmet with no visible face, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, lean light build, three-quarter view, plain flat light grey background, centered, whole body visible with margin",
+ "neg_extra": "(sword:1.5), (shield:1.4), (cape:1.4), medieval, fantasy, face, eyes, multiple figures, character sheet, turnaround, views, parts, pieces, all orange, orange body, brown, rust, heavy armor, bulky",
+ "size": [
+  "--width",
+  "832",
+  "--height",
+  "1216"
+ ],
+ "units": {
+  "citizen_trooper": "(holding a simple compact carbine:1.4), (sealed round gas-mask helmet with twin filters:1.4), (forward leaning striding pose:1.3), ordinary volunteer soldier, few armor plates",
+  "pilot": "(sealed flight helmet with breathing hose:1.4), (grey flight suit with small chest plate:1.3), (holding a small pistol:1.2), vehicle crew pilot, slim",
+  "medic": "(large medical backpack with antenna:1.4), (sealed gas-mask helmet:1.3), (holding a repair tool injector:1.3), field medic, white cross-free armband",
+  "volunteer": "(bulky explosive charge pack strapped to the chest:1.4), (sealed gas-mask helmet:1.3), (running forward pose:1.3), light militia, no weapon",
+  "lance_team": "(large shoulder-fired rocket launcher tube:1.5), (sealed gas-mask helmet:1.3), kneeling anti-armor soldier, light plates"
+ },
+ "vehicles_head": "single sci-fi militia war vehicle, isometric three-quarter view from above,",
+ "vehicles_tail": "mostly mid slate-grey #6E7C99 matte hull, cool grey plates with darker #3E4860 facets, hot orange-red #FF5A2E color ONLY on a few stripe bands, civilian vehicle converted for war, improvised bolted-on armor plates, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, chunky toy-like proportions, plain flat light grey background, centered, whole vehicle visible with wide margin",
+ "vehicles_neg_extra": "multiple vehicles, character sheet, turnaround, views, parts, pieces, blueprint, people, soldiers, crew, road, ground, terrain, shadow, all orange, orange hull, brown, rust, gothic, spikes",
+ "vehicles_size": [
+  "--width",
+  "1216",
+  "--height",
+  "832"
+ ],
+ "vehicles": {
+  "gun_truck": "(armored pickup truck with a big machine gun turret bolted on the back:1.5), four big wheels, boxy cab",
+  "armoured_transport": "(armored bus-like troop carrier truck:1.4), (six big wheels:1.3), welded armor plates, side hatches, small roof gun"
+ },
+ "air_head": "single sci-fi militia aircraft flying, isometric three-quarter view from above,",
+ "air_tail": "mostly mid slate-grey #6E7C99 matte hull, cool grey plates with darker #3E4860 facets, hot orange-red #FF5A2E color ONLY on a few stripe bands, civilian vehicle converted for war, improvised bolted-on armor plates, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, chunky toy-like proportions, plain flat light grey background, centered, whole aircraft visible with wide margin",
+ "air_neg_extra": "multiple vehicles, character sheet, turnaround, views, parts, pieces, blueprint, people, soldiers, crew, road, ground, terrain, shadow, all orange, orange hull, brown, rust, gothic, spikes, clouds, sky, landscape, birds, pilot visible",
+ "air_size": [
+  "--width",
+  "1216",
+  "--height",
+  "832"
+ ],
+ "air": {
+  "interceptor": "(light fast propeller-less jet interceptor:1.4), (short straight wings:1.3), small and nimble, single tail fin",
+  "gunship": "(tilt-rotor gunship with two big engine rotors on the wing tips:1.4), side door guns, boxy fuselage",
+  "paratrooper_transport": "(big cargo transport plane:1.4), (high straight wings with four propellers:1.3), rear loading ramp, bulky fuselage"
+ },
+ "structs_head": "single isolated flat cel-shaded isometric sci-fi militia building on a flat square base-plate, 2:1 dimetric projection,",
+ "structs_tail": "dark charcoal slate matte plating, thin hot orange-red #FF5A2E neon trim lines along edges and base-plate rim, improvised utilitarian prefab architecture, corrugated panels, large simple panel shapes, hard clean edges, flat painted illustration, plain flat light grey background, whole building visible with wide margin, centered",
+ "structs_neg_extra": "multiple buildings, city, town, street, landscape, terrain, trees, people, vehicles, sky, clouds, road, blueprint, views, cropped, dark background, gothic, medieval",
+ "structs_size": [
+  "--width",
+  "1024",
+  "--height",
+  "1024"
+ ],
+ "structs": {
+  "solar_barracks": "(prefab militia barracks made of stacked shipping containers:1.4), (wolf banner pole on the roof:1.2), sandbag wall, compact",
+  "solar_factory": "(open vehicle workshop garage with big roll-up door:1.4), crane arm, stacked containers, wide low building",
+  "solar_airfield": "(small flat landing pad with a prefab hangar tent:1.4), radio mast, windsock, wide low building",
+  "autonomous_defence_node": "(small automated gun turret on a tripod base:1.4), (sensor dish:1.2), compact defensive emplacement"
+ },
+ "redo_head": "single full-body figure, sci-fi citizen militia soldier,",
+ "redo_tail": "mostly mid slate-grey #6E7C99 light armor plates over a grey padded jumpsuit, cool grey with darker #3E4860 facets, hot orange-red #FF5A2E color ONLY on the armband, shoulder plate and helmet stripe, sealed gas-mask respirator helmet with no visible face, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, lean light build, three-quarter view, plain flat light grey background, centered, whole body visible with margin",
+ "redo_size": [
+  "--width",
+  "832",
+  "--height",
+  "1216"
+ ],
+ "redo_neg_extra": "(sword:1.5), (shield:1.4), (cape:1.4), medieval, fantasy, face, eyes, multiple figures, character sheet, turnaround, views, parts, pieces, all orange, orange body, brown, rust, heavy armor, bulky, (multiple views:1.5), (equipment layout:1.4), (callouts:1.4), text, labels, spare parts, second figure",
+ "redo": {
+  "medic_r": "(one single medic soldier standing alone:1.5), (small medical pack on the back:1.2), (holding an injector gun:1.2), sealed gas-mask helmet",
+  "lance_team_r": "(one single soldier standing alone:1.5), (carrying a long rocket launcher tube on the shoulder:1.5), sealed gas-mask helmet, light plates"
+ }
+}

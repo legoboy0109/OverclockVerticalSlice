@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Pilot.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: f3d9de6f2bee2c0821f518beb139a87eac374ed009f3eab8f855ad99dbfdd54d
+; source-sha256: ff7728206e4cb6dbd701b110450732c5050053fce59574224a811e8ffefc8d62
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -39,4 +39,4 @@ targets_crew = false
 crew_bonus_attack = 1
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"scout"
+art_id = &""

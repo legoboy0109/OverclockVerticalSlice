@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Interceptor.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: d3a06de5ae35696bc41a4fd8a03adf3f39fa59a414c42bae0486ab748b10b6a0
+; source-sha256: 1f532ba8e8cb93748817ad123e9635e5d73cdd8292204fe20c6226ae79b1c662
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -39,4 +39,4 @@ targets_crew = false
 crew_bonus_attack = 0
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"fighter"
+art_id = &""

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=5 format=3]
 ; GENERATED from game-data/Structures/Front Airfield.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 9371620f37e353728250d9c529f203aae005a3a61f8b1b28eed67f2aad977671
+; source-sha256: b49f578b2536e8856479bbd80498f5dae7515052861876166e082cf67cedfcb6
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/interceptor.tres" id="2"]
@@ -11,7 +11,7 @@
 script = ExtResource("1")
 display_name = "Front Airfield"
 buildable = false
-art_id = &"airfield"
+art_id = &""
 counts_as = []
 hp = 12
 build_cost = 1200

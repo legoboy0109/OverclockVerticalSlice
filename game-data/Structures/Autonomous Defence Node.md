@@ -1,7 +1,6 @@
 ---
 id: autonomous_defence_node
 buildable: false
-art_id: defensive_structure
 hp: 8
 build_cost: 300
 build_time: 1

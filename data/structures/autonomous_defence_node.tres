@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Structures/Autonomous Defence Node.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: e227075d546684ca5e492e00e9f6c6abb9e0f949573d1ad105fe6cabb8ab2323
+; source-sha256: beefcf9adc21c5222efe067497524af97e6020f879bf07fc8a710ed6875c7280
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 
@@ -8,7 +8,7 @@
 script = ExtResource("1")
 display_name = "Autonomous Defence Node"
 buildable = false
-art_id = &"defensive_structure"
+art_id = &""
 counts_as = []
 hp = 8
 build_cost = 300

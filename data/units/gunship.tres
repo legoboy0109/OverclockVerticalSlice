@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Gunship.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 3524e58eba1add3cc3d4ec283d94fd65aea4cdc62f796a73e2b4701dd545ffbb
+; source-sha256: c6230f04746d0e3b243fc5b1f0cf14a979afdc1a1bc58a6bb5e468c5919a9f2e
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -39,4 +39,4 @@ targets_crew = false
 crew_bonus_attack = 0
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"helicopter"
+art_id = &""

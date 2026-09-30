@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Citizen Trooper.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: c4fb4041d90d5fb1fa2b62a233b34338f2547da2ac3ce9ea570b4918ec847c90
+; source-sha256: 36123c546c3f8cc70a180b9fb5a5c052bb23297d197b2fbd8e44303697aca67f
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -39,4 +39,4 @@ targets_crew = false
 crew_bonus_attack = 0
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"trooper"
+art_id = &""

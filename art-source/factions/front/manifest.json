@@ -1,0 +1,302 @@
+{
+ "assets": [
+  {
+   "kind": "unit",
+   "axis": "h",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "citizen_trooper",
+   "raw": "art-source/generated/front/citizen_trooper_2.png",
+   "px": 128,
+   "touches": {
+    "bone": [
+     [
+      7,
+      7
+     ],
+     [
+      8,
+      6
+     ],
+     [
+      9,
+      7
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "unit",
+   "axis": "h",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "volunteer",
+   "raw": "art-source/generated/front/volunteer_2.png",
+   "px": 124,
+   "touches": {
+    "bone": [
+     [
+      9,
+      8
+     ],
+     [
+      10,
+      7
+     ],
+     [
+      11,
+      8
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "unit",
+   "axis": "h",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "pilot",
+   "raw": "art-source/generated/front/pilot_2.png",
+   "px": 124,
+   "touches": {
+    "bone": [
+     [
+      7,
+      7
+     ],
+     [
+      8,
+      6
+     ],
+     [
+      9,
+      7
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "unit",
+   "axis": "w",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "gun_truck",
+   "raw": "art-source/generated/front/gun_truck_4.png",
+   "px": 176,
+   "touches": {
+    "bone": [
+     [
+      21,
+      10
+     ],
+     [
+      22,
+      9
+     ],
+     [
+      23,
+      10
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "unit",
+   "axis": "w",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "armoured_transport",
+   "raw": "art-source/generated/front/armoured_transport_3.png",
+   "px": 196,
+   "touches": {
+    "bone": [
+     [
+      25,
+      18
+     ],
+     [
+      26,
+      17
+     ],
+     [
+      27,
+      18
+     ]
+    ]
+   }
+  },
+  {
+   "id": "medic",
+   "kind": "unit",
+   "axis": "h",
+   "px": 124,
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "raw": "art-source/generated/front/medic_r_4.png",
+   "touches": {
+    "bone": [
+     [
+      5,
+      10
+     ],
+     [
+      6,
+      9
+     ],
+     [
+      7,
+      10
+     ]
+    ]
+   }
+  },
+  {
+   "id": "interceptor",
+   "kind": "air",
+   "axis": "w",
+   "px": 168,
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "raw": "art-source/generated/front/interceptor_3.png",
+   "touches": {
+    "bone": [
+     [
+      15,
+      10
+     ],
+     [
+      16,
+      9
+     ],
+     [
+      17,
+      10
+     ]
+    ]
+   }
+  },
+  {
+   "id": "lance_team",
+   "kind": "unit",
+   "axis": "h",
+   "px": 132,
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "raw": "art-source/generated/front/lance_team_r_3.png",
+   "touches": {
+    "bone": [
+     [
+      6,
+      11
+     ],
+     [
+      7,
+      10
+     ],
+     [
+      8,
+      11
+     ]
+    ]
+   }
+  },
+  {
+   "id": "gunship",
+   "kind": "air",
+   "axis": "w",
+   "px": 180,
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "raw": "art-source/generated/front/gunship_4.png",
+   "touches": {
+    "bone": [
+     [
+      14,
+      15
+     ],
+     [
+      15,
+      14
+     ],
+     [
+      16,
+      15
+     ]
+    ]
+   }
+  },
+  {
+   "id": "paratrooper_transport",
+   "kind": "air",
+   "axis": "w",
+   "px": 184,
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "raw": "art-source/generated/front/paratrooper_transport_4.png",
+   "touches": {
+    "bone": [
+     [
+      17,
+      21
+     ],
+     [
+      18,
+      20
+     ],
+     [
+      19,
+      21
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "struct",
+   "axis": "w",
+   "px": 256,
+   "flatten": true,
+   "keep_accent": 0.25,
+   "id": "solar_barracks",
+   "raw": "art-source/generated/front/solar_barracks_3.png"
+  },
+  {
+   "kind": "struct",
+   "axis": "w",
+   "px": 256,
+   "flatten": true,
+   "keep_accent": 0.25,
+   "id": "solar_factory",
+   "raw": "art-source/generated/front/solar_factory_4.png"
+  },
+  {
+   "kind": "struct",
+   "axis": "w",
+   "px": 256,
+   "flatten": true,
+   "keep_accent": 0.25,
+   "id": "solar_airfield",
+   "raw": "art-source/generated/front/solar_airfield.png",
+   "crop": 0.04,
+   "tol": 30
+  },
+  {
+   "kind": "struct",
+   "axis": "w",
+   "px": 256,
+   "flatten": true,
+   "keep_accent": 0.25,
+   "id": "autonomous_defence_node",
+   "raw": "art-source/generated/front/autonomous_defence_node_3.png"
+  }
+ ]
+}

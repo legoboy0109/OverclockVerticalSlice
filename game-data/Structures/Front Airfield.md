@@ -1,7 +1,6 @@
 ---
 id: solar_airfield
 buildable: false
-art_id: airfield
 hp: 12
 build_cost: 1200
 build_time: 3
