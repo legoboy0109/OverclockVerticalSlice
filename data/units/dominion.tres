@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Dominion.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: cb91604e8633698aeb31305f2cbf9413b9a41d29a0c70f51a2ab3c489e5db0e7
+; source-sha256: 444100f0e989fd23d8f95887a8ce7b5b9f40005a7111f08097e7ec0f76af48e2
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -39,4 +39,4 @@ targets_crew = false
 crew_bonus_attack = 0
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"fighter"
+art_id = &""

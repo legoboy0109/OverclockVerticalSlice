@@ -20,6 +20,9 @@ Manifest (JSON):
   kind  = unit | air | struct. `air` is drawn high over a ground shadow, like the
           placeholders (make_placeholder_sprites.py): the renderer anchors bottom-centre,
           so the shadow is the ground contact and the gap above it is the height cue.
+  tol   = cutout.py background tolerance (default 22); raise for soft ground shadows.
+  flatten = true to remove a gradient/vignette background before cutout.
+  crop  = optional fraction trimmed off every edge of the raw before cutout (frames).
   promote = optional accent-coverage target (%) passed to promote_accent.py when the
           generated accent is too thin for tests/unit/art/accent_coverage_test.gd.
 
@@ -100,6 +103,37 @@ def palette_lock(im: Image.Image) -> Image.Image:
     return Image.fromarray(a, "RGBA")
 
 
+def flatten_background(path: str, out: str, band: float = 0.03) -> str:
+    """Remove a smooth background gradient so cutout.py's single-tolerance fill can key it.
+
+    cutout.py warns that gradient backgrounds defeat it, and SDXL paints them often
+    (vignettes, light-to-dark studio sweeps — Aegis Walker 2026-09-29 kept its whole
+    backdrop). Fits a quadratic surface per channel to the border band, rejecting
+    outliers twice (the subject may touch the edge), then subtracts the surface and adds
+    back its mean: the field becomes one flat colour, the subject shifts by the same
+    small smooth amount and is otherwise untouched.
+    """
+    a = np.asarray(Image.open(path).convert("RGB")).astype(np.float64)
+    h, w = a.shape[:2]
+    yy, xx = np.mgrid[0:h, 0:w]
+    x, y = xx / w - 0.5, yy / h - 0.5
+    basis = np.stack([np.ones_like(x), x, y, x * x, y * y, x * y], axis=-1)
+    b = max(2, int(min(h, w) * band))
+    edge = np.zeros((h, w), bool)
+    edge[:b], edge[-b:], edge[:, :b], edge[:, -b:] = True, True, True, True
+    out_img = a.copy()
+    for ch in range(3):
+        keep = edge.copy()
+        for _ in range(3):
+            coef, *_ = np.linalg.lstsq(basis[keep], a[..., ch][keep], rcond=None)
+            fit = basis @ coef
+            resid = np.abs(a[..., ch] - fit)
+            keep = edge & (resid < max(6.0, 2.0 * resid[keep].std()))
+        out_img[..., ch] = a[..., ch] - fit + fit[edge].mean()
+    Image.fromarray(np.clip(out_img + 0.5, 0, 255).astype(np.uint8)).save(out)
+    return out
+
+
 def coverage(im: Image.Image) -> float:
     """Accent coverage %, exactly as tests/unit/art/accent_coverage_test.gd measures it."""
     a = np.asarray(im.convert("RGBA")).astype(np.float64)
@@ -154,7 +188,18 @@ def _with_air_shadow(sprite: Image.Image, mask: bool = False) -> Image.Image:
 def build(asset: dict, dry: bool, tmp: str) -> list[str]:
     aid, kind = asset["id"], asset["kind"]
     raw = os.path.join(ROOT, asset["raw"])
-    im, _ = cutout(raw, largest_only=True)
+    if asset.get("crop"):
+        # SDXL sometimes draws a picture frame / inset panel round the subject. The
+        # border flood fill then stops at the frame line and keys nothing. Cropping a
+        # fraction off every edge removes the frame so the fill starts on the panel.
+        c = float(asset["crop"])
+        r = Image.open(raw)
+        w, h = r.size
+        raw = _tmp(r.crop((int(w * c), int(h * c), int(w * (1 - c)), int(h * (1 - c)))),
+                   tmp, f"{aid}_cropped.png")
+    if asset.get("flatten"):
+        raw = flatten_background(raw, os.path.join(tmp, f"{aid}_flat.png"))
+    im, _ = cutout(raw, tol=int(asset.get("tol", 22)), largest_only=True)
     master = palette_lock(_fit(trim(im), asset["axis"], asset["px"]))
     clean_path = os.path.join(CLEANED, f"{aid}_rush_hd2d_clean.png")
     if not dry:

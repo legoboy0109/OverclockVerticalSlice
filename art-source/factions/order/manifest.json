@@ -31,6 +31,49 @@
    "axis": "h",
    "px": 156,
    "promote": 45
+  },
+  {
+   "id": "aegis_walker",
+   "kind": "unit",
+   "raw": "art-source/generated/order/aegis_walker_2.png",
+   "axis": "w",
+   "px": 168,
+   "promote": 36,
+   "crop": 0.03,
+   "flatten": true,
+   "tol": 40
+  },
+  {
+   "id": "cathedral_tank",
+   "kind": "unit",
+   "raw": "art-source/generated/order/cathedral_tank_2.png",
+   "axis": "w",
+   "px": 204,
+   "promote": 42
+  },
+  {
+   "id": "reliquary",
+   "kind": "unit",
+   "raw": "art-source/generated/order/reliquary_3.png",
+   "axis": "w",
+   "px": 184,
+   "promote": 42
+  },
+  {
+   "id": "seraph",
+   "kind": "air",
+   "raw": "art-source/generated/order/seraph_3.png",
+   "axis": "w",
+   "px": 176,
+   "promote": 42
+  },
+  {
+   "id": "dominion",
+   "kind": "air",
+   "raw": "art-source/generated/order/dominion.png",
+   "axis": "w",
+   "px": 164,
+   "promote": 42
   }
  ]
 }
