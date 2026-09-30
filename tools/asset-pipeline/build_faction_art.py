@@ -21,7 +21,10 @@ Manifest (JSON):
           placeholders (make_placeholder_sprites.py): the renderer anchors bottom-centre,
           so the shadow is the ground contact and the gap above it is the height cue.
   tol   = cutout.py background tolerance (default 22); raise for soft ground shadows.
+  accent_sat = palette-lock accent saturation gate (default 0.25); raise to stop browns
+          turning orange.
   flatten = true to remove a gradient/vignette background before cutout.
+  touches = hand-placed pixel details on the finished sprite — see apply_touches().
   crop  = optional fraction trimmed off every edge of the raw before cutout (frames).
   promote = optional accent-coverage target (%) passed to promote_accent.py when the
           generated accent is too thin for tests/unit/art/accent_coverage_test.gd.
@@ -80,7 +83,8 @@ SLATE_HUE, SLATE_SAT = 221.0, 0.26
 RUSH_HUE = 20.0
 
 
-def palette_lock(im: Image.Image, structure: bool = False) -> Image.Image:
+def palette_lock(im: Image.Image, structure: bool = False,
+                 accent_sat: float = ACCENT_SAT_MIN) -> Image.Image:
     """Force a raw render onto the house palette: slate armour, rush-orange accent.
 
     SDXL paints "slate grey" as warm brown-grey and "orange" anywhere from red-brown to
@@ -93,7 +97,10 @@ def palette_lock(im: Image.Image, structure: bool = False) -> Image.Image:
     rgb = a[..., :3].astype(np.float64) / 255.0
     h, s, v = _hsv(rgb)
     warm = (h <= ACCENT_HUE_MAX) | (h >= ACCENT_HUE_WRAP_MIN)
-    accent = warm & (s >= ACCENT_SAT_MIN) & (v >= ACCENT_VAL_MIN)
+    # accent_sat: raise it (manifest `accent_sat`, e.g. 0.5) when a render's browns and
+    # rust shadows are being promoted to faction orange — at recolor's 0.25 they are,
+    # and the unit floods orange with no grey/orange split (Order Knight, 2026-09-30).
+    accent = warm & (s >= accent_sat) & (v >= ACCENT_VAL_MIN)
     h2 = np.where(accent, RUSH_HUE, SLATE_HUE)
     s2 = np.where(accent, np.clip(s * 1.15, 0.65, 1.0), SLATE_SAT * np.clip(v * 1.4, 0.4, 1.0))
     # Lift accent value: renders shade the trim so dark that the anchor hue reads
@@ -138,6 +145,75 @@ def flatten_background(path: str, out: str, band: float = 0.03) -> str:
     Image.fromarray(np.clip(out_img + 0.5, 0, 255).astype(np.uint8)).save(out)
     return out
 
+
+# Pixel touches: rush accent at full brightness (hue matches RUSH_HUE) and a bone white
+# that sits under recolor's saturation gate, so it survives every hue unchanged.
+TOUCH_ACCENT = (255, 110, 38)
+TOUCH_BONE = (222, 214, 196)
+GROUND_RGB = (46, 54, 72)  # dark slate: reads as shadow on the #232A38 floor
+
+
+def apply_touches(px: Image.Image, touches: dict | None, mask: bool = False,
+                  ref: Image.Image | None = None) -> Image.Image:
+    """Paint hand-placed details onto a FINISHED pixel sprite, on the art grid.
+
+    Why: at ~35 art px tall, ornament in the render (engraving, sigils) averages away in
+    pixelize — ornate prompts were tried and lost (2026-09-30). Pixel art is authored at
+    the grid, so detail that must read is placed there, per pixel. Coordinates are art
+    pixels on the final canvas (print the grid to pick them). This is NOT the rejected
+    "composite geometry onto the smooth render" approach (.agent/notes.md): nothing is
+    scaled after placement, so a 1-px feature stays exactly 1 px.
+
+    touches = {"headroom": n,                   # empty art rows added on top (room for a halo)
+               "halo": [cx, cy, rx, ry],        # accent ring, only on EMPTY cells = behind
+               "bone": [[x, y], ...],           # pale detail pixels, drawn over the body
+               "accent": [[x, y], ...],         # extra faction-colour pixels
+               "ground_rows": [y, ...]}         # warm cells in these rows -> shadow
+    mask=True paints the halo/accent cells into a glow mask (they emit); pass the
+    untouched sprite as `ref` so "empty" is judged on the sprite, not on the mask.
+    """
+    if not touches:
+        return px
+    head = int(touches.get("headroom", 0)) * FACTOR
+    if head:
+        # Empty rows added on TOP only, so bottom-centre (the ground contact) is unmoved.
+        # Sprite, mask and ref all get the same rows, so the halo coordinates below are
+        # on the padded grid for all three.
+        def _pad(im: Image.Image) -> Image.Image:
+            out = Image.new(im.mode, (im.width, im.height + head))
+            out.paste(im, (0, head))
+            return out
+        px = _pad(px)
+        ref = _pad(ref) if ref is not None else None
+    sprite = np.asarray(ref if ref is not None else px)
+    empty = sprite[::FACTOR, ::FACTOR, 3] == 0
+    grid = np.asarray(px)[::FACTOR, ::FACTOR].copy()
+    gh, gw = empty.shape
+    cells: list[tuple[int, int, tuple]] = []
+    if "halo" in touches:
+        cx, cy, rx, ry = touches["halo"]
+        yy, xx = np.mgrid[0:gh, 0:gw]
+        d = ((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2
+        inner = (1 - 1.0 / max(rx, ry)) ** 2 * 0.72  # ~1-cell-thick ring
+        for y, x in zip(*np.nonzero((d <= 1.0) & (d >= inner) & empty)):
+            cells.append((int(x), int(y), TOUCH_ACCENT))
+    cells += [(x, y, TOUCH_ACCENT) for x, y in touches.get("accent", [])]
+    if not mask:
+        cells += [(x, y, TOUCH_BONE) for x, y in touches.get("bone", [])]
+    for x, y, col in cells:
+        if 0 <= x < gw and 0 <= y < gh:
+            grid[y, x] = 255 if mask else (*col, 255)
+    # ground_rows: a render's ground shadow tinted warm gets read as trim and becomes a
+    # faction-coloured puddle under the feet (Inquisitor, 2026-09-30). Rows are on the
+    # final (post-headroom) grid; their warm cells turn dark slate and stop emitting.
+    rows = [r for r in touches.get("ground_rows", []) if 0 <= r < gh]
+    if rows:
+        s = sprite[::FACTOR, ::FACTOR].astype(int)
+        warm = (s[..., 0] > 150) & (s[..., 0] > s[..., 2] + 60) & (s[..., 3] > 0)
+        for r in rows:
+            for x in np.nonzero(warm[r])[0]:
+                grid[r, x] = 0 if mask else (*GROUND_RGB, 255)
+    return Image.fromarray(grid.repeat(FACTOR, 0).repeat(FACTOR, 1), px.mode)
 
 def coverage(im: Image.Image) -> float:
     """Accent coverage %, exactly as tests/unit/art/accent_coverage_test.gd measures it."""
@@ -205,23 +281,28 @@ def build(asset: dict, dry: bool, tmp: str) -> list[str]:
     if asset.get("flatten"):
         raw = flatten_background(raw, os.path.join(tmp, f"{aid}_flat.png"))
     im, _ = cutout(raw, tol=int(asset.get("tol", 22)), largest_only=True)
-    master = palette_lock(_fit(trim(im), asset["axis"], asset["px"]), structure=asset["kind"] == "struct")
+    master = palette_lock(_fit(trim(im), asset["axis"], asset["px"]), structure=asset["kind"] == "struct",
+                          accent_sat=float(asset.get("accent_sat", ACCENT_SAT_MIN)))
     clean_path = os.path.join(CLEANED, f"{aid}_rush_hd2d_clean.png")
     if not dry:
         master.save(clean_path)
     src = _tmp(master, tmp, f"{aid}_rush.png")
+    touches = asset.get("touches")
     if asset.get("promote"):
         # The goal is coverage of the FINAL pixel sprite: the outline ring and edge
         # cells cost ~8-12 points versus the smooth master (Knight: 44% smooth -> 33%
         # pixel), so step the smooth target up until the pixelized result clears it.
         goal = float(asset["promote"])
-        for smooth_target in range(int(goal), 76, 3):
+        for smooth_target in range(int(goal) - 8, 76, 1):
             promoted = os.path.join(tmp, f"{aid}_rush_promoted_{smooth_target}.png")
             subprocess.run([sys.executable, os.path.join(os.path.dirname(__file__), "promote_accent.py"),
                             src, promoted, "--target", str(smooth_target)], check=True,
                            stdout=subprocess.DEVNULL)
             cand = promoted if os.path.exists(promoted) else src  # no file = already above
-            if coverage(pixelize(Image.open(cand), FACTOR)) >= goal:
+            final = apply_touches(pixelize(Image.open(cand), FACTOR), touches)
+            if kind == "air":  # the shadow counts as body in the test, so measure with it
+                final = _with_air_shadow(final)
+            if coverage(final) >= goal:
                 break
         src = cand
         master = Image.open(src).convert("RGBA")
@@ -230,7 +311,8 @@ def build(asset: dict, dry: bool, tmp: str) -> list[str]:
     is_struct = kind == "struct"
     out_dir = STRUCTS if is_struct else UNITS
     report = []
-    rush_px = pixelize(master, FACTOR)
+    bare_px = pixelize(master, FACTOR)
+    rush_px = apply_touches(bare_px, touches)
     rush_px_path = _tmp(rush_px, tmp, f"{aid}_rushpx_raw.png")
     for hue in HUES:
         px = rush_px if hue == "rush" else recolor(rush_px_path, hue)[0]
@@ -252,7 +334,7 @@ def build(asset: dict, dry: bool, tmp: str) -> list[str]:
             if not dry:
                 img.save(os.path.join(out_dir, name))
 
-    glow = pixelize_mask(glow_mask(src)[0], FACTOR)
+    glow = apply_touches(pixelize_mask(glow_mask(src)[0], FACTOR), touches, mask=True, ref=bare_px)
     if kind == "air":
         glow = _with_air_shadow(glow, mask=True)
     if is_struct:

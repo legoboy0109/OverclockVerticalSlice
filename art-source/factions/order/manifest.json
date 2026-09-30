@@ -3,77 +3,364 @@
   {
    "id": "levy",
    "kind": "unit",
-   "raw": "art-source/generated/order/levy_4.png",
    "axis": "h",
    "px": 124,
-   "promote": 45
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "raw": "art-source/generated/order/levy_clean_3.png",
+   "touches": {
+    "bone": [
+     [
+      6,
+      6
+     ],
+     [
+      5,
+      7
+     ],
+     [
+      7,
+      7
+     ],
+     [
+      6,
+      8
+     ]
+    ],
+    "accent": [
+     [
+      6,
+      7
+     ]
+    ]
+   }
   },
   {
    "id": "knight",
    "kind": "unit",
-   "raw": "art-source/generated/order/knight_2.png",
+   "raw": "art-source/generated/order/knight_clean.png",
    "axis": "h",
    "px": 148,
-   "promote": 42
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "touches": {
+    "headroom": 3,
+    "halo": [
+     12,
+     4.2,
+     4.5,
+     1.6
+    ],
+    "bone": [
+     [
+      12,
+      13
+     ],
+     [
+      11,
+      14
+     ],
+     [
+      13,
+      14
+     ],
+     [
+      12,
+      15
+     ]
+    ],
+    "accent": [
+     [
+      12,
+      14
+     ]
+    ]
+   }
   },
   {
    "id": "confessor",
    "kind": "unit",
-   "raw": "art-source/generated/order/confessor_6.png",
    "axis": "h",
    "px": 136,
-   "promote": 45
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "raw": "art-source/generated/order/confessor_clean.png",
+   "touches": {
+    "headroom": 3,
+    "halo": [
+     7,
+     4.2,
+     4,
+     1.4
+    ],
+    "bone": [
+     [
+      7,
+      11
+     ],
+     [
+      6,
+      12
+     ],
+     [
+      8,
+      12
+     ],
+     [
+      7,
+      13
+     ]
+    ],
+    "accent": [
+     [
+      7,
+      12
+     ]
+    ]
+   }
   },
   {
    "id": "inquisitor",
    "kind": "unit",
-   "raw": "art-source/generated/order/inquisitor_4.png",
    "axis": "h",
    "px": 156,
-   "promote": 45
+   "promote": 30.2,
+   "tol": 40,
+   "raw": "art-source/generated/order/inquisitor_4.png",
+   "touches": {
+    "headroom": 3,
+    "halo": [
+     12.5,
+     4.2,
+     4,
+     1.4
+    ],
+    "bone": [
+     [
+      12,
+      11
+     ],
+     [
+      11,
+      12
+     ],
+     [
+      13,
+      12
+     ],
+     [
+      12,
+      13
+     ]
+    ],
+    "accent": [
+     [
+      12,
+      12
+     ]
+    ],
+    "ground_rows": [
+     40,
+     41,
+     42
+    ]
+   }
   },
   {
    "id": "aegis_walker",
    "kind": "unit",
-   "raw": "art-source/generated/order/aegis_walker_2.png",
    "axis": "w",
    "px": 168,
-   "promote": 36,
+   "raw": "art-source/generated/order/aegis_walker_2.png",
+   "promote": 30.2,
    "crop": 0.03,
    "flatten": true,
-   "tol": 40
+   "tol": 40,
+   "touches": {
+    "bone": [
+     [
+      26,
+      11
+     ],
+     [
+      25,
+      12
+     ],
+     [
+      27,
+      12
+     ],
+     [
+      26,
+      13
+     ]
+    ],
+    "accent": [
+     [
+      26,
+      12
+     ]
+    ]
+   }
   },
   {
    "id": "cathedral_tank",
    "kind": "unit",
-   "raw": "art-source/generated/order/cathedral_tank_2.png",
    "axis": "w",
    "px": 204,
-   "promote": 42
+   "raw": "art-source/generated/order/cathedral_tank_2.png",
+   "promote": 30.2,
+   "touches": {
+    "bone": [
+     [
+      17,
+      20
+     ],
+     [
+      16,
+      21
+     ],
+     [
+      18,
+      21
+     ],
+     [
+      17,
+      22
+     ]
+    ],
+    "accent": [
+     [
+      17,
+      21
+     ],
+     [
+      32,
+      4
+     ],
+     [
+      32,
+      5
+     ],
+     [
+      32,
+      7
+     ],
+     [
+      33,
+      8
+     ]
+    ]
+   }
   },
   {
    "id": "reliquary",
    "kind": "unit",
-   "raw": "art-source/generated/order/reliquary_3.png",
    "axis": "w",
    "px": 184,
-   "promote": 42
+   "raw": "art-source/generated/order/reliquary_3.png",
+   "promote": 30.2,
+   "touches": {
+    "bone": [
+     [
+      26,
+      7
+     ],
+     [
+      25,
+      8
+     ],
+     [
+      27,
+      8
+     ],
+     [
+      26,
+      9
+     ]
+    ],
+    "accent": [
+     [
+      26,
+      8
+     ]
+    ]
+   }
   },
   {
    "id": "seraph",
    "kind": "air",
-   "raw": "art-source/generated/order/seraph_3.png",
    "axis": "w",
    "px": 176,
-   "promote": 42
+   "raw": "art-source/generated/order/seraph_clean_4.png",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "touches": {
+    "bone": [
+     [
+      28,
+      14
+     ],
+     [
+      27,
+      15
+     ],
+     [
+      29,
+      15
+     ],
+     [
+      28,
+      16
+     ]
+    ],
+    "accent": [
+     [
+      28,
+      15
+     ]
+    ]
+   }
   },
   {
    "id": "dominion",
    "kind": "air",
-   "raw": "art-source/generated/order/dominion.png",
    "axis": "w",
    "px": 164,
-   "promote": 42
+   "raw": "art-source/generated/order/dominion_clean_2.png",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "touches": {
+    "bone": [
+     [
+      27,
+      10
+     ],
+     [
+      26,
+      11
+     ],
+     [
+      28,
+      11
+     ],
+     [
+      27,
+      12
+     ]
+    ],
+    "accent": [
+     [
+      27,
+      11
+     ]
+    ]
+   }
   },
   {
    "id": "empire_barracks",

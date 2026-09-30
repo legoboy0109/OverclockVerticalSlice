@@ -68,5 +68,47 @@
  "ornate": {
   "knight_ornate": "(holding a large sci-fi plasma rifle in both hands:1.5), (tall crested spire helmet with a swept-back fin:1.4), (huge spiked gothic pauldrons:1.3), (orange armor tabard plate with a bone-white starburst sigil:1.3), (small reliquary shrine mounted on the back:1.2), massive armored space marine veteran",
   "levy_ornate": "(holding a compact sci-fi laser carbine in both hands:1.5), (simple spire-crested helmet:1.3), (short orange armor tabard plate with a bone-white starburst sigil:1.3), (prayer-seal badges on the shoulders:1.2), small conscript space trooper, light plate armor"
+ },
+ "clean_head": "single full-body figure, sci-fi gothic crusader soldier,",
+ "clean_tail": "mostly mid slate-grey #6E7C99 matte armor over the whole body, cool neutral grey plates with darker #3E4860 facets, hot orange-red #FF5A2E color blocks ONLY on the chest plate and the tops of the pauldrons, grey arms and grey legs, sealed faceless helmet, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, chunky proportions, three-quarter view, plain flat light grey background, centered, whole body visible with margin",
+ "clean_neg_extra": "(sword:1.6), (blade:1.5), (axe:1.5), (mace:1.5), (spear:1.4), (shield:1.5), (cape:1.4), (cloak:1.4), medieval, fantasy, chainmail, cross, crucifix, plume, feather, face, multiple figures, character sheet, turnaround, views, parts, pieces, orange arms, orange legs, all orange, brown, rust",
+ "clean_size": [
+  "--width",
+  "832",
+  "--height",
+  "1216"
+ ],
+ "clean": {
+  "knight_clean": "(holding a heavy sci-fi plasma rifle:1.4), (very tall pointed spire crest on the helmet:1.4), (huge pointed gothic pauldrons:1.3), (long armored plate tabard to the knees:1.2), massive bulky armored veteran, wide heavy stance",
+  "levy_clean": "(holding a compact sci-fi laser carbine:1.4), (small pointed spire crest on the helmet:1.3), (short armored plate tabard:1.2), small humble conscript soldier, light slim armor, modest upright stance",
+  "confessor_clean": "(tall pointed mitre-shaped helmet:1.5), (long armored plate robe down to the ankles:1.4), (holding a tall staff topped with a repair tool and lantern:1.3), battle priest engineer, calm upright stance",
+  "inquisitor_clean": "(very long thin sci-fi sniper rifle held upright:1.4), (tall narrow pointed spire helmet:1.4), (long coat of armor plates to the shins:1.3), tall thin marksman, planted stance"
+ },
+ "vclean_head": "single sci-fi gothic cathedral war machine, isometric three-quarter view from above,",
+ "vclean_tail": "mostly mid slate-grey #6E7C99 matte armor over the whole hull, cool grey plates with darker #3E4860 facets, hot orange-red #FF5A2E color ONLY on a few trim bands and the spire tips, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, chunky toy-like proportions, plain flat light grey background, centered, whole vehicle visible with wide margin",
+ "vclean_neg_extra": "multiple vehicles, character sheet, turnaround, views, parts, pieces, blueprint, people, soldiers, crew, road, ground, terrain, shadow, medieval, wood, stone castle, all orange, orange hull, brown, rust",
+ "vclean_size": [
+  "--width",
+  "1216",
+  "--height",
+  "832"
+ ],
+ "vclean": {
+  "aegis_walker_clean": "(small four-legged armored walker tank far away in the center:1.4), (gothic pointed-arch armor plates:1.3), whole legs and feet visible, small spire on top, twin cannon, squat body",
+  "cathedral_tank_clean": "(huge heavy battle tank shaped like a cathedral:1.4), (tall pointed gothic spires rising from the hull:1.4), wide tank treads, one massive long cannon, stained-glass-shaped panels",
+  "reliquary_clean": "(armored troop carrier shaped like a reliquary chapel box:1.4), (pointed gothic arched roof:1.3), wide tank treads, no weapons, heavy doors on the side"
+ },
+ "aclean_head": "single sci-fi gothic warplane flying, isometric three-quarter view from above,",
+ "aclean_tail": "mostly mid slate-grey #6E7C99 matte armor over the whole hull, cool grey plates with darker #3E4860 facets, hot orange-red #FF5A2E color ONLY on a few trim bands and the spire tips, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, chunky toy-like proportions, plain flat light grey background, centered, whole aircraft visible with wide margin",
+ "aclean_neg_extra": "multiple vehicles, character sheet, turnaround, views, parts, pieces, blueprint, people, soldiers, crew, road, ground, terrain, shadow, medieval, wood, stone castle, clouds, sky, landscape, birds, feathers, angel, person, pilot visible, all orange, orange hull, brown, rust",
+ "aclean_size": [
+  "--width",
+  "1216",
+  "--height",
+  "832"
+ ],
+ "aclean": {
+  "seraph_clean": "(heavy gunship with six wing blades arranged like a seraph:1.4), (pointed gothic spire nose:1.3), underslung cannons, hovering",
+  "dominion_clean": "(sleek fast interceptor jet:1.4), (swept pointed gothic arch wings:1.3), tall tail fin shaped like a spire, sharp needle nose"
  }
 }
