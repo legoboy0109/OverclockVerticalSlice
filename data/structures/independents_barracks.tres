@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=7 format=3]
 ; GENERATED from game-data/Structures/Lightless Barracks.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: d60caf0dfcaef9e1d823eb6067f0314a21ac9f54a42284155ece0b8e8b9bd81b
+; source-sha256: a2fc533bc596e1033185ce8f2991f765c612b75fcd005660328ca071c2f2d667
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/partisan.tres" id="2"]
@@ -13,7 +13,7 @@
 script = ExtResource("1")
 display_name = "Lightless Barracks"
 buildable = false
-art_id = &"barracks"
+art_id = &""
 counts_as = []
 hp = 12
 build_cost = 900

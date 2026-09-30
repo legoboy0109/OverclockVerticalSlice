@@ -32,7 +32,6 @@ transport_accepts: []
 transport_size: 3
 targets_crew: false
 crew_bonus_attack: 0
-art_id: tank
 ---
 
 ## Notes

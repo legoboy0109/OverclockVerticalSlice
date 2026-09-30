@@ -1,7 +1,6 @@
 ---
 id: independents_factory
 buildable: false
-art_id: factory
 hp: 14
 build_cost: 1000
 build_time: 3

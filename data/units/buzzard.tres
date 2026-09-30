@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Buzzard.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 4285d39acc40a53860956d8413e97b45e50a73e3b8337d7a30561d47735c1a6c
+; source-sha256: 2a7802132999e2af216f767c2e50f4f5581e7f828a955f180989dfd54e872e42
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/abilities/paradrop.tres" id="2"]
@@ -40,4 +40,4 @@ targets_crew = false
 crew_bonus_attack = 0
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"helicopter"
+art_id = &""

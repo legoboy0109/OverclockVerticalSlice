@@ -1,0 +1,308 @@
+{
+ "assets": [
+  {
+   "kind": "unit",
+   "axis": "h",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "partisan",
+   "raw": "art-source/generated/lightless/partisan_3.png",
+   "px": 132,
+   "touches": {
+    "bone": [
+     [
+      8,
+      10
+     ],
+     [
+      10,
+      10
+     ],
+     [
+      9,
+      11
+     ],
+     [
+      8,
+      12
+     ],
+     [
+      10,
+      12
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "unit",
+   "axis": "h",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "pirate",
+   "raw": "art-source/generated/lightless/pirate.png",
+   "px": 128,
+   "touches": {
+    "bone": [
+     [
+      8,
+      12
+     ],
+     [
+      10,
+      12
+     ],
+     [
+      9,
+      13
+     ],
+     [
+      8,
+      14
+     ],
+     [
+      10,
+      14
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "unit",
+   "axis": "h",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "saboteur",
+   "raw": "art-source/generated/lightless/saboteur_2.png",
+   "px": 132,
+   "touches": {
+    "bone": [
+     [
+      9,
+      6
+     ],
+     [
+      11,
+      6
+     ],
+     [
+      10,
+      7
+     ],
+     [
+      9,
+      8
+     ],
+     [
+      11,
+      8
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "unit",
+   "axis": "h",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "marksman",
+   "raw": "art-source/generated/lightless/marksman_2.png",
+   "px": 152,
+   "smooth": 5,
+   "touches": {
+    "bone": [
+     [
+      5,
+      13
+     ],
+     [
+      7,
+      13
+     ],
+     [
+      6,
+      14
+     ],
+     [
+      5,
+      15
+     ],
+     [
+      7,
+      15
+     ]
+    ]
+   }
+  },
+  {
+   "id": "missile_team",
+   "kind": "unit",
+   "axis": "h",
+   "px": 140,
+   "raw": "art-source/generated/lightless/missile_team_5.png",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "touches": {
+    "bone": [
+     [
+      11,
+      9
+     ],
+     [
+      13,
+      9
+     ],
+     [
+      12,
+      10
+     ],
+     [
+      11,
+      11
+     ],
+     [
+      13,
+      11
+     ]
+    ]
+   }
+  },
+  {
+   "id": "technical",
+   "kind": "unit",
+   "axis": "w",
+   "px": 176,
+   "raw": "art-source/generated/lightless/technical_3.png",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "touches": {
+    "bone": [
+     [
+      26,
+      17
+     ],
+     [
+      28,
+      17
+     ],
+     [
+      27,
+      18
+     ],
+     [
+      26,
+      19
+     ],
+     [
+      28,
+      19
+     ]
+    ]
+   }
+  },
+  {
+   "id": "scrap_tank",
+   "kind": "unit",
+   "axis": "w",
+   "px": 192,
+   "raw": "art-source/generated/lightless/scrap_tank.png",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.03,
+   "touches": {
+    "bone": [
+     [
+      28,
+      9
+     ],
+     [
+      30,
+      9
+     ],
+     [
+      29,
+      10
+     ],
+     [
+      28,
+      11
+     ],
+     [
+      30,
+      11
+     ]
+    ]
+   }
+  },
+  {
+   "id": "buzzard",
+   "kind": "air",
+   "axis": "w",
+   "px": 176,
+   "raw": "art-source/generated/lightless/buzzard_3.png",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "touches": {
+    "bone": [
+     [
+      27,
+      13
+     ],
+     [
+      29,
+      13
+     ],
+     [
+      28,
+      14
+     ],
+     [
+      27,
+      15
+     ],
+     [
+      29,
+      15
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "struct",
+   "axis": "w",
+   "px": 256,
+   "flatten": true,
+   "crop": 0.02,
+   "keep_accent": 0.25,
+   "id": "independents_barracks",
+   "raw": "art-source/generated/lightless/independents_barracks_3.png"
+  },
+  {
+   "kind": "struct",
+   "axis": "w",
+   "px": 256,
+   "flatten": true,
+   "crop": 0.02,
+   "keep_accent": 0,
+   "id": "independents_factory",
+   "raw": "art-source/generated/lightless/independents_factory.png",
+   "smooth": 9
+  },
+  {
+   "kind": "struct",
+   "axis": "w",
+   "px": 256,
+   "flatten": true,
+   "crop": 0.02,
+   "keep_accent": 0.25,
+   "id": "independents_airfield",
+   "raw": "art-source/generated/lightless/independents_airfield_3.png"
+  }
+ ]
+}

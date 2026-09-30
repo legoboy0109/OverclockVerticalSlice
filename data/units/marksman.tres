@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Marksman.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 72c58972dedbe6b0aad41989e0ef9b22a28268c778183d3e5a5da760c4878a8b
+; source-sha256: 6fd410c2428cc90cb8be961c0c2b455f519eef56d72f20ac615f7ce87292401f
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -39,4 +39,4 @@ targets_crew = false
 crew_bonus_attack = 0
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"sniper"
+art_id = &""
