@@ -150,6 +150,7 @@ def flatten_background(path: str, out: str, band: float = 0.03) -> str:
 # that sits under recolor's saturation gate, so it survives every hue unchanged.
 TOUCH_ACCENT = (255, 110, 38)
 TOUCH_BONE = (222, 214, 196)
+GROUND_RGB = (46, 54, 72)  # dark slate: reads as shadow on the #232A38 floor
 
 
 def apply_touches(px: Image.Image, touches: dict | None, mask: bool = False,
@@ -166,7 +167,8 @@ def apply_touches(px: Image.Image, touches: dict | None, mask: bool = False,
     touches = {"headroom": n,                   # empty art rows added on top (room for a halo)
                "halo": [cx, cy, rx, ry],        # accent ring, only on EMPTY cells = behind
                "bone": [[x, y], ...],           # pale detail pixels, drawn over the body
-               "accent": [[x, y], ...]}         # extra faction-colour pixels
+               "accent": [[x, y], ...],         # extra faction-colour pixels
+               "ground_rows": [y, ...]}         # warm cells in these rows -> shadow
     mask=True paints the halo/accent cells into a glow mask (they emit); pass the
     untouched sprite as `ref` so "empty" is judged on the sprite, not on the mask.
     """
@@ -201,6 +203,16 @@ def apply_touches(px: Image.Image, touches: dict | None, mask: bool = False,
     for x, y, col in cells:
         if 0 <= x < gw and 0 <= y < gh:
             grid[y, x] = 255 if mask else (*col, 255)
+    # ground_rows: a render's ground shadow tinted warm gets read as trim and becomes a
+    # faction-coloured puddle under the feet (Inquisitor, 2026-09-30). Rows are on the
+    # final (post-headroom) grid; their warm cells turn dark slate and stop emitting.
+    rows = [r for r in touches.get("ground_rows", []) if 0 <= r < gh]
+    if rows:
+        s = sprite[::FACTOR, ::FACTOR].astype(int)
+        warm = (s[..., 0] > 150) & (s[..., 0] > s[..., 2] + 60) & (s[..., 3] > 0)
+        for r in rows:
+            for x in np.nonzero(warm[r])[0]:
+                grid[r, x] = 0 if mask else (*GROUND_RGB, 255)
     return Image.fromarray(grid.repeat(FACTOR, 0).repeat(FACTOR, 1), px.mode)
 
 def coverage(im: Image.Image) -> float:
@@ -287,7 +299,10 @@ def build(asset: dict, dry: bool, tmp: str) -> list[str]:
                             src, promoted, "--target", str(smooth_target)], check=True,
                            stdout=subprocess.DEVNULL)
             cand = promoted if os.path.exists(promoted) else src  # no file = already above
-            if coverage(apply_touches(pixelize(Image.open(cand), FACTOR), touches)) >= goal:
+            final = apply_touches(pixelize(Image.open(cand), FACTOR), touches)
+            if kind == "air":  # the shadow counts as body in the test, so measure with it
+                final = _with_air_shadow(final)
+            if coverage(final) >= goal:
                 break
         src = cand
         master = Image.open(src).convert("RGBA")
