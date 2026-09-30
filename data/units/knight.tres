@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Knight.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: abf92db5dab4343dba22e3ba4ddde447a3cf45783eb28573438f71391b9489c2
+; source-sha256: 309726114529b4c4adb0356c35712a4768fbda773f17103570e7a22abea74519
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -39,4 +39,4 @@ targets_crew = false
 crew_bonus_attack = 0
 starting_merit = 6
 crew_bonus_move_cost = 0
-art_id = &"heavy"
+art_id = &""

@@ -1,0 +1,59 @@
+{
+ "head": "single full-body figure, sci-fi gothic crusader soldier,",
+ "tail": "mid slate-grey #6E7C99 matte armor plates, orange-red #FF5A2E trim panels on shoulders and chest, sealed faceless helmet, flat cel-shaded 2D game sprite, flat colors, hard clean edges, chunky proportions, three-quarter view, plain flat light grey background, centered, whole body visible with margin",
+ "neg_extra": "sword, blade, shield, medieval, fantasy, chainmail, plume, feather, spear, axe, mace, face, multiple figures, character sheet, turnaround, views, parts, pieces",
+ "units": {
+  "levy": "(tall pointed spire crest on the helmet:1.4), (thin golden halo ring behind the head:1.3), humble small conscript, light plate armor, short plate tabard, compact laser carbine",
+  "knight": "veteran crusader heavy trooper, big armored bulk, very tall pointed spire-crested helmet, huge pointed gothic shoulder pauldrons, gothic pointed-arch chest plate, long plate tabard to the knees, thin halo ring floating behind the head, heavy plasma rifle, towering upright stance",
+  "confessor": "(tall pointed mitre helmet:1.5), (halo ring behind the head:1.3), (long plate robe down to the feet:1.3), battle priest, holding a tall staff topped with a lantern",
+  "inquisitor": "(very tall narrow pointed spire helmet:1.4), (long coat of armor plates to the shins:1.3), (very long thin sniper rifle held upright:1.3), tall thin marksman, halo ring behind the head"
+ },
+ "size": [
+  "--width",
+  "832",
+  "--height",
+  "1216"
+ ],
+ "vehicles_head": "single sci-fi gothic cathedral war machine, isometric three-quarter view from above,",
+ "vehicles_tail": "mid slate-grey #6E7C99 matte armor hull, large orange-red #FF5A2E panels on the hull and spires, flat cel-shaded 2D game sprite, flat colors, hard clean edges, chunky toy-like proportions, plain flat light grey background, centered, whole vehicle visible with wide margin",
+ "vehicles_neg_extra": "multiple vehicles, character sheet, turnaround, views, parts, pieces, blueprint, people, soldiers, crew, road, ground, terrain, shadow, medieval, wood, stone castle",
+ "vehicles_size": [
+  "--width",
+  "1216",
+  "--height",
+  "832"
+ ],
+ "vehicles": {
+  "aegis_walker": "(small four-legged armored walker tank far away in the center:1.4), (gothic pointed-arch armor plates:1.3), whole legs and feet visible, small spire on top, twin cannon, squat body",
+  "cathedral_tank": "(huge heavy battle tank shaped like a cathedral:1.4), (tall pointed gothic spires rising from the hull:1.4), wide tank treads, one massive long cannon, stained-glass-shaped panels",
+  "reliquary": "(armored troop carrier shaped like a reliquary chapel box:1.4), (pointed gothic arched roof:1.3), wide tank treads, no weapons, heavy doors on the side"
+ },
+ "air_head": "single sci-fi gothic warplane flying, isometric three-quarter view from above,",
+ "air_tail": "mid slate-grey #6E7C99 matte armor hull, large orange-red #FF5A2E panels on the hull and spires, flat cel-shaded 2D game sprite, flat colors, hard clean edges, chunky toy-like proportions, plain flat light grey background, centered, whole aircraft visible with wide margin",
+ "air_neg_extra": "multiple vehicles, character sheet, turnaround, views, parts, pieces, blueprint, people, soldiers, crew, road, ground, terrain, shadow, medieval, wood, stone castle, clouds, sky, landscape, birds, feathers, angel, person, pilot visible",
+ "air_size": [
+  "--width",
+  "1216",
+  "--height",
+  "832"
+ ],
+ "air": {
+  "seraph": "(heavy gunship with six wing blades arranged like a seraph:1.4), (pointed gothic spire nose:1.3), underslung cannons, hovering",
+  "dominion": "(sleek fast interceptor jet:1.4), (swept pointed gothic arch wings:1.3), tall tail fin shaped like a spire, sharp needle nose"
+ },
+ "structs_head": "single isolated flat cel-shaded isometric sci-fi gothic building on a flat diamond base-plate, 2:1 dimetric projection,",
+ "structs_tail": "dark charcoal slate matte plating, thin hot orange-red #FF5A2E neon trim lines along the arches, spires and base-plate rim, large simple panel shapes, hard clean edges, no greeble, flat painted illustration, plain flat light grey background, whole building visible with wide margin, centered",
+ "structs_neg_extra": "multiple buildings, city, town, street, landscape, terrain, trees, people, vehicles, sky, clouds, ground plane, road, blueprint, floor plan, views, cropped, dark background, medieval, stone bricks, wood",
+ "structs_size": [
+  "--width",
+  "1024",
+  "--height",
+  "1024"
+ ],
+ "structs": {
+  "empire_barracks": "(gothic chapel barracks with a tall pointed arched doorway:1.4), (small pointed spires on the corners:1.3), compact blocky hall",
+  "empire_factory": "(gothic foundry hall with a huge pointed-arch vehicle bay door:1.4), (tall bell tower chimney:1.3), wide heavy building",
+  "empire_airfield": "(flat landing pad platform with a gothic arched hangar:1.4), (slender spire control tower:1.3), wide low building",
+  "cathedral": "(isometric three-quarter view from above of a tall sci-fi gothic cathedral:1.5), (twin tall pointed spires:1.4), round rose window, flying buttresses, compact footprint"
+ }
+}

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Aegis Walker.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 06f8ccb849807acfa8637a92ad6a13b98e8e89335b9d7a121dd099dace63fda6
+; source-sha256: 06322544163b45bd4e0475e2660c1b06c5aee2f25aaa1f71095b291de73266d9
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -39,4 +39,4 @@ targets_crew = false
 crew_bonus_attack = 0
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"tank"
+art_id = &""

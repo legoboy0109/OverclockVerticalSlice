@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=6 format=3]
 ; GENERATED from game-data/Structures/Order Barracks.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 0dcfa1e085d18202f9754b3e2ea4b7d45e553c850998bf4ac6e78b0241639ab5
+; source-sha256: 8048ac0bbf15747b00deabb4d2beeb73b6c591306cf5dcf02d7c570bab992aa3
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/levy.tres" id="2"]
@@ -12,7 +12,7 @@
 script = ExtResource("1")
 display_name = "Order Barracks"
 buildable = false
-art_id = &"barracks"
+art_id = &""
 counts_as = []
 hp = 14
 build_cost = 600

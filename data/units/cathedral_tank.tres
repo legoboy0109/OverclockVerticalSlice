@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Cathedral Tank.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 837497780079a226b7de71f6b0b1d92812c63ca382eedf04b0cd7c0cae097767
+; source-sha256: 3d0dc5c684a79bd02bc3c134ed488bdf76053d44c95fe4c2e9eb0d18cc357141
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -39,4 +39,4 @@ targets_crew = false
 crew_bonus_attack = 0
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"tank"
+art_id = &""

@@ -1,0 +1,111 @@
+{
+ "assets": [
+  {
+   "id": "levy",
+   "kind": "unit",
+   "raw": "art-source/generated/order/levy_4.png",
+   "axis": "h",
+   "px": 124,
+   "promote": 45
+  },
+  {
+   "id": "knight",
+   "kind": "unit",
+   "raw": "art-source/generated/order/knight_2.png",
+   "axis": "h",
+   "px": 148,
+   "promote": 42
+  },
+  {
+   "id": "confessor",
+   "kind": "unit",
+   "raw": "art-source/generated/order/confessor_6.png",
+   "axis": "h",
+   "px": 136,
+   "promote": 45
+  },
+  {
+   "id": "inquisitor",
+   "kind": "unit",
+   "raw": "art-source/generated/order/inquisitor_4.png",
+   "axis": "h",
+   "px": 156,
+   "promote": 45
+  },
+  {
+   "id": "aegis_walker",
+   "kind": "unit",
+   "raw": "art-source/generated/order/aegis_walker_2.png",
+   "axis": "w",
+   "px": 168,
+   "promote": 36,
+   "crop": 0.03,
+   "flatten": true,
+   "tol": 40
+  },
+  {
+   "id": "cathedral_tank",
+   "kind": "unit",
+   "raw": "art-source/generated/order/cathedral_tank_2.png",
+   "axis": "w",
+   "px": 204,
+   "promote": 42
+  },
+  {
+   "id": "reliquary",
+   "kind": "unit",
+   "raw": "art-source/generated/order/reliquary_3.png",
+   "axis": "w",
+   "px": 184,
+   "promote": 42
+  },
+  {
+   "id": "seraph",
+   "kind": "air",
+   "raw": "art-source/generated/order/seraph_3.png",
+   "axis": "w",
+   "px": 176,
+   "promote": 42
+  },
+  {
+   "id": "dominion",
+   "kind": "air",
+   "raw": "art-source/generated/order/dominion.png",
+   "axis": "w",
+   "px": 164,
+   "promote": 42
+  },
+  {
+   "id": "empire_barracks",
+   "kind": "struct",
+   "raw": "art-source/generated/order/empire_barracks_2.png",
+   "axis": "w",
+   "px": 256,
+   "flatten": true
+  },
+  {
+   "id": "empire_factory",
+   "kind": "struct",
+   "raw": "art-source/generated/order/empire_factory_2.png",
+   "axis": "w",
+   "px": 256,
+   "flatten": true
+  },
+  {
+   "id": "empire_airfield",
+   "kind": "struct",
+   "raw": "art-source/generated/order/empire_airfield.png",
+   "axis": "w",
+   "px": 256,
+   "flatten": true
+  },
+  {
+   "id": "cathedral",
+   "kind": "struct",
+   "raw": "art-source/generated/order/cathedral_6.png",
+   "axis": "w",
+   "px": 256,
+   "flatten": true
+  }
+ ]
+}

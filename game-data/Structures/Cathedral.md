@@ -1,7 +1,6 @@
 ---
 id: cathedral
 buildable: false
-art_id: research_lab
 counts_as:
 - '[[Research Lab]]'
 hp: 12
