@@ -44,7 +44,8 @@
       9
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "kind": "unit",
@@ -90,7 +91,8 @@
       9
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "kind": "unit",
@@ -136,68 +138,50 @@
       11
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
+   "id": "lance_specialist",
    "kind": "unit",
    "axis": "h",
-   "promote": 30.2,
-   "flatten": true,
-   "crop": 0.02,
-   "id": "lance_specialist",
-   "raw": "art-source/generated/mandate/lance_specialist_4.png",
    "px": 140,
+   "raw": "art-source/generated/zredo/lance_specialist_2.png",
+   "cutter": "birefnet",
+   "promote": 30.2,
    "touches": {
     "bone": [
      [
-      16,
-      9
-     ],
-     [
-      17,
-      9
-     ],
-     [
-      18,
-      9
-     ],
-     [
-      16,
+      4,
       10
      ],
      [
-      18,
+      5,
       10
      ],
      [
-      16,
+      6,
+      10
+     ],
+     [
+      4,
       11
      ],
      [
-      17,
+      6,
       11
      ],
      [
-      18,
-      11
-     ]
-    ],
-    "lines": [
-     [
-      2,
-      6,
-      24,
-      6,
-      "gun",
-      2
+      4,
+      12
      ],
      [
-      25,
+      5,
+      12
+     ],
+     [
       6,
-      25,
-      6,
-      "accent",
-      2
+      12
      ]
     ]
    }
@@ -246,50 +230,50 @@
       10
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
-   "kind": "unit",
-   "promote": 30.2,
-   "flatten": true,
-   "crop": 0.02,
    "id": "breaker_mech",
-   "raw": "art-source/generated/mandate/breaker_mech_4.png",
+   "kind": "unit",
    "axis": "h",
    "px": 164,
+   "raw": "art-source/generated/zredo/breaker_mech.png",
+   "cutter": "birefnet",
+   "promote": 30.2,
    "touches": {
     "bone": [
      [
-      26,
-      7
+      29,
+      13
      ],
      [
-      27,
-      7
+      30,
+      13
      ],
      [
-      28,
-      7
+      31,
+      13
      ],
      [
-      26,
-      8
+      29,
+      14
      ],
      [
-      28,
-      8
+      31,
+      14
      ],
      [
-      26,
-      9
+      29,
+      15
      ],
      [
-      27,
-      9
+      30,
+      15
      ],
      [
-      28,
-      9
+      31,
+      15
      ]
     ]
    }
@@ -356,7 +340,8 @@
       2
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "kind": "unit",
@@ -402,7 +387,8 @@
       13
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "kind": "air",
@@ -448,7 +434,8 @@
       8
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "kind": "air",
@@ -494,7 +481,8 @@
       17
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "kind": "air",
@@ -540,7 +528,8 @@
       22
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "kind": "struct",
@@ -550,7 +539,8 @@
    "flatten": true,
    "crop": 0.02,
    "id": "protectorate_barracks",
-   "raw": "art-source/generated/mandate/protectorate_barracks_4.png"
+   "raw": "art-source/generated/mandate/protectorate_barracks_4.png",
+   "cutter": "flood"
   },
   {
    "kind": "struct",
@@ -560,7 +550,8 @@
    "flatten": true,
    "crop": 0.02,
    "id": "protectorate_factory",
-   "raw": "art-source/generated/mandate/protectorate_factory.png"
+   "raw": "art-source/generated/mandate/protectorate_factory.png",
+   "cutter": "flood"
   },
   {
    "kind": "struct",
@@ -570,7 +561,8 @@
    "flatten": true,
    "crop": 0.02,
    "id": "protectorate_airfield",
-   "raw": "art-source/generated/mandate/protectorate_airfield_2.png"
+   "raw": "art-source/generated/mandate/protectorate_airfield_2.png",
+   "cutter": "flood"
   },
   {
    "kind": "struct",
@@ -580,7 +572,8 @@
    "flatten": true,
    "crop": 0.02,
    "id": "protectorate_defence",
-   "raw": "art-source/generated/mandate/protectorate_defence_3.png"
+   "raw": "art-source/generated/mandate/protectorate_defence_3.png",
+   "cutter": "flood"
   }
  ]
 }

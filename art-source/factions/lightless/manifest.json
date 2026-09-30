@@ -32,7 +32,8 @@
       12
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "kind": "unit",
@@ -66,7 +67,8 @@
       14
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "kind": "unit",
@@ -100,87 +102,22 @@
       8
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
-   "kind": "unit",
-   "axis": "h",
-   "promote": 30.2,
-   "flatten": true,
-   "crop": 0.02,
    "id": "marksman",
-   "raw": "art-source/generated/lightless/marksman_2.png",
-   "px": 152,
-   "smooth": 5,
-   "touches": {
-    "bone": [
-     [
-      5,
-      13
-     ],
-     [
-      7,
-      13
-     ],
-     [
-      6,
-      14
-     ],
-     [
-      5,
-      15
-     ],
-     [
-      7,
-      15
-     ]
-    ],
-    "lines": [
-     [
-      15,
-      1,
-      15,
-      31,
-      "gun",
-      1
-     ],
-     [
-      14,
-      8,
-      14,
-      10,
-      "gun",
-      1
-     ],
-     [
-      15,
-      1,
-      15,
-      1,
-      "accent",
-      1
-     ]
-    ]
-   }
-  },
-  {
-   "id": "missile_team",
    "kind": "unit",
    "axis": "h",
-   "px": 140,
-   "raw": "art-source/generated/lightless/missile_team_5.png",
+   "px": 152,
+   "raw": "art-source/generated/zredo/marksman.png",
+   "cutter": "birefnet",
    "promote": 30.2,
-   "flatten": true,
-   "crop": 0.02,
    "touches": {
     "bone": [
      [
-      11,
-      9
-     ],
-     [
-      13,
-      9
+      10,
+      10
      ],
      [
       12,
@@ -191,8 +128,45 @@
       11
      ],
      [
-      13,
-      11
+      10,
+      12
+     ],
+     [
+      12,
+      12
+     ]
+    ]
+   }
+  },
+  {
+   "id": "missile_team",
+   "kind": "unit",
+   "axis": "h",
+   "px": 140,
+   "raw": "art-source/generated/zredo/missile_team.png",
+   "cutter": "birefnet",
+   "promote": 30.2,
+   "touches": {
+    "bone": [
+     [
+      10,
+      8
+     ],
+     [
+      12,
+      8
+     ],
+     [
+      11,
+      9
+     ],
+     [
+      10,
+      10
+     ],
+     [
+      12,
+      10
      ]
     ]
    }
@@ -202,49 +176,31 @@
    "kind": "unit",
    "axis": "w",
    "px": 176,
-   "raw": "art-source/generated/lightless/technical_3.png",
+   "raw": "art-source/generated/zredo/technical.png",
+   "cutter": "birefnet",
    "promote": 30.2,
-   "flatten": true,
-   "crop": 0.02,
+   "smooth": 3,
    "touches": {
     "bone": [
      [
-      26,
-      17
+      32,
+      13
      ],
      [
-      28,
-      17
+      34,
+      13
      ],
      [
-      27,
-      18
+      33,
+      14
      ],
      [
-      26,
-      19
+      32,
+      15
      ],
      [
-      28,
-      19
-     ]
-    ],
-    "lines": [
-     [
-      28,
-      6,
-      28,
-      3,
-      "gun",
-      1
-     ],
-     [
-      28,
-      3,
-      39,
-      1,
-      "gun",
-      1
+      34,
+      15
      ]
     ]
    }
@@ -281,7 +237,8 @@
       11
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "id": "buzzard",
@@ -315,7 +272,8 @@
       15
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "kind": "struct",
@@ -326,7 +284,8 @@
    "keep_accent": 0.25,
    "id": "independents_barracks",
    "raw": "art-source/generated/lightless/independents_barracks_3.png",
-   "accent_edges": true
+   "accent_edges": true,
+   "cutter": "flood"
   },
   {
    "kind": "struct",
@@ -337,7 +296,8 @@
    "keep_accent": 0,
    "id": "independents_factory",
    "raw": "art-source/generated/lightless/independents_factory.png",
-   "smooth": 9
+   "smooth": 9,
+   "cutter": "flood"
   },
   {
    "kind": "struct",
@@ -347,7 +307,8 @@
    "crop": 0.02,
    "keep_accent": 0.25,
    "id": "independents_airfield",
-   "raw": "art-source/generated/lightless/independents_airfield_3.png"
+   "raw": "art-source/generated/lightless/independents_airfield_3.png",
+   "cutter": "flood"
   }
  ]
 }

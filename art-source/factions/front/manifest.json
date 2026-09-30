@@ -24,7 +24,8 @@
       7
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "kind": "unit",
@@ -50,7 +51,8 @@
       8
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "kind": "unit",
@@ -76,7 +78,8 @@
       7
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "kind": "unit",
@@ -102,7 +105,8 @@
       10
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "kind": "unit",
@@ -128,7 +132,8 @@
       18
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "id": "medic",
@@ -154,7 +159,8 @@
       8
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "id": "interceptor",
@@ -180,48 +186,30 @@
       10
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "id": "lance_team",
    "kind": "unit",
    "axis": "h",
    "px": 132,
+   "raw": "art-source/generated/zredo/lance_team.png",
+   "cutter": "birefnet",
    "promote": 30.2,
-   "flatten": true,
-   "crop": 0.02,
-   "raw": "art-source/generated/front/lance_team_r_3.png",
    "touches": {
     "bone": [
      [
-      6,
-      11
-     ],
-     [
-      7,
-      10
-     ],
-     [
-      8,
-      11
-     ]
-    ],
-    "lines": [
-     [
-      2,
-      5,
-      14,
-      5,
-      "gun",
-      2
-     ],
-     [
       15,
-      5,
-      15,
-      5,
-      "accent",
-      2
+      20
+     ],
+     [
+      16,
+      19
+     ],
+     [
+      17,
+      20
      ]
     ]
    }
@@ -250,7 +238,8 @@
       16
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "id": "paratrooper_transport",
@@ -276,7 +265,8 @@
       13
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "kind": "struct",
@@ -286,7 +276,8 @@
    "keep_accent": 0.25,
    "id": "solar_barracks",
    "raw": "art-source/generated/front/solar_barracks_3.png",
-   "accent_edges": true
+   "accent_edges": true,
+   "cutter": "flood"
   },
   {
    "kind": "struct",
@@ -295,7 +286,8 @@
    "flatten": true,
    "keep_accent": 0.25,
    "id": "solar_factory",
-   "raw": "art-source/generated/front/solar_factory_4.png"
+   "raw": "art-source/generated/front/solar_factory_4.png",
+   "cutter": "flood"
   },
   {
    "id": "solar_airfield",
@@ -306,7 +298,8 @@
    "flatten": true,
    "crop": 0.02,
    "keep_accent": 0.25,
-   "accent_edges": 1
+   "accent_edges": 1,
+   "cutter": "flood"
   },
   {
    "kind": "struct",
@@ -315,7 +308,8 @@
    "flatten": true,
    "keep_accent": 0.25,
    "id": "autonomous_defence_node",
-   "raw": "art-source/generated/front/autonomous_defence_node_3.png"
+   "raw": "art-source/generated/front/autonomous_defence_node_3.png",
+   "cutter": "flood"
   }
  ]
 }

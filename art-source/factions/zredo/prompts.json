@@ -1,0 +1,23 @@
+{
+ "model": "zimage",
+ "head": "single full-body",
+ "tail": "mostly mid slate-grey matte armor with a few hot orange-red armor panels, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, chunky proportions, three-quarter view, plain flat light grey background, centered, whole body visible with margin",
+ "neg_extra": "multiple figures, character sheet, turnaround, multiple views, text, watermark, face, skin, eyes, cropped, sword, shield, medieval",
+ "size": ["--width", "832", "--height", "1216"],
+ "units": {
+  "missile_team": "lean wiry hunched sci-fi scavenger raider in mismatched asymmetric salvaged armor plates and a blacked-out sealed helmet, carrying a long shoulder-mounted missile launcher tube on the right shoulder",
+  "lance_specialist": "slim elite sci-fi human specialist in a sleek fitted rounded armor suit and smooth sealed helmet, holding a very long thin energy lance weapon pointing forward",
+  "lance_team": "lean sci-fi citizen militia soldier in light partial armor plates over a padded jumpsuit and a sealed rounded gas-mask helmet, carrying a long shoulder-mounted rocket launcher tube on the right shoulder",
+  "marksman": "hunched sci-fi scavenger sniper in mismatched patched salvaged armor and a blacked-out sealed helmet, holding a very long sniper rifle vertically upright beside the body"
+ },
+ "vehicles_head": "single",
+ "vehicles_tail": "mostly mid slate-grey matte armor hull with a few hot orange-red panels, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, chunky toy-like proportions, isometric three-quarter view from above, plain flat light grey background, centered, whole vehicle visible with wide margin",
+ "vehicles_neg_extra": "multiple vehicles, character sheet, multiple views, text, watermark, people, crew, road, terrain, cropped",
+ "vehicles_size": ["--width", "1216", "--height", "832"],
+ "vehicles": {
+  "technical": "scrap-built sci-fi pickup truck made of patched mismatched salvaged plates, with a big machine gun mounted on a post in the open truck bed",
+  "battery": "heavy industrial sci-fi self-propelled artillery vehicle with hazard stripes and exhaust stacks, two long barrels raised steeply toward the sky, wide boxy slab hull on tank treads",
+  "tank": "clean orderly standard-issue sci-fi main battle tank, square boxy turret with one long main cannon pointing forward, low flat hull on tank treads",
+  "breaker_mech": "squat four-legged sci-fi combat robot walker with a smooth rounded capsule-shaped pill body and short thick rounded legs, white-grey egg-smooth shell panels, twin arm cannons"
+ }
+}

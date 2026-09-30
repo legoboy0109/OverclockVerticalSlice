@@ -24,9 +24,16 @@ for group in [g for g in cfg if isinstance(cfg[g], dict)]:
     neg = base_neg + ", " + cfg.get(f"{group}_neg_extra", cfg.get("neg_extra", ""))
     for uid, body in cfg[group].items():
         if only and uid not in only: continue
+        # "model": "zimage" in prompts.json switches to Z-Image base (see comfyui_generate.py):
+        # it needs no SDXL mega-negative, so only neg_extra is sent.
+        zimage = cfg.get("model") == "zimage"
+        extra = (["--model", "zimage", "--unet-dtype", "fp8_e4m3fn", "--steps", "30", "--cfg", "4",
+                  "--sampler", "res_multistep", "--scheduler", "simple"] if zimage else [])
+        negative = cfg.get(f"{group}_neg_extra", cfg.get("neg_extra", "")) if zimage else neg
         for _ in range(a.count):
             r = subprocess.run([sys.executable, os.path.join(ROOT, "tools/asset-pipeline/comfyui_generate.py"),
-                "--prompt", f"{head} {body}, {tail}", "--negative", neg, "--out", out, "--name", uid,
-                "--timeout", "600"] + cfg.get(f"{group}_size", cfg.get("size", [])), capture_output=True, text=True)
+                "--prompt", f"{head} {body}, {tail}", "--negative", negative, "--out", out, "--name", uid,
+                "--timeout", "1800" if zimage else "600"] + extra + cfg.get(f"{group}_size", cfg.get("size", [])),
+                capture_output=True, text=True)
             print(uid, (r.stdout.strip().splitlines() or ["?"])[-1], r.stderr.strip()[-200:] if r.returncode else "", flush=True)
 print("ALLDONE", flush=True)
