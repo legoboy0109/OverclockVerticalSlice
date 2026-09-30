@@ -20,8 +20,10 @@ Manifest (JSON):
   kind  = unit | air | struct. `air` is drawn high over a ground shadow, like the
           placeholders (make_placeholder_sprites.py): the renderer anchors bottom-centre,
           so the shadow is the ground contact and the gap above it is the height cue.
-  cutter = "birefnet" to cut out with the BiRefNet AI model via ComfyUI (comfyui_cutout.py)
-          instead of cutout.py's flood fill; crop/flatten/tol then do not matter.
+  cutter = "birefnet" (DEFAULT since 2026-09-30) cuts out with the BiRefNet AI model via
+          ComfyUI (comfyui_cutout.py); "flood" uses cutout.py's colour flood fill, which
+          crop/flatten/tol tune. Every asset approved before the switch is pinned to
+          "flood" in its manifest so a rebuild reproduces it exactly.
   tol   = cutout.py background tolerance (default 22); raise for soft ground shadows.
   accent_sat = palette-lock accent saturation gate (default 0.25); raise to stop browns
           turning orange.
@@ -382,7 +384,7 @@ def build(asset: dict, dry: bool, tmp: str) -> list[str]:
         # no keying, no resize — re-keying a transparent image eats dark armour.
         im = Image.open(raw).convert("RGBA")
     else:
-        if asset.get("cutter") == "birefnet":
+        if asset.get("cutter", "birefnet") == "birefnet":
             # AI segmentation via ComfyUI (comfyui_cutout.py): survives gradients,
             # ground slabs and light-on-light that break the flood fill. Its soft
             # edge is cut at alpha 40 first, or faint haze bridges a separate prop

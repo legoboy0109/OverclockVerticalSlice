@@ -115,7 +115,8 @@
       2
      ]
     ]
-   }
+   },
+   "cutter": "flood"
   },
   {
    "promote": 30.2,
@@ -125,7 +126,8 @@
    "kind": "unit",
    "axis": "w",
    "px": 176,
-   "raw": "art-source/generated/accord/transport.png"
+   "raw": "art-source/generated/accord/transport.png",
+   "cutter": "flood"
   },
   {
    "promote": 30.2,
@@ -135,7 +137,8 @@
    "kind": "air",
    "axis": "w",
    "px": 164,
-   "raw": "art-source/generated/accord/fighter_3.png"
+   "raw": "art-source/generated/accord/fighter_3.png",
+   "cutter": "flood"
   },
   {
    "promote": 30.2,
@@ -146,7 +149,8 @@
    "axis": "w",
    "px": 184,
    "raw": "art-source/generated/accord/bomber_3.png",
-   "smooth": 3
+   "smooth": 3,
+   "cutter": "flood"
   },
   {
    "promote": 30.2,
@@ -157,7 +161,8 @@
    "axis": "w",
    "px": 172,
    "raw": "art-source/generated/accord/helicopter.png",
-   "smooth": 3
+   "smooth": 3,
+   "cutter": "flood"
   },
   {
    "id": "airfield",
@@ -166,7 +171,8 @@
    "px": 256,
    "raw": "art-source/generated/accord/airfield_4.png",
    "flatten": true,
-   "keep_accent": 0.25
+   "keep_accent": 0.25,
+   "cutter": "flood"
   },
   {
    "id": "artillery",
@@ -178,7 +184,8 @@
    "flatten": true,
    "crop": 0.02,
    "smooth": 3,
-   "tol": 30
+   "tol": 30,
+   "cutter": "flood"
   }
  ]
 }

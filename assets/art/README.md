@@ -15,6 +15,12 @@ art-source/factions/<faction>/manifest.json  → tools/asset-pipeline/build_fact
 tools/asset-pipeline/roster_board.py <out.png> <unit ids…>   (review on real tiles, no display needed)
 ```
 
+**Tools (2026-09-30):** cut-outs default to **BiRefNet** (AI segmentation via ComfyUI,
+`comfyui_cutout.py`) — assets approved before the switch are pinned to `"cutter": "flood"` so
+rebuilds reproduce them. For prompts SDXL cannot follow (specific weapons, shapes), set
+`"model": "zimage"` in a prompts.json: Z-Image base follows them first try but takes ~4-5 min per
+image on the RX 6900 XT (vs ~20 s SDXL). Findings: `design/art/image-model-options-2026-09.md`.
+
 `build_faction_art.py` writes every file this README's naming rules require (3 hues × e/w ×
 idle/destroyed + glow masks; structures: 3 hues × idle/destroyed + glow). Sprites keep the
 **same 2× file scale** — one art pixel is a 4×4 block, i.e. 2×2 screen px — so the renderer
