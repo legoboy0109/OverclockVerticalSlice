@@ -69,5 +69,42 @@
  "redo": {
   "medic_r": "(one single medic soldier standing alone:1.5), (small medical pack on the back:1.2), (holding an injector gun:1.2), sealed gas-mask helmet",
   "lance_team_r": "(one single soldier standing alone:1.5), (carrying a long rocket launcher tube on the shoulder:1.5), sealed gas-mask helmet, light plates"
+ },
+ "pc_units_head": "single full-body figure, sci-fi citizen militia soldier,",
+ "pc_units_tail": "mostly mid slate-grey #6E7C99 matte armor, cool grey plates with darker #3E4860 facets, hot orange-red #FF5A2E color ONLY on the helmet and one armband, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, chunky proportions, plain flat light grey background, centered, whole body visible with wide margin, sealed rounded gas-mask helmet, light partial plates over a padded jumpsuit, three-quarter view",
+ "pc_units_neg_extra": "multiple figures, character sheet, turnaround, views, parts, pieces, face, skin, eyes, red cross, all orange, orange suit, brown, rust, sword, medieval",
+ "pc_units_size": [
+  "--width",
+  "832",
+  "--height",
+  "1216"
+ ],
+ "pc_units": {
+  "medic_clean": "(huge bulky medical backpack with pouches and a short antenna:1.5), (holding a compact med-injector tool:1.2), lean medic soldier, forward-leaning stride"
+ },
+ "pc_air_head": "single sci-fi militia aircraft flying, isometric three-quarter view from above,",
+ "pc_air_tail": "mostly mid slate-grey #6E7C99 matte armor, cool grey plates with darker #3E4860 facets, hot orange-red #FF5A2E color ONLY on the wing tips and the nose, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, chunky proportions, plain flat light grey background, centered, whole aircraft visible with wide margin, civilian cargo plane converted for war, simple clean shapes",
+ "pc_air_neg_extra": "multiple aircraft, character sheet, views, parts, blueprint, people, clouds, sky, landscape, ground, all orange, orange stripes, camouflage, brown, rust",
+ "pc_air_size": [
+  "--width",
+  "1216",
+  "--height",
+  "832"
+ ],
+ "pc_air": {
+  "gunship_clean": "(tilt-rotor gunship with two big engine pods on the wing tips:1.4), side door gun, boxy fuselage",
+  "paratrooper_transport_clean": "(chunky twin-engine cargo transport plane:1.4), (open rear loading ramp:1.3), high straight wings, fat round fuselage"
+ },
+ "pc_structs_head": "single isolated flat cel-shaded isometric sci-fi militia building on a flat square base-plate, 2:1 dimetric projection,",
+ "pc_structs_tail": "dark charcoal slate plating, thin hot orange-red #FF5A2E neon trim lines along edges and landing markings, large simple panel shapes, hard clean edges, flat painted illustration, (plain flat medium grey background:1.3), whole building visible with wide margin, centered",
+ "pc_structs_neg_extra": "multiple buildings, city, street, landscape, terrain, trees, people, sky, clouds, road, blueprint, views, cropped, white background, light background, gradient background",
+ "pc_structs_size": [
+  "--width",
+  "1024",
+  "--height",
+  "1024"
+ ],
+ "pc_structs": {
+  "solar_airfield_clean": "(flat square helipad landing platform with painted circle marking:1.5), (small sandbagged control hut with radio mast at one corner:1.3), (one small parked militia plane on the pad:1.1), low flat building"
  }
 }

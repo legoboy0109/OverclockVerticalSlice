@@ -135,23 +135,23 @@
    "kind": "unit",
    "axis": "h",
    "px": 124,
-   "promote": 30.2,
+   "raw": "art-source/generated/front/medic_clean.png",
    "flatten": true,
    "crop": 0.02,
-   "raw": "art-source/generated/front/medic_r_4.png",
+   "promote": 30.2,
    "touches": {
     "bone": [
      [
-      5,
-      10
-     ],
-     [
       6,
-      9
+      8
      ],
      [
       7,
-      10
+      7
+     ],
+     [
+      8,
+      8
      ]
     ]
    }
@@ -231,23 +231,23 @@
    "kind": "air",
    "axis": "w",
    "px": 180,
-   "promote": 30.2,
+   "raw": "art-source/generated/front/gunship_clean.png",
    "flatten": true,
    "crop": 0.02,
-   "raw": "art-source/generated/front/gunship_4.png",
+   "promote": 30.2,
    "touches": {
     "bone": [
      [
-      14,
+      18,
+      16
+     ],
+     [
+      19,
       15
      ],
      [
-      15,
-      14
-     ],
-     [
-      16,
-      15
+      20,
+      16
      ]
     ]
    }
@@ -257,23 +257,23 @@
    "kind": "air",
    "axis": "w",
    "px": 184,
-   "promote": 30.2,
+   "raw": "art-source/generated/front/paratrooper_transport_clean.png",
    "flatten": true,
    "crop": 0.02,
-   "raw": "art-source/generated/front/paratrooper_transport_4.png",
+   "promote": 30.2,
    "touches": {
     "bone": [
      [
-      17,
-      21
-     ],
-     [
-      18,
-      20
-     ],
-     [
       19,
-      21
+      13
+     ],
+     [
+      20,
+      12
+     ],
+     [
+      21,
+      13
      ]
     ]
    }
@@ -298,15 +298,15 @@
    "raw": "art-source/generated/front/solar_factory_4.png"
   },
   {
+   "id": "solar_airfield",
    "kind": "struct",
    "axis": "w",
    "px": 256,
+   "raw": "art-source/generated/front/solar_airfield_clean.png",
    "flatten": true,
+   "crop": 0.02,
    "keep_accent": 0.25,
-   "id": "solar_airfield",
-   "raw": "art-source/generated/front/solar_airfield.png",
-   "crop": 0.04,
-   "tol": 30
+   "accent_edges": 1
   },
   {
    "kind": "struct",
