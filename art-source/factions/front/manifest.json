@@ -205,6 +205,24 @@
       8,
       11
      ]
+    ],
+    "lines": [
+     [
+      2,
+      5,
+      14,
+      5,
+      "gun",
+      2
+     ],
+     [
+      15,
+      5,
+      15,
+      5,
+      "accent",
+      2
+     ]
     ]
    }
   },
@@ -267,7 +285,8 @@
    "flatten": true,
    "keep_accent": 0.25,
    "id": "solar_barracks",
-   "raw": "art-source/generated/front/solar_barracks_3.png"
+   "raw": "art-source/generated/front/solar_barracks_3.png",
+   "accent_edges": true
   },
   {
    "kind": "struct",

@@ -34,7 +34,9 @@
    "clean": true,
    "axis": "h",
    "px": 0,
-   "promote": 30.2
+   "promote": 30.2,
+   "accent_edges": 1,
+   "accent_edges_diagonal": true
   },
   {
    "id": "sniper",
@@ -101,7 +103,19 @@
    "axis": "w",
    "px": 176,
    "raw": "art-source/generated/accord/tank.png",
-   "smooth": 3
+   "smooth": 3,
+   "touches": {
+    "lines": [
+     [
+      21,
+      10,
+      1,
+      4,
+      "gun",
+      2
+     ]
+    ]
+   }
   },
   {
    "promote": 30.2,

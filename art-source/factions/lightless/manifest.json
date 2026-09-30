@@ -134,6 +134,32 @@
       7,
       15
      ]
+    ],
+    "lines": [
+     [
+      15,
+      1,
+      15,
+      31,
+      "gun",
+      1
+     ],
+     [
+      14,
+      8,
+      14,
+      10,
+      "gun",
+      1
+     ],
+     [
+      15,
+      1,
+      15,
+      1,
+      "accent",
+      1
+     ]
     ]
    }
   },
@@ -201,6 +227,24 @@
      [
       28,
       19
+     ]
+    ],
+    "lines": [
+     [
+      28,
+      6,
+      28,
+      3,
+      "gun",
+      1
+     ],
+     [
+      28,
+      3,
+      39,
+      1,
+      "gun",
+      1
      ]
     ]
    }
@@ -281,7 +325,8 @@
    "crop": 0.02,
    "keep_accent": 0.25,
    "id": "independents_barracks",
-   "raw": "art-source/generated/lightless/independents_barracks_3.png"
+   "raw": "art-source/generated/lightless/independents_barracks_3.png",
+   "accent_edges": true
   },
   {
    "kind": "struct",

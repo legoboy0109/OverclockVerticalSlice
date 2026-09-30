@@ -69,5 +69,30 @@
  ],
  "retry": {
   "lance_specialist_b": "(slim human soldier in a tight sleek rounded bodysuit:1.4), (huge long tube energy lance cannon carried on the right shoulder, longer than the body:1.5), smooth rounded helmet, braced aiming stance"
+ },
+ "round_v_head": "single sleek sci-fi robotic war machine, isometric three-quarter view from above,",
+ "round_v_tail": "smooth rounded capsule-shaped hull shells, pale light-grey #B8C0CC and slate #6E7C99 rounded armor, hot orange-red #FF5A2E color ONLY on a few trim bands, sleek clean high-tech design, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple rounded panel shapes, chunky toy-like proportions, plain flat medium grey background, centered, whole machine visible with wide margin",
+ "round_v_neg_extra": "multiple vehicles, character sheet, turnaround, views, parts, pieces, blueprint, people, soldiers, crew, pilot visible, road, ground, terrain, shadow, all orange, orange hull, brown, rust, spikes, angular jagged, gothic, sharp angles, angular, faceted, boxy, spikes",
+ "round_v_size": [
+  "--width",
+  "1216",
+  "--height",
+  "832"
+ ],
+ "round_a_head": "single sleek sci-fi robotic aircraft flying, isometric three-quarter view from above,",
+ "round_a_tail": "smooth rounded capsule-shaped hull shells, pale light-grey #B8C0CC and slate #6E7C99 rounded armor, hot orange-red #FF5A2E color ONLY on a few trim bands, sleek clean high-tech design, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple rounded panel shapes, chunky toy-like proportions, plain flat medium grey background, centered, whole aircraft visible with wide margin",
+ "round_a_neg_extra": "multiple vehicles, character sheet, turnaround, views, parts, pieces, blueprint, people, soldiers, crew, pilot visible, road, ground, terrain, shadow, all orange, orange hull, brown, rust, spikes, angular jagged, gothic, clouds, sky, landscape, birds, sharp angles, angular, faceted, boxy, spikes",
+ "round_a_size": [
+  "--width",
+  "1216",
+  "--height",
+  "832"
+ ],
+ "round_v": {
+  "breaker_mech_round": "(smooth rounded capsule-shaped pill hull with no sharp corners:1.5), (white-grey egg-smooth shell panels:1.2), (squat four-legged robot walker:1.3), rounded dome body, short thick legs",
+  "lance_tank_round": "(smooth rounded capsule-shaped pill hull with no sharp corners:1.5), (white-grey egg-smooth shell panels:1.2), (hover tank with one very long rail cannon:1.3), rounded pod turret"
+ },
+ "round_a": {
+  "talon_round": "(smooth rounded capsule-shaped pill hull with no sharp corners:1.5), (white-grey egg-smooth shell panels:1.2), (small fast interceptor drone jet:1.3), rounded teardrop fuselage, short curved wings"
  }
 }
