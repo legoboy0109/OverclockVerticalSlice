@@ -451,6 +451,11 @@ aircraft, buildings — shares its marker. Samples: `art-source/hd2d-exploration
 | **Trappist Autonomous Mandate** | Identical smooth white-shell robots; human specialists in sleek fitted suits | Rounded capsule shapes (every other faction is angular) |
 | **Order of the Ninth Descent** | Sci-fi crusaders: spire-crested sealed helmets, gothic-arch chest plates, plate tabards, halo rings, cathedral shapes on vehicles and buildings | Tall, vertical, pointed |
 
+**Faction emblems (pixel touches, 2026-09-30)** — a few bone-white pixels on every unit's chest
+or hull, the non-hue ownership backup §1 P2 asks for: Order ◆ diamond (+ halo on ranked units,
+not the Levy) · Front ^ chevron · Collective hex-nut ring · Lightless scratched ✕ · Mandate ring ·
+**Accord none** (the baseline "nothing added" faction). Buildings carry no emblem.
+
 ⚠ **Order drifts medieval under SDXL** (swords, kite shields, open knight helms). Prompts must
 carry guns/energy weapons and push "sci-fi", and negate sword/shield/medieval unless the unit's
 role calls for it. Rank-visible ornament (halo that grows with rank) is a noted future idea.

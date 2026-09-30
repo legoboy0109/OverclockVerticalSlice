@@ -21,8 +21,10 @@ idle/destroyed + glow masks; structures: 3 hues × idle/destroyed + glow). Sprit
 needed no change. After building, delete the asset's `art_id:` line from its vault note and run
 `python3 tools/vault/build_data.py` so it stops borrowing base art.
 
-Done so far: **Order of the Ninth Descent** (all 9 units, 4 buildings). Every other new-faction
-unit still borrows base art through `art_id`. The base roster is still smooth (not pixel) art.
+Done: **every faction** (2026-09-30) — the Accord (base roster converted, placeholder
+vehicles/aircraft replaced), Order, Front, Collective, Lightless, Mandate. No unit or structure
+borrows art through `art_id` any more; `make_placeholder_sprites.py` is only for future new types.
+Each faction's inputs live in `art-source/factions/<faction>/`; re-run its manifest to rebuild.
 
 ## Layout
 ```
