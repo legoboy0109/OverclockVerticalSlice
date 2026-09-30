@@ -37,6 +37,20 @@ from PIL import Image, ImageFilter
 OUTLINE_RGB = (12, 14, 22)
 
 
+def _sat(rgb: np.ndarray) -> np.ndarray:
+    rgb = rgb.astype(np.float64)
+    mx, mn = rgb.max(axis=-1), rgb.min(axis=-1)
+    return np.where(mx > 0, (mx - mn) / np.maximum(mx, 1e-9), 0.0)
+
+
+def _hue(rgb: np.ndarray) -> np.ndarray:
+    r, g, b = [rgb[..., i].astype(np.float64) for i in range(3)]
+    mx, mn = np.maximum(np.maximum(r, g), b), np.minimum(np.minimum(r, g), b)
+    d = np.where(mx - mn == 0, 1e-9, mx - mn)
+    h = np.where(mx == r, ((g - b) / d) % 6, np.where(mx == g, (b - r) / d + 2, (r - g) / d + 4))
+    return np.where(mx - mn == 0, 0.0, h * 60.0)
+
+
 def _canvas(a: np.ndarray, factor: int) -> np.ndarray:
     """Pad to a multiple of factor (extra rows on top, columns split) plus one cell margin."""
     h, w = a.shape[:2]
@@ -58,7 +72,8 @@ def _up(a: np.ndarray, factor: int) -> np.ndarray:
 
 
 def pixelize(im: Image.Image, factor: int = 4, colors: int = 12,
-             alpha_cut: float = 0.45, outline: bool = True, smooth: int = 7) -> Image.Image:
+             alpha_cut: float = 0.45, outline: bool = True, smooth: int = 7,
+             keep_accent: float = 0.0) -> Image.Image:
     """Pixelize an RGBA sprite. See module doc for geometry guarantees.
 
     Method (chosen 2026-09-29 against area-average at 24 and 12 colours, and majority
@@ -91,7 +106,19 @@ def pixelize(im: Image.Image, factor: int = 4, colors: int = 12,
         # Per-cell majority via one-hot counts (vectorised; -1 = transparent, ignored).
         counts = np.stack([(cells == k).sum(axis=2) for k in range(len(pal))], axis=2)
         filled = counts.sum(axis=2) >= alpha_cut * factor * factor
-        out[filled, :3] = pal[counts.argmax(axis=2)[filled]]
+        winner = counts.argmax(axis=2)
+        if keep_accent > 0:
+            # Thin neon trim (1-2 source px, e.g. structure edge lines) never wins a
+            # majority and vanished entirely (Defensive Structure: 0% accent after
+            # pixelize, 2026-09-30). A cell whose pixels are at least `keep_accent`
+            # warm accent takes its most common ACCENT colour instead.
+            ph = _hue(pal)
+            acc = ((ph <= 45) | (ph >= 335)) & (_sat(pal) >= 0.25) & (pal.max(axis=1) >= 26)
+            acc_counts = np.where(acc[None, None, :], counts, 0)
+            share = acc_counts.sum(axis=2) / (factor * factor)
+            take = filled & (share >= keep_accent)
+            winner = np.where(take, acc_counts.argmax(axis=2), winner)
+        out[filled, :3] = pal[winner[filled]]
         out[filled, 3] = 255
     solid = out[..., 3] > 0
     if outline:

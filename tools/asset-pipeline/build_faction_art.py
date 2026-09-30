@@ -24,6 +24,11 @@ Manifest (JSON):
   accent_sat = palette-lock accent saturation gate (default 0.25); raise to stop browns
           turning orange.
   flatten = true to remove a gradient/vignette background before cutout.
+  clean = true when raw is already a cut-out sprite at shipped size (converting approved
+          smooth art); skips cutout and resize.
+  smooth = median pre-filter size (default 7); lower (3) keeps thin frames, e.g. Sniper.
+  keep_accent = cell share of accent (e.g. 0.25) that keeps thin neon trim in pixelize.
+  lock  = false to skip palette_lock (art already on the house palette).
   touches = hand-placed pixel details on the finished sprite — see apply_touches().
   crop  = optional fraction trimmed off every edge of the raw before cutout (frames).
   promote = optional accent-coverage target (%) passed to promote_accent.py when the
@@ -280,14 +285,33 @@ def build(asset: dict, dry: bool, tmp: str) -> list[str]:
                    tmp, f"{aid}_cropped.png")
     if asset.get("flatten"):
         raw = flatten_background(raw, os.path.join(tmp, f"{aid}_flat.png"))
-    im, _ = cutout(raw, tol=int(asset.get("tol", 22)), largest_only=True)
-    master = palette_lock(_fit(trim(im), asset["axis"], asset["px"]), structure=asset["kind"] == "struct",
-                          accent_sat=float(asset.get("accent_sat", ACCENT_SAT_MIN)))
+    if asset.get("clean"):
+        # Already an approved RGBA cutout at shipped size (the pre-pivot smooth art):
+        # no keying, no resize — re-keying a transparent image eats dark armour.
+        im = Image.open(raw).convert("RGBA")
+    else:
+        im, _ = cutout(raw, tol=int(asset.get("tol", 22)), largest_only=True)
+        im = _fit(trim(im), asset["axis"], asset["px"])
+    master = im if asset.get("lock") is False else palette_lock(
+        im, structure=asset["kind"] == "struct",
+        accent_sat=float(asset.get("accent_sat", ACCENT_SAT_MIN)))
     clean_path = os.path.join(CLEANED, f"{aid}_rush_hd2d_clean.png")
     if not dry:
         master.save(clean_path)
     src = _tmp(master, tmp, f"{aid}_rush.png")
     touches = asset.get("touches")
+    px_opts = {"keep_accent": float(asset.get("keep_accent", 0)), "smooth": int(asset.get("smooth", 7))}
+    relock = asset.get("lock") is not False
+    accent_sat = float(asset.get("accent_sat", ACCENT_SAT_MIN))
+
+    def _pixel(img: Image.Image) -> Image.Image:
+        # Re-lock AFTER pixelize: median-cut palette entries can average orange with
+        # grey into faint warm colours (sat .25-.45) that the test does not count as
+        # accent in rush but that recolor lifts over the line in boom — bomber rush
+        # 32.6% vs boom 36.6%, over the 3-point limit (2026-09-30). Per-pixel, so the
+        # grid is untouched; value is kept (structure=False: no second darkening).
+        out = pixelize(img, FACTOR, **px_opts)
+        return palette_lock(out, accent_sat=accent_sat) if relock else out
     if asset.get("promote"):
         # The goal is coverage of the FINAL pixel sprite: the outline ring and edge
         # cells cost ~8-12 points versus the smooth master (Knight: 44% smooth -> 33%
@@ -299,7 +323,7 @@ def build(asset: dict, dry: bool, tmp: str) -> list[str]:
                             src, promoted, "--target", str(smooth_target)], check=True,
                            stdout=subprocess.DEVNULL)
             cand = promoted if os.path.exists(promoted) else src  # no file = already above
-            final = apply_touches(pixelize(Image.open(cand), FACTOR), touches)
+            final = apply_touches(_pixel(Image.open(cand)), touches)
             if kind == "air":  # the shadow counts as body in the test, so measure with it
                 final = _with_air_shadow(final)
             if coverage(final) >= goal:
@@ -311,7 +335,7 @@ def build(asset: dict, dry: bool, tmp: str) -> list[str]:
     is_struct = kind == "struct"
     out_dir = STRUCTS if is_struct else UNITS
     report = []
-    bare_px = pixelize(master, FACTOR)
+    bare_px = _pixel(master)
     rush_px = apply_touches(bare_px, touches)
     rush_px_path = _tmp(rush_px, tmp, f"{aid}_rushpx_raw.png")
     for hue in HUES:

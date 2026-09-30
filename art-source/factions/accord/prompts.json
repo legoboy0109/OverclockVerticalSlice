@@ -1,0 +1,45 @@
+{
+ "head": "single sci-fi military",
+ "tail": "mostly mid slate-grey #6E7C99 matte armor over the whole hull, cool grey plates with darker #3E4860 facets, hot orange-red #FF5A2E color ONLY on a few clean stripe bands and panel edges, clean orderly standard-issue military design, square boxy rectangular shapes, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, chunky toy-like proportions, plain flat light grey background, centered, whole vehicle visible with wide margin",
+ "neg_extra": "multiple vehicles, character sheet, turnaround, views, parts, pieces, blueprint, people, soldiers, crew, road, ground, terrain, shadow, all orange, orange hull, brown, rust, gothic, spikes",
+ "vehicles_head": "single clean sci-fi military ground vehicle, isometric three-quarter view from above,",
+ "vehicles_tail": "mostly mid slate-grey #6E7C99 matte armor over the whole hull, cool grey plates with darker #3E4860 facets, hot orange-red #FF5A2E color ONLY on a few clean stripe bands and panel edges, clean orderly standard-issue military design, square boxy rectangular shapes, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, chunky toy-like proportions, plain flat light grey background, centered, whole vehicle visible with wide margin",
+ "vehicles_neg_extra": "multiple vehicles, character sheet, turnaround, views, parts, pieces, blueprint, people, soldiers, crew, road, ground, terrain, shadow, all orange, orange hull, brown, rust, gothic, spikes",
+ "vehicles_size": [
+  "--width",
+  "1216",
+  "--height",
+  "832"
+ ],
+ "vehicles": {
+  "tank": "(compact main battle tank:1.4), (square boxy turret with one long cannon:1.3), wide tank treads, low flat hull",
+  "artillery": "(mobile artillery gun with a very long barrel pointing steeply up at the sky at 45 degrees:1.6), (open gun platform with no turret:1.3), boxy chassis on tank treads, stabilizer legs",
+  "transport": "(armored troop transport:1.4), (boxy armored personnel carrier with six wheels:1.3), rear hatch, small roof gun"
+ },
+ "air_head": "single clean sci-fi military aircraft flying, isometric three-quarter view from above,",
+ "air_tail": "mostly mid slate-grey #6E7C99 matte armor over the whole hull, cool grey plates with darker #3E4860 facets, hot orange-red #FF5A2E color ONLY on a few clean stripe bands and panel edges, clean orderly standard-issue military design, square boxy rectangular shapes, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, chunky toy-like proportions, plain flat light grey background, centered, whole aircraft visible with wide margin",
+ "air_neg_extra": "multiple vehicles, character sheet, turnaround, views, parts, pieces, blueprint, people, soldiers, crew, road, ground, terrain, shadow, all orange, orange hull, brown, rust, gothic, spikes, clouds, sky, landscape, birds, pilot visible",
+ "air_size": [
+  "--width",
+  "1216",
+  "--height",
+  "832"
+ ],
+ "air": {
+  "fighter": "(sleek fighter jet:1.4), (straight trapezoid wings:1.3), twin tail fins, pointed nose",
+  "bomber": "(heavy bomber aircraft:1.4), (very wide straight wings:1.3), four engines, bulky fuselage",
+  "helicopter": "(armored attack helicopter:1.4), (large main rotor on top:1.3), stub wings with rocket pods, boxy cockpit"
+ },
+ "structs_head": "single isolated flat cel-shaded isometric sci-fi military building on a flat square base-plate, 2:1 dimetric projection,",
+ "structs_tail": "dark charcoal slate matte plating, thin hot orange-red #FF5A2E neon trim lines along edges and base-plate rim, clean orderly boxy rectangular architecture, large simple panel shapes, hard clean edges, no greeble, flat painted illustration, plain flat light grey background, whole building visible with wide margin, centered",
+ "structs_neg_extra": "multiple buildings, city, town, street, landscape, terrain, trees, people, vehicles, sky, clouds, road, blueprint, views, cropped, dark background, gothic",
+ "structs_size": [
+  "--width",
+  "1024",
+  "--height",
+  "1024"
+ ],
+ "structs": {
+  "airfield": "(flat square landing pad platform:1.4), (small boxy control tower with antenna:1.3), (one parked jet on the pad:1.1), wide low building"
+ }
+}
