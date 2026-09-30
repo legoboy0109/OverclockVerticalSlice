@@ -218,6 +218,16 @@ func _parse_args() -> void:
 			var fd: FactionDef = load("res://data/factions/%s.tres" % fparts[0])
 			fd.set(fparts[1], int(fspec[1]))
 			print("SIM_FACTION_STAT,%s,%s,%d" % [fparts[0], fparts[1], int(fd.get(fparts[1]))])
+		elif arg.begins_with("--combat="):
+			# Combat-config experiment for this run only: --combat=rank_hp=0,1,3,5 (int lists) or
+			# --combat=merit_per_kill=4. Sets the loaded CombatConfig every system reads.
+			var ckv: PackedStringArray = arg.trim_prefix("--combat=").split("=")
+			var cur: Variant = CombatBalance.combat.get(ckv[0])
+			if cur is PackedInt32Array:
+				CombatBalance.combat.set(ckv[0], PackedInt32Array(Array(ckv[1].split(",")).map(func(x: String) -> int: return int(x))))
+			else:
+				CombatBalance.combat.set(ckv[0], int(ckv[1]))
+			print("SIM_COMBAT,%s,%s" % [ckv[0], str(CombatBalance.combat.get(ckv[0]))])
 		elif arg.begins_with("--econ="):
 			# Economy experiment for this run only: --econ=base_income=1500 (repeatable). Set on
 			# the BASE config, because every game's Balance.reset() copies the match economy from it.
@@ -614,6 +624,17 @@ func _trace_push(game: int, turn: int, state: GameState) -> void:
 		var armed: bool = (e as UnitState).type.attack > 0 if e is UnitState else (e as StructureState).type.attack > 0
 		if armed and state.grid.manhattan_distance(e.position, hq.position) <= AIBalance.ai.push_defence_radius:
 			defenders += 1
+	# Promotion factions: how many units hold a rank, the average, and whether rank support stands.
+	var f: FactionDef = state.faction_of(p)
+	if f != null and f.promotes:
+		var ranked: int = 0
+		var rank_sum: int = 0
+		for u: UnitState in fighters:
+			if u.rank > 0:
+				ranked += 1
+			rank_sum += u.rank
+		print("SIM_RANK,%d,%d,%d,%d,%d,%.2f,%d" % [game, turn, p, fighters.size(), ranked,
+			float(rank_sum) / maxf(1.0, float(fighters.size())), 1 if Promotion._supported(state, p) else 0])
 	print("SIM_PUSH,%d,%d,%d,%d,%d,%d,%d,%.1f,%d" % [game, turn, p, fighters.size(), largest, ready,
 		defenders, float(dist_sum) / maxf(1.0, float(fighters.size())), forward])
 

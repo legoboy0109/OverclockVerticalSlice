@@ -99,8 +99,10 @@ func test_promotion_to_elite_raises_max_and_current_hp() -> void:
 	t.merit = 16
 	Promotion.apply_rank(state, t)
 	assert_int(t.rank).is_equal(2)
-	assert_int(Unit.effective_max_hp(t)).is_equal(UnitTypes.TROOPER.hp + 2)
-	assert_int(t.current_hp).is_equal(6)   # PV-5: the new hp arrives at once
+	var bonus: int = CombatBalance.combat.rank_hp[2]
+	assert_int(bonus).is_greater(0)   # the rank must actually grant hp for this test to mean anything
+	assert_int(Unit.effective_max_hp(t)).is_equal(UnitTypes.TROOPER.hp + bonus)
+	assert_int(t.current_hp).is_equal(4 + bonus)   # PV-5: the new hp arrives at once
 
 
 func test_rank_caps_at_champion() -> void:
@@ -156,4 +158,4 @@ func test_healing_respects_the_promoted_ceiling() -> void:
 	Promotion.apply_rank(state, t)
 	t.current_hp = 1
 	Unit.apply_hp_delta(t, 100)
-	assert_int(t.current_hp).is_equal(UnitTypes.TROOPER.hp + 2)
+	assert_int(t.current_hp).is_equal(UnitTypes.TROOPER.hp + CombatBalance.combat.rank_hp[2])

@@ -163,10 +163,16 @@ func test_a_trained_pilot_makes_the_vehicle_hit_harder() -> void:
 func test_solar_is_poorer_with_a_shallower_economy_slope() -> void:
 	var state := MatchSetup.build(_map(),
 		[Factions.SOLAR_FEDERATION, Factions.DEMOCRATIC_ALLIANCE] as Array[FactionDef], 0, 80)
-	assert_int(Credits.credit_income(state, 1) - Credits.credit_income(state, 0)).is_equal(200)
+	# Read from the faction (its penalty was halved on 2026-09-29) — the point is the SHAPE:
+	# poorer from turn 1, and the gap widens with each economy tier.
+	var f: FactionDef = Factions.SOLAR_FEDERATION
+	assert_int(f.base_income_delta).is_less(0)
+	assert_int(Credits.credit_income(state, 1) - Credits.credit_income(state, 0)).is_equal(-f.base_income_delta)
 	state.per_player[0].economy_tier = 1
 	state.per_player[1].economy_tier = 1
-	assert_int(Credits.credit_income(state, 1) - Credits.credit_income(state, 0)).is_equal(300)
+	assert_int(Credits.credit_income(state, 1) - Credits.credit_income(state, 0)) \
+		.is_equal(-f.base_income_delta - f.econ_tier_bonus_delta)
+	assert_int(-f.econ_tier_bonus_delta).is_greater(0)
 
 
 func test_a_machinist_crew_drives_the_siege_mech_faster() -> void:

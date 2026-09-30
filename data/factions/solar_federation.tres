@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="FactionDef" load_steps=8 format=3]
 ; GENERATED from game-data/Factions/Wolf Citizens' Front.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: f636b8e8f87cfb2128ebfca9c2223494a360582d3afae5f00077f339218aa22f
+; source-sha256: e03b4fb039801760511097a637712840a02d3649a127f932e275c917231d1ae0
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/structures/solar_barracks.tres" id="2"]
@@ -18,7 +18,7 @@ playable = true
 structures = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")]
 techs = []
 infantry_cap_delta = 1
-base_income_delta = -200
+base_income_delta = -100
 econ_tier_bonus_delta = -100
 upkeep_pct_delta = 0
 vehicle_upkeep_pct_delta = 0

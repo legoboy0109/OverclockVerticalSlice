@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Marksman.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 5f425a18a464381aa3357b1f7b15daa9efde3a3a2ee10019f670395bb8dad574
+; source-sha256: 72c58972dedbe6b0aad41989e0ef9b22a28268c778183d3e5a5da760c4878a8b
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -10,7 +10,7 @@ display_name = "Marksman"
 unit_class = 0
 can_target = Array[int]([0, 1])
 hp = 3
-attack = 7
+attack = 5
 attack_range = 4
 defense = 0
 move_cost = 1
