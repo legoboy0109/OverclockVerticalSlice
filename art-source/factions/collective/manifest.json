@@ -1,0 +1,517 @@
+{
+ "assets": [
+  {
+   "kind": "unit",
+   "axis": "h",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "tol": 30,
+   "id": "guard",
+   "px": 136,
+   "raw": "art-source/generated/collective/guard_4.png",
+   "touches": {
+    "bone": [
+     [
+      9,
+      11
+     ],
+     [
+      10,
+      11
+     ],
+     [
+      11,
+      11
+     ],
+     [
+      9,
+      12
+     ],
+     [
+      11,
+      12
+     ],
+     [
+      9,
+      13
+     ],
+     [
+      10,
+      13
+     ],
+     [
+      11,
+      13
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "unit",
+   "axis": "h",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "tol": 30,
+   "id": "machinist",
+   "px": 124,
+   "raw": "art-source/generated/collective/machinist_3.png",
+   "touches": {
+    "bone": [
+     [
+      5,
+      9
+     ],
+     [
+      6,
+      9
+     ],
+     [
+      7,
+      9
+     ],
+     [
+      5,
+      10
+     ],
+     [
+      7,
+      10
+     ],
+     [
+      5,
+      11
+     ],
+     [
+      6,
+      11
+     ],
+     [
+      7,
+      11
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "unit",
+   "axis": "h",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "tol": 30,
+   "id": "foreman",
+   "px": 132,
+   "raw": "art-source/generated/collective/foreman_3.png",
+   "touches": {
+    "bone": [
+     [
+      6,
+      9
+     ],
+     [
+      7,
+      9
+     ],
+     [
+      8,
+      9
+     ],
+     [
+      6,
+      10
+     ],
+     [
+      8,
+      10
+     ],
+     [
+      6,
+      11
+     ],
+     [
+      7,
+      11
+     ],
+     [
+      8,
+      11
+     ]
+    ]
+   }
+  },
+  {
+   "id": "hauler",
+   "kind": "unit",
+   "axis": "w",
+   "px": 188,
+   "raw": "art-source/generated/collective/hauler_4.png",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "tol": 30,
+   "touches": {
+    "bone": [
+     [
+      22,
+      12
+     ],
+     [
+      23,
+      12
+     ],
+     [
+      24,
+      12
+     ],
+     [
+      22,
+      13
+     ],
+     [
+      24,
+      13
+     ],
+     [
+      22,
+      14
+     ],
+     [
+      23,
+      14
+     ],
+     [
+      24,
+      14
+     ]
+    ]
+   }
+  },
+  {
+   "id": "lancer",
+   "kind": "unit",
+   "axis": "w",
+   "px": 184,
+   "raw": "art-source/generated/collective/lancer_4.png",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "tol": 30,
+   "smooth": 3,
+   "touches": {
+    "bone": [
+     [
+      27,
+      10
+     ],
+     [
+      28,
+      10
+     ],
+     [
+      29,
+      10
+     ],
+     [
+      27,
+      11
+     ],
+     [
+      29,
+      11
+     ],
+     [
+      27,
+      12
+     ],
+     [
+      28,
+      12
+     ],
+     [
+      29,
+      12
+     ]
+    ]
+   }
+  },
+  {
+   "id": "walker",
+   "kind": "unit",
+   "axis": "h",
+   "px": 156,
+   "raw": "art-source/generated/collective/walker_p_3.png",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "tol": 30,
+   "touches": {
+    "bone": [
+     [
+      16,
+      13
+     ],
+     [
+      17,
+      13
+     ],
+     [
+      18,
+      13
+     ],
+     [
+      16,
+      14
+     ],
+     [
+      18,
+      14
+     ],
+     [
+      16,
+      15
+     ],
+     [
+      17,
+      15
+     ],
+     [
+      18,
+      15
+     ]
+    ]
+   }
+  },
+  {
+   "id": "siege_mech",
+   "kind": "unit",
+   "axis": "h",
+   "px": 188,
+   "raw": "art-source/generated/collective/siege_mech_p_3.png",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "tol": 30,
+   "touches": {
+    "bone": [
+     [
+      19,
+      14
+     ],
+     [
+      20,
+      14
+     ],
+     [
+      21,
+      14
+     ],
+     [
+      19,
+      15
+     ],
+     [
+      21,
+      15
+     ],
+     [
+      19,
+      16
+     ],
+     [
+      20,
+      16
+     ],
+     [
+      21,
+      16
+     ]
+    ]
+   }
+  },
+  {
+   "id": "battery",
+   "kind": "unit",
+   "axis": "w",
+   "px": 192,
+   "raw": "art-source/generated/collective/battery_3.png",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "tol": 30,
+   "smooth": 3,
+   "touches": {
+    "bone": [
+     [
+      23,
+      14
+     ],
+     [
+      24,
+      14
+     ],
+     [
+      25,
+      14
+     ],
+     [
+      23,
+      15
+     ],
+     [
+      25,
+      15
+     ],
+     [
+      23,
+      16
+     ],
+     [
+      24,
+      16
+     ],
+     [
+      25,
+      16
+     ]
+    ]
+   }
+  },
+  {
+   "id": "skyworks_gunship",
+   "kind": "air",
+   "axis": "w",
+   "px": 180,
+   "raw": "art-source/generated/collective/skyworks_gunship_2.png",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "tol": 30,
+   "touches": {
+    "bone": [
+     [
+      22,
+      12
+     ],
+     [
+      23,
+      12
+     ],
+     [
+      24,
+      12
+     ],
+     [
+      22,
+      13
+     ],
+     [
+      24,
+      13
+     ],
+     [
+      22,
+      14
+     ],
+     [
+      23,
+      14
+     ],
+     [
+      24,
+      14
+     ]
+    ]
+   }
+  },
+  {
+   "id": "skyworks_interceptor",
+   "kind": "air",
+   "axis": "w",
+   "px": 168,
+   "raw": "art-source/generated/collective/skyworks_interceptor.png",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "tol": 30,
+   "smooth": 3,
+   "touches": {
+    "bone": [
+     [
+      20,
+      10
+     ],
+     [
+      21,
+      10
+     ],
+     [
+      22,
+      10
+     ],
+     [
+      20,
+      11
+     ],
+     [
+      22,
+      11
+     ],
+     [
+      20,
+      12
+     ],
+     [
+      21,
+      12
+     ],
+     [
+      22,
+      12
+     ]
+    ]
+   }
+  },
+  {
+   "id": "union_barracks",
+   "kind": "struct",
+   "axis": "w",
+   "px": 256,
+   "raw": "art-source/generated/collective/union_barracks_4.png",
+   "flatten": true,
+   "crop": 0.02,
+   "keep_accent": 0.25
+  },
+  {
+   "id": "union_factory",
+   "kind": "struct",
+   "axis": "w",
+   "px": 256,
+   "raw": "art-source/generated/collective/union_factory.png",
+   "flatten": true,
+   "crop": 0.02,
+   "keep_accent": 0.25
+  },
+  {
+   "id": "union_airfield",
+   "kind": "struct",
+   "axis": "w",
+   "px": 256,
+   "raw": "art-source/generated/collective/union_airfield_3.png",
+   "flatten": true,
+   "crop": 0.02,
+   "keep_accent": 0.25
+  },
+  {
+   "id": "bulwark",
+   "kind": "struct",
+   "axis": "w",
+   "px": 256,
+   "raw": "art-source/generated/collective/bulwark_2.png",
+   "flatten": true,
+   "crop": 0.02,
+   "keep_accent": 0.25
+  }
+ ]
+}

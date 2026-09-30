@@ -33,7 +33,6 @@ transport_size: 1
 targets_crew: false
 crew_bonus_attack: 1
 crew_bonus_move_cost: -1
-art_id: scout
 ---
 
 ## Notes

@@ -1,7 +1,6 @@
 ---
 id: bulwark
 buildable: false
-art_id: defensive_structure
 hp: 14
 build_cost: 600
 build_time: 2

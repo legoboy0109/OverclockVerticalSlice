@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Siege Mech.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: e6619d55f6f0e5f4db36e699bfbf692f60a156493b56b395d9994f0dcc17d46f
+; source-sha256: f74581d9e2a20fa8def2e6e07cdee47852189c9a67e1e8c855d7b754546f5fe5
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -39,4 +39,4 @@ targets_crew = false
 crew_bonus_attack = 0
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"tank"
+art_id = &""

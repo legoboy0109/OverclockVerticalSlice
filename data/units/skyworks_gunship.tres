@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Skyworks Gunship.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 2fb97bc9bbb5f8364e5384e429e48a4ee84faec7209fb4245cd75dfae64f8480
+; source-sha256: 2165c3ffebf2aac6567ceb98379ee1f1c46704d872eec7c9af3035d942271330
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -39,4 +39,4 @@ targets_crew = false
 crew_bonus_attack = 0
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"helicopter"
+art_id = &""

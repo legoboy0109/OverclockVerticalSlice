@@ -1,0 +1,73 @@
+{
+ "head": "single full-body figure, sci-fi industrial foundry soldier,",
+ "tail": "mostly mid slate-grey #6E7C99 matte slab armor over the whole body, cool grey plates with darker #3E4860 facets, hot orange-red #FF5A2E color ONLY on hazard-stripe panels on the chest and shoulders, sealed welder-mask helmet with a flat slab faceplate and no eyes, heavy industrial foundry worker gear, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, chunky bottom-heavy boxy proportions, three-quarter view, plain flat light grey background, centered, whole body visible with margin",
+ "neg_extra": "sword, blade, shield, medieval, fantasy, gothic, spikes, cape, cloak, face, eyes, visor glow, multiple figures, character sheet, turnaround, views, parts, pieces, all orange, orange legs, brown, rust, text",
+ "size": [
+  "--width",
+  "832",
+  "--height",
+  "1216"
+ ],
+ "units": {
+  "guard": "(holding a heavy riveted sci-fi shotgun:1.4), (thick slab shoulder armor like machine casings:1.4), (welder-mask helmet:1.3), wide squat heavy guard, planted stance",
+  "machinist": "(light mechanic coveralls with a few armor plates:1.3), (welder-mask helmet:1.4), (big wrench tool on the back:1.3), small compact crewman, holding a small pistol",
+  "foreman": "(welder-mask helmet with a tall exhaust pipe on the back:1.3), (large backpack toolbox and a mechanical repair arm:1.4), heavy work apron of armor plates, supervisor engineer"
+ },
+ "vehicles_head": "single sci-fi heavy industrial war machine, isometric three-quarter view from above,",
+ "vehicles_tail": "mostly mid slate-grey #6E7C99 matte slab armor like heavy machine casings, cool grey plates with darker #3E4860 facets, hot orange-red #FF5A2E color ONLY on a few yellow-free hazard-stripe bands, exhaust stacks, heavy industrial foundry design, boxy bottom-heavy wide shapes, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, chunky toy-like proportions, plain flat light grey background, centered, whole vehicle visible with wide margin",
+ "vehicles_neg_extra": "multiple vehicles, character sheet, turnaround, views, parts, pieces, blueprint, people, soldiers, crew, road, ground, terrain, shadow, all orange, orange hull, brown, rust, gothic, spikes, yellow",
+ "vehicles_size": [
+  "--width",
+  "1216",
+  "--height",
+  "832"
+ ],
+ "vehicles": {
+  "walker": "(two-legged light mech walker:1.4), (boxy cockpit cab like a construction machine:1.3), short arm cannon, thick piston legs",
+  "siege_mech": "(enormous four-legged siege mech fortress:1.5), (huge boxy armored body like a foundry furnace:1.4), twin massive cannons, smokestacks on top, very thick legs",
+  "hauler": "(heavy armored cargo hauler truck:1.4), (big boxy container body:1.3), six huge wheels, unarmed, industrial crane arm folded on top",
+  "lancer": "(tracked tank with a long electric lance cannon:1.4), (coil rings along the barrel:1.3), low boxy slab hull",
+  "battery": "(heavy mobile artillery battery:1.4), (three tall howitzer barrels angled up:1.3), boxy hull on tank treads, outrigger stabilizer legs"
+ },
+ "air_head": "single sci-fi heavy industrial aircraft flying, isometric three-quarter view from above,",
+ "air_tail": "mostly mid slate-grey #6E7C99 matte slab armor like heavy machine casings, cool grey plates with darker #3E4860 facets, hot orange-red #FF5A2E color ONLY on a few yellow-free hazard-stripe bands, exhaust stacks, heavy industrial foundry design, boxy bottom-heavy wide shapes, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, chunky toy-like proportions, plain flat light grey background, centered, whole aircraft visible with wide margin",
+ "air_neg_extra": "multiple vehicles, character sheet, turnaround, views, parts, pieces, blueprint, people, soldiers, crew, road, ground, terrain, shadow, all orange, orange hull, brown, rust, gothic, spikes, yellow, clouds, sky, landscape, birds, pilot visible",
+ "air_size": [
+  "--width",
+  "1216",
+  "--height",
+  "832"
+ ],
+ "air": {
+  "skyworks_gunship": "(heavy boxy gunship with four ducted fan rotors:1.4), (chunky cargo-crane style fuselage:1.3), underslung autocannon",
+  "skyworks_interceptor": "(stubby heavy jet interceptor:1.4), (thick boxy fuselage with two big engines:1.3), short straight wings"
+ },
+ "structs_head": "single isolated flat cel-shaded isometric sci-fi industrial foundry building on a flat square base-plate, 2:1 dimetric projection,",
+ "structs_tail": "dark charcoal slate matte slab plating, thin hot orange-red #FF5A2E neon trim lines along edges, hazard-stripe bands and base-plate rim, smokestacks, heavy boxy industrial architecture, large simple panel shapes, hard clean edges, no greeble, flat painted illustration, plain flat light grey background, whole building visible with wide margin, centered",
+ "structs_neg_extra": "multiple buildings, city, town, street, landscape, terrain, trees, people, vehicles, sky, clouds, road, blueprint, views, cropped, dark background, gothic, smoke clouds",
+ "structs_size": [
+  "--width",
+  "1024",
+  "--height",
+  "1024"
+ ],
+ "structs": {
+  "union_barracks": "(squat blocky workers barracks hall:1.4), (big rolling shutter door:1.3), two short smokestacks",
+  "union_factory": "(huge foundry factory with a giant vehicle bay door:1.4), (tall twin smokestacks:1.3), crane gantry on the roof, wide heavy building",
+  "union_airfield": "(flat square landing pad with a boxy hangar:1.4), (loading crane tower:1.3), wide low building",
+  "bulwark": "(massive squat armored gun bunker:1.4), (thick slab walls with one huge cannon:1.3), low wide fortress, hazard stripes"
+ },
+ "mechs_head": "single sci-fi heavy industrial mech, one lone machine floating on a plain flat solid pale grey background, no ground, no floor, no surface beneath it, no shadow, three-quarter view,",
+ "mechs_tail": "mostly mid slate-grey #6E7C99 matte slab armor like heavy machine casings over the whole machine, grey legs, grey arms, hot orange-red #FF5A2E color ONLY on hazard-stripe bands on the shoulders and cockpit, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple panel shapes, chunky toy-like proportions, centered, whole machine visible with wide margin",
+ "mechs_neg_extra": "multiple vehicles, character sheet, turnaround, views, parts, pieces, blueprint, people, soldiers, crew, road, ground, terrain, shadow, all orange, orange hull, brown, rust, gothic, spikes, yellow, text, labels, callouts, muzzle flash, fire, explosion, floor, ground plane, cast shadow, orange legs",
+ "mechs_size": [
+  "--width",
+  "896",
+  "--height",
+  "1152"
+ ],
+ "mechs": {
+  "walker_p": "(two-legged light mech walker:1.4), (boxy cockpit cab like a construction excavator:1.3), short arm cannon, thick piston legs",
+  "siege_mech_p": "(enormous squat four-legged siege mech fortress:1.5), (huge boxy furnace-like armored body:1.4), twin massive cannons, two smokestacks on top, very thick short legs"
+ }
+}

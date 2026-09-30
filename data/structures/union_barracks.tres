@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=5 format=3]
 ; GENERATED from game-data/Structures/Collective Barracks.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 13f4862b4a799404e9daac80945fc932509fe421d5a906d14e80f89fdacfd5fd
+; source-sha256: b725ea18945fa0287f0df9aef239e039b1c009a76439ac6e0a2e1da2cf0ccffd
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/machinist.tres" id="2"]
@@ -11,7 +11,7 @@
 script = ExtResource("1")
 display_name = "Collective Barracks"
 buildable = false
-art_id = &"barracks"
+art_id = &""
 counts_as = []
 hp = 12
 build_cost = 600

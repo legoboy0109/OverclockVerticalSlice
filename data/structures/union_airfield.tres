@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=4 format=3]
 ; GENERATED from game-data/Structures/Collective Airfield.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 14ce6f1ce0d07bfce16398ec43d24a4611aeeb02dc41d4ae707bfd095170aa88
+; source-sha256: 61992ba928d04d71e670b0c70725af572deb960f2e2c00934afc3e6fd7e76409
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/skyworks_gunship.tres" id="2"]
@@ -10,7 +10,7 @@
 script = ExtResource("1")
 display_name = "Collective Airfield"
 buildable = false
-art_id = &"airfield"
+art_id = &""
 counts_as = []
 hp = 12
 build_cost = 1200

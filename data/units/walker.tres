@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Walker.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 1abdbc88de7596171e2229b587a001fa765bd817f8efaf2ccef19190e8640c1c
+; source-sha256: 06b06ed65806967848d5962bb1ade25d300c1ab1970228915af648644f31ebd8
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -39,4 +39,4 @@ targets_crew = false
 crew_bonus_attack = 0
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"tank"
+art_id = &""

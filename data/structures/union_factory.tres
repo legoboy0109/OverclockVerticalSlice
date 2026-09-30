@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=7 format=3]
 ; GENERATED from game-data/Structures/Collective Factory.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 9217ae04a46d2fb18ee5062610e8795e403d7eed71df5d75369556b3286bbbb5
+; source-sha256: d019784297cab92b4792bd25e5cc685498372ff307bf2b3180c929ef6798b336
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/walker.tres" id="2"]
@@ -13,7 +13,7 @@
 script = ExtResource("1")
 display_name = "Collective Factory"
 buildable = false
-art_id = &"factory"
+art_id = &""
 counts_as = []
 hp = 16
 build_cost = 1000

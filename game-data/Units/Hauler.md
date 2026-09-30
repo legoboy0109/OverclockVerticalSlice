@@ -32,7 +32,6 @@ transport_size: 3
 targets_crew: false
 crew_bonus_attack: 0
 crew_bonus_move_cost: 0
-art_id: transport
 ---
 
 ## Notes

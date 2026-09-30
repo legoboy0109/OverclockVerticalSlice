@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Guard.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 82d4986ce1c7e18444d3b9a94a5ae455012c19601de2b1615568e59e39480c51
+; source-sha256: 74938ad09a8bcf52237136431a36c905593060aa61c1b2a35d59227f8f61699d
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/abilities/fortify.tres" id="2"]
@@ -40,4 +40,4 @@ targets_crew = false
 crew_bonus_attack = 0
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"trooper"
+art_id = &""
