@@ -3,6 +3,27 @@
 Drop **generated runtime PNGs** here, by category. Layered **source** working files
 (`.kra`/`.aseprite`/`.psd`) live OUTSIDE `assets/` in `art-source/` so Godot never imports them.
 
+## ★ HD-2D faction art (2026-09-29) — how new-faction sprites are made
+
+The art direction moved to **HD-2D pixel art** (art bible, top amendment + §5.6). Faction
+sprites come from a per-faction pipeline, not `place_runtime.py` (which only knows the VS set):
+
+```
+art-source/factions/<faction>/prompts.json   → tools/asset-pipeline/gen_batch.py   (SDXL candidates)
+    pick the best raw per asset
+art-source/factions/<faction>/manifest.json  → tools/asset-pipeline/build_faction_art.py
+tools/asset-pipeline/roster_board.py <out.png> <unit ids…>   (review on real tiles, no display needed)
+```
+
+`build_faction_art.py` writes every file this README's naming rules require (3 hues × e/w ×
+idle/destroyed + glow masks; structures: 3 hues × idle/destroyed + glow). Sprites keep the
+**same 2× file scale** — one art pixel is a 4×4 block, i.e. 2×2 screen px — so the renderer
+needed no change. After building, delete the asset's `art_id:` line from its vault note and run
+`python3 tools/vault/build_data.py` so it stops borrowing base art.
+
+Done so far: **Order of the Ninth Descent** (all 9 units, 4 buildings). Every other new-faction
+unit still borrows base art through `art_id`. The base roster is still smooth (not pixel) art.
+
 ## Layout
 ```
 assets/art/
