@@ -693,3 +693,20 @@ are unchanged, so code and saves are unaffected):
   Front / Collective / Lightless / Mandate / Order + Barracks, Factory, Airfield (and Mandate
   Defence). The Accord uses the shared generic buildings. Cathedral, Bulwark and other unprefixed
   buildings are unchanged.
+
+## Highlands faction gaps (2026-09-29)
+
+Target 12–18 of 30 per map vs the Accord. Before: The Lightless 25, Order of the Ninth Descent 9,
+Wolf Citizens' Front 11 on Highlands.
+- **The Lightless — Marksman attack 7 → 5.** At range 4 on Highlands' open lanes it hit first and
+  hardest. Result 12 / 14 / 17 (small / Crossroads / Highlands). Range 4 → 3 was also tested (22 on Highlands).
+- **Wolf Citizens' Front — income penalty −200 → −100.** Set when base income was 1000; it was the
+  weakest faction. Result 16 / 17 / 17. No penalty at all (25) and Citizen Trooper hp 5 (23)
+  overshot Highlands.
+- **Order of the Ninth Descent — rank bonuses up** (attack +1/+2/+2, hp +1/+3/+5; were +1/+1/+2,
+  +0/+2/+4). The Order was strong on the short small map and weak on Highlands, although it ranked
+  up *more* there (49% of fighters ranked vs 25%, Cathedral standing 94% of turns): ranks counted
+  for too little. Result 20 / 13 / 15 (was 20 / 9 / 9). Knight hp 8/9 buffed every map and
+  overshot the small map; Inquisitor attack 6 → 5 made it *stronger* (the AI built better units);
+  the stronger rank table overshot Crossroads (23).
+- ⚠ The Order stays slightly high on the small map (20/30). Unchanged by this pass.

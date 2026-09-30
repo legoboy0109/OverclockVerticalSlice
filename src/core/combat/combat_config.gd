@@ -43,8 +43,13 @@ extends Resource
 ## raise thresholds before touching bonuses.
 @export var rank_thresholds: PackedInt32Array = PackedInt32Array([0, 6, 16, 32])
 ## Per-rank bonuses, additive (PV-3), indexed by rank 0..3.
-@export var rank_attack: PackedInt32Array = PackedInt32Array([0, 1, 1, 2])
-@export var rank_hp: PackedInt32Array = PackedInt32Array([0, 0, 2, 4])
+## ★ 2026-09-29 (Highlands balance): attack [0,1,1,2] → [0,1,2,2], hp [0,0,2,4] → [0,1,3,5]. The
+## Order of the Ninth Descent was strong on the short small map (20/30) and weak on long Highlands
+## (9/30) although it ranked up MORE there (49% of fighters vs 25%): ranks counted for too little.
+## Thresholds were NOT lowered (the anti-snowball guard above) — the fix is what a rank is worth,
+## which matters most where ranks accumulate. Result: 20 / 13 / 15 of 30 on the three maps.
+@export var rank_attack: PackedInt32Array = PackedInt32Array([0, 1, 2, 2])
+@export var rank_hp: PackedInt32Array = PackedInt32Array([0, 1, 3, 5])
 @export var rank_range: PackedInt32Array = PackedInt32Array([0, 0, 0, 1])
 ## Merit per destroyed enemy unit / destroyed enemy structure / non-killing hit (PV-1).
 @export var merit_per_kill: int = 3

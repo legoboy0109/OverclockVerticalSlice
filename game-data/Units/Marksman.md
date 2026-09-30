@@ -5,7 +5,7 @@ can_target:
 - infantry
 - ground_vehicle
 hp: 3
-attack: 7
+attack: 5
 attack_range: 4
 defense: 0
 move_cost: 1
@@ -36,6 +36,9 @@ art_id: sniper
 ---
 
 ## Notes
+
+- **2026-09-29 (Highlands balance):** attack 7 → 5. At range 4 on Highlands' open lanes it hit
+  first and hardest: The Lightless won 25/30 there. At 5: 12 / 14 / 17 of 30 on the three maps.
 
 ★ Stats from `design/gdd/factions/independents.md`. ⚠ Placeholder art borrowed from `sniper` — looks identical to it on the board.
 

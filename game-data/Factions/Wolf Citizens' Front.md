@@ -11,7 +11,7 @@ structures:
 - '[[Autonomous Defence Node]]'
 techs: []
 infantry_cap_delta: 1
-base_income_delta: -200
+base_income_delta: -100
 econ_tier_bonus_delta: -100
 upkeep_pct_delta: 0
 vehicle_upkeep_pct_delta: 0
@@ -22,6 +22,9 @@ rank_support_structures: []
 ---
 
 ## Notes
+
+- **2026-09-29 (Highlands balance):** income penalty −200 → −100. It was set when base income
+  was 1000 and left the Front the weakest faction (35/90). At −100: 16 / 17 / 17 of 30.
 
 ★ `design/gdd/factions/solar-federation.md`. Poorer (−200 base income, −100 per economy tier), a bigger infantry ceiling (+1 cap, 4 Barracks), move-cost-1 infantry, specialists (Pilot, Medic, Volunteer, Lance Team), transports instead of tanks, cheap crewless defence nodes that can shoot aircraft.
 

@@ -173,9 +173,13 @@ effective_attack_range(unit)  = base_range + RANK_RANGE[rank]
 | Rank | Merit | Attack | Max hp | Range | Roughly |
 |---|---:|---:|---:|---:|---|
 | 0 | 0 | 3 | 6 | 2 | as shipped |
-| 1 | 6 | **4** | 6 | 2 | 2 kills |
-| 2 | 16 | **4** | **8** | 2 | ~5 kills |
-| 3 | 32 | **5** | **10** | **3** | ~11 kills |
+| 1 | 6 | **4** | **7** | 2 | 2 kills |
+| 2 | 16 | **5** | **9** | 2 | ~5 kills |
+| 3 | 32 | **5** | **11** | **3** | ~11 kills |
+
+> ★ **Retuned 2026-09-29 (Highlands balance):** rank bonuses attack +1/+2/+2 and hp +1/+3/+5 (were
+> +1/+1/+2 and +0/+2/+4). Measured: the Order ranked up more on long maps yet lost there, so ranks
+> were worth too little. Thresholds unchanged. See `design/decision-log.md`.
 
 > ⚠ **Rescaled 2026-08-24 against the shipped roster** (Trooper hp is 6, not the 10 an earlier draft
 > assumed). A rank-3 Champion medium infantry (atk 5, hp 10, range 3) is **a Heavy's health with
