@@ -182,6 +182,42 @@ func test_a_missing_settings_file_is_a_first_run_not_an_error() -> void:
 	assert_bool(loaded.reduced_motion).is_false()
 
 
+func test_lighting_effects_defaults_on_and_survives_a_round_trip_off() -> void:
+	# Arrange
+	var s := _fresh()
+	assert_bool(s.lighting_effects).is_true()
+	# Act
+	s.lighting_effects = false
+	assert_int(s.save()).is_equal(OK)
+	var loaded := GameSettings.new()
+	loaded.load_saved()
+	# Assert
+	assert_bool(loaded.lighting_effects).is_false()
+	assert_bool(loaded.has_overrides()).is_true()
+	_fresh().save()
+
+
+func test_a_settings_file_older_than_the_lighting_option_keeps_lighting_on() -> void:
+	# Arrange — a file written before lighting_effects existed has no such key; it must
+	# not read as "the player switched lighting off".
+	var cfg := ConfigFile.new()
+	cfg.set_value("display", "reduced_motion", true)
+	cfg.save(GameSettings.PATH)
+	# Act
+	var loaded := GameSettings.new()
+	loaded.load_saved()
+	# Assert
+	assert_bool(loaded.lighting_effects).is_true()
+	_fresh().save()
+
+
+func test_reset_turns_lighting_back_on() -> void:
+	var s := _fresh()
+	s.lighting_effects = false
+	s.reset_to_defaults()
+	assert_bool(s.lighting_effects).is_true()
+
+
 # ==============================================================================
 # Guard: every shipped binding is a REAL input.
 # ==============================================================================

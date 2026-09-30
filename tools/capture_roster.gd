@@ -40,9 +40,11 @@ func _run() -> void:
 	add_child(slice)
 	for i: int in 8:
 		await get_tree().process_frame
-	# --flat renders with the HD-2D lighting off, for before/after comparisons.
+	# --flat renders with the HD-2D lighting off, through the SAME path the Settings toggle
+	# uses (GameSettings.lighting_effects, not saved), for before/after comparisons.
 	if OS.get_cmdline_user_args().has("--flat") and slice.get("_lighting") != null:
-		slice._lighting.set_enabled(false)
+		Settings.settings.lighting_effects = false
+		slice._lighting.apply_setting()
 	var st: GameState = slice.state()
 	var ids: PackedStringArray = _arg("--units", "trooper").split(",")
 	var name: String = _arg("--out", "roster")

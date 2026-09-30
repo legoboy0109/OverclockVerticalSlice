@@ -36,11 +36,21 @@ const EDGE_BLUR_SHADER_PATH: String = "res://src/ui/board_renderer/edge_blur.gds
 ## Mip level at the very screen edge.
 const EDGE_BLUR_MAX_LOD: float = 2.5
 
+## Emitted when [member GameSettings.lighting_effects] changes, so the owner can re-apply
+## the per-actor effects (halo, pools) that this node does not own.
+signal lighting_toggled(on: bool)
+
 var _blur_layer: CanvasLayer = null
 var _blur_material: ShaderMaterial = null
+## The last applied setting, so the poll only acts on a change.
+var _on: bool = true
 
 
 func _ready() -> void:
+	# ALWAYS, not the default: Settings is opened from the pause menu, where the tree is
+	# paused and the slice's own _process is frozen — this is what makes the toggle apply
+	# live behind the menu instead of on resume.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_blur_layer = CanvasLayer.new()
 	_blur_layer.name = "Hd2dEdgeBlur"
 	_blur_layer.layer = BLUR_CANVAS_LAYER
@@ -54,6 +64,26 @@ func _ready() -> void:
 	_blur_material.set_shader_parameter(&"max_lod", EDGE_BLUR_MAX_LOD)
 	rect.material = _blur_material
 	_blur_layer.add_child(rect)
+
+
+func _process(_delta: float) -> void:
+	apply_setting()
+
+
+## Reads [member GameSettings.lighting_effects] and, if it changed, switches the blur
+## and emits [signal lighting_toggled]. Polled every frame; call it once after
+## connecting the signal so a saved "off" applies before the first frame.
+func apply_setting() -> void:
+	var on: bool = Settings.settings == null or Settings.settings.lighting_effects
+	if on != _on:
+		_on = on
+		set_enabled(on)
+		lighting_toggled.emit(on)
+
+
+## Whether lighting is currently applied (the last value read from settings).
+func is_on() -> bool:
+	return _on
 
 
 ## Sets the blur bands to the HUD's reserved top/bottom screen margins, in pixels.

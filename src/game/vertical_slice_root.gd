@@ -521,6 +521,19 @@ func _build_lighting() -> void:
 	_lighting = Hd2dLighting.new()
 	add_child(_lighting)
 	_lighting.set_bands(CAMERA_HUD_TOP_MARGIN_PX, CAMERA_HUD_BOTTOM_MARGIN_PX)
+	# GameSettings.lighting_effects is polled by Hd2dLighting (it keeps running under the
+	# pause menu, where Settings lives); it switches the blur itself and tells us to
+	# re-apply the per-actor halo + pools.
+	_lighting.lighting_toggled.connect(_on_lighting_toggled)
+	_lighting.apply_setting()   # a saved "off" applies before the first frame is drawn
+
+
+## Re-applies the actors' halo and floor pools after the lighting setting changes.
+func _on_lighting_toggled(on: bool) -> void:
+	if _feed == null:
+		return
+	_feed.lighting_enabled = on
+	_refresh_occupant_pick_regions()   # re-syncs every sprite, so glow + pools re-apply
 
 
 # --- Status / legend overlay (screen space; provisional scene glue) ----------

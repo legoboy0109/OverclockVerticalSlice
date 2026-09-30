@@ -110,6 +110,9 @@ enum Device { KEYBOARD, GAMEPAD }
 
 var ui_scale: float = UI_SCALE_DEFAULT
 var reduced_motion: bool = false
+## HD-2D lighting (ADR-0020): neon halo, floor light pools and edge blur, all together.
+## On by default; off gives the flat look — for comfort (the edge blur) or weaker hardware.
+var lighting_effects: bool = true
 
 ## Only the bindings the player actually changed: {action: {device: code}}.
 ## Absent entries fall through to whatever project.godot ships.
@@ -281,11 +284,13 @@ func reset_to_defaults() -> void:
 	_overrides.clear()
 	ui_scale = UI_SCALE_DEFAULT
 	reduced_motion = false
+	lighting_effects = true
 
 
 ## True iff the player has changed anything from the shipped defaults.
 func has_overrides() -> bool:
-	return not _overrides.is_empty() or ui_scale != UI_SCALE_DEFAULT or reduced_motion
+	return not _overrides.is_empty() or ui_scale != UI_SCALE_DEFAULT or reduced_motion \
+		or not lighting_effects
 
 
 # --- Persistence --------------------------------------------------------------
@@ -294,6 +299,7 @@ func save() -> Error:
 	var cfg := ConfigFile.new()
 	cfg.set_value("display", "ui_scale", ui_scale)
 	cfg.set_value("display", "reduced_motion", reduced_motion)
+	cfg.set_value("display", "lighting_effects", lighting_effects)
 	for action: StringName in _overrides:
 		for device: int in _overrides[action]:
 			cfg.set_value("bindings", "%s.%d" % [action, device], _overrides[action][device])
@@ -308,6 +314,9 @@ func load_saved() -> void:
 	ui_scale = clampf(float(cfg.get_value("display", "ui_scale", UI_SCALE_DEFAULT)),
 		UI_SCALE_MIN, UI_SCALE_MAX)
 	reduced_motion = bool(cfg.get_value("display", "reduced_motion", false))
+	# Default TRUE when absent: a settings file written before this option existed must
+	# not read as "the player turned lighting off".
+	lighting_effects = bool(cfg.get_value("display", "lighting_effects", true))
 	_overrides.clear()
 	if not cfg.has_section("bindings"):
 		return

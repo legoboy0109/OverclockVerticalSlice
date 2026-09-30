@@ -49,8 +49,12 @@ hardware floor (technical-preferences.md).
 - Any future shader on a canvas item: fragment `COLOR` already includes the texture — multiply a
   resample by a vertex-captured modulate, not by `COLOR` (the first `pixel_sharp` build squared the
   texture and turned rush orange deep red).
-- `Hd2dLighting.set_enabled(false)` turns the edge blur off (a hook for a future graphics setting; no
-  player-facing option is exposed yet — that is a product decision). Halo and pools are not toggled.
+- **Player toggle (2026-09-30, user request):** Settings → Display → "Lighting Effects"
+  (`GameSettings.lighting_effects`, default on, saved; an older settings file without the key reads
+  as ON). One switch for all three effects. `Hd2dLighting` polls it with `PROCESS_MODE_ALWAYS` —
+  Settings is opened from the pause menu, where the slice's own `_process` is frozen — switches the
+  blur and emits `lighting_toggled`; the slice sets `EntitySpriteFeed.lighting_enabled` and re-syncs
+  (off = the plain trim mask and hidden pools, i.e. the pre-lighting look).
 - The halo costs a one-off CPU bake per glow mask the first time that type appears (cached after).
 
 ## Alternatives Rejected

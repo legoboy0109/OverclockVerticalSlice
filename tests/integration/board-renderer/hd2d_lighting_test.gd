@@ -152,3 +152,57 @@ func test_halo_pads_the_mask_evenly_and_keeps_the_rim() -> void:
 func test_halo_texture_is_built_once_per_mask() -> void:
 	var path := "res://assets/art/units/unit_scout_e_idle_01_glow.png"
 	assert_object(EntityGlow.halo_texture(path)).is_same(EntityGlow.halo_texture(path))
+
+
+func test_lighting_off_gives_the_plain_glow_and_hides_the_pools() -> void:
+	# Arrange
+	var renderer: BoardRenderer = auto_free(BoardRenderer.new())
+	add_child(renderer)
+	var feed := EntitySpriteFeed.new(renderer, FACTIONS)
+	var entities: Array[EntityState] = [_unit(1, 0, Vector2i(1, 1), UnitTypes.TROOPER)]
+	feed.sync(entities)
+	# Act
+	feed.lighting_enabled = false
+	feed.sync(entities)
+	# Assert — the pre-lighting look: mask drawn at the body's own frame, no pool.
+	var body: Sprite2D = _sprites(renderer)[0]
+	var glow := body.get_node(^"Glow") as Sprite2D
+	assert_vector(glow.offset).is_equal(body.offset)
+	assert_vector(glow.texture.get_size()).is_equal(body.texture.get_size())
+	assert_bool((body.get_node(EntityLightPools.NODE_NAME) as PointLight2D).visible).is_false()
+	# And back on restores the halo and the pool.
+	feed.lighting_enabled = true
+	feed.sync(entities)
+	assert_vector(glow.offset).is_equal(EntityGlow.halo_offset(body.offset))
+	assert_bool((body.get_node(EntityLightPools.NODE_NAME) as PointLight2D).visible).is_true()
+
+
+func test_the_settings_toggle_applies_live_even_while_the_game_is_paused() -> void:
+	# Arrange — Settings is opened from the PAUSE menu, where the slice's own _process is
+	# frozen; the toggle must still reach the board behind the menu.
+	var root: Node = preload("res://scenes/vertical_slice.tscn").instantiate()
+	add_child(root)
+	await get_tree().process_frame
+	var blur := root.find_child("Hd2dEdgeBlur", true, false) as CanvasLayer
+	var screen := SettingsScreen.new()
+	add_child(screen)
+	await get_tree().process_frame
+	# Act
+	get_tree().paused = true
+	screen.toggle_lighting(false)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	# Assert
+	var pool_visible: bool = false
+	for node: Node in root.find_children(EntityLightPools.NODE_NAME, "PointLight2D", true, false):
+		pool_visible = pool_visible or (node as PointLight2D).visible
+	assert_bool(Settings.settings.lighting_effects).is_false()
+	assert_bool(blur.visible).is_false()
+	assert_bool(pool_visible).is_false()
+	# Cleanup — restore the shipped default for every later test (the screen saved it).
+	screen.toggle_lighting(true)
+	get_tree().paused = false
+	await get_tree().process_frame
+	screen.queue_free()
+	root.queue_free()
+	await get_tree().process_frame

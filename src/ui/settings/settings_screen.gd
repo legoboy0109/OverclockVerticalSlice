@@ -44,6 +44,7 @@ var _warning_label: Label = null
 var _scale_label: Label = null
 var _scale_slider: HSlider = null
 var _motion_button: CheckButton = null
+var _lighting_button: CheckButton = null
 var _back_button: Button = null
 
 
@@ -118,6 +119,7 @@ func _build() -> void:
 	column.add_child(_heading("DISPLAY", 20))
 	column.add_child(_scale_row())
 	column.add_child(_motion_row())
+	column.add_child(_lighting_row())
 
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 18)
@@ -238,6 +240,20 @@ func _motion_row() -> HBoxContainer:
 	return row
 
 
+## HD-2D lighting on/off (neon halo, floor light pools, edge blur — ADR-0020). Applied
+## live: the board polls the setting each frame, like Reduced Motion.
+func _lighting_row() -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	row.add_child(_cell("Lighting Effects", ROW_LABEL_WIDTH, MenuStyle.TEXT))
+	_lighting_button = CheckButton.new()
+	_lighting_button.custom_minimum_size = Vector2(0, MenuStyle.MIN_HIT_TARGET)
+	_lighting_button.focus_mode = Control.FOCUS_ALL
+	_lighting_button.toggled.connect(_on_lighting_toggled)
+	row.add_child(_lighting_button)
+	return row
+
+
 # --- Rebinding ----------------------------------------------------------------
 
 func _begin_listening(action: StringName, device: int) -> void:
@@ -327,6 +343,11 @@ func _on_motion_toggled(pressed: bool) -> void:
 	_save_and_report()
 
 
+func _on_lighting_toggled(pressed: bool) -> void:
+	_settings.lighting_effects = pressed
+	_save_and_report()
+
+
 func _on_reset() -> void:
 	_settings.reset_to_defaults()
 	_settings.apply_all()
@@ -392,6 +413,8 @@ func _refresh_display_labels() -> void:
 		_scale_label.text = "%d%%" % roundi(_settings.ui_scale * 100.0)
 	if _motion_button != null:
 		_motion_button.set_pressed_no_signal(_settings.reduced_motion)
+	if _lighting_button != null:
+		_lighting_button.set_pressed_no_signal(_settings.lighting_effects)
 
 
 # --- Testable model -----------------------------------------------------------
@@ -427,3 +450,14 @@ func ui_scale() -> float:
 
 func reduced_motion() -> bool:
 	return _settings.reduced_motion
+
+
+## Whether HD-2D lighting is on (see [member GameSettings.lighting_effects]).
+func lighting_effects() -> bool:
+	return _settings.lighting_effects
+
+
+## Flips the lighting toggle as a player would (drives the real [CheckButton], so the
+## handler, the save and the label refresh all run). For tests.
+func toggle_lighting(on: bool) -> void:
+	_lighting_button.button_pressed = on

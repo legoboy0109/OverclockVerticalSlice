@@ -149,6 +149,11 @@ const PIXEL_SHARP_SHADER_PATH: String = "res://src/ui/board_renderer/pixel_sharp
 ## multiplies through.
 var _body_material: ShaderMaterial = null
 
+## HD-2D lighting on the actors (GameSettings.lighting_effects): the glow halo and the
+## floor light pools. Read on every sync, so flip it and re-sync to apply. Off = the
+## plain trim mask and no pools — exactly the look before the lighting pass.
+var lighting_enabled: bool = true
+
 ## Live [code]entity_id -> glow overlay Sprite2D[/code] map. Each overlay is a CHILD
 ## of that entity's base sprite, so it inherits position and draws immediately after
 ## its parent (i.e. on top) with no depth bookkeeping of its own.
@@ -347,7 +352,7 @@ func _refresh_entity(entity: EntityState) -> void:
 	_refresh_glow(entity, sprite, facing)
 	# HD-2D floor pool in the owner's hue (re-applied each sync: the fitted scale can
 	# change with the texture, and the pool is sized in screen pixels).
-	EntityLightPools.ensure(sprite, EntityGlow.hue_for(_faction_for(entity.owner)))
+	EntityLightPools.ensure(sprite, EntityGlow.hue_for(_faction_for(entity.owner))).visible = lighting_enabled
 
 
 ## Derives, stores and returns [param entity]'s current facing. An entity seen for
@@ -1032,8 +1037,12 @@ func _refresh_glow(entity: EntityState, sprite: Sprite2D, facing: String) -> voi
 	# frame exactly — no scale of its own (the parent already carries the 2x-art
 	# scale). The HD-2D halo pads the mask on every side, so the offset shifts by the
 	# same padding and the rim still registers with the armour (EntityGlow.halo_*).
-	glow.texture = EntityGlow.halo_texture(path)
-	glow.offset = EntityGlow.halo_offset(sprite.offset)
+	if lighting_enabled:
+		glow.texture = EntityGlow.halo_texture(path)
+		glow.offset = EntityGlow.halo_offset(sprite.offset)
+	else:
+		glow.texture = load(path)
+		glow.offset = sprite.offset
 
 	var destroyed: bool = EntitySpriteCatalog.state_token(entity) == EntitySpriteCatalog.STATE_DESTROYED
 	var pulse_base: float = EntityGlow.resting_pulse(destroyed)
