@@ -27,6 +27,7 @@ Manifest (JSON):
   clean = true when raw is already a cut-out sprite at shipped size (converting approved
           smooth art); skips cutout and resize.
   smooth = median pre-filter size (default 7); lower (3) keeps thin frames, e.g. Sniper.
+  accent_edges = rim width in cells (1-2): faction colour only on the rims of orange regions (over-orange art).
   keep_accent = cell share of accent (e.g. 0.25) that keeps thin neon trim in pixelize.
   lock  = false to skip palette_lock (art already on the house palette).
   touches = hand-placed pixel details on the finished sprite — see apply_touches().
@@ -156,6 +157,44 @@ def flatten_background(path: str, out: str, band: float = 0.03) -> str:
 TOUCH_ACCENT = (255, 110, 38)
 TOUCH_BONE = (222, 214, 196)
 GROUND_RGB = (46, 54, 72)  # dark slate: reads as shadow on the #232A38 floor
+# Line-touch inks. "gun" is gunmetal a step darker than the slate armour so a drawn
+# barrel reads as a separate object; "slate" matches the armour.
+LINE_RGB = {"gun": (58, 63, 76), "slate": (110, 124, 153), "accent": TOUCH_ACCENT,
+            "bone": TOUCH_BONE, "dark": (34, 38, 48)}
+
+
+def _line_cells(x0: int, y0: int, x1: int, y1: int) -> list[tuple[int, int]]:
+    """Bresenham cells from (x0,y0) to (x1,y1) inclusive."""
+    cells, dx, dy = [], abs(x1 - x0), -abs(y1 - y0)
+    sx, sy = (1 if x0 < x1 else -1), (1 if y0 < y1 else -1)
+    err = dx + dy
+    while True:
+        cells.append((x0, y0))
+        if x0 == x1 and y0 == y1:
+            return cells
+        e2 = 2 * err
+        if e2 >= dy:
+            err += dy
+            x0 += sx
+        if e2 <= dx:
+            err += dx
+            y0 += sy
+
+
+def _reline(grid: np.ndarray) -> np.ndarray:
+    """Rebuild the 1-cell outline ring from scratch around the current body.
+
+    Needed after `lines` add body outside the old silhouette (a barrel sticking out
+    must be outlined) or `erase` removes body (its old ring would float in the air).
+    """
+    ink = np.all(grid[..., :3] == OUTLINE_RGB, axis=-1) & (grid[..., 3] > 0)
+    body = (grid[..., 3] > 0) & ~ink
+    p = np.pad(body, 1)
+    ring = (p[:-2, 1:-1] | p[2:, 1:-1] | p[1:-1, :-2] | p[1:-1, 2:]) & ~body
+    out = grid.copy()
+    out[~body] = 0
+    out[ring] = (*OUTLINE_RGB, 255)
+    return out
 
 
 def apply_touches(px: Image.Image, touches: dict | None, mask: bool = False,
@@ -173,7 +212,11 @@ def apply_touches(px: Image.Image, touches: dict | None, mask: bool = False,
                "halo": [cx, cy, rx, ry],        # accent ring, only on EMPTY cells = behind
                "bone": [[x, y], ...],           # pale detail pixels, drawn over the body
                "accent": [[x, y], ...],         # extra faction-colour pixels
-               "ground_rows": [y, ...]}         # warm cells in these rows -> shadow
+               "ground_rows": [y, ...],         # warm cells in these rows -> shadow
+               "erase": [[x0, y0, x1, y1], ...],  # clear a cell rectangle (inclusive)
+               "lines": [[x0, y0, x1, y1, ink, width], ...]}  # draw weapons etc.
+    `ink` is a LINE_RGB key; width 1 or 2 (2 = the line plus the row under it). After
+    erase/lines the outline ring is rebuilt, so drawn parts are outlined like the rest.
     mask=True paints the halo/accent cells into a glow mask (they emit); pass the
     untouched sprite as `ref` so "empty" is judged on the sprite, not on the mask.
     """
@@ -218,7 +261,54 @@ def apply_touches(px: Image.Image, touches: dict | None, mask: bool = False,
         for r in rows:
             for x in np.nonzero(warm[r])[0]:
                 grid[r, x] = 0 if mask else (*GROUND_RGB, 255)
+    erase = touches.get("erase", [])
+    lines = touches.get("lines", [])
+    for x0, y0, x1, y1 in erase:
+        grid[max(0, y0):y1 + 1, max(0, x0):x1 + 1] = 0
+    for ln in lines:
+        x0, y0, x1, y1, ink = ln[:5]
+        width = int(ln[5]) if len(ln) > 5 else 1
+        for x, y in _line_cells(int(x0), int(y0), int(x1), int(y1)):
+            for yy in range(y, y + width):
+                if 0 <= x < gw and 0 <= yy < gh:
+                    if mask:
+                        grid[yy, x] = 255 if ink == "accent" else 0
+                    else:
+                        grid[yy, x] = (*LINE_RGB[ink], 255)
+    if (erase or lines) and not mask:
+        grid = _reline(grid)
     return Image.fromarray(grid.repeat(FACTOR, 0).repeat(FACTOR, 1), px.mode)
+
+
+def accent_edges(px: Image.Image, structure: bool = False, width: int = 1,
+                 diagonal: bool = False) -> Image.Image:
+    """Keep faction colour only on the EDGES of accent regions; interiors go slate.
+
+    For sprites whose render is mostly orange (Heavy 62%, container barracks, brick
+    factory — polish pass 2026-09-30): solid orange blocks become grey panels with a
+    neon rim, which is what art bible §5.1/§3.2 ask for ("thin neon trim"). Value is
+    kept so shading survives; structures take the darker plating band.
+    """
+    a = np.asarray(px).copy()
+    g = a[::FACTOR, ::FACTOR].copy()
+    rgb = g[..., :3].astype(np.float64) / 255.0
+    h, s, v = _hsv(rgb)
+    acc = (((h <= ACCENT_HUE_MAX) | (h >= ACCENT_HUE_WRAP_MIN)) & (s >= 0.45)
+           & (v >= ACCENT_VAL_MIN) & (g[..., 3] > 0))
+    # Erode `width` times: a rim `width` cells thick stays accent.
+    interior = acc.copy()
+    for _ in range(max(1, int(width))):
+        p = np.pad(interior, 1)
+        interior = interior & p[:-2, 1:-1] & p[2:, 1:-1] & p[1:-1, :-2] & p[1:-1, 2:]
+        if diagonal:  # a cell touching non-accent only at a corner also stays rim
+            interior = interior & p[:-2, :-2] & p[:-2, 2:] & p[2:, :-2] & p[2:, 2:]
+    # Accent is bright, so its value would give PALE panels (the Heavy read washed-out
+    # blue). Map into the armour band (units, around #6E7C99) or the dark plating band.
+    v2 = (0.10 + 0.20 * v) if structure else (0.30 + 0.32 * v)
+    slate = _from_hsv(np.full_like(h, SLATE_HUE), np.full_like(s, SLATE_SAT), v2)
+    g[interior, :3] = np.clip(slate[interior] * 255 + 0.5, 0, 255).astype(np.uint8)
+    return Image.fromarray(g.repeat(FACTOR, 0).repeat(FACTOR, 1), "RGBA")
+
 
 def coverage(im: Image.Image) -> float:
     """Accent coverage %, exactly as tests/unit/art/accent_coverage_test.gd measures it."""
@@ -319,7 +409,11 @@ def build(asset: dict, dry: bool, tmp: str) -> list[str]:
         ink = np.all(a[..., :3] == OUTLINE_RGB, axis=-1) & (a[..., 3] > 0)
         locked = np.asarray(palette_lock(out, accent_sat=accent_sat)).copy()
         locked[ink] = (*OUTLINE_RGB, 255)
-        return Image.fromarray(locked, "RGBA")
+        out = Image.fromarray(locked, "RGBA")
+        if asset.get("accent_edges"):
+            out = accent_edges(out, structure=kind == "struct", width=int(asset["accent_edges"]),
+                               diagonal=bool(asset.get("accent_edges_diagonal")))
+        return out
     if asset.get("promote"):
         # The goal is coverage of the FINAL pixel sprite: the outline ring and edge
         # cells cost ~8-12 points versus the smooth master (Knight: 44% smooth -> 33%

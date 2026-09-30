@@ -181,6 +181,24 @@
       18,
       11
      ]
+    ],
+    "lines": [
+     [
+      2,
+      6,
+      24,
+      6,
+      "gun",
+      2
+     ],
+     [
+      25,
+      6,
+      25,
+      6,
+      "accent",
+      2
+     ]
     ]
    }
   },
@@ -280,44 +298,62 @@
    "kind": "unit",
    "promote": 30.2,
    "flatten": true,
-   "crop": 0.02,
    "id": "lance_tank",
-   "raw": "art-source/generated/mandate/lance_tank.png",
+   "raw": "art-source/generated/mandate/lance_tank_round.png",
    "axis": "w",
    "px": 204,
+   "crop": 0.02,
    "touches": {
     "bone": [
      [
-      23,
-      13
+      35,
+      16
      ],
+     [
+      36,
+      16
+     ],
+     [
+      37,
+      16
+     ],
+     [
+      35,
+      17
+     ],
+     [
+      37,
+      17
+     ],
+     [
+      35,
+      18
+     ],
+     [
+      36,
+      18
+     ],
+     [
+      37,
+      18
+     ]
+    ],
+    "lines": [
      [
       24,
-      13
+      9,
+      6,
+      1,
+      "gun",
+      2
      ],
      [
-      25,
-      13
-     ],
-     [
-      23,
-      14
-     ],
-     [
-      25,
-      14
-     ],
-     [
-      23,
-      15
-     ],
-     [
-      24,
-      15
-     ],
-     [
-      25,
-      15
+      5,
+      1,
+      5,
+      1,
+      "accent",
+      2
      ]
     ]
    }
@@ -465,43 +501,43 @@
    "axis": "w",
    "promote": 30.2,
    "flatten": true,
-   "crop": 0.02,
    "id": "talon",
-   "raw": "art-source/generated/mandate/talon_2.png",
+   "raw": "art-source/generated/mandate/talon_round_3.png",
    "px": 168,
+   "crop": 0.02,
    "touches": {
     "bone": [
      [
-      14,
-      14
+      23,
+      20
      ],
      [
-      15,
-      14
+      24,
+      20
      ],
      [
-      16,
-      14
+      25,
+      20
      ],
      [
-      14,
-      15
+      23,
+      21
      ],
      [
-      16,
-      15
+      25,
+      21
      ],
      [
-      14,
-      16
+      23,
+      22
      ],
      [
-      15,
-      16
+      24,
+      22
      ],
      [
-      16,
-      16
+      25,
+      22
      ]
     ]
    }
