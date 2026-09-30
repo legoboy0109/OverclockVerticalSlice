@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Sentinel Mech.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 879b9aa640164cc57bc71c4ecf1cbcc83d9727e4528d7421256a19302e959fa2
+; source-sha256: b942c08b0e50317de324ee9155e9ab04ac917f99e229ead20ee3d3cc3a851324
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -39,4 +39,4 @@ targets_crew = false
 crew_bonus_attack = 0
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"tank"
+art_id = &""

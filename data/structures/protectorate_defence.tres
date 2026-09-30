@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Structures/Mandate Defence.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: c73d3e5af3925fbcd217b8b42cddd5ff9b33151dc1814117cb0ea47b85cd89e2
+; source-sha256: 0fa484d0d3b88424d43edd93e744c3c56e581c559c16538e9336f8bc6c43234e
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 
@@ -8,7 +8,7 @@
 script = ExtResource("1")
 display_name = "Mandate Defence"
 buildable = false
-art_id = &"defensive_structure"
+art_id = &""
 counts_as = []
 hp = 10
 build_cost = 500

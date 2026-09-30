@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Breaker Mech.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 1bfd04e54d62f113d9a43a7b9ebcc01450849e10b09dd2a9e9ff4b6a423c2777
+; source-sha256: 7ca4c944597345c016607cff79ec4d44081064c12613cb4c323e7cd204155e82
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -39,4 +39,4 @@ targets_crew = false
 crew_bonus_attack = 0
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"tank"
+art_id = &""

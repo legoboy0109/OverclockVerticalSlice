@@ -1,0 +1,550 @@
+{
+ "assets": [
+  {
+   "kind": "unit",
+   "axis": "h",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "servitor",
+   "raw": "art-source/generated/mandate/servitor_2.png",
+   "px": 130,
+   "touches": {
+    "bone": [
+     [
+      9,
+      7
+     ],
+     [
+      10,
+      7
+     ],
+     [
+      11,
+      7
+     ],
+     [
+      9,
+      8
+     ],
+     [
+      11,
+      8
+     ],
+     [
+      9,
+      9
+     ],
+     [
+      10,
+      9
+     ],
+     [
+      11,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "unit",
+   "axis": "h",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "demolitions_specialist",
+   "raw": "art-source/generated/mandate/demolitions_specialist_3.png",
+   "px": 136,
+   "touches": {
+    "bone": [
+     [
+      12,
+      7
+     ],
+     [
+      13,
+      7
+     ],
+     [
+      14,
+      7
+     ],
+     [
+      12,
+      8
+     ],
+     [
+      14,
+      8
+     ],
+     [
+      12,
+      9
+     ],
+     [
+      13,
+      9
+     ],
+     [
+      14,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "unit",
+   "axis": "h",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "support_specialist",
+   "raw": "art-source/generated/mandate/support_specialist_2.png",
+   "px": 136,
+   "touches": {
+    "bone": [
+     [
+      3,
+      9
+     ],
+     [
+      4,
+      9
+     ],
+     [
+      5,
+      9
+     ],
+     [
+      3,
+      10
+     ],
+     [
+      5,
+      10
+     ],
+     [
+      3,
+      11
+     ],
+     [
+      4,
+      11
+     ],
+     [
+      5,
+      11
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "unit",
+   "axis": "h",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "lance_specialist",
+   "raw": "art-source/generated/mandate/lance_specialist_4.png",
+   "px": 140,
+   "touches": {
+    "bone": [
+     [
+      16,
+      9
+     ],
+     [
+      17,
+      9
+     ],
+     [
+      18,
+      9
+     ],
+     [
+      16,
+      10
+     ],
+     [
+      18,
+      10
+     ],
+     [
+      16,
+      11
+     ],
+     [
+      17,
+      11
+     ],
+     [
+      18,
+      11
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "unit",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "sentinel_mech",
+   "raw": "art-source/generated/mandate/sentinel_mech.png",
+   "axis": "h",
+   "px": 172,
+   "touches": {
+    "bone": [
+     [
+      19,
+      8
+     ],
+     [
+      20,
+      8
+     ],
+     [
+      21,
+      8
+     ],
+     [
+      19,
+      9
+     ],
+     [
+      21,
+      9
+     ],
+     [
+      19,
+      10
+     ],
+     [
+      20,
+      10
+     ],
+     [
+      21,
+      10
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "unit",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "breaker_mech",
+   "raw": "art-source/generated/mandate/breaker_mech_4.png",
+   "axis": "h",
+   "px": 164,
+   "touches": {
+    "bone": [
+     [
+      26,
+      7
+     ],
+     [
+      27,
+      7
+     ],
+     [
+      28,
+      7
+     ],
+     [
+      26,
+      8
+     ],
+     [
+      28,
+      8
+     ],
+     [
+      26,
+      9
+     ],
+     [
+      27,
+      9
+     ],
+     [
+      28,
+      9
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "unit",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "lance_tank",
+   "raw": "art-source/generated/mandate/lance_tank.png",
+   "axis": "w",
+   "px": 204,
+   "touches": {
+    "bone": [
+     [
+      23,
+      13
+     ],
+     [
+      24,
+      13
+     ],
+     [
+      25,
+      13
+     ],
+     [
+      23,
+      14
+     ],
+     [
+      25,
+      14
+     ],
+     [
+      23,
+      15
+     ],
+     [
+      24,
+      15
+     ],
+     [
+      25,
+      15
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "unit",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "cinder_tank",
+   "raw": "art-source/generated/mandate/cinder_tank_3.png",
+   "axis": "w",
+   "px": 196,
+   "touches": {
+    "bone": [
+     [
+      34,
+      11
+     ],
+     [
+      35,
+      11
+     ],
+     [
+      36,
+      11
+     ],
+     [
+      34,
+      12
+     ],
+     [
+      36,
+      12
+     ],
+     [
+      34,
+      13
+     ],
+     [
+      35,
+      13
+     ],
+     [
+      36,
+      13
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "air",
+   "axis": "w",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "strafer",
+   "raw": "art-source/generated/mandate/strafer_2.png",
+   "px": 180,
+   "touches": {
+    "bone": [
+     [
+      20,
+      6
+     ],
+     [
+      21,
+      6
+     ],
+     [
+      22,
+      6
+     ],
+     [
+      20,
+      7
+     ],
+     [
+      22,
+      7
+     ],
+     [
+      20,
+      8
+     ],
+     [
+      21,
+      8
+     ],
+     [
+      22,
+      8
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "air",
+   "axis": "w",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "autonomous_lifter",
+   "raw": "art-source/generated/mandate/autonomous_lifter_4.png",
+   "px": 176,
+   "touches": {
+    "bone": [
+     [
+      11,
+      15
+     ],
+     [
+      12,
+      15
+     ],
+     [
+      13,
+      15
+     ],
+     [
+      11,
+      16
+     ],
+     [
+      13,
+      16
+     ],
+     [
+      11,
+      17
+     ],
+     [
+      12,
+      17
+     ],
+     [
+      13,
+      17
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "air",
+   "axis": "w",
+   "promote": 30.2,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "talon",
+   "raw": "art-source/generated/mandate/talon_2.png",
+   "px": 168,
+   "touches": {
+    "bone": [
+     [
+      14,
+      14
+     ],
+     [
+      15,
+      14
+     ],
+     [
+      16,
+      14
+     ],
+     [
+      14,
+      15
+     ],
+     [
+      16,
+      15
+     ],
+     [
+      14,
+      16
+     ],
+     [
+      15,
+      16
+     ],
+     [
+      16,
+      16
+     ]
+    ]
+   }
+  },
+  {
+   "kind": "struct",
+   "axis": "w",
+   "px": 256,
+   "keep_accent": 0.25,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "protectorate_barracks",
+   "raw": "art-source/generated/mandate/protectorate_barracks_4.png"
+  },
+  {
+   "kind": "struct",
+   "axis": "w",
+   "px": 256,
+   "keep_accent": 0.25,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "protectorate_factory",
+   "raw": "art-source/generated/mandate/protectorate_factory.png"
+  },
+  {
+   "kind": "struct",
+   "axis": "w",
+   "px": 256,
+   "keep_accent": 0.25,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "protectorate_airfield",
+   "raw": "art-source/generated/mandate/protectorate_airfield_2.png"
+  },
+  {
+   "kind": "struct",
+   "axis": "w",
+   "px": 256,
+   "keep_accent": 0.25,
+   "flatten": true,
+   "crop": 0.02,
+   "id": "protectorate_defence",
+   "raw": "art-source/generated/mandate/protectorate_defence_3.png"
+  }
+ ]
+}

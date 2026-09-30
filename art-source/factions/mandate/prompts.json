@@ -1,0 +1,73 @@
+{
+ "head": "single full-body figure, sleek sci-fi robotic soldier,",
+ "tail": "smooth rounded capsule-shaped armor shells, pale light-grey #B8C0CC and slate #6E7C99 rounded shell panels, hot orange-red #FF5A2E color ONLY on the chest shell and the shoulder caps, grey arms and grey legs, sealed smooth faceless helmet with no visor and no eyes, flat cel-shaded 2D game sprite, flat colors, clean smooth rounded shapes, hard clean edges, chunky proportions, three-quarter view, plain flat medium grey background, centered, whole body visible with margin",
+ "neg_extra": "(sword:1.5), (shield:1.4), (cape:1.4), medieval, fantasy, face, eyes, glowing visor, glowing eyes, visor glow, mouth, skin, hair, multiple figures, character sheet, turnaround, views, parts, pieces, all orange, orange arms, orange legs, brown, rust, spikes, angular jagged armor, gothic",
+ "size": [
+  "--width",
+  "832",
+  "--height",
+  "1216"
+ ],
+ "units": {
+  "servitor": "(thin identical mass-produced humanoid combat robot:1.4), (smooth egg-shaped featureless head:1.4), slim rounded limbs, integrated arm cannon, upright rigid mechanical stance",
+  "demolitions_specialist": "(human specialist in a sleek fitted rounded armor suit:1.3), (large rounded explosive charge pack on the back:1.4), smooth rounded helmet, compact grenade launcher, crouched ready stance",
+  "lance_specialist": "(human specialist in a sleek fitted rounded armor suit:1.3), (long shoulder-mounted energy lance cannon:1.4), smooth rounded helmet, braced firing stance",
+  "support_specialist": "(human specialist in a sleek fitted rounded armor suit:1.3), (rounded backpack with a repair drone arm:1.4), smooth rounded helmet, holding a repair tool, calm upright stance"
+ },
+ "vehicles_head": "single sleek sci-fi robotic war machine, isometric three-quarter view from above,",
+ "vehicles_tail": "smooth rounded capsule-shaped hull shells, pale light-grey #B8C0CC and slate #6E7C99 rounded armor, hot orange-red #FF5A2E color ONLY on a few trim bands, sleek clean high-tech design, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple rounded panel shapes, chunky toy-like proportions, plain flat medium grey background, centered, whole machine visible with wide margin",
+ "vehicles_neg_extra": "multiple vehicles, character sheet, turnaround, views, parts, pieces, blueprint, people, soldiers, crew, pilot visible, road, ground, terrain, shadow, all orange, orange hull, brown, rust, spikes, angular jagged, gothic",
+ "vehicles_size": [
+  "--width",
+  "1216",
+  "--height",
+  "832"
+ ],
+ "vehicles": {
+  "sentinel_mech": "(big bipedal robot mech:1.4), (smooth rounded capsule torso and egg-shaped head:1.4), thick rounded arms with arm cannons, sturdy legs",
+  "breaker_mech": "(heavy squat robot mech with huge rounded fists:1.4), (smooth rounded capsule body:1.3), short thick legs, shockwave emitters on the fists",
+  "lance_tank": "(sleek hover tank:1.4), (very long rail cannon lance barrel:1.4), smooth rounded capsule hull, no treads, hovering pads",
+  "cinder_tank": "(heavy rounded flamethrower tank:1.4), (twin fuel tanks on the back:1.3), smooth rounded capsule turret, short nozzle cannon, wide treads"
+ },
+ "air_head": "single sleek sci-fi robotic aircraft flying, isometric three-quarter view from above,",
+ "air_tail": "smooth rounded capsule-shaped hull shells, pale light-grey #B8C0CC and slate #6E7C99 rounded armor, hot orange-red #FF5A2E color ONLY on a few trim bands, sleek clean high-tech design, flat cel-shaded 2D game sprite, flat colors, hard clean edges, large simple rounded panel shapes, chunky toy-like proportions, plain flat medium grey background, centered, whole aircraft visible with wide margin",
+ "air_neg_extra": "multiple vehicles, character sheet, turnaround, views, parts, pieces, blueprint, people, soldiers, crew, pilot visible, road, ground, terrain, shadow, all orange, orange hull, brown, rust, spikes, angular jagged, gothic, clouds, sky, landscape, birds",
+ "air_size": [
+  "--width",
+  "1216",
+  "--height",
+  "832"
+ ],
+ "air": {
+  "strafer": "(ground attack drone gunship:1.4), (smooth rounded capsule fuselage:1.3), long gun pods under both wings, straight wings",
+  "autonomous_lifter": "(heavy cargo lifter drone with four rounded ducted fans:1.4), (smooth rounded capsule cargo pod slung underneath:1.3), no cockpit",
+  "talon": "(sleek fast interceptor drone jet:1.4), (smooth rounded capsule body with swept wings:1.3), no cockpit, twin engines"
+ },
+ "structs_head": "single isolated flat cel-shaded isometric sci-fi high-tech building on a flat square base-plate, 2:1 dimetric projection,",
+ "structs_tail": "dark charcoal slate matte smooth rounded dome and capsule shapes, thin hot orange-red #FF5A2E neon trim lines along edges and base-plate rim, sleek clean rounded architecture, large simple shapes, hard clean edges, no greeble, flat painted illustration, plain flat light grey background, whole building visible with wide margin, centered",
+ "structs_neg_extra": "multiple buildings, city, town, street, landscape, terrain, trees, people, vehicles, sky, clouds, road, blueprint, views, cropped, dark background, gothic, spikes",
+ "structs_size": [
+  "--width",
+  "1024",
+  "--height",
+  "1024"
+ ],
+ "structs": {
+  "protectorate_barracks": "(rounded capsule-shaped robot assembly hall:1.4), (large round doorway:1.3), smooth dome roof",
+  "protectorate_factory": "(large rounded dome factory:1.4), (big round vehicle bay door:1.3), smooth rounded chimney vents",
+  "protectorate_airfield": "(round landing pad platform:1.4), (small rounded capsule control tower:1.3), wide low building",
+  "protectorate_defence": "(compact rounded dome gun turret emplacement:1.4), twin short barrels, smooth armored dome, small footprint"
+ },
+ "retry_head": "single full-body figure, slim human sci-fi specialist soldier,",
+ "retry_tail": "smooth rounded capsule-shaped armor shells, pale light-grey #B8C0CC and slate #6E7C99 rounded shell panels, hot orange-red #FF5A2E color ONLY on the chest shell and the shoulder caps, grey arms and grey legs, sealed smooth faceless helmet with no visor and no eyes, flat cel-shaded 2D game sprite, flat colors, clean smooth rounded shapes, hard clean edges, chunky proportions, three-quarter view, plain flat medium grey background, centered, whole body visible with margin",
+ "retry_neg_extra": "(sword:1.5), (shield:1.4), (cape:1.4), medieval, fantasy, face, eyes, glowing visor, glowing eyes, visor glow, mouth, skin, hair, multiple figures, character sheet, turnaround, views, parts, pieces, all orange, orange arms, orange legs, brown, rust, spikes, angular jagged armor, gothic, bulky robot, mech",
+ "retry_size": [
+  "--width",
+  "832",
+  "--height",
+  "1216"
+ ],
+ "retry": {
+  "lance_specialist_b": "(slim human soldier in a tight sleek rounded bodysuit:1.4), (huge long tube energy lance cannon carried on the right shoulder, longer than the body:1.5), smooth rounded helmet, braced aiming stance"
+ }
+}

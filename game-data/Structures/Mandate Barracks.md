@@ -1,7 +1,6 @@
 ---
 id: protectorate_barracks
 buildable: false
-art_id: barracks
 hp: 12
 build_cost: 600
 build_time: 2

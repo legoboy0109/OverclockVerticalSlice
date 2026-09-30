@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Strafer.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: f9c26179799971fc94485a9dcd98c0281429027460ba0dfbae3ad4ec92ddc151
+; source-sha256: a9c949288b57972a0916ec06e3b0b85a55f5153b8e5564e1286814b8c53db78e
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -39,4 +39,4 @@ targets_crew = false
 crew_bonus_attack = 0
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"bomber"
+art_id = &""

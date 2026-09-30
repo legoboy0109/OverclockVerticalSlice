@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Talon.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 13dde0bdc797d0fcbd814dee61c9bd1d3688f47f96b56b2708b638f8caba7c6a
+; source-sha256: 49ea01b5a6b3a0effb3805f99705d536ef00d76ebec3104f0a56ce806aa75135
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -39,4 +39,4 @@ targets_crew = false
 crew_bonus_attack = 0
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"fighter"
+art_id = &""

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Lance Specialist.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: e3a04ee621c3e0733a688ae09ba263909482c171f2bb0603c64e7f8059ba8bfc
+; source-sha256: edacac44ee53b7e3a2a71924b2909581d9796f5daf68a2696953b50eb6ac7944
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -39,4 +39,4 @@ targets_crew = false
 crew_bonus_attack = 0
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"sniper"
+art_id = &""

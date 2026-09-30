@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Support Specialist.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: bbf1ad299d4f16769dc7fd465a7ee9b2e30d12e8a66fc368d48233a8e18d1ae5
+; source-sha256: c3531ba7be9813accfd6ec1e34defd598b375176ea4dc962464427ba7fd9e8f6
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/abilities/repair.tres" id="2"]
@@ -40,4 +40,4 @@ targets_crew = false
 crew_bonus_attack = 0
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"builder"
+art_id = &""

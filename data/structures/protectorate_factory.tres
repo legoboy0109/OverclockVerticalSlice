@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=6 format=3]
 ; GENERATED from game-data/Structures/Mandate Factory.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 7b0b0ce6bd6aa86a43bd944482c691a1bac6ee49fdbacb52eab1bdda9172f5cf
+; source-sha256: c96dd3d210c50e73ea0f587635adeb7198c65c3eb8b6250071dccc3f2d406982
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/sentinel_mech.tres" id="2"]
@@ -12,7 +12,7 @@
 script = ExtResource("1")
 display_name = "Mandate Factory"
 buildable = false
-art_id = &"factory"
+art_id = &""
 counts_as = []
 hp = 14
 build_cost = 1000

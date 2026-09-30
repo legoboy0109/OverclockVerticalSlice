@@ -311,7 +311,15 @@ def build(asset: dict, dry: bool, tmp: str) -> list[str]:
         # 32.6% vs boom 36.6%, over the 3-point limit (2026-09-30). Per-pixel, so the
         # grid is untouched; value is kept (structure=False: no second darkening).
         out = pixelize(img, FACTOR, **px_opts)
-        return palette_lock(out, accent_sat=accent_sat) if relock else out
+        if not relock:
+            return out
+        # Keep the outline ink exact: the lock re-hues it to (20,20,22), which is
+        # invisible but breaks anything that looks for OUTLINE_RGB (grid printers).
+        a = np.asarray(out)
+        ink = np.all(a[..., :3] == OUTLINE_RGB, axis=-1) & (a[..., 3] > 0)
+        locked = np.asarray(palette_lock(out, accent_sat=accent_sat)).copy()
+        locked[ink] = (*OUTLINE_RGB, 255)
+        return Image.fromarray(locked, "RGBA")
     if asset.get("promote"):
         # The goal is coverage of the FINAL pixel sprite: the outline ring and edge
         # cells cost ~8-12 points versus the smooth master (Knight: 44% smooth -> 33%

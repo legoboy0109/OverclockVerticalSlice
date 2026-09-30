@@ -1,7 +1,6 @@
 ---
 id: protectorate_defence
 buildable: false
-art_id: defensive_structure
 hp: 10
 build_cost: 500
 build_time: 2

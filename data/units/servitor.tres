@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Servitor.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: b25685346f0c71fd727312559625d3112fb4c889cb2ecac4ab352a4cece5d6ea
+; source-sha256: 74bc51c07dc0d0ce16e820492e43ca36632819a8af7ccf6eda1e1fa8ca5db508
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -39,4 +39,4 @@ targets_crew = false
 crew_bonus_attack = -1
 starting_merit = 0
 crew_bonus_move_cost = 0
-art_id = &"trooper"
+art_id = &""
