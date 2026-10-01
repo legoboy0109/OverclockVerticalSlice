@@ -48,3 +48,8 @@ static func reset_turn_flags(structure: StructureState) -> void:
 	structure.has_attacked = false
 	structure.units_produced_this_turn = 0
 	structure.stood_down = false
+
+
+## ★ 2026-10-01 (tech trees): a structure's max hp — its type's plus the cached tech bonus.
+static func effective_max_hp(structure: StructureState) -> int:
+	return structure.type.hp + structure.tech_hp_bonus

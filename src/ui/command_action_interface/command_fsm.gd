@@ -491,17 +491,22 @@ static func _move_entry(state: GameState, entity: EntityState) -> VerbEntry:
 ## already-attacked short-circuit.
 ## True when [param entity]'s type carries a weapon at all: some attack, some range and
 ## something it may target. A Volley-style range bonus never arms an unarmed type.
-static func has_weapon(entity: EntityState) -> bool:
+static func has_weapon(entity: EntityState, state: GameState = null) -> bool:
 	var t: Variant = entity.get("type")
 	if t == null:
 		return false
-	return int(t.attack) > 0 and int(t.attack_range) > 0 and not (t.can_target as Array).is_empty()
+	if (t.can_target as Array).is_empty():
+		return false
+	# With a state, research counts (Hardpoints arms the HQ).
+	if state != null:
+		return Combat._effective_attack_for(state, entity) > 0 and Unit.effective_attack_range(state, entity) > 0
+	return int(t.attack) > 0 and int(t.attack_range) > 0
 
 
 static func _attack_entry(state: GameState, entity: EntityState) -> VerbEntry:
 	# ★ 2026-10-01 (user decision): no weapon → no Attack row at all (it read "no targets" on
 	# every HQ, factory, Builder and Transport).
-	if not has_weapon(entity):
+	if not has_weapon(entity, state):
 		return VerbEntry.new(Verb.ATTACK, false, Reason.NO_WEAPON)
 	var can_still_attack: bool
 	if entity is UnitState:
@@ -717,7 +722,7 @@ static func _research_entry(state: GameState, entity: EntityState) -> VerbEntry:
 ## mapping its answer onto flags rather than re-deriving the rule (Pass-Through Invariant).
 ## Carries the rush's AP price, since like Attack it is one number known up front.
 static func _rush_entry(state: GameState, entity: EntityState) -> VerbEntry:
-	var cost: int = BaseProduction.rush_ap_cost()
+	var cost: int = BaseProduction.rush_ap_cost(state, entity as StructureState) if entity is StructureState else BaseProduction.rush_ap_cost()
 	if not (entity is StructureState) or entity.owner != state.active_player:
 		return VerbEntry.new(Verb.RUSH, false, Reason.NOTHING_TO_RUSH)
 	# ★ 2026-10-01 (user decision): a finished building that can only ever make infantry or

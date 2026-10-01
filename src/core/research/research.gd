@@ -107,6 +107,87 @@ static func effective_research_time(_state: GameState, tech: TechDef, _player: i
 
 
 ## AP to start [param tech]: its own [member TechDef.ap_surcharge], or the base
+## ★ 2026-10-01 (tech trees): recomputes the tech-derived bonuses cached on [param player]'s units
+## and structures ([member UnitState.tech_hp_bonus] etc). A RAISED max hp also raises current hp
+## by the same amount (a tech grants its hp at once, like a promotion — PV-5); a lowered one
+## clamps. Called at the start of the owner's turn (after production, so new units are covered)
+## and on every research completion.
+static func refresh_bonuses(state: GameState, player: int) -> void:
+	for e: EntityState in state.entities():
+		if e.owner != player:
+			continue
+		if e is UnitState:
+			_refresh_unit(state, e as UnitState)
+			for c: UnitState in Unit.all_carried(e as UnitState):
+				_refresh_unit(state, c)
+		elif e is StructureState:
+			var st: StructureState = e
+			if st.type == null:
+				continue
+			var before: int = Structure.effective_max_hp(st)
+			var hp: int = st.type.hp * sum(state, player, &"structure_hp_pct") / 100
+			if st.is_hq():
+				hp += sum(state, player, &"hq_hp_bonus")
+			st.tech_hp_bonus = hp
+			var after: int = Structure.effective_max_hp(st)
+			st.current_hp = clampi(st.current_hp + maxi(0, after - before), 0, after)
+
+
+static func _refresh_unit(state: GameState, u: UnitState) -> void:
+	if u.type == null:
+		return
+	var p: int = u.owner
+	var cls: int = u.type.unit_class
+	var before: int = Unit.effective_max_hp(u)
+	var hp: int = 0
+	if cls == UnitTypeDef.UnitClass.INFANTRY:
+		hp += sum(state, p, &"infantry_hp_bonus")
+	elif cls == UnitTypeDef.UnitClass.GROUND_VEHICLE:
+		hp += sum(state, p, &"vehicle_hp_bonus")
+	u.tech_hp_bonus = hp
+	var after: int = Unit.effective_max_hp(u)
+	u.current_hp = clampi(u.current_hp + maxi(0, after - before), 0, after)
+	var mv: int = sum(state, p, &"move_cap_bonus") + unit_type_bonus(state, p, u.type, &"bonus_unit_move_cap")
+	if cls != UnitTypeDef.UnitClass.INFANTRY:
+		mv += sum(state, p, &"vehicle_move_cap_bonus")
+	u.tech_move_bonus = mv
+	u.tech_ammo_bonus = sum(state, p, &"ammo_bonus")
+	u.tech_attack_ap_discount = sum(state, p, &"attack_ap_discount")
+
+
+## ★ 2026-10-01 (tech trees): the summed value of int effect [param field] over [param player]'s
+## completed techs — the one accessor every new tree effect reads through, so a new field needs
+## no new function here. 0 for an out-of-range player (fixtures with no PlayerState).
+static func sum(state: GameState, player: int, field: StringName) -> int:
+	if state == null or player < 0 or player >= state.per_player.size():
+		return 0
+	var total: int = 0
+	for t: TechDef in state.per_player[player].completed_techs:
+		total += int(t.get(field))
+	return total
+
+
+## True when any of [param player]'s completed techs sets bool effect [param field].
+static func any(state: GameState, player: int, field: StringName) -> bool:
+	if state == null or player < 0 or player >= state.per_player.size():
+		return false
+	for t: TechDef in state.per_player[player].completed_techs:
+		if bool(t.get(field)):
+			return true
+	return false
+
+
+## Summed per-unit-type bonus [param field] (bonus_unit_attack / bonus_unit_move_cap) that
+## applies to [param type] through [member TechDef.bonus_unit_types].
+static func unit_type_bonus(state: GameState, player: int, type: UnitTypeDef, field: StringName) -> int:
+	if state == null or player < 0 or player >= state.per_player.size() or type == null:
+		return 0
+	var total: int = 0
+	for t: TechDef in state.per_player[player].completed_techs:
+		if type in t.bonus_unit_types:
+			total += int(t.get(field))
+	return total
+
 ## [member EconomyConfig.research_ap_cost] when it leaves that at -1 (ADR-0018 D5).
 static func effective_research_ap_surcharge(_state: GameState, tech: TechDef, _player: int) -> int:
 	return tech.ap_surcharge if tech.ap_surcharge >= 0 else Balance.economy.research_ap_cost
@@ -315,6 +396,7 @@ static func advance_research_timers(state: GameState, player: int) -> Array:
 		evt.owner = player
 		evt.tech = tech
 		events.append(evt)
+	refresh_bonuses(state, player)   # a completed tech applies to every unit at once
 	return events
 
 
@@ -358,17 +440,25 @@ static func _eject_freed_pilots(state: GameState, player: int, tech: TechDef) ->
 
 static func apply_idle_healing(state: GameState, player: int) -> Array:
 	var amount: int = idle_heal(state, player)
-	if amount <= 0:
+	# ★ 2026-10-01 (tech trees): Self-Repair Protocols — ground vehicles heal even after acting.
+	var self_repair: int = sum(state, player, &"vehicle_self_repair")
+	if amount <= 0 and self_repair <= 0:
 		return []
 	var events: Array = []
 	for e: EntityState in state.entities():
 		if not (e is UnitState) or e.owner != player:
 			continue
 		var unit: UnitState = e
-		if unit.has_attacked or unit.tiles_moved_this_turn > 0 or unit.current_hp >= Unit.effective_max_hp(unit):
+		if unit.current_hp >= Unit.effective_max_hp(unit):
+			continue
+		var idle: bool = not unit.has_attacked and unit.tiles_moved_this_turn == 0
+		var gain: int = (amount if idle else 0)
+		if unit.type.unit_class == UnitTypeDef.UnitClass.GROUND_VEHICLE:
+			gain += self_repair
+		if gain <= 0:
 			continue
 		var before: int = unit.current_hp
-		Unit.apply_hp_delta(unit, amount)
+		Unit.apply_hp_delta(unit, gain)
 		var evt := UnitHealedEvent.new()
 		evt.entity_id = unit.entity_id
 		evt.amount = unit.current_hp - before

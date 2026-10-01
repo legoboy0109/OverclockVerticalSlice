@@ -681,7 +681,7 @@ static func _score_rush_candidates(lookahead: GameState, entity: EntityState, be
 	var value: float = credits_to_ap(float(credits)) * AIBalance.ai.rush_turn_value_fraction
 	if _enemy_unit_within(lookahead, structure.position, entity.owner, AIBalance.ai.rush_threat_radius):
 		value *= AIBalance.ai.rush_threat_multiplier
-	var cost: int = BaseProduction.rush_ap_cost()
+	var cost: int = BaseProduction.rush_ap_cost(lookahead, structure)
 	var score: float = value / float(cost)
 	if _is_better(score, cost, entity.entity_id, best.score, best.ap_cost, best.entity_id):
 		best = _Candidate.new(action, score, cost, entity.entity_id)
@@ -988,7 +988,7 @@ static func _deploy_tile_is_lethal(lookahead: GameState, owner: int, \
 static func _threat_reach_of(state: GameState, entity: EntityState) -> int:
 	if entity is UnitState:
 		var u: UnitState = entity
-		return u.type.soft_move_cap + Unit.effective_attack_range(state, u)
+		return Unit.soft_move_cap(u) + Unit.effective_attack_range(state, u)
 	return Unit.effective_attack_range(state, entity)
 
 
@@ -1038,7 +1038,7 @@ static func _enemy_hq(state: GameState, owner: int) -> StructureState:
 ## [method GridState.manhattan_distance] — no [method Movement.reachable] call
 ## against a hypothetical future turn.
 static func _sets_up_attack_next_turn(state: GameState, unit: UnitState, dest: Vector2i) -> bool:
-	var reach: int = unit.type.soft_move_cap + Unit.effective_attack_range(state, unit)
+	var reach: int = Unit.soft_move_cap(unit) + Unit.effective_attack_range(state, unit)
 	for e: EntityState in state.entities():
 		if e.owner == unit.owner:
 			continue
@@ -1065,7 +1065,7 @@ static func _sets_up_attack_next_turn(state: GameState, unit: UnitState, dest: V
 ## [method Movement.reachable] itself just reported.
 static func _tiles_moved_for(unit: UnitState, reported_cost: int) -> int:
 	var depth: int = 1
-	while depth <= unit.type.soft_move_cap + unit.tiles_moved_this_turn + 64:
+	while depth <= Unit.soft_move_cap(unit) + unit.tiles_moved_this_turn + 64:
 		if Movement.move_path_cost(unit, depth) == reported_cost:
 			return depth
 		depth += 1
@@ -1911,12 +1911,12 @@ static func _reachability_multiplier(lookahead: GameState, owner: int, deploy_ti
 		if not (friendly is UnitState):
 			continue
 		var friendly_unit: UnitState = friendly
-		var friendly_reach: int = Unit.effective_attack_range(lookahead, friendly_unit) + friendly_unit.type.soft_move_cap
+		var friendly_reach: int = Unit.effective_attack_range(lookahead, friendly_unit) + Unit.soft_move_cap(friendly_unit)
 		for enemy: EntityState in enemies:
 			if not (enemy is UnitState):
 				continue
 			var enemy_unit: UnitState = enemy
-			var enemy_reach: int = Unit.effective_attack_range(lookahead, enemy_unit) + enemy_unit.type.soft_move_cap
+			var enemy_reach: int = Unit.effective_attack_range(lookahead, enemy_unit) + Unit.soft_move_cap(enemy_unit)
 			var dist: int = lookahead.grid.manhattan_distance(friendly_unit.position, enemy_unit.position)
 			if dist <= friendly_reach or dist <= enemy_reach:
 				return _REACHABILITY_MULTIPLIER_IN_CONTACT

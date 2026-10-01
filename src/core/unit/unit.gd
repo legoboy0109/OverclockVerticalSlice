@@ -143,7 +143,13 @@ static func apply_hp_delta(unit: UnitState, delta: int) -> void:
 ## ★ The ONE place max hp is read for a unit — healing, repair, the AI and the HUD all use it,
 ## so a promoted unit is never healed back to its old ceiling.
 static func effective_max_hp(unit: UnitState) -> int:
-	return unit.type.hp + _rank_value(CombatBalance.combat.rank_hp, unit.rank)
+	return unit.type.hp + _rank_value(CombatBalance.combat.rank_hp, unit.rank) + unit.tech_hp_bonus
+
+
+## Tiles [param unit] may move before the over-cap surcharge: its type's cap plus the cached
+## tech bonus (Rapid Deployment, Blitz). ★ 2026-10-01: every surcharge read goes through here.
+static func soft_move_cap(unit: UnitState) -> int:
+	return unit.type.soft_move_cap + unit.tech_move_bonus
 
 
 ## The rank's bonus from [param table], clamped to the table (rank 0 = no bonus).
@@ -180,6 +186,10 @@ static func effective_attack(state: GameState, unit: UnitState) -> int:
 	# TP-5d: a trained pilot improves the vehicle it crews, only while it is aboard.
 	var crew: int = unit.pilot.type.crew_bonus_attack if unit.pilot != null else 0
 	var doctrine: int = Research.vehicle_attack_bonus(state, unit.owner) if unit.type.unit_class == UnitTypeDef.UnitClass.GROUND_VEHICLE else 0
+	# ★ 2026-10-01 (tech trees): Combined Arms reaches aircraft too; per-type bonuses (Technicals).
+	if unit.type.unit_class == UnitTypeDef.UnitClass.AIR:
+		doctrine += Research.sum(state, unit.owner, &"aircraft_attack_bonus")
+	doctrine += Research.unit_type_bonus(state, unit.owner, unit.type, &"bonus_unit_attack")
 	return unit.type.attack + Research.attack_bonus(state, unit.owner) + _rank_value(CombatBalance.combat.rank_attack, unit.rank) + crew + doctrine
 
 
@@ -213,6 +223,9 @@ static func effective_produce_cost(state: GameState, unit_type: UnitTypeDef, pla
 	# ★ CR-14 Foundry: a percent off AFTER the faction delta, integer-floored — the
 	# discount applies to what this player actually pays, not the catalogue price.
 	cost = cost * (100 - Research.produce_cost_discount_pct(state, player)) / 100
+	# ★ 2026-10-01 (tech trees): Levy en Masse — an infantry-only discount on top.
+	if unit_type.unit_class == UnitTypeDef.UnitClass.INFANTRY:
+		cost = cost * (100 - Research.sum(state, player, &"infantry_cost_discount_pct")) / 100
 	return maxi(1, cost)
 
 
@@ -248,14 +261,25 @@ static func effective_attack_range(state: GameState, entity: EntityState) -> int
 		var base: int = effective_type_attack_range(state, entity.type, entity.owner)
 		# PV-3: a Champion's extra range, for a unit that attacks at all.
 		return base + _rank_value(CombatBalance.combat.rank_range, entity.rank) if base > 0 else base
-	return entity.type.attack_range
+	# ★ 2026-10-01 (tech trees): armed structures get Point Defense range; the HQ gets a weapon
+	# from Hardpoints. Unarmed structures stay at range 0.
+	var r: int = entity.type.attack_range
+	if entity.type.attack > 0:
+		r += Research.sum(state, entity.owner, &"defensive_range_bonus")
+	if entity is StructureState and (entity as StructureState).is_hq():
+		r = maxi(r, Research.sum(state, entity.owner, &"hq_range"))
+	return r
 
 
 ## [method effective_attack_range] for a unit TYPE [param player] would field — for
 ## callers reasoning about a unit that does not exist yet (the AI's deploy scoring).
 static func effective_type_attack_range(state: GameState, unit_type: UnitTypeDef, player: int) -> int:
 	if unit_type.attack_range > 0:
-		return unit_type.attack_range + Research.attack_range_bonus(state, player)
+		var r: int = unit_type.attack_range + Research.attack_range_bonus(state, player)
+		# ★ 2026-10-01 (tech trees): Long Guns — ground vehicles only.
+		if unit_type.unit_class == UnitTypeDef.UnitClass.GROUND_VEHICLE:
+			r += Research.sum(state, player, &"vehicle_range_bonus")
+		return r
 	return unit_type.attack_range
 
 
@@ -274,4 +298,8 @@ static func effective_type_attack_range(state: GameState, unit_type: UnitTypeDef
 ## are not read or folded here — see [method effective_produce_cost]'s note.
 static func effective_move_cost(state: GameState, unit_type: UnitTypeDef, player: int) -> int:
 	var d: FactionUnitDelta = Faction.unit_delta(state.faction_of(player), unit_type)
-	return maxi(MIN_MOVE_COST, unit_type.move_cost + (d.move_cost_delta if d else 0))
+	var cost: int = unit_type.move_cost + (d.move_cost_delta if d else 0)
+	# ★ 2026-10-01 (tech trees): Infiltrators — infantry pay less per tile.
+	if unit_type.unit_class == UnitTypeDef.UnitClass.INFANTRY:
+		cost -= Research.sum(state, player, &"infantry_move_cost_discount")
+	return maxi(MIN_MOVE_COST, cost)

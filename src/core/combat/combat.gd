@@ -73,9 +73,52 @@ static func damage(state: GameState, attacker: EntityState, defender: EntityStat
 	# ★ CR-14 Penetration: a UNIT attacker whose owner holds it ignores Cover entirely.
 	if attacker is UnitState and Research.ignores_cover(state, attacker.owner):
 		cover = 0
-	var def: int = Unit.effective_defense(state, defender) if defender is UnitState else defender.type.defense
+	var def: int = Unit.effective_defense(state, defender) if defender is UnitState else _structure_defense(state, defender)
+	# ★ 2026-10-01 (tech trees): Dig In — defence while standing in Cover (whoever Cover protects).
+	if defender is UnitState and Unit.benefits_from_cover(defender) and state.grid.is_cover(defender.position.x, defender.position.y):
+		def += Research.sum(state, defender.owner, &"cover_defense")
+	var atk: int = _effective_attack_for(state, attacker) + _target_bonus(state, attacker, defender)
 	# DT-3: resistance is ONE additive term; MIN_DAMAGE still floors every landed hit (DT-5).
-	return max(CombatBalance.combat.min_damage, _effective_attack_for(state, attacker) - cover - def - resistance(defender, dtype))
+	return max(CombatBalance.combat.min_damage, atk - cover - def - resistance(defender, dtype))
+
+
+## ★ 2026-10-01 (tech trees): attack bonuses that depend on WHAT is hit (Armor Piercing,
+## Shredder Rounds, Sappers, Flak Batteries) or where the attacker stands (Ambush).
+static func _target_bonus(state: GameState, attacker: EntityState, defender: EntityState) -> int:
+	var p: int = attacker.owner
+	var b: int = 0
+	var armored: bool = defender is StructureState or (defender is UnitState \
+		and (defender as UnitState).type.unit_class != UnitTypeDef.UnitClass.INFANTRY)
+	if armored:
+		b += Research.sum(state, p, &"attack_vs_armor")
+	elif defender is UnitState:
+		b += Research.sum(state, p, &"attack_vs_infantry")
+	var inf_attacker: bool = attacker is UnitState and (attacker as UnitState).type.unit_class == UnitTypeDef.UnitClass.INFANTRY
+	if inf_attacker and defender is StructureState:
+		b += Research.sum(state, p, &"infantry_attack_vs_structures")
+	if inf_attacker and state.grid.is_cover(attacker.position.x, attacker.position.y):
+		b += Research.sum(state, p, &"infantry_cover_attack")
+	if attacker is StructureState and defender is UnitState \
+			and (defender as UnitState).type.unit_class == UnitTypeDef.UnitClass.AIR:
+		b += Research.sum(state, p, &"defensive_anti_air")
+	return b
+
+
+## ★ 2026-10-01 (tech trees): a structure's defence — its type's, plus Reinforced Concrete, plus
+## an aura (Consecration) when it stands beside one of its owner's aura structures.
+static func _structure_defense(state: GameState, s: EntityState) -> int:
+	var d: int = s.type.defense + Research.sum(state, s.owner, &"structure_defense_bonus")
+	var aura: int = Research.sum(state, s.owner, &"aura_defense_bonus")
+	if aura > 0:
+		var sources: Array = []
+		for t: TechDef in state.per_player[s.owner].completed_techs:
+			sources.append_array(t.aura_structures)
+		for n: Vector2i in [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]:
+			var e: EntityState = state.entity_at(s.position + n)
+			if e is StructureState and e.owner == s.owner and (e as StructureState).type in sources:
+				d += aura
+				break
+	return d
 
 
 ## The attack value [method damage] charges against [param attacker]: the
@@ -91,7 +134,15 @@ static func damage(state: GameState, attacker: EntityState, defender: EntityStat
 ## stay typed to [EntityState] (not [code]UnitState[/code]) so no signature
 ## change is needed then.
 static func _effective_attack_for(state: GameState, attacker: EntityState) -> int:
-	return Unit.effective_attack(state, attacker) if attacker is UnitState else attacker.type.attack
+	if attacker is UnitState:
+		return Unit.effective_attack(state, attacker)
+	# ★ 2026-10-01 (tech trees): Fortifications for armed structures; Hardpoints arms the HQ.
+	var a: int = attacker.type.attack
+	if a > 0:
+		a += Research.sum(state, attacker.owner, &"defensive_attack_bonus")
+	if attacker is StructureState and (attacker as StructureState).is_hq():
+		a = maxi(a, Research.sum(state, attacker.owner, &"hq_attack"))
+	return a
 
 
 ## The AP cost [param attacker] spends to attack (ADR-0010, TR-combat-012,
@@ -120,6 +171,9 @@ static func attack_cost_for(attacker: EntityState) -> int:
 	var cost: int = CombatBalance.combat.attack_cost
 	if attacker.type.area_shape != UnitTypeDef.AreaShape.SINGLE:
 		cost += CombatBalance.combat.area_ap_surcharge
+	# ★ 2026-10-01 (tech trees): Fire Discipline, cached on the unit (this query has no state).
+	if attacker is UnitState:
+		cost = maxi(1, cost - (attacker as UnitState).tech_attack_ap_discount)
 	return cost
 
 
@@ -169,7 +223,7 @@ static func area_victims(state: GameState, attacker: EntityState, from_tile: Vec
 	tiles.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return a.y < b.y or (a.y == b.y and a.x < b.x))
 	for t: Vector2i in tiles:
 		var e: EntityState = state.entity_at(t)
-		if e == null or e == attacker or not can_target(attacker, e):
+		if e == null or e == attacker or not can_target(attacker, e, state):
 			continue
 		out.append(e)
 	return out
@@ -285,7 +339,7 @@ static func _walk_direction(state: GameState, attacker: EntityState, origin: Vec
 			var occupant: EntityState = state.entity_at(tile)
 			# ★ UC-4: something this attacker cannot target does not block its line either —
 			# a ground gun fires under an aircraft, an anti-air gun over a tank.
-			if not can_target(attacker, occupant):
+			if not can_target(attacker, occupant, state):
 				continue
 			if occupant.owner != attacker.owner:
 				return _WalkResult.new(BlockedReason.NONE, TargetResult.new(occupant_id, tile))
@@ -374,11 +428,16 @@ static func legal_targets_from(state: GameState, attacker: EntityState, from_til
 ## UC-4). A unit target is legal iff its class is in the attacker's
 ## [code]can_target[/code]. A STRUCTURE counts as a ground target — attackable by anything
 ## that can hit infantry or ground vehicles, so a Fighter (air-only) cannot hit a building.
-static func can_target(attacker: EntityState, target: EntityState) -> bool:
+static func can_target(attacker: EntityState, target: EntityState, state: GameState = null) -> bool:
 	if target == null:
 		return false
 	var classes: Array[int] = attacker.type.can_target
 	if target is UnitState:
+		# ★ 2026-10-01 (tech trees): Flak Batteries lets armed structures hit aircraft.
+		if state != null and attacker is StructureState \
+				and (target as UnitState).type.unit_class == UnitTypeDef.UnitClass.AIR \
+				and Research.sum(state, attacker.owner, &"defensive_anti_air") > 0:
+			return true
 		return (target as UnitState).type.unit_class in classes
 	return UnitTypeDef.UnitClass.INFANTRY in classes or UnitTypeDef.UnitClass.GROUND_VEHICLE in classes
 
@@ -434,7 +493,7 @@ static func _area_targets_from(state: GameState, attacker: EntityState, from_til
 				continue
 			var tile := Vector2i(x, y)
 			var occupant: EntityState = state.entity_at(tile)
-			if occupant.owner == attacker.owner or not can_target(attacker, occupant):
+			if occupant.owner == attacker.owner or not can_target(attacker, occupant, state):
 				continue
 			var dist: int = state.grid.manhattan_distance(from_tile, tile)
 			if dist < min_range or dist > attack_range:
@@ -639,6 +698,11 @@ static func apply(state: GameState, action: AttackAction) -> Array[Event]:
 		events.append(DamageEvent.new(attacker.entity_id, victims[i].entity_id, dmgs[i]))
 	for v: EntityState in victims:
 		if v.current_hp <= 0:
+			# ★ 2026-10-01 (tech trees): Salvage — a share of an enemy UNIT's price back to the killer.
+			if v is UnitState and v.owner != attacker.owner:
+				var pct: int = Research.sum(state, attacker.owner, &"kill_refund_pct")
+				if pct > 0:
+					Credits.credit(state, attacker.owner, Unit.effective_produce_cost(state, (v as UnitState).type, v.owner) * pct / 100)
 			events.append_array(state.destroy_entity(v.entity_id))
 	# ★ PV-6: merit AFTER all deaths, rank changes after merit — never mid-resolution.
 	for v: EntityState in victims:
@@ -650,7 +714,7 @@ static func apply(state: GameState, action: AttackAction) -> Array[Event]:
 	# attacker is a legal target under the DEFENDER's own targeting profile.
 	# Free (no AP, no has_attacked write); structurally non-recursive (one
 	# straight-line block, never a loop or a call back into apply()).
-	if target.current_hp > 0 and target.type.can_counterattack and _in_defenders_profile(state, target, attacker):
+	if target.current_hp > 0 and _can_counter(state, target) and _in_defenders_profile(state, target, attacker):
 		var counter_dmg: int = damage(state, target, attacker)   # roles swapped
 		Ammo.spend(target)   # a counter is still a shot fired (2026-10-01)
 		_apply_damage_to(attacker, counter_dmg)                  # polymorphic — attacker may be a StructureState (Story 005)
@@ -665,6 +729,15 @@ static func apply(state: GameState, action: AttackAction) -> Array[Event]:
 	return events
 
 
+## ★ 2026-10-01 (tech trees): whether [param defender] counterattacks — its type says so, or it
+## is an armed structure and its owner holds Overwatch Grid.
+static func _can_counter(state: GameState, defender: EntityState) -> bool:
+	if defender.type.can_counterattack:
+		return true
+	return defender is StructureState and _effective_attack_for(state, defender) > 0 \
+		and Research.any(state, defender.owner, &"defensive_counterattack")
+
+
 ## Applies [param dmg] to [param target]'s current hp, polymorphic over
 ## defender kind (ADR-0010) — the shared exit point [method apply] calls so it
 ## never needs an [code]is UnitState[/code] branch of its own. A
@@ -677,7 +750,7 @@ static func _apply_damage_to(target: EntityState, dmg: int) -> void:
 	if target is UnitState:
 		Unit.apply_hp_delta(target, -dmg)   # unit-owned mutator (existing hp-clamp path)
 	else: # StructureState — Base & Production owns structure hp; clamp inline until that epic lands
-		target.current_hp = clampi(target.current_hp - dmg, 0, target.type.hp)  # TODO(base-production): structure hp mutator
+		target.current_hp = clampi(target.current_hp - dmg, 0, Structure.effective_max_hp(target))  # TODO(base-production): structure hp mutator
 
 
 ## True iff [param would_be_target] is a legal target for [param defender],

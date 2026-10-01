@@ -62,6 +62,9 @@ const KNOWN_FIELDS: Array[String] = [
 	"merit", "rank",
 	# ★ Ammo (2026-10-01) — a lookahead that forgot spent ammo would plan shots it can't fire.
 	"ammo_spent",
+	# ★ Tech trees (2026-10-01) — cached tech bonuses; a lookahead that lost them would misjudge
+	# hp, reach, ammo and attack price.
+	"tech_hp_bonus", "tech_move_bonus", "tech_ammo_bonus", "tech_attack_ap_discount",
 ]
 
 

@@ -40,9 +40,16 @@ static func uses_ammo(type: UnitTypeDef) -> bool:
 	return max_ammo(type) > 0
 
 
+## [param unit]'s full load: its type's, plus the cached tech bonus (Supply Lines, Ammo Surplus)
+## for a unit that uses ammo at all. 0 = unlimited.
+static func unit_max(unit: UnitState) -> int:
+	var m: int = max_ammo(unit.type)
+	return m + unit.tech_ammo_bonus if m > 0 else 0
+
+
 ## Attacks [param unit] has left, or -1 when it doesn't use ammo.
 static func remaining(unit: UnitState) -> int:
-	var m: int = max_ammo(unit.type)
+	var m: int = unit_max(unit)
 	if m <= 0:
 		return -1
 	return maxi(0, m - unit.ammo_spent)
@@ -71,13 +78,20 @@ static func resupply_turn(state: GameState, player: int) -> Array[Event]:
 	var events: Array[Event] = []
 	if state.grid == null:
 		return events   # board-less states (unit-test fixtures): nothing is adjacent to anything
+	# ★ 2026-10-01 (tech trees): Forward Depots widen the reach; Field Workshops heal there too.
+	var reach: int = maxi(1, Research.sum(state, player, &"resupply_range"))
+	var heal: int = Research.sum(state, player, &"supply_heal")
+	var healed: Dictionary = {}
 	for e: EntityState in state.entities():
 		if e.owner != player or not (e is StructureState) or not is_resupplier(e as StructureState):
 			continue
-		for d: Vector2i in _NEIGHBOURS:
+		for d: Vector2i in _offsets(reach):
 			var u: EntityState = state.entity_at(e.position + d)
 			if not (u is UnitState) or u.owner != player:
 				continue
+			if heal > 0 and not healed.has(u.entity_id):
+				healed[u.entity_id] = true
+				Unit.apply_hp_delta(u as UnitState, heal)
 			for unit: UnitState in [u as UnitState] + Unit.all_carried(u as UnitState):
 				if unit.ammo_spent > 0 and uses_ammo(unit.type):
 					unit.ammo_spent = 0
@@ -87,3 +101,17 @@ static func resupply_turn(state: GameState, player: int) -> Array[Event]:
 					evt.supplier_id = e.entity_id
 					events.append(evt)
 	return events
+
+
+## Every tile offset within Manhattan distance [param reach] (1 = the four neighbours).
+static func _offsets(reach: int) -> Array[Vector2i]:
+	if reach <= 1:
+		return _NEIGHBOURS
+	var out: Array[Vector2i] = []
+	for dy: int in range(-reach, reach + 1):
+		for dx: int in range(-reach, reach + 1):
+			var m: int = absi(dx) + absi(dy)
+			if m >= 1 and m <= reach:
+				out.append(Vector2i(dx, dy))
+	return out
+

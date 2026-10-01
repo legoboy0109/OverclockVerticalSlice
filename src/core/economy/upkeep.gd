@@ -87,7 +87,9 @@ static func total_upkeep(state: GameState, player: int) -> int:
 				continue
 			total += st.type.upkeep
 	# D9: a faction's upkeep rate, folded here and nowhere else (CR-4). Floored at 0.
-	return maxi(0, total * (100 + Faction.upkeep_pct_delta(state, player)) / 100)
+	# ★ 2026-10-01 (tech trees): Quartermasters folds in the same place.
+	var pct: int = Faction.upkeep_pct_delta(state, player) - Research.sum(state, player, &"upkeep_discount_pct")
+	return maxi(0, total * (100 + pct) / 100)
 
 
 ## [param player]'s [b]net[/b] Credit income: gross income minus total upkeep.
