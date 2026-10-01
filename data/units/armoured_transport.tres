@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Armoured Transport.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 74754d6bcadcaa1f5a9637fe1b557aeb9d74605690db197a88f533c75702cdde
+; source-sha256: d578196dd1436b0fe7adbfc5ce7b8bbbeba9254ffbf3e59dee9144660c025139
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -18,7 +18,7 @@ soft_move_cap = 3
 produce_cost = 1300
 production_turns = 2
 max_ammo = -1
-upkeep = 600
+upkeep = 300
 ground_offset_px = 9
 counts_toward_cap = false
 can_counterattack = false

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Battery.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 163e711cad3c754fc19af0dc8dbbb9ac82f13ff2b48e8f08b2b3c4700eb3a8b8
+; source-sha256: 53be990aea82f6d86ba1962d0b0751f6893d2eee0f18296cd9038374d2019826
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -18,7 +18,7 @@ soft_move_cap = 3
 produce_cost = 1700
 production_turns = 3
 max_ammo = -1
-upkeep = 900
+upkeep = 450
 ground_offset_px = 11
 counts_toward_cap = false
 can_counterattack = false

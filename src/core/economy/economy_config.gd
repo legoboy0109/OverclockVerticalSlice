@@ -97,8 +97,14 @@ extends Resource
 ## ([method Upkeep.default_upkeep]). Cheaper infantry and dearer vehicles, so that with the
 ## infantry cap raised to 16 upkeep — not the cap — still limits army size, and infantry keep a
 ## late-game niche besides piloting. Percent of the price-derived figure.
-@export var infantry_upkeep_pct: int = 75
-@export var vehicle_upkeep_pct: int = 150
+## ★ 2026-10-01 (user decision): vehicles 150 -> 75 "so the AI fields more vehicles" — at 150 a
+## Tank's upkeep equalled 5 Troopers' and the AI's army upkeep already ate its whole income —
+## and then infantry 75 -> 50 ("reduce the infantry" upkeep). Measured (12-game batches): vehicle
+## production share Accord 7% -> 11%, Wolf v Ross 3% -> 7%; armies on the board grow (Accord
+## 3.2 -> 3.8 per side, toward the 7-9 target above) and Crossroads games run longer (77 -> 106
+## turns). 60% infantry was worse on both counts (vehicle share fell, round-cap stalemates).
+@export var infantry_upkeep_pct: int = 50
+@export var vehicle_upkeep_pct: int = 75
 
 ## Rounding step for derived upkeep. ★ LOAD-BEARING, not cosmetic: before the ×100
 ## Credit rescale the derivation was a bare `ceil(produce_cost / 3)`, and it produced

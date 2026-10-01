@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Strafer.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: a9c949288b57972a0916ec06e3b0b85a55f5153b8e5564e1286814b8c53db78e
+; source-sha256: 987597c16191d51bd9291d5b6e54012176371c53f9a6f54387e207a23c893f3b
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -18,7 +18,7 @@ soft_move_cap = 8
 produce_cost = 1400
 production_turns = 2
 max_ammo = -1
-upkeep = 750
+upkeep = 380
 ground_offset_px = 0
 counts_toward_cap = false
 can_counterattack = false

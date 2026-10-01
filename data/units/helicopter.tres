@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Helicopter.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 777de9255732d914373413617d5fc309f08f62a810b56654d739cbf8e4f4615b
+; source-sha256: 01d5e9c7638dc7fab2d5285a404447edf74bae5c2a3907fce63d2f4150a12226
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -18,7 +18,7 @@ soft_move_cap = 6
 produce_cost = 1200
 production_turns = 2
 max_ammo = -1
-upkeep = 600
+upkeep = 300
 ground_offset_px = 0
 counts_toward_cap = false
 can_counterattack = false

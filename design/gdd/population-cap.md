@@ -172,6 +172,16 @@ can look at the board and know both sides' ceilings.
 > cannot comfortably sustain a full one.** The cap is the wall; upkeep is what makes you stop before
 > you reach it. If either number moves, re-check this paragraph.
 >
+> ### ★ CHANGED 2026-10-01 (user decision) — late game, the cap binds, not upkeep
+>
+> Upkeep was cut (vehicles ×1.5 → ×0.75, infantry ×0.75 → ×0.5 of the price-derived figure) so
+> the AI fields vehicles. A Trooper now costs 100/turn, so a fully-researched economy sustains
+> ~23 infantry against a cap of 16: **late game the cap is the wall and upkeep no longer bites
+> for infantry.** Before the economy is researched upkeep still binds first, and that is where
+> armies actually sit (3–5 per side in AI-vs-AI sims). The paragraphs below describe the earlier
+> rule and are kept as history. Pinned by
+> `tests/unit/population_cap_test.gd::test_upkeep_binds_early_and_the_cap_binds_late_on_a_realistic_build`.
+>
 > ### ⚠ CORRECTED 2026-08-24 during S6-04 implementation — the worked example compared two different builds
 >
 > The claim below ("cap 10, sustainable 8–9") was reached by comparing the **full** cap

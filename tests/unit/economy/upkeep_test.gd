@@ -77,19 +77,19 @@ func test_shipped_roster_upkeep_matches_the_derived_convention() -> void:
 	assert_int(UnitTypes.HEAVY.upkeep).is_equal(Upkeep.default_upkeep(UnitTypes.HEAVY.produce_cost, UnitTypes.HEAVY.unit_class))
 
 
-func test_shipped_roster_upkeep_is_80_150_150_230() -> void:
-	# 2026-09-29: infantry upkeep ×0.75 (was 100/200/200/300) — user decision.
-	assert_int(UnitTypes.SCOUT.upkeep).is_equal(80)
-	assert_int(UnitTypes.TROOPER.upkeep).is_equal(150)
-	assert_int(UnitTypes.SNIPER.upkeep).is_equal(150)
-	assert_int(UnitTypes.HEAVY.upkeep).is_equal(230)
+func test_shipped_roster_upkeep_is_50_100_100_150() -> void:
+	# 2026-09-29: infantry upkeep ×0.75 (was 100/200/200/300); 2026-10-01 ×0.5 — user decisions.
+	assert_int(UnitTypes.SCOUT.upkeep).is_equal(50)
+	assert_int(UnitTypes.TROOPER.upkeep).is_equal(100)
+	assert_int(UnitTypes.SNIPER.upkeep).is_equal(100)
+	assert_int(UnitTypes.HEAVY.upkeep).is_equal(150)
 
 
-func test_vehicles_pay_more_upkeep_than_the_price_formula_alone() -> void:
-	# The other half of the 2026-09-29 decision: vehicles ×1.5.
+func test_tank_upkeep_follows_the_vehicle_rate() -> void:
+	# 2026-09-29 vehicles ×1.5; 2026-10-01 (user decision) cut to ×0.75 so the AI fields vehicles.
 	assert_int(UnitTypes.TANK.upkeep).is_equal(
 		Upkeep.default_upkeep(UnitTypes.TANK.produce_cost, UnitTypes.TANK.unit_class))
-	assert_int(UnitTypes.TANK.upkeep).is_equal(750)
+	assert_int(UnitTypes.TANK.upkeep).is_equal(380)
 
 
 func test_every_entity_upkeep_is_non_negative() -> void:
@@ -147,10 +147,10 @@ func test_destroyed_entity_contributes_nothing_from_that_moment() -> void:
 
 func test_total_upkeep_sums_units_and_structures() -> void:
 	var state := _state()
-	_add_unit(state, 0, UnitTypes.SCOUT, Vector2i(0, 1))     # 80
-	_add_unit(state, 0, UnitTypes.HEAVY, Vector2i(1, 1))     # 230
+	_add_unit(state, 0, UnitTypes.SCOUT, Vector2i(0, 1))     # 50
+	_add_unit(state, 0, UnitTypes.HEAVY, Vector2i(1, 1))     # 150
 	_add_structure(state, 0, StructureTypes.RESEARCH_LAB, Vector2i(2, 1))  # 200
-	assert_int(Upkeep.total_upkeep(state, 0)).is_equal(510)
+	assert_int(Upkeep.total_upkeep(state, 0)).is_equal(400)
 
 
 func test_total_upkeep_counts_only_the_named_players_entities() -> void:
@@ -193,8 +193,10 @@ func test_apply_turn_economy_banks_net_income() -> void:
 func test_deficit_drains_the_bank_but_never_below_zero() -> void:
 	var state := _state()
 	state.per_player[0].current_credits = 500
-	for i: int in range(12):
-		_add_unit(state, 0, UnitTypes.HEAVY, Vector2i(i, 3))
+	# Enough Heavies that upkeep outruns income (sized from the live numbers, not a magic count).
+	var needed: int = Credits.credit_income(state, 0) / UnitTypes.HEAVY.upkeep + 6
+	for i: int in range(needed):
+		_add_unit(state, 0, UnitTypes.HEAVY, Vector2i(i % 8, 3 + i / 8))
 	Upkeep.apply_turn_economy(state, 0)
 	assert_int(state.per_player[0].current_credits).is_equal(0)
 	assert_bool(state.per_player[0].in_deficit).is_true()
