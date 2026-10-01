@@ -1,6 +1,6 @@
 ---
 id: assembly_lines
-description: Factories can build 2 units at once.
+description: Factories can build 2 units at once. +1,200 Credits of income every turn.
 tree: economy
 tier: 3
 research_cost: 1600
@@ -12,6 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: eco_fd
 factions: []
+economy_tier_bonus: 1
 replaces:
 - '[[Mass Production]]'
 production_cap_bonus: 1

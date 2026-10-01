@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Foundry.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: e45984aa4a7990272b66405f585f003556f4af2ba2ac7ae84332fb22908b98e6
+; source-sha256: d07f76eb1fcd098cec8808365623b1fa09b2f12a1d2de4d15200861f735cb697
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/economy_1.tres" id="2"]
@@ -9,7 +9,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Foundry"
-description = "Units cost 25% fewer Credits."
+description = "Units cost 25% fewer Credits. +800 Credits of income every turn."
 tier = 2
 research_cost = 1200
 research_time = 3
@@ -23,7 +23,7 @@ defense_bonus = 0
 attack_range_bonus = 0
 ignores_cover = false
 idle_heal = 0
-economy_tier_bonus = 0
+economy_tier_bonus = 1
 produce_ap_discount = 0
 build_ap_discount = 0
 produce_cost_discount_pct = 25

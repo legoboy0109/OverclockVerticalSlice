@@ -1,6 +1,6 @@
 ---
 id: logistics
-description: Producing and building cost 1 less AP.
+description: Producing and building cost 1 less AP. +800 Credits of income every turn.
 tree: economy
 tier: 2
 research_cost: 1200
@@ -12,6 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: eco_ib
 factions: []
+economy_tier_bonus: 1
 produce_ap_discount: 1
 build_ap_discount: 1
 ---

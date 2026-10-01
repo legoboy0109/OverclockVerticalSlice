@@ -1,6 +1,6 @@
 ---
 id: field_workshops
-description: Units beside a supply structure heal 2 HP at the start of your turn.
+description: Units beside a supply structure heal 2 HP at the start of your turn. +1,200 Credits of income every turn.
 tree: economy
 tier: 3
 research_cost: 1600
@@ -12,6 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: eco_fwd
 factions: []
+economy_tier_bonus: 1
 supply_heal: 2
 ---
 

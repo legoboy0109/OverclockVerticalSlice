@@ -1,6 +1,6 @@
 ---
 id: forward_depots
-description: Supply structures resupply units up to 2 tiles away.
+description: Supply structures resupply units up to 2 tiles away. +800 Credits of income every turn.
 tree: economy
 tier: 2
 research_cost: 1200
@@ -12,6 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: eco_sl
 factions: []
+economy_tier_bonus: 1
 resupply_range: 2
 ---
 

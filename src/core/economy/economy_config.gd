@@ -10,7 +10,7 @@
 ## and read via [code]Balance.economy[/code] — never threaded through call
 ## sites as an explicit parameter. Its ten fields fall in three groups
 ## (the 2026-08-05 AP↔Credits pivot added the last five):
-## [br]• [b]Credit-income curve[/b] (`base_income`, `econ_tier_bonus`, `max_economy_tier`)
+## [br]• [b]Credit-income curve[/b] (`base_income`, `econ_tier_bonuses`, `max_economy_tier`)
 ##   — read by [code]Credits.credit_income()[/code] (the research-tier income curve).
 ## [br]• [b]AP tactical budget[/b] (`flat_ap_per_turn`, `ap_carryover_cap`) — read by
 ##   [code]AP.reset_turn()[/code]. Flat per-turn, not income-driven.
@@ -27,7 +27,7 @@
 ## Usage:
 ## [codeblock]
 ## var cfg: EconomyConfig = Balance.economy
-## var income: int = cfg.base_income + cfg.econ_tier_bonus * tier
+## var income: int = cfg.base_income + Credits.tier_income(tier)
 ## [/codeblock]
 class_name EconomyConfig
 extends Resource
@@ -57,11 +57,15 @@ extends Resource
 ## of 3+ on 17-31% of turns (design/decision-log.md, "Army size is the real lever").
 @export var base_income: int = 1500
 
-## Credit income added per completed economy research tier.
-@export var econ_tier_bonus: int = 500
+## Credit income each economy research tier ADDS, in order: tier 1, tier 2, tier 3.
+## ★ 2026-10-01 (user decision): escalating, +500 / +800 / +1,200 (was a flat +500), and every
+## Economy-tree tech now grants a tier — so a fully researched economy earns 1,500 -> 4,000.
+## Faction slopes ([member FactionDef.econ_tier_bonus_delta], Ross +200) still add per tier.
+## Length must equal [member max_economy_tier].
+@export var econ_tier_bonuses: PackedInt32Array = PackedInt32Array([500, 800, 1200])
 
 ## Number of economy tiers that exist. ★ THIS IS THE ECONOMY'S HARD CEILING:
-## income tops out at `base_income + econ_tier_bonus * max_economy_tier` (2,500)
+## income tops out at `base_income + sum(econ_tier_bonuses)` (4,000)
 ## and cannot grow further by any means. Raising it re-opens the unbounded-economy
 ## defect the PIVOT verdict diagnosed — do not treat it as a routine tuning knob.
 @export var max_economy_tier: int = 3
@@ -75,9 +79,8 @@ extends Resource
 ## AI's load-time lethal-floor invariant computable against a real number instead of a
 ## literal. ★ Move to Research's own config resource when that system lands (S6-05+).
 ##
-## Flat +[member econ_tier_bonus] per tier against an escalating cost gives diminishing
-## returns on investment without a diminishing benefit: each tier still feels like a
-## real upgrade, but the third pays back in ~7 turns against a 30-round match.
+## (Legacy: these costs predate the branching tech trees, whose Economy techs carry their own
+## prices; only the AI's load-time lethal-floor invariant still reads tier 1's.)
 @export var econ_tier_costs: PackedInt32Array = PackedInt32Array([1000, 2000, 3500])
 
 # --- Upkeep (the Credit drain; S6-02, unit-upkeep.md) ------------------------

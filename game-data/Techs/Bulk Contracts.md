@@ -1,6 +1,6 @@
 ---
 id: bulk_contracts
-description: Structures cost 25% fewer Credits.
+description: Structures cost 25% fewer Credits. +1,200 Credits of income every turn.
 tree: economy
 tier: 3
 research_cost: 1600
@@ -12,6 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: eco_rr
 factions: []
+economy_tier_bonus: 1
 structure_cost_discount_pct: 25
 ---
 

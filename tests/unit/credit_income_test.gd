@@ -26,7 +26,8 @@ func _state_with_tier(tier: int) -> GameState:
 	return state
 
 
-# --- The curve itself: 1500 / 2000 / 2500 / 3000 (base 1000 -> 1500 on 2026-09-29, user decision) ---
+# --- The curve itself: 1500 / 2000 / 2800 / 4000 (base 1500 since 2026-09-29; escalating tiers
+# +500 / +800 / +1200 since 2026-10-01 — user decisions) ---
 
 func test_credit_income_tier0_returns_base_income_only() -> void:
 	assert_int(Credits.credit_income(_state_with_tier(0), 0)).is_equal(1500)
@@ -36,12 +37,12 @@ func test_credit_income_tier1_returns_2000() -> void:
 	assert_int(Credits.credit_income(_state_with_tier(1), 0)).is_equal(2000)
 
 
-func test_credit_income_tier2_returns_2500() -> void:
-	assert_int(Credits.credit_income(_state_with_tier(2), 0)).is_equal(2500)
+func test_credit_income_tier2_returns_2800() -> void:
+	assert_int(Credits.credit_income(_state_with_tier(2), 0)).is_equal(2800)
 
 
-func test_credit_income_tier3_returns_3000_the_hard_ceiling() -> void:
-	assert_int(Credits.credit_income(_state_with_tier(3), 0)).is_equal(3000)
+func test_credit_income_tier3_returns_4000_the_hard_ceiling() -> void:
+	assert_int(Credits.credit_income(_state_with_tier(3), 0)).is_equal(4000)
 
 
 # --- The ceiling is HARD. This is the PIVOT fix's rate-bound half. ---
@@ -49,8 +50,8 @@ func test_credit_income_tier3_returns_3000_the_hard_ceiling() -> void:
 func test_credit_income_above_max_tier_still_returns_the_ceiling() -> void:
 	# A tier value beyond max_economy_tier must not keep paying. The whole point of
 	# re-basing onto research is that the economy STOPS growing.
-	assert_int(Credits.credit_income(_state_with_tier(4), 0)).is_equal(3000)
-	assert_int(Credits.credit_income(_state_with_tier(99), 0)).is_equal(3000)
+	assert_int(Credits.credit_income(_state_with_tier(4), 0)).is_equal(4000)
+	assert_int(Credits.credit_income(_state_with_tier(99), 0)).is_equal(4000)
 
 
 func test_credit_income_negative_tier_clamps_to_base() -> void:
@@ -89,7 +90,7 @@ func test_credit_income_reads_each_player_tier_independently() -> void:
 	var state: GameState = GameStateFactory.make_state(2, 0)
 	state.per_player[0].economy_tier = 3
 	state.per_player[1].economy_tier = 0
-	assert_int(Credits.credit_income(state, 0)).is_equal(3000)
+	assert_int(Credits.credit_income(state, 0)).is_equal(4000)
 	assert_int(Credits.credit_income(state, 1)).is_equal(1500)
 
 
@@ -118,6 +119,30 @@ func test_add_income_banks_the_tiered_amount() -> void:
 	var state: GameState = _state_with_tier(2)
 	state.per_player[0].current_credits = 0
 	Credits.add_income(state, 0)
-	assert_int(state.per_player[0].current_credits).is_equal(2500)
+	assert_int(state.per_player[0].current_credits).is_equal(2800)
 	Credits.add_income(state, 0)
-	assert_int(state.per_player[0].current_credits).is_equal(5000)
+	assert_int(state.per_player[0].current_credits).is_equal(5600)
+
+
+# --- 2026-10-01 (user decision): escalating tiers, granted by every Economy-tree tech -----------
+
+func test_every_economy_tree_tech_grants_one_income_tier() -> void:
+	var seen: int = 0
+	for t: TechDef in Techs.ALL:
+		if t.tree == "economy":
+			seen += 1
+			assert_int(t.economy_tier_bonus).override_failure_message(
+				"%s is an Economy-tree tech but grants no income tier" % t.display_name).is_equal(1)
+	assert_int(seen).override_failure_message("no Economy-tree techs found — the check is vacuous").is_greater_equal(14)   # the shared Economy techs (faction swaps live elsewhere)
+
+
+func test_ross_full_economy_overtakes_the_baseline() -> void:
+	# Ross: -300 base, +500 per tier on top of +500/+800/+1200 -> 1,200 early, 5,200 fully researched.
+	var state: GameState = GameStateFactory.make_state(2, 0)
+	state.per_player[0].faction = Factions.MACHINISTS_UNION
+	state.per_player[1].faction = Factions.DEMOCRATIC_ALLIANCE
+	assert_int(Credits.credit_income(state, 0)).is_equal(1200)
+	state.per_player[0].economy_tier = 3
+	state.per_player[1].economy_tier = 3
+	assert_int(Credits.credit_income(state, 0)).is_equal(5200)
+	assert_int(Credits.credit_income(state, 1)).is_equal(4000)

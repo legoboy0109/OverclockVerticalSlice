@@ -1,6 +1,6 @@
 ---
 id: supply_lines
-description: Vehicles and aircraft +1 ammo; Supply Depots cost 50% less.
+description: Vehicles and aircraft +1 ammo; Supply Depots cost 50% less. +500 Credits of income every turn.
 tree: economy
 tier: 1
 research_cost: 800
@@ -10,6 +10,7 @@ requires: []
 requires_structures: []
 exclusive_group: eco_t1
 factions: []
+economy_tier_bonus: 1
 ammo_bonus: 1
 depot_cost_discount_pct: 50
 ---

@@ -1,6 +1,6 @@
 ---
 id: foundry
-description: Units cost 25% fewer Credits.
+description: Units cost 25% fewer Credits. +800 Credits of income every turn.
 tree: economy
 tier: 2
 research_cost: 1200
@@ -12,6 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: eco_ib
 factions: []
+economy_tier_bonus: 1
 produce_cost_discount_pct: 25
 ---
 

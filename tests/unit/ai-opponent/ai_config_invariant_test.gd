@@ -27,13 +27,13 @@ extends GdUnitTestSuite
 
 # ★ S6-01 (2026-08-24): re-pointed off the deleted per-outpost income curve onto the
 # research-tier model. The ratio is UNCHANGED and so is every expected value below --
-# econ_tier_bonus/first_tier_cost = 500/1000 = 0.5, exactly as the old
+# econ_tier_bonuses[0]/first_tier_cost = 500/1000 = 0.5, exactly as the old
 # outpost_bonus_tier1/build_cost = 2/4 did. The invariant's meaning is identical
 # (the AI's lethal floor must exceed the best economic score available); only its
 # subject moved from "the first outpost" to "the first economy tier".
 func _default_economy() -> EconomyConfig:
 	var cfg := EconomyConfig.new()
-	cfg.econ_tier_bonus = 500
+	cfg.econ_tier_bonuses = PackedInt32Array([500, 800, 1200])
 	cfg.econ_tier_costs = PackedInt32Array([1000, 2000, 3500])
 	return cfg
 

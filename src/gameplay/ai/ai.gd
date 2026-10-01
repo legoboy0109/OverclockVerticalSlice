@@ -2464,7 +2464,7 @@ static func _tech_research_value(lookahead: GameState, player: int, tech: TechDe
 			_foundry_tech_marginal_value(lookahead, player, tech))
 	if tech.economy_tier_bonus != 0:
 		total += _research_value(tech.research_time, mini(horizon, AIBalance.ai.economy_horizon), \
-			credits_to_ap(_economy_tech_marginal_value(Balance.economy.econ_tier_bonus, 0, 0)))
+			credits_to_ap(_economy_tech_marginal_value(Credits.next_tier_income(lookahead, player), 0, 0)))
 	var tree_value: float = _tree_effects_marginal_value(lookahead, player, tech)
 	if tree_value > 0.0:
 		total += _research_value(tech.research_time, horizon, tree_value)
