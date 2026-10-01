@@ -10,16 +10,7 @@ structures:
 - '[[Supply Depot]]'
 - '[[Research Lab]]'
 - '[[Defensive Structure]]'
-techs:
-- '[[Attack Tech]]'
-- '[[Defense Tech]]'
-- '[[Economy Tech]]'
-- '[[Penetration]]'
-- '[[Volley]]'
-- '[[Plating]]'
-- '[[Field Repair]]'
-- '[[Logistics]]'
-- '[[Foundry]]'
+techs: []
 infantry_cap_delta: 0
 base_income_delta: 0
 upkeep_pct_delta: 0

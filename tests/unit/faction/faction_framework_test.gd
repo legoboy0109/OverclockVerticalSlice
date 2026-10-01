@@ -329,12 +329,21 @@ func test_doctrine_strengthens_vehicles_only() -> void:
 	levy.type = UnitTypes.LEVY
 	var w_atk: int = Unit.effective_attack(state, walker)
 	var l_atk: int = Unit.effective_attack(state, levy)
-	GameStateFactory.grant_tech(state, 0, Techs.DOCTRINE_III)
+	GameStateFactory.grant_tech(state, 0, Techs.DOCTRINE)   # ★ 2026-10-01: Doctrine I-III folded into one swap
 	assert_int(Unit.effective_attack(state, walker)).is_equal(w_atk + 1)
 	assert_int(Unit.effective_defense(state, walker)).is_equal(UnitTypes.AEGIS_WALKER.defense + 1)
 	assert_int(Unit.effective_attack(state, levy)).is_equal(l_atk)
 
 
-func test_doctrine_is_strictly_linear() -> void:
-	var state := _empire_state()
-	assert_int(Research.availability(state, 0, Techs.DOCTRINE_II)).is_equal(Action.Reason.PREREQUISITE_MISSING)
+func test_doctrine_takes_combined_arms_slot_in_the_order_tree() -> void:
+	# ★ 2026-10-01 (tech trees): the Order's Doctrine replaces Combined Arms (same tier, parent and
+	# pair), and Combined Arms is not in the Order's tree.
+	var order: FactionDef = null
+	for f: FactionDef in Factions.playable():
+		if Techs.DOCTRINE in f.techs:
+			order = f
+	assert_object(order).is_not_null()
+	assert_bool(Techs.COMBINED_ARMS in order.techs).is_false()
+	assert_bool(Techs.COMBINED_ARMS in Techs.DOCTRINE.replaces).is_true()
+	assert_int(Techs.DOCTRINE.tier).is_equal(Techs.COMBINED_ARMS.tier)
+	assert_str(String(Techs.DOCTRINE.exclusive_group)).is_equal(String(Techs.COMBINED_ARMS.exclusive_group))

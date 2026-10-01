@@ -1,20 +1,20 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=2 format=3]
-; GENERATED from game-data/Techs/Economy Tech.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 73c7b1379e77e21dd4d15a24c6f76bb9a25414761c3b8dc6dca4ed1aeb140ddb
+; GENERATED from game-data/Techs/Industrial Base.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: c1bdd4f51c0817886d2da6a87e8415c660179ab14fad00bd638cb26285742d03
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
-display_name = "Economy Tech"
+display_name = "Industrial Base"
 description = "+500 Credits of income every turn."
 tier = 1
 research_cost = 1000
 research_time = 3
-ap_surcharge = -1
+ap_surcharge = 4
 prerequisites = []
 required_structures = []
-exclusive_group = &""
+exclusive_group = &"eco_t1"
 allowed_factions = []
 attack_bonus = 0
 defense_bonus = 0
@@ -28,3 +28,48 @@ produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
 vehicle_defense_bonus = 0
+tree = "economy"
+move_cap_bonus = 0
+vehicle_move_cap_bonus = 0
+infantry_move_cost_discount = 0
+attack_vs_armor = 0
+attack_vs_infantry = 0
+infantry_attack_vs_structures = 0
+vehicle_range_bonus = 0
+attack_ap_discount = 0
+infantry_cover_attack = 0
+cover_defense = 0
+infantry_hp_bonus = 0
+vehicle_hp_bonus = 0
+vehicle_self_repair = 0
+structure_hp_pct = 0
+structure_defense_bonus = 0
+defensive_attack_bonus = 0
+defensive_range_bonus = 0
+defensive_counterattack = false
+defensive_anti_air = 0
+hq_hp_bonus = 0
+hq_attack = 0
+hq_range = 0
+build_time_discount = 0
+ammo_bonus = 0
+depot_cost_discount_pct = 0
+resupply_range = 0
+supply_heal = 0
+rush_ap_discount = 0
+vehicle_rush_half = false
+vehicle_production_turn_discount = 0
+kill_refund_pct = 0
+ap_per_turn_bonus = 0
+upkeep_discount_pct = 0
+structure_cost_discount_pct = 0
+pop_cap_bonus = 0
+infantry_cost_discount_pct = 0
+production_cap_bonus = 0
+aura_defense_bonus = 0
+bonus_unit_attack = 0
+aircraft_attack_bonus = 0
+replaces = []
+bonus_unit_move_cap = 0
+bonus_unit_types = []
+aura_structures = []

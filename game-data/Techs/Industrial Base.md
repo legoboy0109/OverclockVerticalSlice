@@ -1,23 +1,16 @@
 ---
 id: economy_1
 description: +500 Credits of income every turn.
+tree: economy
 tier: 1
 research_cost: 1000
 research_time: 3
-ap_surcharge: -1
+ap_surcharge: 4
 requires: []
 requires_structures: []
-exclusive_group: ''
+exclusive_group: eco_t1
 factions: []
-attack_bonus: 0
-defense_bonus: 0
-attack_range_bonus: 0
-ignores_cover: false
-idle_heal: 0
 economy_tier_bonus: 1
-produce_ap_discount: 0
-build_ap_discount: 0
-produce_cost_discount_pct: 0
 ---
 
 ## Notes

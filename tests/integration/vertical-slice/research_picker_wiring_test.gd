@@ -90,8 +90,11 @@ func test_choosing_a_tech_from_the_picker_starts_research_at_the_hq() -> void:
 	assert_bool(_press_row(_menu(root), "Research")).override_failure_message(
 		"no enabled Research row on the HQ menu").is_true()
 	await get_tree().process_frame
-	# ★ 2026-10-01: the row label is the name alone; the description is a second line.
-	assert_bool(_press_row(_menu(root), "Attack Tech")).override_failure_message(
+	# ★ 2026-10-01 (branching trees): Research → a tree → the tech.
+	assert_bool(_press_row(_menu(root), "Offense")).override_failure_message(
+		"no Offense tree row in the research picker").is_true()
+	await get_tree().process_frame
+	assert_bool(_press_row(_menu(root), "Heavy Ordnance")).override_failure_message(
 		"no enabled Attack Tech row in the research picker: %s" % [_row_texts(_menu(root))]).is_true()
 	await get_tree().process_frame
 	assert_object(hq.research_target).override_failure_message(
@@ -99,19 +102,21 @@ func test_choosing_a_tech_from_the_picker_starts_research_at_the_hq() -> void:
 	).is_same(Techs.ATTACK_I)
 
 
-func test_the_picker_shows_locked_techs_with_their_reason() -> void:
-	# Locked techs are SEEN, not missing — the tree is part of what a player reads.
+func test_a_tree_shows_only_the_current_choice() -> void:
+	# ★ 2026-10-01 (branching trees): a fresh Offense tree offers its tier-1 pair and nothing deeper.
 	var root: VerticalSliceRoot = await _make_root()
 	_select_hq(root)
 	await get_tree().process_frame
 	_press_row(_menu(root), "Research")
 	await get_tree().process_frame
+	_press_row(_menu(root), "Offense")
+	await get_tree().process_frame
 	var texts: Array[String] = _row_texts(_menu(root))
-	var found: bool = false
-	for t: String in texts:
-		if t == "Penetration":   # ★ 2026-10-01: name alone; description is a second line
-			found = true
-	assert_bool(found).override_failure_message("Penetration missing from the picker: %s" % [texts]).is_true()
+	var joined: String = " | ".join(texts)
+	assert_bool(joined.contains("Heavy Ordnance")).override_failure_message(joined).is_true()
+	assert_bool(joined.contains("Rapid Deployment")).override_failure_message(joined).is_true()
+	assert_bool(joined.contains("Penetration")).override_failure_message(
+		"a tier-2 tech is shown before its parent: %s" % joined).is_false()
 
 
 func test_cancel_research_takes_two_presses() -> void:

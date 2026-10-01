@@ -1,24 +1,19 @@
 ---
 id: mech_autonomy
 description: Sentinel and Breaker mechs no longer need pilots. Crewed ones eject their pilot.
-tier: 2
-research_cost: 2000
-research_time: 3
-ap_surcharge: 2
-requires: []
+tree: economy
+tier: 3
+research_cost: 3000
+research_time: 4
+ap_surcharge: 8
+requires:
+- '[[Logistics]]'
 requires_structures:
 - '[[Research Lab]]'
-exclusive_group: ''
+exclusive_group: eco_lg
 factions: []
-attack_bonus: 0
-defense_bonus: 0
-attack_range_bonus: 0
-ignores_cover: false
-idle_heal: 0
-economy_tier_bonus: 0
-produce_ap_discount: 0
-build_ap_discount: 0
-produce_cost_discount_pct: 0
+replaces:
+- '[[Command Network]]'
 frees_pilots:
 - '[[Sentinel Mech]]'
 - '[[Breaker Mech]]'

@@ -2066,7 +2066,7 @@ func act_at_cursor() -> bool:
 ## the monotonic cost function, mirroring the AI's own conversion. Falls back to 1.
 func _tiles_for_cost(unit: UnitState, ap_cost: int) -> int:
 	var tiles: int = 1
-	while tiles <= unit.type.soft_move_cap + unit.tiles_moved_this_turn + 64:
+	while tiles <= Unit.soft_move_cap(unit) + unit.tiles_moved_this_turn + 64:
 		var c: int = Movement.move_path_cost(unit, tiles)
 		if c == ap_cost:
 			return tiles

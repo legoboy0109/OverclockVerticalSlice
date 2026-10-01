@@ -1,0 +1,77 @@
+[gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
+; GENERATED from game-data/Techs/Armor Piercing.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 50eed717369ab2b28d33c18aedca6c0c9525890a2b09e119b8a5e177b296b47a
+
+[ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/techs/penetration.tres" id="2"]
+[ext_resource type="Resource" path="res://data/structures/research_lab.tres" id="3"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Armor Piercing"
+description = "+2 attack against vehicles, aircraft and structures."
+tier = 3
+research_cost = 3000
+research_time = 4
+ap_surcharge = 8
+prerequisites = [ExtResource("2")]
+required_structures = [ExtResource("3")]
+exclusive_group = &"off_pen"
+allowed_factions = []
+attack_bonus = 0
+defense_bonus = 0
+attack_range_bonus = 0
+ignores_cover = false
+idle_heal = 0
+economy_tier_bonus = 0
+produce_ap_discount = 0
+build_ap_discount = 0
+produce_cost_discount_pct = 0
+frees_pilots = []
+vehicle_attack_bonus = 0
+vehicle_defense_bonus = 0
+tree = "offense"
+move_cap_bonus = 0
+vehicle_move_cap_bonus = 0
+infantry_move_cost_discount = 0
+attack_vs_armor = 2
+attack_vs_infantry = 0
+infantry_attack_vs_structures = 0
+vehicle_range_bonus = 0
+attack_ap_discount = 0
+infantry_cover_attack = 0
+cover_defense = 0
+infantry_hp_bonus = 0
+vehicle_hp_bonus = 0
+vehicle_self_repair = 0
+structure_hp_pct = 0
+structure_defense_bonus = 0
+defensive_attack_bonus = 0
+defensive_range_bonus = 0
+defensive_counterattack = false
+defensive_anti_air = 0
+hq_hp_bonus = 0
+hq_attack = 0
+hq_range = 0
+build_time_discount = 0
+ammo_bonus = 0
+depot_cost_discount_pct = 0
+resupply_range = 0
+supply_heal = 0
+rush_ap_discount = 0
+vehicle_rush_half = false
+vehicle_production_turn_discount = 0
+kill_refund_pct = 0
+ap_per_turn_bonus = 0
+upkeep_discount_pct = 0
+structure_cost_discount_pct = 0
+pop_cap_bonus = 0
+infantry_cost_discount_pct = 0
+production_cap_bonus = 0
+aura_defense_bonus = 0
+bonus_unit_attack = 0
+aircraft_attack_bonus = 0
+replaces = []
+bonus_unit_move_cap = 0
+bonus_unit_types = []
+aura_structures = []

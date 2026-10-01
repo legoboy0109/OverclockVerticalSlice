@@ -491,17 +491,22 @@ static func _move_entry(state: GameState, entity: EntityState) -> VerbEntry:
 ## already-attacked short-circuit.
 ## True when [param entity]'s type carries a weapon at all: some attack, some range and
 ## something it may target. A Volley-style range bonus never arms an unarmed type.
-static func has_weapon(entity: EntityState) -> bool:
+static func has_weapon(entity: EntityState, state: GameState = null) -> bool:
 	var t: Variant = entity.get("type")
 	if t == null:
 		return false
-	return int(t.attack) > 0 and int(t.attack_range) > 0 and not (t.can_target as Array).is_empty()
+	if (t.can_target as Array).is_empty():
+		return false
+	# With a state, research counts (Hardpoints arms the HQ).
+	if state != null:
+		return Combat._effective_attack_for(state, entity) > 0 and Unit.effective_attack_range(state, entity) > 0
+	return int(t.attack) > 0 and int(t.attack_range) > 0
 
 
 static func _attack_entry(state: GameState, entity: EntityState) -> VerbEntry:
 	# ★ 2026-10-01 (user decision): no weapon → no Attack row at all (it read "no targets" on
 	# every HQ, factory, Builder and Transport).
-	if not has_weapon(entity):
+	if not has_weapon(entity, state):
 		return VerbEntry.new(Verb.ATTACK, false, Reason.NO_WEAPON)
 	var can_still_attack: bool
 	if entity is UnitState:
@@ -717,7 +722,7 @@ static func _research_entry(state: GameState, entity: EntityState) -> VerbEntry:
 ## mapping its answer onto flags rather than re-deriving the rule (Pass-Through Invariant).
 ## Carries the rush's AP price, since like Attack it is one number known up front.
 static func _rush_entry(state: GameState, entity: EntityState) -> VerbEntry:
-	var cost: int = BaseProduction.rush_ap_cost()
+	var cost: int = BaseProduction.rush_ap_cost(state, entity as StructureState) if entity is StructureState else BaseProduction.rush_ap_cost()
 	if not (entity is StructureState) or entity.owner != state.active_player:
 		return VerbEntry.new(Verb.RUSH, false, Reason.NOTHING_TO_RUSH)
 	# ★ 2026-10-01 (user decision): a finished building that can only ever make infantry or
@@ -968,6 +973,45 @@ class ResearchOption extends RefCounted:
 ## [signal CommandInterface.commit_rejected]).
 ##
 ## O(techs) plus each tech's own O(1) gate/afford queries.
+## ★ 2026-10-01 (branching tech trees): the three trees, in menu order.
+const RESEARCH_TREES: Array[String] = ["offense", "defense", "economy"]
+
+
+## What the tree view shows for [param tree]: every tech already researched there (tier order),
+## then the CURRENT choices — techs whose only gates are "not researched yet", a missing Lab or
+## affordability. Locked branches (the pair you did not pick) and deeper tiers stay hidden, so
+## the player sees their path and the next fork, never the whole 14. Pure, testable.
+static func research_tree_view(options: Array[ResearchOption], tree: String) -> Array[ResearchOption]:
+	var done: Array[ResearchOption] = []
+	var next: Array[ResearchOption] = []
+	for o: ResearchOption in options:
+		if o.tech.tree != tree:
+			continue
+		match o.reason:
+			Action.Reason.ALREADY_RESEARCHED:
+				done.append(o)
+			Action.Reason.OK, Action.Reason.CANT_AFFORD, Action.Reason.CANT_AFFORD_CREDITS, \
+					Action.Reason.REQUIRES_STRUCTURE, Action.Reason.RESEARCH_IN_PROGRESS, Action.Reason.IN_DEFICIT:
+				next.append(o)
+	done.sort_custom(func(a: ResearchOption, b: ResearchOption) -> bool: return a.tech.tier < b.tech.tier)
+	return done + next
+
+
+## One line for the tree list: what is researched in [param tree], and whether a choice is open.
+static func research_tree_summary(options: Array[ResearchOption], tree: String) -> String:
+	var names: PackedStringArray = []
+	var open_choices: int = 0
+	for o: ResearchOption in research_tree_view(options, tree):
+		if o.reason == Action.Reason.ALREADY_RESEARCHED:
+			names.append(o.tech.display_name)
+		else:
+			open_choices += 1
+	var done: String = "Nothing researched yet" if names.is_empty() else ", ".join(names)
+	if open_choices == 0:
+		return done + "  ·  complete"
+	return done + "  ·  next: choose 1 of %d" % open_choices
+
+
 static func research_options(state: GameState, entity: EntityState) -> Array[ResearchOption]:
 	var options: Array[ResearchOption] = []
 	if not (entity is StructureState):

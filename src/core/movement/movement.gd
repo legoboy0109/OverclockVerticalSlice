@@ -223,7 +223,7 @@ static func _neighbors_in_fixed_order(grid: GridState, pos: Vector2i) -> Array[V
 ## The closed-form soft-move-cap cost summation for entering [param tiles_entered]
 ## tiles this turn, given [param unit]'s current
 ## [member UnitState.tiles_moved_this_turn]. The first
-## [code]unit.type.soft_move_cap - unit.tiles_moved_this_turn[/code] tiles
+## [code]Unit.soft_move_cap(unit) - unit.tiles_moved_this_turn[/code] tiles
 ## (floored at 0) cost [code]unit.type.move_cost[/code] each; every tile beyond
 ## costs the flat [method UnitBalance.surcharge_for] surcharge. Monotonically
 ## non-decreasing in [param tiles_entered] — the property [method reachable]'s
@@ -231,7 +231,7 @@ static func _neighbors_in_fixed_order(grid: GridState, pos: Vector2i) -> Array[V
 ## 002's [code]move_path_cost()[/code] billing — the reachable-vs-billed
 ## agreement invariant depends on there being exactly one implementation. O(1).
 static func _cost_for_depth(unit: UnitState, tiles_entered: int) -> int:
-	var c: int = unit.type.soft_move_cap
+	var c: int = Unit.soft_move_cap(unit)
 	var m: int = unit.tiles_moved_this_turn
 	var t: int = tiles_entered
 	var per_tile: int = Unit.crewed_move_cost(unit)   # TP-5d: a trained crew drives faster
@@ -246,7 +246,7 @@ static func _cost_for_depth(unit: UnitState, tiles_entered: int) -> int:
 ## ([code]max(0, soft_move_cap - tiles_moved_this_turn)[/code]) — a tile at
 ## exactly that boundary depth is not yet surcharged. O(1).
 static func _is_surcharged_at_depth(unit: UnitState, depth: int) -> bool:
-	return depth > max(0, unit.type.soft_move_cap - unit.tiles_moved_this_turn)
+	return depth > max(0, Unit.soft_move_cap(unit) - unit.tiles_moved_this_turn)
 
 
 ## The public forwarder for [method _cost_for_depth] — Story 002's billing

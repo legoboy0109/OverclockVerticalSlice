@@ -1,0 +1,20 @@
+---
+id: sappers
+description: Infantry get +3 attack against structures.
+tree: offense
+tier: 3
+research_cost: 3000
+research_time: 4
+ap_surcharge: 8
+requires:
+- '[[Infiltrators]]'
+requires_structures:
+- '[[Research Lab]]'
+exclusive_group: off_inf
+factions: []
+infantry_attack_vs_structures: 3
+---
+
+## Notes
+
+Part of the branching tech trees (design doc "Overclock Tech Trees", approved 2026-10-01).

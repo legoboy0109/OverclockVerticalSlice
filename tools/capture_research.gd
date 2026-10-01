@@ -24,7 +24,7 @@ func _run() -> void:
 	state.per_player[0].current_ap = 20
 	state.per_player[0].current_credits = 4200
 	var ps: PlayerState = state.per_player[0]
-	for t: TechDef in [Techs.ATTACK_I, Techs.DEFENSE_I, Techs.PLATING]:
+	for t: TechDef in [Techs.ATTACK_I, Techs.DEFENSE_I, Techs.PLATING]:   # Heavy Ordnance, Hardened Armor, Plating
 		ps.completed_techs.append(t)
 	var hq: StructureState = Research.researcher(state, 0)
 	var lab := StructureState.new()
@@ -43,6 +43,10 @@ func _run() -> void:
 	_press(root, "Research")
 	await _settle()
 	_shot("02-research-picker")
+	# ★ 2026-10-01 (branching trees): the tree list above, then one tree's view.
+	_press(root, "Defense")
+	await _settle()
+	_shot("02b-research-tree")
 
 	# Research in progress: the HQ menu names it, and Cancel Research quotes the refund.
 	hq.research_target = Techs.PENETRATION

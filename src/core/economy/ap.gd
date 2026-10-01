@@ -99,3 +99,4 @@ static func reset_turn(state: GameState, player: int) -> void:
 	var ps: PlayerState = state.per_player[player]
 	var leftover: int = ps.current_ap
 	ps.current_ap = cfg.flat_ap_per_turn + min(leftover, cfg.ap_carryover_cap)
+	ps.current_ap += Research.sum(state, player, &"ap_per_turn_bonus")   # ★ 2026-10-01: Command Network

@@ -96,7 +96,7 @@ func unit_info(entity_id: int) -> Dictionary:
 		"current_hp": unit.current_hp,
 		# ★ Ammo (2026-10-01): -1 / 0 when the unit doesn't use ammo.
 		"ammo": Ammo.remaining(unit),
-		"max_ammo": Ammo.max_ammo(unit.type),
+		"max_ammo": Ammo.unit_max(unit),
 		"hp": Unit.effective_max_hp(unit),
 		"rank": unit.rank,
 		"effective_attack": Unit.effective_attack(_state, unit),
@@ -244,7 +244,7 @@ func structure_info(entity_id: int) -> Dictionary:
 	return {
 		"type": structure.type,
 		"current_hp": structure.current_hp,
-		"hp": structure.type.hp,
+		"hp": Structure.effective_max_hp(structure),
 		"build_status": structure.build_status,
 		"build_turns_remaining": structure.build_turns_remaining,
 		"units_produced_this_turn": structure.units_produced_this_turn,

@@ -54,6 +54,10 @@ enum BuildStatus { UNDER_CONSTRUCTION, COMPLETED }
 ## mutation code (Combat's structure-defender damage path, ADR-0010).
 @export var current_hp: int
 
+## ★ 2026-10-01 (tech trees): cached max-hp bonus (Fortifications %, Hardpoints), written only by
+## [method Research.refresh_bonuses]. See [method Structure.effective_max_hp].
+@export var tech_hp_bonus: int = 0
+
 ## Where this structure sits in the build lifecycle. Defaults to
 ## [code]UNDER_CONSTRUCTION[/code] — a fresh structure is always placed
 ## mid-build (ADR-0017 D1's `build()` transition); a caller representing an

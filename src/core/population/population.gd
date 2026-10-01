@@ -39,6 +39,7 @@ static func effective_cap(state: GameState, player: int) -> int:
 		if st.type == null or st.build_status != StructureState.BuildStatus.COMPLETED:
 			continue
 		total += st.type.cap_bonus
+	total += Research.sum(state, player, &"pop_cap_bonus")   # ★ 2026-10-01: Emergency Draft / Levy en Masse
 	return clampi(total, 0, cfg.cap_hard_ceiling)
 
 

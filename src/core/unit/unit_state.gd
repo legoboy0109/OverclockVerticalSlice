@@ -49,6 +49,15 @@ extends EntityState
 ## remaining so a fresh unit, and every save from before ammo existed, starts full at 0.
 @export var ammo_spent: int = 0
 
+## ★ 2026-10-01 (tech trees): tech-derived bonuses CACHED on the unit, because the rules that
+## read them (max hp, the move surcharge, ammo, attack price) are asked about a unit with no
+## GameState in hand. Written ONLY by [method Research.refresh_bonuses] — at every start of the
+## owner's turn and whenever their research completes — never by hand.
+@export var tech_hp_bonus: int = 0
+@export var tech_move_bonus: int = 0
+@export var tech_ammo_bonus: int = 0
+@export var tech_attack_ap_discount: int = 0
+
 ## Tiles moved so far this turn, toward the Movement epic's soft-cap penalty
 ## (forward-declared; the writer is out of scope here). Reset to [code]0[/code]
 ## at the start of the owning player's turn by [method Unit.reset_turn_flags]

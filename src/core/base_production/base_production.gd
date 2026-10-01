@@ -348,8 +348,12 @@ static func apply_build(state: GameState, action: BuildAction) -> Array[Event]:
 ## function; that hook was explicitly removed per ADR-0017/the story's
 ## regression-guard AC). Non-Neutral faction delta values are out of this
 ## story's scope (Faction epic).
-static func effective_build_cost(_state: GameState, structure_type: StructureTypeDef, _player: int) -> int:
-	return structure_type.build_cost
+static func effective_build_cost(state: GameState, structure_type: StructureTypeDef, player: int) -> int:
+	# ★ 2026-10-01 (tech trees): Bulk Contracts (all structures) and Supply Lines (Supply Depots).
+	var pct: int = Research.sum(state, player, &"structure_cost_discount_pct")
+	if structure_type.resupplies and structure_type.producible_types.is_empty() and structure_type != StructureTypes.HQ:
+		pct += Research.sum(state, player, &"depot_cost_discount_pct")
+	return maxi(1, structure_type.build_cost * (100 - clampi(pct, 0, 90)) / 100)
 
 
 ## The AP surcharge a Produce costs [param player]: the base
@@ -375,8 +379,11 @@ static func effective_build_ap_cost(state: GameState, player: int) -> int:
 ## [code]faction_delta == 0[/code], so this returns
 ## [param structure_type].build_time verbatim — exactly base. Non-Neutral
 ## faction delta values are out of this story's scope (Faction epic).
-static func effective_build_time(_state: GameState, structure_type: StructureTypeDef, _player: int) -> int:
-	return structure_type.build_time
+static func effective_build_time(state: GameState, structure_type: StructureTypeDef, player: int) -> int:
+	# ★ 2026-10-01 (tech trees): Rapid Construction (never below 1; a 0-turn type stays 0).
+	if structure_type.build_time <= 0:
+		return structure_type.build_time
+	return maxi(1, structure_type.build_time - Research.sum(state, player, &"build_time_discount"))
 
 
 ## Advances [param player]'s build timers — the concrete body of ADR-0008
@@ -657,8 +664,25 @@ static func rush_turns_remaining(structure: StructureState) -> int:
 
 
 ## AP one rush costs (flat — [member EconomyConfig.rush_ap_cost]).
-static func rush_ap_cost() -> int:
-	return Balance.economy.rush_ap_cost
+static func rush_ap_cost(state: GameState = null, structure: StructureState = null) -> int:
+	var cost: int = Balance.economy.rush_ap_cost
+	if state == null or structure == null:
+		return cost
+	# ★ 2026-10-01 (tech trees): Rapid Requisition (flat off), Overdrive (vehicles at half).
+	cost -= Research.sum(state, structure.owner, &"rush_ap_discount")
+	if structure.build_status == StructureState.BuildStatus.COMPLETED and structure.producing_type != null \
+			and is_rushable_type(structure.producing_type) and Research.any(state, structure.owner, &"vehicle_rush_half"):
+		cost = int(ceil(cost / 2.0))
+	return maxi(1, cost)
+
+
+## Turns [param unit_type] takes to produce for [param player]: its own, less Mass Production for
+## vehicles and aircraft (never below 1).
+static func effective_production_turns(state: GameState, unit_type: UnitTypeDef, player: int) -> int:
+	var t: int = unit_type.production_turns
+	if unit_type.unit_class != UnitTypeDef.UnitClass.INFANTRY:
+		t -= Research.sum(state, player, &"vehicle_production_turn_discount")
+	return maxi(1, t)
 
 
 ## Rejection cause for [method apply_rush], or [constant Action.Reason.OK].
@@ -685,7 +709,7 @@ static func validate_rush(state: GameState, action: RushAction) -> int:
 		return Action.Reason.NOT_RUSHABLE
 	if turns <= 1:
 		return Action.Reason.RUSH_AT_MINIMUM
-	if not AP.can_afford(state, player, rush_ap_cost()):
+	if not AP.can_afford(state, player, rush_ap_cost(state, structure)):
 		return Action.Reason.CANT_AFFORD
 	return Action.Reason.OK
 
@@ -696,7 +720,7 @@ static func apply_rush(state: GameState, action: RushAction) -> Array[Event]:
 		return []
 	var player: int = state.active_player
 	var structure: StructureState = state.entities_by_id[action.structure_id]
-	var cost: int = rush_ap_cost()
+	var cost: int = rush_ap_cost(state, structure)
 	AP.spend(state, player, cost)
 	var evt := RushedEvent.new()
 	evt.entity_id = structure.entity_id
@@ -817,11 +841,12 @@ static func legal_deploy_tiles(state: GameState, producer: StructureState, unit_
 ##
 ## O(1). Called by [method validate_produce]'s cap gate (checked before the AP
 ## gate, so an at-cap producer is rejected even with AP to spare).
-static func effective_production_cap(_state: GameState, producer: StructureState, _player: int) -> int:
+static func effective_production_cap(state: GameState, producer: StructureState, player: int) -> int:
 	var base_cap: int = producer.type.production_cap
 	if base_cap == 0:
 		return 0
-	var delta: int = 0 # Faction production_cap fold deferred to Faction epic (0 under Neutral).
+	# ★ 2026-10-01 (tech trees): Assembly Lines.
+	var delta: int = Research.sum(state, player, &"production_cap_bonus")
 	return maxi(1, base_cap + delta)
 
 
@@ -944,7 +969,7 @@ static func apply_produce(state: GameState, action: ProduceAction) -> Array[Even
 	# at commit, so a queued unit is already paid for — which is what makes PC-3
 	# ("units under production count against the cap") meaningful rather than a loophole.
 	producer.producing_type = action.unit_type
-	producer.production_turns_remaining = action.unit_type.production_turns
+	producer.production_turns_remaining = effective_production_turns(state, action.unit_type, player)
 	producer.production_tile = action.tile
 
 	producer.units_produced_this_turn += 1

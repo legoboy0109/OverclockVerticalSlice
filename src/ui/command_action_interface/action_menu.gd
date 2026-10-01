@@ -960,21 +960,44 @@ func _open_submenu(options: Array[CommandFSM.ProduceOption]) -> void:
 ## choosing between Penetration and Volley needs to know what each does before the pick
 ## that locks the other out for the match.
 func _open_research_submenu() -> void:
+	# ★ 2026-10-01 (branching tech trees): first the three trees, each with what you have
+	# researched there and whether a choice is open; picking one opens that tree's view.
 	var items: Array[Dictionary] = []
-	for option: CommandFSM.ResearchOption in _research_options:
+	for tree: String in CommandFSM.RESEARCH_TREES:
 		items.append({
-			"label": option.tech.display_name,
+			"label": tree.capitalize(),
+			"sub": CommandFSM.research_tree_summary(_research_options, tree),
+			"right": ">",
+			"enabled": true,
+			"is_reason": false,
+			"on_press": _open_research_tree.bind(tree),
+		})
+	_open_research_panel("RESEARCH", items)
+
+
+## One tree: the techs researched in it, then the current choice (the pair below the last pick).
+func _open_research_tree(tree: String) -> void:
+	var items: Array[Dictionary] = []
+	for option: CommandFSM.ResearchOption in CommandFSM.research_tree_view(_research_options, tree):
+		items.append({
+			"label": "%s   (tier %d)" % [option.tech.display_name, option.tech.tier],
 			"sub": option.tech.description,
 			"right": research_option_text(option),
 			"enabled": option.enabled,
 			"is_reason": not option.enabled,
 			"on_press": _on_research_row_pressed.bind(option.tech),
 		})
+	# Back sits LAST so the keyboard/pad cursor lands on the first tech, not on "back".
+	items.append({"label": "< All trees", "right": "", "enabled": true, "is_reason": false,
+		"on_press": _open_research_submenu})
+	_open_research_panel("RESEARCH  ·  %s" % tree.to_upper(), items)
+
+
+func _open_research_panel(title_text: String, items: Array[Dictionary]) -> void:
 	_build_submenu(items)
 	_submenu_centred = true
-	# Title row above the techs.
 	var title := Label.new()
-	title.text = "RESEARCH"
+	title.text = title_text
 	title.add_theme_font_override("font", UiTheme.label_font())
 	title.add_theme_font_size_override("font_size", 15)
 	title.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)

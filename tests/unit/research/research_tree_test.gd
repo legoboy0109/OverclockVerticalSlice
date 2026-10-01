@@ -91,37 +91,48 @@ func _finish(state: GameState, player: int = 0) -> void:
 
 # --- The shipped tree ---------------------------------------------------------------
 
-func test_every_tier_two_tech_needs_a_lab_and_a_tier_one_parent() -> void:
+# ★ 2026-10-01 — the branching tree (design doc "Overclock Tech Trees"): three trees, three tiers,
+# every tier a choice of two, each choice opening its own pair below it (2 + 4 + 8 per tree).
+
+func test_every_tech_above_tier_one_needs_a_lab_and_a_parent_one_tier_up() -> void:
 	for tech: TechDef in Techs.ALL:
-		if tech.tier != 2:
+		if tech.tier == 1:
 			continue
 		assert_bool(StructureTypes.RESEARCH_LAB in tech.required_structures).override_failure_message(
 			"%s does not require a Research Lab." % tech.display_name).is_true()
 		assert_int(tech.prerequisites.size()).is_equal(1)
-		assert_int(tech.prerequisites[0].tier).is_equal(1)
-		assert_str(String(tech.exclusive_group)).is_not_empty()
+		assert_int(tech.prerequisites[0].tier).is_equal(tech.tier - 1)
+		assert_str(tech.prerequisites[0].tree).is_equal(tech.tree)
 
 
-func test_tier_one_techs_need_nothing() -> void:
+func test_tier_one_techs_need_nothing_but_are_still_a_choice() -> void:
 	for tech: TechDef in Techs.ALL:
 		if tech.tier != 1:
 			continue
 		assert_array(tech.prerequisites).is_empty()
 		assert_array(tech.required_structures).is_empty()
-		assert_str(String(tech.exclusive_group)).is_empty()
+		assert_str(String(tech.exclusive_group)).is_not_empty()
+
+
+func test_each_tree_is_two_then_four_then_eight() -> void:
+	for tree: String in ["offense", "defense", "economy"]:
+		var by_tier: Array[int] = [0, 0, 0]
+		for tech: TechDef in Techs.ALL:
+			if tech.tree == tree:
+				by_tier[tech.tier - 1] += 1
+		assert_array(by_tier).override_failure_message("%s tree is %s" % [tree, by_tier]).is_equal([2, 4, 8])
 
 
 func test_every_branch_is_exactly_a_pair_under_one_parent() -> void:
 	var groups: Dictionary = {}
 	for tech: TechDef in Techs.ALL:
-		if tech.exclusive_group != &"":
-			groups.get_or_add(tech.exclusive_group, []).append(tech)
-	assert_int(groups.size()).is_equal(3)
+		groups.get_or_add(tech.exclusive_group, []).append(tech)
+	assert_int(groups.size()).is_equal(21)   # 3 trees x (1 + 2 + 4) pairs
 	for group: StringName in groups:
 		var members: Array = groups[group]
 		assert_int(members.size()).override_failure_message(
 			"Branch %s has %d techs, not a pair." % [group, members.size()]).is_equal(2)
-		assert_object(members[0].prerequisites[0]).is_same(members[1].prerequisites[0])
+		assert_array(members[0].prerequisites).is_equal(members[1].prerequisites)
 
 
 func test_every_tech_costs_credits_and_ap_and_time() -> void:
@@ -132,12 +143,12 @@ func test_every_tech_costs_credits_and_ap_and_time() -> void:
 		assert_int(Research.effective_research_time(state, tech, 0)).is_greater(0)
 
 
-func test_tier_two_costs_more_ap_than_tier_one() -> void:
-	# User decision 2026-09-28: tier 2 pays AP as well as Credits.
+func test_research_ap_is_4_6_8_by_tier() -> void:
+	# User decision 2026-10-01.
 	var state := _state()
-	assert_int(Research.effective_research_ap_surcharge(state, Techs.PENETRATION, 0)).is_equal(2)
-	assert_int(Research.effective_research_ap_surcharge(state, Techs.ATTACK_I, 0)).is_equal(
-		Balance.economy.research_ap_cost)
+	var want: Array[int] = [4, 6, 8]
+	for tech: TechDef in Techs.ALL:
+		assert_int(Research.effective_research_ap_surcharge(state, tech, 0)).is_equal(want[tech.tier - 1])
 
 
 # --- Starting research at the HQ ---------------------------------------------------
@@ -157,7 +168,7 @@ func test_starting_research_spends_both_pools_up_front() -> void:
 	var hq := _hq(state)
 	_research(state, hq, Techs.ATTACK_I)
 	assert_int(state.per_player[0].current_credits).is_equal(CREDITS - Techs.ATTACK_I.research_cost)
-	assert_int(state.per_player[0].current_ap).is_equal(AP_BUDGET - Balance.economy.research_ap_cost)
+	assert_int(state.per_player[0].current_ap).is_equal(AP_BUDGET - Research.effective_research_ap_surcharge(state, Techs.ATTACK_I, 0))
 
 
 func test_a_research_lab_cannot_research() -> void:
@@ -448,3 +459,33 @@ func test_clone_keeps_tech_identity_and_is_independent() -> void:
 	_finish(copy)
 	assert_bool(Research.has_tech(copy, 0, Techs.DEFENSE_I)).is_true()
 	assert_bool(Research.has_tech(state, 0, Techs.DEFENSE_I)).is_false()
+
+
+# --- Faction swaps (2026-10-01) ------------------------------------------------------------
+
+func test_every_faction_tree_is_the_shared_42_with_swaps_in_their_slots() -> void:
+	for f: FactionDef in Factions.playable():
+		var tree: Array[TechDef] = f.techs if not f.techs.is_empty() else Techs.ALL
+		assert_int(tree.size()).override_failure_message("%s tree has %d techs" % [f.display_name, tree.size()]).is_equal(42)
+		for t: TechDef in tree:
+			if t in Techs.ALL:
+				continue
+			assert_int(t.replaces.size()).override_failure_message("%s is neither shared nor a swap" % t.display_name).is_equal(1)
+			var r: TechDef = t.replaces[0]
+			assert_bool(r in tree).override_failure_message("%s keeps %s alongside its swap" % [f.display_name, r.display_name]).is_false()
+			assert_int(t.tier).is_equal(r.tier)
+			assert_str(String(t.exclusive_group)).is_equal(String(r.exclusive_group))
+			assert_array(t.prerequisites).is_equal(r.prerequisites)
+
+
+func test_a_swap_unlocks_what_its_replaced_tech_would() -> void:
+	# The Lightless research Scrap Plating instead of Hardened Armor — Plating must still open.
+	var state := _state()
+	var lightless: FactionDef = null
+	for f: FactionDef in Factions.playable():
+		if Techs.SCRAP_PLATING in f.techs:
+			lightless = f
+	state.per_player[0].faction = lightless
+	_lab(state)
+	GameStateFactory.grant_tech(state, 0, Techs.SCRAP_PLATING)
+	assert_int(Research.availability(state, 0, Techs.PLATING)).is_equal(Action.Reason.OK)

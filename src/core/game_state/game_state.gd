@@ -361,6 +361,8 @@ func start_turn(player: int) -> Array:
 	# 3. Advance build + research timers (commutative order; both before step 4).
 	events.append_array(BaseProduction.advance_build_timers(self, player))
 	events.append_array(Research.advance_research_timers(self, player))
+	# 3a. ★ 2026-10-01 (tech trees): cached tech bonuses cover units delivered this turn too.
+	Research.refresh_bonuses(self, player)
 	# 3b. ★ Ammo (2026-10-01): resupply AFTER step 3, so a factory/depot completing this turn
 	# already supplies, and a unit delivered this turn (spawned full) is simply skipped.
 	events.append_array(Ammo.resupply_turn(self, player))
