@@ -129,10 +129,10 @@ func test_keyboard_focus_is_styled_distinctly_from_mouse_hover() -> void:
 		var hover: StyleBox = b.get_theme_stylebox("hover")
 		assert_object(focus).is_not_null()
 		assert_object(hover).is_not_null()
-		assert_bool(focus is StyleBoxFlat and hover is StyleBoxFlat).is_true()
-		var f: StyleBoxFlat = focus
-		var h: StyleBoxFlat = hover
-		assert_bool(f.bg_color != h.bg_color or f.border_color != h.border_color) \
+		# ★ 2026-10-01 (holo glass): glass boxes carry their fill/edge as metadata.
+		assert_bool(focus.has_meta(&"edge") and hover.has_meta(&"edge")).is_true()
+		assert_bool(focus.get_meta(&"fill") != hover.get_meta(&"fill") \
+				or focus.get_meta(&"edge") != hover.get_meta(&"edge")) \
 			.override_failure_message(
 				"the keyboard-focus treatment must differ from mouse hover") \
 			.is_true()

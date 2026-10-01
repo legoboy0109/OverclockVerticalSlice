@@ -68,49 +68,25 @@ static func make_entry(text: String, interactive: bool = true,
 ## difference in hue alone would fail the same specs' "no information by colour
 ## alone" rule — so the focus ring is also visibly thicker.
 static func apply(b: Button) -> void:
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.075, 0.095, 0.130, 0.95)
-	normal.border_color = Color(0.30, 0.36, 0.44)
-	normal.set_border_width_all(1)
-	normal.set_content_margin_all(10)
-
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.120, 0.150, 0.195, 0.98)
-	hover.border_color = Color(0.48, 0.56, 0.66)
-
-	var focus := normal.duplicate() as StyleBoxFlat
-	focus.bg_color = Color(0.150, 0.105, 0.080, 0.98)
-	focus.border_color = ACCENT
-	focus.set_border_width_all(3)
-
-	var pressed := normal.duplicate() as StyleBoxFlat
-	pressed.bg_color = Color(0.190, 0.130, 0.095, 1.0)
-
-	var disabled := normal.duplicate() as StyleBoxFlat
-	disabled.bg_color = Color(0.055, 0.070, 0.095, 0.95)
-	disabled.border_color = Color(0.20, 0.24, 0.30)
-
-	b.add_theme_stylebox_override("normal", normal)
-	b.add_theme_stylebox_override("hover", hover)
-	b.add_theme_stylebox_override("focus", focus)
-	b.add_theme_stylebox_override("pressed", pressed)
-	b.add_theme_stylebox_override("disabled", disabled)
+	# ★ 2026-10-01 (holo glass, UI direction B): cut-corner glass entries. Focus is the loud
+	# state — accent edge and a warm fill — because on a pad it is the only cursor there is.
+	var glass_fill := Color(0.07, 0.12, 0.19, 0.82)
+	b.add_theme_stylebox_override("normal", UiTheme.glass_box(glass_fill, Color(0.47, 0.78, 1.0, 0.45)))
+	b.add_theme_stylebox_override("hover", UiTheme.glass_box(Color(0.10, 0.17, 0.26, 0.90), Color(0.60, 0.85, 1.0, 0.85)))
+	b.add_theme_stylebox_override("focus", UiTheme.glass_box(Color(ACCENT, 0.16), ACCENT, 2))
+	b.add_theme_stylebox_override("pressed", UiTheme.glass_box(Color(ACCENT, 0.30), ACCENT, 2))
+	b.add_theme_stylebox_override("disabled", UiTheme.glass_box(Color(0.05, 0.08, 0.12, 0.70), Color(0.47, 0.78, 1.0, 0.18)))
+	b.add_theme_font_override("font", UiTheme.label_font())
 
 
-## Makes [param c] fill the viewport, and keeps it filling on resize.
-##
-## ★ Use this for any full-screen Control built with [code].new()[/code] rather
-## than instanced from a scene. [method Control.set_anchors_preset] alone is NOT
-## enough in two common cases, and it has now caught this project twice:
-## [br]• parented to a [CanvasLayer], which is not a Control and so offers no
-##   parent rect to anchor against;
-## [br]• built with [code].new()[/code], which has none of the anchor properties a
-##   [code].tscn[/code] root carries.
-##
-## In both the Control ends up at ZERO SIZE, and the symptoms do not look like a
-## sizing bug: a full-rect background covers nothing, and a [CenterContainer]
-## inside it centres its contents on the origin, so the panel appears in the
-## top-left corner. Same cause, two unrelated-looking faults.
+## Gives [param label] the soft neon glow the holo-glass titles use (outline passes, no shader).
+static func glow_label(label: Label, color: Color, size_px: int = 14) -> void:
+	# A faint wide outline reads as a halo; a strong one read as a brown stroke (2026-10-01).
+	label.add_theme_color_override("font_outline_color", Color(color, 0.12))
+	label.add_theme_constant_override("outline_size", size_px)
+	label.add_theme_font_override("font", UiTheme.font(700))
+
+
 static func fill_viewport(c: Control) -> void:
 	c.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var viewport: Viewport = c.get_viewport()
@@ -135,9 +111,9 @@ static func fill_viewport(c: Control) -> void:
 static func make_plate() -> PanelContainer:
 	var plate := PanelContainer.new()
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.075, 0.095, 0.130, 1.0)
-	style.border_color = ACCENT
-	style.set_border_width_all(2)
+	style.bg_color = Color.WHITE   # replaced by the glass shader; only the margins matter
 	style.set_content_margin_all(32)
 	plate.add_theme_stylebox_override("panel", style)
+	# ★ 2026-10-01 (holo glass): frosted plate with an accent edge and soft glow.
+	UiTheme.make_glass(plate, Color(ACCENT, 0.7), 14.0)
 	return plate

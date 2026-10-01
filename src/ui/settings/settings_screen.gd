@@ -435,9 +435,12 @@ func binding_label(action: StringName, device: int) -> String:
 	var code: int = _settings.binding(action, device)
 	if code < 0:
 		return "—"
+	# ★ 2026-10-01: the names on the keycap / pad face — "[" not "BracketLeft", "A" not "Pad 0" —
+	# shared with the HUD's hint bar so the two never disagree.
 	if device == GameSettings.Device.KEYBOARD:
-		return OS.get_keycode_string(code)
-	return "Pad %d" % code
+		var text: String = OS.get_keycode_string(code)
+		return InputGlyphs._KEY_DISPLAY.get(text, text)
+	return InputGlyphs._PAD_BUTTON_NAMES.get(code, "Pad %d" % code)
 
 ## The current warning/hint line ("" when there is nothing to say).
 func conflict_warning() -> String:

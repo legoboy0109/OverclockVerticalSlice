@@ -135,6 +135,11 @@ static func glass_box(fill: Color, edge: Color, edge_px: int = 1, cut: int = int
 		box.set_content_margin(side, 10)
 	box.content_margin_left = 14
 	box.content_margin_right = 14
+	# Recorded so tests can check a state's treatment (e.g. focus vs hover must differ by more
+	# than hue — the edge WIDTH) without decoding the texture.
+	box.set_meta(&"fill", fill)
+	box.set_meta(&"edge", edge)
+	box.set_meta(&"edge_px", edge_px)
 	_boxes[key] = box
 	return box
 

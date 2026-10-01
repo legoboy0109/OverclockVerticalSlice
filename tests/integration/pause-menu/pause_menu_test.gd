@@ -198,10 +198,11 @@ func test_entries_meet_the_font_and_hit_target_floors() -> void:
 func test_keyboard_focus_is_distinct_from_mouse_hover() -> void:
 	var p: PauseMenu = await _make_pause()
 	for b: Button in _all_buttons(p):
-		var f: StyleBoxFlat = b.get_theme_stylebox("focus")
-		var h: StyleBoxFlat = b.get_theme_stylebox("hover")
-		assert_bool(f.bg_color != h.bg_color).is_true()
-		assert_bool(f.border_width_top != h.border_width_top).override_failure_message(
+		# ★ 2026-10-01 (holo glass): glass boxes carry their fill/edge/edge width as metadata.
+		var f: StyleBox = b.get_theme_stylebox("focus")
+		var h: StyleBox = b.get_theme_stylebox("hover")
+		assert_bool(f.get_meta(&"fill") != h.get_meta(&"fill")).is_true()
+		assert_bool(f.get_meta(&"edge_px") != h.get_meta(&"edge_px")).override_failure_message(
 			"focus and hover must differ by more than hue — 'no info by colour alone'"
 		).is_true()
 
