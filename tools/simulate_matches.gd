@@ -116,6 +116,18 @@ const MIRROR_OPENINGS: Array[Vector2i] = [
 ## [/codeblock]
 var _degrade_favoured_pct: int = 0
 
+## ★ 2026-10-01 (tech-tree balance): a fixed research path per seat — `--plan0=A|B|C` /
+## `--plan1=...` (tech display names, in order). Whenever that seat's researcher is idle, the
+## next unfinished tech on its path starts [b]free[/b] (no Credits, no AP): the experiment
+## compares two branches of the same tier, which cost the same, so waiving the price removes
+## the "could it afford it this turn" noise without favouring either side. Once a path is
+## exhausted the AI researches on its own as usual. Empty = shipped behaviour.
+var _plans: Array = [[], []]
+
+## `--free-lab`: both seats start with a completed Research Lab beside their HQ, so tier-2+
+## techs on a path are reachable without depending on whether the AI chooses to build one.
+var _free_lab: bool = false
+
 ## Restricts the batch to a single handicap cell (-1 = all). The sweep only needs +1, and a
 ## full batch is ~25 minutes against ~7 for one cell.
 var _only_handicap: int = -1
@@ -271,6 +283,21 @@ func _parse_args() -> void:
 			_first_turn_ap_override = maxi(0, int(arg.split("=")[1]))
 		elif arg.begins_with("--variants="):
 			_variants = clampi(int(arg.split("=")[1]), 1, _VARIANT_Y_OFFSETS.size())
+		elif arg.begins_with("--plan0=") or arg.begins_with("--plan1="):
+			var seat_idx: int = int(arg.substr(6, 1))
+			for tech_name: String in arg.substr(8).split("|", false):
+				var found: TechDef = null
+				for t: TechDef in Techs.ALL:
+					if t.display_name == tech_name:
+						found = t
+				if found == null:
+					push_error("simulate_matches: unknown tech in plan: '%s'" % tech_name)
+				else:
+					_plans[seat_idx].append(found)
+			print("SIM_PLAN,%d,%s" % [seat_idx, arg.substr(8)])
+		elif arg == "--free-lab":
+			_free_lab = true
+			print("SIM_FREE_LAB")
 	if _degrade_favoured_pct != 0 or _only_handicap != -1 or _variants != 3 or _plain_map:
 		print("SIM_CONFIG,degrade_favoured_pct=%d,only_handicap=%d,variants=%d,plain=%s" % [
 			_degrade_favoured_pct, _only_handicap, _variants, str(_plain_map)
@@ -372,6 +399,7 @@ func _play(game: int, favoured: int, handicap: int, variant: int) -> void:
 ## [method AITurnDriver.run_ai_turn], including the reject bound and the trailing
 ## [EndTurnAction] that hands the turn back.
 func _run_one_turn(state: GameState, game: int = 0, turn: int = 0, favoured: int = -1) -> void:
+	_advance_plan(state)
 	var economy_investments: int = 0
 	var rejects: int = 0
 	var committed: int = 0
@@ -567,7 +595,54 @@ func _build_match(favoured: int, handicap: int, variant: int) -> GameState:
 		u.current_hp = UnitTypes.TROOPER.hp
 		state.grid.place(u.entity_id, tile.x, tile.y)
 		state.entities_by_id[u.entity_id] = u
+	if _free_lab:
+		_place_free_labs(state, hq_of)
 	return state
+
+
+## --plan0/--plan1: if the active seat's researcher is idle, start the next unfinished tech on
+## its path for free. A tech the seat cannot take (a faction swap replaces it, or a gate fails)
+## is skipped with a SIM_PLAN_SKIP row rather than silently stalling the path.
+func _advance_plan(state: GameState) -> void:
+	var p: int = state.active_player
+	var lab: StructureState = Research.researcher(state, p)
+	if lab == null or lab.research_target != null:
+		return
+	for t: TechDef in _plans[p]:
+		if Research.has_tech(state, p, t):
+			continue
+		if Research.availability(state, p, t) != Action.Reason.OK:
+			print("SIM_PLAN_SKIP,%d,%s,%d" % [p, t.display_name, Research.availability(state, p, t)])
+			continue
+		lab.research_target = t
+		lab.research_turns_remaining = Research.effective_research_time(state, t, p)
+		return
+
+
+## --free-lab: a completed Research Lab on the first open tile behind (or beside) each HQ.
+func _place_free_labs(state: GameState, hq_of: Array[Vector2i]) -> void:
+	for player: int in 2:
+		var hq: Vector2i = hq_of[player]
+		var back: int = -1 if hq.x < VSMap.WIDTH / 2 else 1
+		var candidates: Array[Vector2i] = []
+		for r: int in [1, 2, 3]:
+			for dy: int in [0, -1, 1, -2, 2, -3, 3]:
+				candidates.append(Vector2i(hq.x + back * r, hq.y + dy))
+			for dy: int in [-r, r]:
+				candidates.append(Vector2i(hq.x, hq.y + dy))
+		for tile: Vector2i in candidates:
+			if not state.grid.in_bounds(tile.x, tile.y) or not state.grid.is_passable(tile.x, tile.y):
+				continue
+			var lab := StructureState.new()
+			lab.entity_id = BONUS_ID_BASE + 800 + player
+			lab.owner = player
+			lab.position = tile
+			lab.type = StructureTypes.RESEARCH_LAB
+			lab.current_hp = StructureTypes.RESEARCH_LAB.hp
+			lab.build_status = StructureState.BuildStatus.COMPLETED
+			state.grid.place(lab.entity_id, tile.x, tile.y)
+			state.entities_by_id[lab.entity_id] = lab
+			break
 
 
 ## Bonus units are placed near their owner's HQ, offset by [param variant] so the three
