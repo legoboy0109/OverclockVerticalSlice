@@ -1093,6 +1093,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			back_out() # the mouse half of CR-1's "right-click or ESC" cancel.
 	elif event is InputEventMouseMotion and (event.button_mask & MOUSE_BUTTON_MASK_MIDDLE) != 0:
 		_camera.position -= event.relative / _camera.zoom # middle-drag: free pan
+	elif event is InputEventMouseMotion and _board != null and _hud != null and _hud.glyph_layer() != null:
+		# ★ 2026-10-01: hovering shows a unit's exact hp, like the board cursor does.
+		_hud.glyph_layer().set_hover_tile(_board.screen_to_grid(_board.get_local_mouse_position()))
 
 
 ## Left-click: inside an open preview a click on a highlighted tile COMMITS
@@ -2259,6 +2262,9 @@ func _sync_cursor_highlight() -> void:
 	if _board == null or _cursor == null:
 		return
 	_board.set_cursor(_cursor.grid_pos)
+	# ★ 2026-10-01: the exact hp number follows the board cursor (mouse and pad alike).
+	if _hud != null and _hud.glyph_layer() != null:
+		_hud.glyph_layer().set_cursor_tile(_cursor.grid_pos)
 
 
 ## Re-issues the open range overlay after a commit, so it reflects the board that

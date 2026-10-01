@@ -29,12 +29,11 @@ extends GdUnitTestSuite
 
 # --- AC (defaults present): all 9 knobs at their exact ADR-0016 §4 defaults --
 
-func test_hud_config_exposes_all_9_knobs_at_adr_defaults() -> void:
+func test_hud_config_exposes_all_knobs_at_adr_defaults() -> void:
 	# Arrange / Act
 	var cfg := HUDConfig.new()
 
 	# Assert
-	assert_int(cfg.pip_max_hp).is_equal(10)
 	assert_int(cfg.action_log_length).is_equal(20)
 	assert_int(cfg.ap_fill_flourish_ms).is_equal(400)
 	assert_int(cfg.ap_tick_duration_ms).is_equal(120)

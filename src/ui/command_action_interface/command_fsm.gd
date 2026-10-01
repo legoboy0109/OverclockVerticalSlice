@@ -374,11 +374,13 @@ static func menu_model(state: GameState, entity: EntityState) -> Array[VerbEntry
 	menu.append(_build_entry(state, entity))
 	menu.append(_research_entry(state, entity))
 	menu.append(_rush_entry(state, entity))
-	menu.append(_wait_entry(entity))
 	menu.append(_cancel_build_entry(state, entity))
 	menu.append(_cancel_research_entry(state, entity))
 	menu.append(_ability_entry(state, entity))
 	menu.append(_disband_entry(state, entity))
+	# ★ 2026-10-01 (user decision): Wait is ALWAYS the last row, below even the destructive
+	# verbs — "I'm done with this one" sits in the same place on every menu.
+	menu.append(_wait_entry(entity))
 	return menu
 
 

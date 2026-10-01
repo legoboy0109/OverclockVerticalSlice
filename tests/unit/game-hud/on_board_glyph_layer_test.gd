@@ -1,4 +1,6 @@
-# Story 005: On-Board Glyph Layer — hp pip/numeric branch (Logic sub-slice).
+# Story 005: On-Board Glyph Layer — hp bar/number visibility + markers (Logic sub-slice).
+# ★ 2026-10-01: the pip/numeric hp branch was replaced (user decision) by one bar shown only
+# when damaged and the exact number only under the board cursor.
 #
 # Covers the BLOCKING Logic slice of production/epics/game-hud/story-005-on-board-glyph-layer.md
 # (TR-hud-010/011/012, ADR-0016 pip/numeric branch). The Visual/Feel legibility
@@ -82,34 +84,17 @@ func _layer(reader: GameStateReader, config: HUDConfig = null) -> OnBoardGlyphLa
 # AC-10: the pure pip/numeric branch (the >= boundary is load-bearing).
 # ==============================================================================
 
-func test_hp_render_mode_branches_on_pip_max_hp() -> void:
-	assert_int(OnBoardGlyphLayer.hp_render_mode(9, 10)).is_equal(OnBoardGlyphLayer.HpMode.PIPS)
-	assert_int(OnBoardGlyphLayer.hp_render_mode(10, 10)) \
-		.override_failure_message("max_hp == pip_max_hp must render NUMERIC (the >= boundary)") \
-		.is_equal(OnBoardGlyphLayer.HpMode.NUMERIC)
-	assert_int(OnBoardGlyphLayer.hp_render_mode(14, 10)).is_equal(OnBoardGlyphLayer.HpMode.NUMERIC)
-	assert_int(OnBoardGlyphLayer.hp_render_mode(1, 10)).is_equal(OnBoardGlyphLayer.HpMode.PIPS)
+func test_hp_bar_shows_only_when_damaged() -> void:
+	# ★ 2026-10-01 (user decision): no bar at full health, a bar for any damage.
+	assert_bool(OnBoardGlyphLayer.hp_bar_visible(10, 10)).is_false()
+	assert_bool(OnBoardGlyphLayer.hp_bar_visible(9, 10)).is_true()
+	assert_bool(OnBoardGlyphLayer.hp_bar_visible(1, 40)).is_true()
 
 
-func test_hp_mode_for_unit_branches_against_config() -> void:
-	var state := _make_state()
-	_place_unit(state, 1, 9) # below 10 → pips
-	_place_unit(state, 2, 14) # at/above 10 → numeric
-	var l := _layer(GameStateReader.new(state))
-	assert_int(l.hp_mode_for(1)).is_equal(OnBoardGlyphLayer.HpMode.PIPS)
-	assert_int(l.hp_mode_for(2)).is_equal(OnBoardGlyphLayer.HpMode.NUMERIC)
+func test_hp_number_shows_only_under_the_cursor() -> void:
+	assert_bool(OnBoardGlyphLayer.hp_number_visible(Vector2i(3, 4), Vector2i(3, 4))).is_true()
+	assert_bool(OnBoardGlyphLayer.hp_number_visible(Vector2i(3, 4), Vector2i(4, 4))).is_false()
 
-
-func test_hp_mode_for_structure_boundary_is_numeric() -> void:
-	var state := _make_state()
-	_place_structure(state, 5, 10, StructureState.BuildStatus.COMPLETED) # exactly at threshold.
-	var l := _layer(GameStateReader.new(state))
-	assert_int(l.hp_mode_for(5)).is_equal(OnBoardGlyphLayer.HpMode.NUMERIC)
-
-
-# ==============================================================================
-# Marker derivation (available data).
-# ==============================================================================
 
 func test_has_acted_marker_only_when_unit_has_attacked() -> void:
 	var state := _make_state()

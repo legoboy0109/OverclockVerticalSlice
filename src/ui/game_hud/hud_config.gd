@@ -16,11 +16,6 @@
 class_name HUDConfig
 extends Resource
 
-## Hp-pip branch threshold (TR-hud-012): entities with max_hp below this render
-## discrete drain-on-damage pips; at/above this render numeric current/max
-## instead (the `>=` boundary is load-bearing).
-@export var pip_max_hp: int = 10
-
 ## Action log ring-buffer capacity (TR-hud-014): the oldest entry drops once the
 ## log would exceed this many entries.
 @export var action_log_length: int = 20

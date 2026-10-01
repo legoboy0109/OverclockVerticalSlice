@@ -921,3 +921,12 @@ func _find_entry(menu: Array[CommandFSM.VerbEntry], verb: int) -> CommandFSM.Ver
 			return entry
 	fail("menu_model did not return a VerbEntry for verb %d" % verb)
 	return null
+
+
+func test_menu_wait_is_always_the_last_row() -> void:
+	# ★ 2026-10-01 (user decision): Wait sits at the bottom of every unit's menu, below
+	# abilities and the destructive verbs.
+	var state := _make_state()
+	var u := _place_unit(state, 1, 0, Vector2i(3, 3), UnitTypes.TROOPER)
+	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, u)
+	assert_int(menu[-1].verb).is_equal(CommandFSM.Verb.WAIT)
