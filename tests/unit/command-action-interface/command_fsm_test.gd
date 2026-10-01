@@ -947,3 +947,27 @@ func test_menu_move_row_is_hidden_on_structures() -> void:
 	var e := _find_entry(CommandFSM.menu_model(state, s), CommandFSM.Verb.MOVE)
 	assert_bool(e.enabled).is_false()
 	assert_bool(ActionMenu._is_inapplicable(e)).is_true()
+
+
+func test_menu_attack_row_hidden_on_anything_without_a_weapon() -> void:
+	# ★ 2026-10-01 (user decision): HQ / factories / Builders / Transports carry no weapon.
+	var state := _make_state()
+	var hq := StructureState.new()
+	hq.entity_id = 9
+	hq.owner = 0
+	hq.position = Vector2i(4, 4)
+	hq.type = StructureTypes.HQ
+	hq.current_hp = hq.type.hp
+	hq.build_status = StructureState.BuildStatus.COMPLETED
+	state.entities_by_id[9] = hq
+	var e := _find_entry(CommandFSM.menu_model(state, hq), CommandFSM.Verb.ATTACK)
+	assert_bool(ActionMenu._is_inapplicable(e)).is_true()
+	var builder := _place_unit(state, 10, 0, Vector2i(2, 2), UnitTypes.BUILDER)
+	assert_bool(ActionMenu._is_inapplicable(_find_entry(CommandFSM.menu_model(state, builder), CommandFSM.Verb.ATTACK))).is_true()
+	# Armed things keep it.
+	var trooper := _place_unit(state, 11, 0, Vector2i(6, 6), UnitTypes.TROOPER)
+	assert_bool(ActionMenu._is_inapplicable(_find_entry(CommandFSM.menu_model(state, trooper), CommandFSM.Verb.ATTACK))).is_false()
+	assert_bool(CommandFSM.has_weapon(trooper)).is_true()
+	var def_tower := StructureState.new()
+	def_tower.type = StructureTypes.DEFENSIVE_STRUCTURE
+	assert_bool(CommandFSM.has_weapon(def_tower)).is_true()

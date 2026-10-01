@@ -164,6 +164,7 @@ enum Reason {
 	NOTHING_TO_RUSH = 1048576,     ## Rush: not an own structure that is under construction or producing. STRUCTURAL — hidden.
 	NOT_RUSHABLE = 2097152,        ## Rush: producing infantry or a builder, which can't be rushed (user decision). SITUATIONAL — shown, so the rule is learned.
 	RUSH_AT_MINIMUM = 4194304,     ## Rush: already ready at the start of the next turn — the floor. SITUATIONAL.
+	NO_WEAPON = 16777216,          ## Attack: this kind of thing has no weapon at all (HQ, factories, Builders, Transports). STRUCTURAL — hidden (2026-10-01, user decision).
 	OUT_OF_AMMO = 8388608,         ## Attack: a vehicle/aircraft with no ammo left ([method Ammo.is_empty]). SITUATIONAL — resupply beside an HQ, factory, airfield or Supply Depot.
 }
 
@@ -488,7 +489,20 @@ static func _move_entry(state: GameState, entity: EntityState) -> VerbEntry:
 ## Builds the Attack [VerbEntry] — see [method menu_model]'s doc comment for
 ## the full rule, including AC-8's both-reasons requirement and AC-7's
 ## already-attacked short-circuit.
+## True when [param entity]'s type carries a weapon at all: some attack, some range and
+## something it may target. A Volley-style range bonus never arms an unarmed type.
+static func has_weapon(entity: EntityState) -> bool:
+	var t: Variant = entity.get("type")
+	if t == null:
+		return false
+	return int(t.attack) > 0 and int(t.attack_range) > 0 and not (t.can_target as Array).is_empty()
+
+
 static func _attack_entry(state: GameState, entity: EntityState) -> VerbEntry:
+	# ★ 2026-10-01 (user decision): no weapon → no Attack row at all (it read "no targets" on
+	# every HQ, factory, Builder and Transport).
+	if not has_weapon(entity):
+		return VerbEntry.new(Verb.ATTACK, false, Reason.NO_WEAPON)
 	var can_still_attack: bool
 	if entity is UnitState:
 		can_still_attack = Unit.can_attack(entity)

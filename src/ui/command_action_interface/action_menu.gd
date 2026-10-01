@@ -245,6 +245,7 @@ const REASON_LABELS: Dictionary = {
 	CommandFSM.Reason.NOT_RUSHABLE: "infantry can't rush",
 	CommandFSM.Reason.RUSH_AT_MINIMUM: "ready next turn",
 	CommandFSM.Reason.OUT_OF_AMMO: "out of ammo",
+	CommandFSM.Reason.NO_WEAPON: "no weapon",
 }
 
 ## Player-facing phrasing for an [enum Action.Reason] a validator returned when a
@@ -312,6 +313,7 @@ const REASON_ORDER: Array[int] = [
 	CommandFSM.Reason.NOT_UNDER_CONSTRUCTION,
 	CommandFSM.Reason.NOTHING_IN_RESEARCH,
 	CommandFSM.Reason.NOTHING_TO_RUSH,
+	CommandFSM.Reason.NO_WEAPON,
 	CommandFSM.Reason.NOT_A_UNIT,
 	CommandFSM.Reason.NOTHING_BLOCKED,
 	CommandFSM.Reason.NOT_COMPLETED,
@@ -794,7 +796,8 @@ static func _is_inapplicable(entry: CommandFSM.VerbEntry) -> bool:
 		or (entry.reason & CommandFSM.Reason.NOT_A_PRODUCER) != 0 \
 		or (entry.reason & CommandFSM.Reason.NOT_A_BUILDER) != 0 \
 		or (entry.reason & CommandFSM.Reason.NOTHING_BLOCKED) != 0 \
-		or (entry.reason & CommandFSM.Reason.NOTHING_TO_RUSH) != 0
+		or (entry.reason & CommandFSM.Reason.NOTHING_TO_RUSH) != 0 \
+		or (entry.reason & CommandFSM.Reason.NO_WEAPON) != 0
 
 
 ## The Disband row's payout, or empty for anything that cannot be disbanded.
