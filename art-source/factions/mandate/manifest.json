@@ -540,7 +540,10 @@
    "crop": 0.02,
    "id": "protectorate_barracks",
    "raw": "art-source/generated/mandate/protectorate_barracks_4.png",
-   "cutter": "flood"
+   "cutter": "flood",
+   "declutter": 8,
+   "declutter_smooth": true,
+   "accent_cap": 15
   },
   {
    "kind": "struct",
@@ -551,7 +554,10 @@
    "crop": 0.02,
    "id": "protectorate_factory",
    "raw": "art-source/generated/mandate/protectorate_factory.png",
-   "cutter": "flood"
+   "cutter": "flood",
+   "declutter": 8,
+   "declutter_smooth": true,
+   "accent_cap": 15
   },
   {
    "kind": "struct",
@@ -562,7 +568,10 @@
    "crop": 0.02,
    "id": "protectorate_airfield",
    "raw": "art-source/generated/mandate/protectorate_airfield_2.png",
-   "cutter": "flood"
+   "cutter": "flood",
+   "declutter": 8,
+   "declutter_smooth": true,
+   "accent_cap": 15
   },
   {
    "kind": "struct",
@@ -573,7 +582,10 @@
    "crop": 0.02,
    "id": "protectorate_defence",
    "raw": "art-source/generated/mandate/protectorate_defence_3.png",
-   "cutter": "flood"
+   "cutter": "flood",
+   "declutter": 8,
+   "declutter_smooth": true,
+   "accent_cap": 15
   }
  ]
 }

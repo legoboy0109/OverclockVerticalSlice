@@ -496,7 +496,10 @@
    "flatten": true,
    "crop": 0.02,
    "keep_accent": 0.25,
-   "cutter": "flood"
+   "cutter": "flood",
+   "declutter": 8,
+   "declutter_smooth": true,
+   "accent_cap": 15
   },
   {
    "id": "union_factory",
@@ -519,7 +522,11 @@
    "flatten": true,
    "crop": 0.02,
    "keep_accent": 0.25,
-   "cutter": "flood"
+   "cutter": "flood",
+   "declutter": 8,
+   "declutter_smooth": true,
+   "accent_cap": 15,
+   "accent_sat": 0.5
   },
   {
    "id": "bulwark",
@@ -530,7 +537,10 @@
    "flatten": true,
    "crop": 0.02,
    "keep_accent": 0.25,
-   "cutter": "flood"
+   "cutter": "flood",
+   "declutter": 8,
+   "declutter_smooth": true,
+   "accent_cap": 15
   }
  ]
 }

@@ -8,6 +8,7 @@
 ##
 ## Usage: `./redot tools/CaptureRoster.tscn -- --units levy,knight --out order-infantry`
 ##        (needs a display; ids are vault note ids, i.e. the .tres basenames)
+## Structure ids (e.g. empire_factory) work too — they are placed completed.
 extends Node
 
 const OUT: String = "res://production/qa/evidence/roster"
@@ -30,6 +31,13 @@ func _ready() -> void:
 
 func _type_by_id(id: String) -> UnitTypeDef:
 	for t: UnitTypeDef in UnitTypes.ALL:
+		if t.resource_path.get_file().get_basename() == id:
+			return t
+	return null
+
+
+func _struct_by_id(id: String) -> StructureTypeDef:
+	for t: StructureTypeDef in StructureTypes.ALL:
 		if t.resource_path.get_file().get_basename() == id:
 			return t
 	return null
@@ -59,14 +67,29 @@ func _run() -> void:
 		var x: int = maxi(0, w / 2 - ids.size())
 		for id: String in ids:
 			var type: UnitTypeDef = _type_by_id(id)
-			if type == null:
-				push_error("capture_roster: unknown unit id '%s'" % id)
+			var stype: StructureTypeDef = _struct_by_id(id) if type == null else null
+			if type == null and stype == null:
+				push_error("capture_roster: unknown unit/structure id '%s'" % id)
 				continue
 			var y: int = y0
 			while x < w and (not st.grid.is_passable(x, y) or st.entity_at(Vector2i(x, y)) != null):
 				x += 1
 			if x >= w:
 				break
+			if stype != null:
+				var b := StructureState.new()
+				b.entity_id = st.next_entity_id
+				st.next_entity_id += 1
+				b.owner = row
+				b.type = stype
+				b.current_hp = stype.hp
+				b.build_status = StructureState.BuildStatus.COMPLETED
+				b.position = Vector2i(x, y)
+				st.entities_by_id[b.entity_id] = b
+				st.grid.place(b.entity_id, x, y)
+				placed.append(b.position)
+				x += 2
+				continue
 			var u := UnitState.new()
 			u.entity_id = st.next_entity_id
 			st.next_entity_id += 1

@@ -375,7 +375,10 @@
    "axis": "w",
    "px": 256,
    "flatten": true,
-   "cutter": "flood"
+   "cutter": "flood",
+   "declutter": 8,
+   "declutter_smooth": true,
+   "accent_cap": 15
   },
   {
    "id": "empire_factory",
@@ -384,7 +387,11 @@
    "axis": "w",
    "px": 256,
    "flatten": true,
-   "cutter": "flood"
+   "cutter": "flood",
+   "declutter": 8,
+   "declutter_smooth": true,
+   "accent_cap": 15,
+   "accent_sat": 0.5
   },
   {
    "id": "empire_airfield",
@@ -393,7 +400,10 @@
    "axis": "w",
    "px": 256,
    "flatten": true,
-   "cutter": "flood"
+   "cutter": "flood",
+   "declutter": 8,
+   "declutter_smooth": true,
+   "accent_cap": 15
   },
   {
    "id": "cathedral",
@@ -402,7 +412,10 @@
    "axis": "w",
    "px": 256,
    "flatten": true,
-   "cutter": "flood"
+   "cutter": "flood",
+   "declutter": 8,
+   "declutter_smooth": true,
+   "accent_cap": 15
   }
  ]
 }
