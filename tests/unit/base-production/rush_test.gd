@@ -229,3 +229,17 @@ func test_menu_rush_row_hidden_on_idle_structures_and_units() -> void:
 	var e := _rush_entry(state, idle)
 	assert_bool(e.enabled).is_false()
 	assert_bool(ActionMenu._is_inapplicable(e)).is_true()
+
+
+func test_menu_rush_row_hidden_on_the_hq_and_infantry_only_producers() -> void:
+	# ★ 2026-10-01 (user decision): never offered where it could never apply.
+	var state := _state()
+	var hq := _structure(state, 0, StructureTypes.HQ, Vector2i(2, 2))
+	var e := _rush_entry(state, hq)
+	assert_bool(e.enabled).is_false()
+	assert_bool(ActionMenu._is_inapplicable(e)).is_true()
+	var barracks := _structure(state, 0, StructureTypes.BARRACKS, Vector2i(6, 6))
+	assert_bool(ActionMenu._is_inapplicable(_rush_entry(state, barracks))).is_true()
+	# A factory (vehicles) still shows it, even idle-but-producing-infantry would be shown.
+	var factory := _producing(state, _type_of_class(UnitTypeDef.UnitClass.GROUND_VEHICLE), 2)
+	assert_bool(_rush_entry(state, factory).enabled).is_true()

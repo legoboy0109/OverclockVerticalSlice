@@ -825,7 +825,8 @@ func test_menu_model_producer_under_cap_with_deploy_space_and_ap_produce_enabled
 # enabled=false with an unspecified reason).
 # ==============================================================================
 
-func test_menu_model_structure_move_disabled_out_of_range_reason() -> void:
+func test_menu_model_structure_move_disabled_not_a_unit_reason() -> void:
+	# ★ 2026-10-01 (user decision): was OUT_OF_RANGE ("no route", shown); now NOT_A_UNIT (hidden).
 	var state := _make_state(0)
 	var structure_type := _make_structure_type()
 	var structure := _place_structure(state, 1, 0, Vector2i(5, 5), structure_type)
@@ -835,7 +836,7 @@ func test_menu_model_structure_move_disabled_out_of_range_reason() -> void:
 	var move_entry: CommandFSM.VerbEntry = _find_entry(menu, CommandFSM.Verb.MOVE)
 
 	assert_bool(move_entry.enabled).is_false()
-	assert_int(move_entry.reason).is_equal(CommandFSM.Reason.OUT_OF_RANGE)
+	assert_int(move_entry.reason).is_equal(CommandFSM.Reason.NOT_A_UNIT)
 
 
 # ==============================================================================
@@ -930,3 +931,19 @@ func test_menu_wait_is_always_the_last_row() -> void:
 	var u := _place_unit(state, 1, 0, Vector2i(3, 3), UnitTypes.TROOPER)
 	var menu: Array[CommandFSM.VerbEntry] = CommandFSM.menu_model(state, u)
 	assert_int(menu[-1].verb).is_equal(CommandFSM.Verb.WAIT)
+
+
+func test_menu_move_row_is_hidden_on_structures() -> void:
+	# ★ 2026-10-01 (user decision): buildings never move, so no "Move — no route" row.
+	var state := _make_state()
+	var s := StructureState.new()
+	s.entity_id = 9
+	s.owner = 0
+	s.position = Vector2i(4, 4)
+	s.type = StructureTypes.HQ
+	s.current_hp = s.type.hp
+	s.build_status = StructureState.BuildStatus.COMPLETED
+	state.entities_by_id[9] = s
+	var e := _find_entry(CommandFSM.menu_model(state, s), CommandFSM.Verb.MOVE)
+	assert_bool(e.enabled).is_false()
+	assert_bool(ActionMenu._is_inapplicable(e)).is_true()
