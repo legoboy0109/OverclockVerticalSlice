@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Structures/Supply Depot.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 9c7a589a11fe007125bac0729cafa059cc692a7ccae98897463e898f98641c73
+; source-sha256: 23507c79aa212f61185d80d89ce20bcc3ef5e3657b44e75b31d71d4a37fb7288
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 
@@ -8,7 +8,7 @@
 script = ExtResource("1")
 display_name = "Supply Depot"
 buildable = true
-art_id = &"research_lab"
+art_id = &""
 counts_as = []
 hp = 10
 build_cost = 500

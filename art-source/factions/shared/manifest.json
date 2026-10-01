@@ -1,0 +1,34 @@
+{
+ "assets": [
+  {
+   "id": "construction",
+   "kind": "struct",
+   "raw": "art-source/generated/zstructs/construction_2.png",
+   "axis": "w",
+   "px": 256,
+   "flatten": true,
+   "cutter": "flood",
+   "hue_max": 60,
+   "keep_accent": 0.15,
+   "smooth": 3,
+   "plate_band": [0.0, 0.85],
+   "accent_colors": 2,
+   "touches": {"base_rim": 1}
+  },
+  {
+   "id": "supply_depot",
+   "kind": "struct",
+   "raw": "art-source/generated/zstructs/supply_depot_2.png",
+   "axis": "w",
+   "px": 256,
+   "flatten": true,
+   "cutter": "flood",
+   "hue_max": 60,
+   "keep_accent": 0.15,
+   "smooth": 3,
+   "plate_band": [0.0, 0.85],
+   "accent_colors": 2,
+   "touches": {"base_rim": 1}
+  }
+ ]
+}
