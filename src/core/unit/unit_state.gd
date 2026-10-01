@@ -55,6 +55,8 @@ extends EntityState
 ## owner's turn and whenever their research completes — never by hand.
 @export var tech_hp_bonus: int = 0
 @export var tech_move_bonus: int = 0
+## AP off each in-cap tile (Infiltrators) — read by [method Unit.crewed_move_cost].
+@export var tech_move_cost_discount: int = 0
 @export var tech_ammo_bonus: int = 0
 @export var tech_attack_ap_discount: int = 0
 

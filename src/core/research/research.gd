@@ -161,6 +161,8 @@ static func _refresh_unit(state: GameState, u: UnitState) -> void:
 	if cls != UnitTypeDef.UnitClass.INFANTRY:
 		mv += sum(state, p, &"vehicle_move_cap_bonus")
 	u.tech_move_bonus = mv
+	u.tech_move_cost_discount = sum(state, p, &"infantry_move_cost_discount") \
+		if cls == UnitTypeDef.UnitClass.INFANTRY else 0
 	u.tech_ammo_bonus = sum(state, p, &"ammo_bonus")
 	u.tech_attack_ap_discount = sum(state, p, &"attack_ap_discount")
 

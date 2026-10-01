@@ -96,6 +96,19 @@ func test_effect_infantry_move_cost_discount_floors_at_one() -> void:
 	assert_int(Unit.effective_move_cost(s, UnitTypes.TROOPER, 0)).is_equal(Unit.MIN_MOVE_COST)
 
 
+# Regression (2026-10-01 sims): Infiltrators once changed only effective_move_cost, which Movement
+# never calls, so the tech did nothing in play. Check the cost Movement actually bills.
+func test_effect_infantry_move_cost_discount_reduces_billed_move_cost() -> void:
+	var s := _state()
+	var inf := _unit(s, 0, UnitTypes.TROOPER, Vector2i(2, 2))
+	var tank := _unit(s, 0, UnitTypes.TANK, Vector2i(4, 4))
+	var i0: int = Movement.move_path_cost(inf, 1)
+	var t0: int = Movement.move_path_cost(tank, 1)
+	_grant(s, _tech(&"infantry_move_cost_discount", 1))
+	assert_int(Movement.move_path_cost(inf, 1)).is_equal(i0 - 1)
+	assert_int(Movement.move_path_cost(tank, 1)).is_equal(t0)
+
+
 # --- Attack ----------------------------------------------------------------------------------
 
 func test_effect_attack_vs_armor_and_vs_infantry_pick_the_target_class() -> void:
