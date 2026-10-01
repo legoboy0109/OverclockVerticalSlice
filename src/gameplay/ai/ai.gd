@@ -1517,7 +1517,7 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 	# choose_action re-proposes a produce every call, apply_action rejects it, and the
 	# driver's reject-continue loop spins. Exactly the freeze the production-cap gate
 	# above was added to prevent, one field along.
-	if producer.producing_type != null:
+	if not BaseProduction.has_free_slot(lookahead, producer):   # all slots busy (Ross Barracks have 2)
 		return best
 
 	var deploy_tiles: Array[Vector2i] = BaseProduction.legal_deploy_tiles(lookahead, producer, null)
@@ -2138,7 +2138,19 @@ static func _capacity_value(lookahead: GameState, player: int, structure_type: S
 	var produces: bool = not structure_type.producible_types.is_empty()
 	if structure_type.cap_bonus <= 0 and not produces:
 		return 0.0
-	var marginal_cost: float = _cheapest_producible_cost(lookahead, player)
+	# ★ 2026-10-01 (user direction: "make the AI build factories earlier"): a producer is worth
+	# the units IT makes. This read the player's globally cheapest unit (a 200-Credit Scout), so
+	# a Factory was valued as a slow Scout factory and lost to a Barracks every time — the AI
+	# raised ~1 Factory per side per game. Now: the cheapest ARMED type this structure produces.
+	# ⚠ Measured: priced that way with no further rule, the Factory came FIRST (median round 1,
+	# 59% vehicles) and the opening had no infantry producer. So a producer with no infantry
+	# of its own only earns its own-unit price once an infantry producer exists (any build
+	# status): Barracks first, then the Factory a couple of rounds later.
+	var own_price_ok: bool = produces and AIBalance.ai.producer_value_own_units \
+		and (_makes_armed_infantry(structure_type) or _has_infantry_producer(lookahead, player))
+	var marginal_cost: float = _cheapest_armed_cost_of(lookahead, player, structure_type) if own_price_ok else 0.0
+	if marginal_cost <= 0.0:
+		marginal_cost = _cheapest_producible_cost(lookahead, player)
 	if marginal_cost <= 0.0:
 		return 0.0
 
@@ -2174,6 +2186,36 @@ static func _capacity_value(lookahead: GameState, player: int, structure_type: S
 	if usable <= 0.0:
 		return 0.0
 	return credits_to_ap(usable * marginal_cost)
+
+
+## True when [param structure_type] produces an armed infantry type (a Barracks).
+static func _makes_armed_infantry(structure_type: StructureTypeDef) -> bool:
+	for t: UnitTypeDef in structure_type.producible_types:
+		if t.unit_class == UnitTypeDef.UnitClass.INFANTRY and t.attack > 0 and not t.can_build:
+			return true
+	return false
+
+
+## True when [param player] owns an armed-infantry producer, completed or under construction.
+static func _has_infantry_producer(s: GameState, player: int) -> bool:
+	for e: EntityState in s.entities():
+		if e is StructureState and e.owner == player and _makes_armed_infantry((e as StructureState).type):
+			return true
+	return false
+
+
+## Credit cost of the cheapest ARMED unit [param structure_type] produces for [param player]
+## (0 if it produces none — e.g. the HQ, which makes only Builders).
+static func _cheapest_armed_cost_of(s: GameState, player: int, structure_type: StructureTypeDef) -> float:
+	var cheapest: float = 0.0
+	for t: UnitTypeDef in structure_type.producible_types:
+		if t.attack <= 0 or t.can_build:
+			continue
+		# Fixtures without a faction get the catalogue price (effective_produce_cost needs one).
+		var c: float = float(Unit.effective_produce_cost(s, t, player) if s.faction_of(player) != null else t.produce_cost)
+		if cheapest <= 0.0 or c < cheapest:
+			cheapest = c
+	return cheapest
 
 
 ## Credit cost of the cheapest unit [param player] can currently produce anywhere, or 0.0 if
@@ -2406,7 +2448,7 @@ static func _tree_effects_marginal_value(s: GameState, p: int, t: TechDef) -> fl
 	ae += 0.01 * t.structure_hp_pct + 0.02 * t.hq_hp_bonus + 0.15 * t.hq_attack + (0.4 if t.defensive_counterattack else 0.0)
 	ae += 0.15 * t.defensive_anti_air + 0.4 * t.build_time_discount + 0.2 * t.ammo_bonus * veh
 	ae += 0.15 * t.resupply_range * veh + 0.3 * t.supply_heal + 0.6 * t.vehicle_production_turn_discount * veh
-	ae += 0.3 * t.pop_cap_bonus + 0.6 * t.production_cap_bonus + 0.5 * t.bonus_unit_attack + 0.3 * t.bonus_unit_move_cap
+	ae += 0.3 * t.pop_cap_bonus + 0.6 * (t.production_cap_bonus + t.factory_slot_bonus) + 0.5 * t.bonus_unit_attack + 0.3 * t.bonus_unit_move_cap
 	ae += 0.5 if not t.frees_pilots.is_empty() else 0.0
 	var ap: float = float(t.ap_per_turn_bonus) + 2.0 * t.attack_ap_discount + 0.5 * t.rush_ap_discount \
 		+ (1.0 if t.vehicle_rush_half else 0.0)
@@ -2451,7 +2493,7 @@ static func _vehicle_savings_reserve(s: GameState, owner: int) -> int:
 		var st: StructureState = e
 		if st.build_status != StructureState.BuildStatus.COMPLETED or st.type.producible_types.is_empty():
 			continue
-		var idle: bool = st.producing_type == null
+		var idle: bool = BaseProduction.has_free_slot(s, st)
 		for t: UnitTypeDef in st.type.producible_types:
 			if t.can_build or t.attack <= 0 or not Population.can_field(s, owner, t):
 				continue
@@ -2491,7 +2533,7 @@ static func _vehicle_upkeep_room(s: GameState, owner: int) -> int:
 		if not (e is StructureState) or e.owner != owner:
 			continue
 		var st: StructureState = e
-		if st.build_status != StructureState.BuildStatus.COMPLETED or st.producing_type != null:
+		if st.build_status != StructureState.BuildStatus.COMPLETED or not BaseProduction.has_free_slot(s, st):
 			continue
 		for t: UnitTypeDef in st.type.producible_types:
 			if t.can_build or t.attack <= 0 or t.unit_class == UnitTypeDef.UnitClass.INFANTRY \

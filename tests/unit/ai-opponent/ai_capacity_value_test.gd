@@ -124,8 +124,9 @@ func test_capacity_value_is_bounded_by_remaining_headroom() -> void:
 	var at_ceiling: float = AI._economy_value(state, 0, StructureTypes.BARRACKS)
 	# The Barracks' own cap_bonus is the only headroom it creates, so value is finite and
 	# bounded by that -- not by throughput, which is larger.
+	# Priced at the cheapest armed unit the Barracks itself makes (2026-10-01).
 	var max_possible: float = AI.credits_to_ap(float(StructureTypes.BARRACKS.cap_bonus) \
-		* AI._cheapest_producible_cost(state, 0))
+		* AI._cheapest_armed_cost_of(state, 0, StructureTypes.BARRACKS))
 	assert_float(at_ceiling).is_less_equal(max_possible + 0.0001)
 	assert_float(at_ceiling).is_greater(0.0)
 
@@ -166,11 +167,13 @@ func test_structures_granting_no_cap_are_still_worth_zero() -> void:
 	assert_float(AI._economy_value(state, 0, StructureTypes.RESEARCH_LAB)).is_equal_approx(0.0, 0.0001)
 
 
-func test_no_producer_means_no_capacity_value() -> void:
-	# A cap slot is worth what you can put in it. With no completed producer, nothing.
+func test_a_first_producer_is_valued_by_its_own_units() -> void:
+	# ★ 2026-10-01: was "no completed producer means no capacity value" — slots were priced at
+	# the cheapest unit the player could ALREADY make. A producer is now worth the armed units
+	# it makes itself, so the first Barracks has value even with nothing else standing.
 	var state := _state()
 	_fill_to(state, 0, 2)
-	assert_float(AI._economy_value(state, 0, StructureTypes.BARRACKS)).is_equal_approx(0.0, 0.0001)
+	assert_float(AI._economy_value(state, 0, StructureTypes.BARRACKS)).is_greater(0.0)
 
 
 func test_capacity_value_uses_the_cheapest_producible_unit() -> void:
@@ -183,3 +186,22 @@ func test_capacity_value_uses_the_cheapest_producible_unit() -> void:
 	# Builder. Reads the roster rather than naming a number, so a re-cost of the
 	# Builder does not silently turn this into a test of nothing.
 	assert_float(cheapest).is_equal_approx(float(UnitTypes.BUILDER.produce_cost), 0.0001)
+
+
+func test_a_factory_earns_its_vehicle_price_only_after_a_barracks_exists() -> void:
+	# 2026-10-01: Factories valued by their own vehicles, but not before the first infantry
+	# producer — measured, the AI otherwise opened Factory-first with no infantry at all.
+	var state := _state()
+	_add_hq(state, 0, Vector2i(5, 5))
+	var before: float = AI._economy_value(state, 0, StructureTypes.FACTORY)
+	var b := StructureState.new()
+	b.entity_id = state.next_entity_id
+	b.owner = 0
+	b.position = Vector2i(2, 2)
+	b.type = StructureTypes.BARRACKS
+	b.current_hp = b.type.hp
+	b.build_status = StructureState.BuildStatus.UNDER_CONSTRUCTION
+	state.entities_by_id[b.entity_id] = b
+	state.grid.place(b.entity_id, 2, 2)
+	state.next_entity_id += 1
+	assert_float(AI._economy_value(state, 0, StructureTypes.FACTORY)).is_greater(before)

@@ -220,6 +220,11 @@ extends Resource
 ## income than the best vehicle's upkeep. Losses then free budget for the vehicle instead.
 @export var vehicle_room_min_army: int = 3
 
+## ★ Producers valued by their OWN units (AI._capacity_value, 2026-10-01). On = a Factory is worth
+## the vehicles it makes; off = every producer is priced at the player's cheapest unit anywhere
+## (the old behaviour, which left the AI raising ~1 Factory per side per game).
+@export var producer_value_own_units: bool = true
+
 ## `ap_cost_opponent_paid_for` weight for the enemy HQ (which has no
 ## `build_cost`) — a siege-priority weight, not a sunk-cost figure.
 ## ★★ RAISED 12 -> 60 (S6-07c, user's lever: "make the objective outscore trading").
