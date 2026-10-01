@@ -231,13 +231,13 @@ func test_build_with_exact_credits_and_ap_surcharge_via_apply_action_commits_ato
 	var state := _make_state(0, 0)
 	var anchor := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(0, 0))
 	_place(state, anchor)
-	var cost: int = BaseProduction.effective_build_cost(state, StructureTypes.FACTORY, 0)
+	var cost: int = BaseProduction.effective_build_cost(state, StructureTypes.BARRACKS, 0)
 	state.per_player[0].current_credits = cost
 	state.per_player[0].current_ap = Balance.economy.build_ap_cost
 	var target_tile := Vector2i(1, 0) # manhattan==1 from the anchor.
 	# Non-vacuous precondition: the tile is actually legal before we act.
-	assert_bool(target_tile in BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)).is_true()
-	var action := _build(StructureTypes.FACTORY, target_tile, 0, anchor.entity_id)
+	assert_bool(target_tile in BaseProduction.legal_build_tiles(state, 0, StructureTypes.BARRACKS)).is_true()
+	var action := _build(StructureTypes.BARRACKS, target_tile, 0, anchor.entity_id)
 
 	# Act
 	var result: ActionResult = state.apply_action(action)
@@ -251,7 +251,7 @@ func test_build_with_exact_credits_and_ap_surcharge_via_apply_action_commits_ato
 	var placed_id: int = state.grid.occupant_at(target_tile.x, target_tile.y)
 	assert_int(placed_id).is_not_equal(GridState.EMPTY_OCCUPANT)
 	var placed: StructureState = state.entities_by_id[placed_id]
-	assert_object(placed.type).is_same(StructureTypes.FACTORY)
+	assert_object(placed.type).is_same(StructureTypes.BARRACKS)
 	assert_int(placed.build_status).is_equal(StructureState.BuildStatus.UNDER_CONSTRUCTION)
 	# ... and the commit emitted a StructurePlacedEvent for the new structure
 	# (event-stream symmetry with AC-7's StructureDestroyedEvent check).
@@ -259,7 +259,7 @@ func test_build_with_exact_credits_and_ap_surcharge_via_apply_action_commits_ato
 	for e: Event in result.events:
 		if e is StructurePlacedEvent and e.entity_id == placed_id:
 			saw_placed = true
-			assert_object(e.structure_type).is_same(StructureTypes.FACTORY)
+			assert_object(e.structure_type).is_same(StructureTypes.BARRACKS)
 			assert_int(e.owner).is_equal(0)
 	assert_bool(saw_placed).is_true()
 
@@ -271,7 +271,7 @@ func test_unaffordable_build_credits_short_via_apply_action_rejected_state_uncha
 	var state := _make_state(0, 0)
 	var anchor := _make_unit(1, 0, UnitTypes.SCOUT, Vector2i(0, 0))
 	_place(state, anchor)
-	var cost: int = BaseProduction.effective_build_cost(state, StructureTypes.FACTORY, 0)
+	var cost: int = BaseProduction.effective_build_cost(state, StructureTypes.BARRACKS, 0)
 	state.per_player[0].current_credits = cost - 1
 	state.per_player[0].current_ap = Balance.economy.build_ap_cost
 	var target_tile := Vector2i(1, 0)
@@ -279,7 +279,7 @@ func test_unaffordable_build_credits_short_via_apply_action_rejected_state_uncha
 	var ap_before: int = state.per_player[0].current_ap
 	var occupancy_before: PackedInt32Array = state.grid.occupancy.duplicate()
 	var entity_count_before: int = state.entities_by_id.size()
-	var action := _build(StructureTypes.FACTORY, target_tile, 0, anchor.entity_id)
+	var action := _build(StructureTypes.BARRACKS, target_tile, 0, anchor.entity_id)
 
 	# Act
 	var result: ActionResult = state.apply_action(action)

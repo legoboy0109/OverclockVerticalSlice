@@ -246,6 +246,7 @@ const REASON_LABELS: Dictionary = {
 	CommandFSM.Reason.RUSH_AT_MINIMUM: "ready next turn",
 	CommandFSM.Reason.OUT_OF_AMMO: "out of ammo",
 	CommandFSM.Reason.NO_WEAPON: "no weapon",
+	CommandFSM.Reason.NEEDS_STRUCTURE: "needs a building first",
 }
 
 ## Player-facing phrasing for an [enum Action.Reason] a validator returned when a
@@ -314,6 +315,7 @@ const REASON_ORDER: Array[int] = [
 	CommandFSM.Reason.NOTHING_IN_RESEARCH,
 	CommandFSM.Reason.NOTHING_TO_RUSH,
 	CommandFSM.Reason.NO_WEAPON,
+	CommandFSM.Reason.NEEDS_STRUCTURE,
 	CommandFSM.Reason.NOT_A_UNIT,
 	CommandFSM.Reason.NOTHING_BLOCKED,
 	CommandFSM.Reason.NOT_COMPLETED,
@@ -1082,7 +1084,9 @@ func open_build_options(options: Array[CommandFSM.BuildOption], \
 	for option: CommandFSM.BuildOption in options:
 		items.append({
 			"label": option.structure_type.display_name,
-			"right": _cost_text(option.credit_cost, option.ap_cost, option.enabled, option.reason),
+			# A missing prerequisite names the building, like research's "Needs <tech>".
+			"right": ("Needs %s" % option.blocking_structure.display_name) if option.blocking_structure != null \
+				else _cost_text(option.credit_cost, option.ap_cost, option.enabled, option.reason),
 			"enabled": option.enabled,
 			"is_reason": not option.enabled,
 			"on_press": _on_build_row_pressed.bind(option.structure_type),

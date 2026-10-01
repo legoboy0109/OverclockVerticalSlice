@@ -166,6 +166,7 @@ enum Reason {
 	RUSH_AT_MINIMUM = 4194304,     ## Rush: already ready at the start of the next turn — the floor. SITUATIONAL.
 	NO_WEAPON = 16777216,          ## Attack: this kind of thing has no weapon at all (HQ, factories, Builders, Transports). STRUCTURAL — hidden (2026-10-01, user decision).
 	OUT_OF_AMMO = 8388608,         ## Attack: a vehicle/aircraft with no ammo left ([method Ammo.is_empty]). SITUATIONAL — resupply beside an HQ, factory, airfield or Supply Depot.
+	NEEDS_STRUCTURE = 33554432,    ## Build: a prerequisite structure is not completed yet ([method BaseProduction.missing_prerequisite]). SITUATIONAL — shown as "Needs <structure>" (2026-10-01).
 }
 
 
@@ -1132,6 +1133,8 @@ class BuildOption extends RefCounted:
 	var enabled: bool
 	## Bitmask (OR) of every [enum Reason] flag that made this row unavailable.
 	var reason: int
+	## The structure still needed first when [member reason] has [constant Reason.NEEDS_STRUCTURE].
+	var blocking_structure: StructureTypeDef = null
 
 	func _init(t: StructureTypeDef, cc: int, ac: int, e: bool, r: int) -> void:
 		structure_type = t
@@ -1185,9 +1188,12 @@ static func build_options(state: GameState, builder: UnitState, \
 			reason |= Reason.INSUFFICIENT_CREDITS
 		if not has_space:
 			reason |= Reason.NO_DEPLOY_SPACE
-		options.append(BuildOption.new(
-			type, credit_cost, ap_cost, reason == Reason.NONE, reason
-		))
+		var needed: StructureTypeDef = BaseProduction.missing_prerequisite(state, player, type)
+		if needed != null:
+			reason |= Reason.NEEDS_STRUCTURE
+		var option := BuildOption.new(type, credit_cost, ap_cost, reason == Reason.NONE, reason)
+		option.blocking_structure = needed
+		options.append(option)
 	return options
 
 

@@ -81,6 +81,11 @@ extends Resource
 ## the Empire's Cathedral counts as a Research Lab, so it gates tier-2 research like one.
 @export var counts_as: Array[StructureTypeDef] = []
 
+## ★ 2026-10-01 (user decision): build prerequisites. The player must own a COMPLETED structure
+## of one of these types (any one) before raising this one — Factory needs a Barracks, Airfield a
+## Factory. Empty = no prerequisite. See [method BaseProduction.missing_prerequisite].
+@export var requires_structures: Array[StructureTypeDef] = []
+
 ## Borrow another type's sprites (its id) until this one has its own art — a faction's
 ## variant of a shared building, or a new unit awaiting art. Empty = its own id.
 ## ⚠ Placeholder: two types sharing art look identical on the board.

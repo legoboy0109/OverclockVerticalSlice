@@ -2,6 +2,8 @@
 id: empire_factory
 buildable: false
 counts_as: []
+requires_structures:
+- '[[Order Barracks]]'
 hp: 14
 build_cost: 1000
 build_time: 3

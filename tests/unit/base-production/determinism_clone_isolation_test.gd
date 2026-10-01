@@ -229,7 +229,7 @@ func test_cross_clone_build_yields_field_wise_equal_states() -> void:
 	_place(source, _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5)))
 	var a: GameState = source.clone()
 	var b: GameState = source.clone()
-	var action := _make_build_action(StructureTypes.FACTORY, Vector2i(6, 5))
+	var action := _make_build_action(StructureTypes.BARRACKS, Vector2i(6, 5))
 	# Act -- identical build on each clone.
 	BaseProduction.apply_build(a, action)
 	BaseProduction.apply_build(b, action)
@@ -304,7 +304,7 @@ func test_clone_isolation_build_leaves_source_unchanged() -> void:
 	_place(source, _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5)))
 	var snapshot: GameState = source.clone() # pre-action snapshot
 	var c: GameState = source.clone()
-	var action := _make_build_action(StructureTypes.FACTORY, Vector2i(6, 5))
+	var action := _make_build_action(StructureTypes.BARRACKS, Vector2i(6, 5))
 	# Act -- build only on the clone.
 	BaseProduction.apply_build(c, action)
 	# Assert -- the clone gained the structure; the source is untouched (never

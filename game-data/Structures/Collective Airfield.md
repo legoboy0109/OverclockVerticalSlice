@@ -1,6 +1,8 @@
 ---
 id: union_airfield
 buildable: false
+requires_structures:
+- '[[Collective Factory]]'
 hp: 12
 build_cost: 1200
 build_time: 3

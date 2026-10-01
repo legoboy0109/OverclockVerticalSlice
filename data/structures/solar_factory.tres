@@ -1,10 +1,11 @@
-[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=5 format=3]
 ; GENERATED from game-data/Structures/Front Factory.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 30eed6df552571f564a125c528f91fe7d4cdf9f1e65979c4e9a3ef315d7458a8
+; source-sha256: 51df4889cfe1e180338c6c207ad99ce0ef5ff29c975d66065316ac5786830e51
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
-[ext_resource type="Resource" path="res://data/units/gun_truck.tres" id="2"]
-[ext_resource type="Resource" path="res://data/units/armoured_transport.tres" id="3"]
+[ext_resource type="Resource" path="res://data/structures/solar_barracks.tres" id="2"]
+[ext_resource type="Resource" path="res://data/units/gun_truck.tres" id="3"]
+[ext_resource type="Resource" path="res://data/units/armoured_transport.tres" id="4"]
 
 [resource]
 script = ExtResource("1")
@@ -12,6 +13,7 @@ display_name = "Front Factory"
 buildable = false
 art_id = &""
 counts_as = []
+requires_structures = [ExtResource("2")]
 hp = 14
 build_cost = 1000
 build_time = 3
@@ -20,7 +22,7 @@ max_count = 2
 cap_bonus = 0
 production_cap = 1
 production_slots = 1
-producible_types = [ExtResource("2"), ExtResource("3")]
+producible_types = [ExtResource("3"), ExtResource("4")]
 attack = 0
 attack_range = 0
 defense = 0

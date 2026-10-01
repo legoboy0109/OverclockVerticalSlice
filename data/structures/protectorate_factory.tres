@@ -1,12 +1,13 @@
-[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=7 format=3]
 ; GENERATED from game-data/Structures/Mandate Factory.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 5910ce2fe26a2f401683ad66a9b97aafd1cb1b0a0bb4da8495dfbd833b2dfc2c
+; source-sha256: 8e030bad894bf5f522d24ed3ea7e3e34597db67d0d44122b0eae3639eed41770
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
-[ext_resource type="Resource" path="res://data/units/sentinel_mech.tres" id="2"]
-[ext_resource type="Resource" path="res://data/units/breaker_mech.tres" id="3"]
-[ext_resource type="Resource" path="res://data/units/lance_tank.tres" id="4"]
-[ext_resource type="Resource" path="res://data/units/cinder_tank.tres" id="5"]
+[ext_resource type="Resource" path="res://data/structures/protectorate_barracks.tres" id="2"]
+[ext_resource type="Resource" path="res://data/units/sentinel_mech.tres" id="3"]
+[ext_resource type="Resource" path="res://data/units/breaker_mech.tres" id="4"]
+[ext_resource type="Resource" path="res://data/units/lance_tank.tres" id="5"]
+[ext_resource type="Resource" path="res://data/units/cinder_tank.tres" id="6"]
 
 [resource]
 script = ExtResource("1")
@@ -14,6 +15,7 @@ display_name = "Mandate Factory"
 buildable = false
 art_id = &""
 counts_as = []
+requires_structures = [ExtResource("2")]
 hp = 14
 build_cost = 1000
 build_time = 3
@@ -22,7 +24,7 @@ max_count = 3
 cap_bonus = 0
 production_cap = 1
 production_slots = 1
-producible_types = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5")]
+producible_types = [ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")]
 attack = 0
 attack_range = 0
 defense = 0

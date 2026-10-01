@@ -133,6 +133,7 @@ KINDS: dict[str, Kind] = {
         Field("buildable", "bool", False, help="In the SHARED roster (factions with their own list ignore it)"),
         Field("art_id", "group", "", help="Borrow another structure's sprites (its id) until this has art"),
         Field("counts_as", "links", [], target="Structures", help="Stands in for these types when a rule asks (e.g. a faction's Research Lab)"),
+        Field("requires_structures", "links", [], target="Structures", help="Must own a completed one of these first"),
         Field("hp", "int", required=True),
         Field("build_cost", "int", required=True, help="Credits"),
         Field("build_time", "int", required=True, help="Owner-turns"),

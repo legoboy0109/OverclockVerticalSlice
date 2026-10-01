@@ -1,6 +1,8 @@
 ---
 id: protectorate_factory
 buildable: false
+requires_structures:
+- '[[Mandate Barracks]]'
 hp: 14
 build_cost: 1000
 build_time: 3

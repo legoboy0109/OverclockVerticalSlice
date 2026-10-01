@@ -1,11 +1,12 @@
-[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=6 format=3]
 ; GENERATED from game-data/Structures/Front Airfield.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: cc8454dbf65b1078269b10278b19329e1a8bfad88fefb717255a73be3771166a
+; source-sha256: ee2bc02f103dde8d32428ddc66bd45f9a534f1caf2f2e232acfdb2890d2be1b2
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
-[ext_resource type="Resource" path="res://data/units/interceptor.tres" id="2"]
-[ext_resource type="Resource" path="res://data/units/gunship.tres" id="3"]
-[ext_resource type="Resource" path="res://data/units/paratrooper_transport.tres" id="4"]
+[ext_resource type="Resource" path="res://data/structures/solar_factory.tres" id="2"]
+[ext_resource type="Resource" path="res://data/units/interceptor.tres" id="3"]
+[ext_resource type="Resource" path="res://data/units/gunship.tres" id="4"]
+[ext_resource type="Resource" path="res://data/units/paratrooper_transport.tres" id="5"]
 
 [resource]
 script = ExtResource("1")
@@ -13,6 +14,7 @@ display_name = "Front Airfield"
 buildable = false
 art_id = &""
 counts_as = []
+requires_structures = [ExtResource("2")]
 hp = 12
 build_cost = 1200
 build_time = 3
@@ -21,7 +23,7 @@ max_count = 1
 cap_bonus = 0
 production_cap = 1
 production_slots = 1
-producible_types = [ExtResource("2"), ExtResource("3"), ExtResource("4")]
+producible_types = [ExtResource("3"), ExtResource("4"), ExtResource("5")]
 attack = 0
 attack_range = 0
 defense = 0

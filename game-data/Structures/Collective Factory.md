@@ -1,6 +1,8 @@
 ---
 id: union_factory
 buildable: false
+requires_structures:
+- '[[Collective Barracks]]'
 hp: 16
 build_cost: 1000
 build_time: 3
