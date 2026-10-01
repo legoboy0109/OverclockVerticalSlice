@@ -212,6 +212,25 @@ func _parse_args() -> void:
 			_plain_map = true
 		elif arg.begins_with("--max-rounds="):
 			_max_rounds_override = maxi(0, int(arg.split("=")[1]))
+		elif arg.begins_with("--vehicle-scale="):
+			# Balance experiment (2026-10-01): scale EVERY vehicle and aircraft at once, e.g.
+			# --vehicle-scale=hp:125,attack:125,defense+:1 (percent for hp/attack, "+" adds a flat
+			# amount). Mutates the loaded resources for this run only, like --unit-stat.
+			for f: String in DirAccess.get_files_at("res://data/units"):
+				if not f.ends_with(".tres"):
+					continue
+				var res: Resource = load("res://data/units/" + f)
+				if not (res is UnitTypeDef) or (res as UnitTypeDef).unit_class == UnitTypeDef.UnitClass.INFANTRY:
+					continue   # unit_config.tres lives in the same folder
+				var vt: UnitTypeDef = res
+				for part: String in arg.trim_prefix("--vehicle-scale=").split(","):
+					var kv: PackedStringArray = part.split(":")
+					if kv[0].ends_with("+"):
+						var prop: String = kv[0].trim_suffix("+")
+						vt.set(prop, int(vt.get(prop)) + int(kv[1]))
+					elif int(vt.get(kv[0])) > 0:
+						vt.set(kv[0], maxi(1, roundi(float(vt.get(kv[0])) * int(kv[1]) / 100.0)))
+			print("SIM_VEHICLE_SCALE,%s" % arg.trim_prefix("--vehicle-scale="))
 		elif arg.begins_with("--unit-stat="):
 			# Balance experiment without touching the vault: --unit-stat=sniper.attack=5 (repeatable).
 			# Mutates the loaded resource, which every reference shares, for this run only.
