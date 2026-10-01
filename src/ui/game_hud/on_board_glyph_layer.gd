@@ -2,7 +2,7 @@
 ## ADR-0016 hp pip/numeric branch; TR-hud-010/011/012).
 ##
 ## A [Node2D] (board screen-space, like [BoardRenderer]) that draws per-entity
-## glyphs — hp (pips or numeric), the has-acted marker, the build-timer badge —
+## glyphs — hp (a bar when damaged, the number under the cursor), the has-acted marker, the build-timer badge —
 ## each anchored at exactly [code]grid_to_screen(tile) + GLYPH_OFFSETS[glyph_class][/code]
 ## via the injected anchor source's [method BoardRenderer.glyph_anchor]. This
 ## layer NEVER writes HUD-local pixel-offset math (ADR-0013 forbidden pattern):
@@ -37,12 +37,17 @@
 class_name OnBoardGlyphLayer
 extends Node2D
 
-## hp display mode (AC-10). Discrete drain-on-damage pips below
-## [member HUDConfig.pip_max_hp]; numeric current/max at or above it.
-enum HpMode { PIPS, NUMERIC }
+## ★ hp bar geometry (2026-10-01). Neutral, never a faction hue: hp is state, not ownership
+## (art bible §4.3); a dark plate keeps it legible over either player's colours.
+const HP_BAR_SIZE: Vector2 = Vector2(34, 5)
+const HP_BAR_FILL: Color = Color(0.94, 0.95, 0.98)
+const HP_BAR_BACK: Color = Color(0.05, 0.06, 0.09, 0.9)
+const HP_NUMBER_SIZE: int = 13
 
-## Default pip threshold if no [HUDConfig] was injected (matches the resource default).
-const _DEFAULT_PIP_MAX_HP: int = 10
+## The board cursor's tile ([method set_cursor_tile]) and the mouse-hover tile
+## ([method set_hover_tile]); the exact hp number shows only on these two.
+var _cursor_tile: Vector2i = Vector2i(-1, -1)
+var _hover_tile: Vector2i = Vector2i(-1, -1)
 
 var _reader: GameStateReader = null
 
@@ -66,6 +71,9 @@ func bind(reader: GameStateReader, anchor_source: Object, config: HUDConfig) -> 
 
 
 func _ready() -> void:
+	# ★ 2026-10-01: draw above every board layer (props, cover blocks, sprites) — a damaged
+	# unit's bar was hidden behind a cover block beside it.
+	z_index = RenderingServer.CANVAS_ITEM_Z_MAX - 1
 	if _reader != null:
 		_reader.subscribe_action_applied(_on_action_applied)
 
@@ -79,24 +87,37 @@ func _exit_tree() -> void:
 		_reader.unsubscribe_action_applied(_on_action_applied)
 
 
-## PURE (AC-10): hp renders as discrete pips below [param pip_max_hp] and numeric
-## at/above it — the `>=` boundary is load-bearing (a max_hp exactly at the
-## threshold flips to numeric, e.g. a hp-14 structure at pip_max_hp 10 → NUMERIC).
-static func hp_render_mode(max_hp: int, pip_max_hp: int) -> HpMode:
-	return HpMode.NUMERIC if max_hp >= pip_max_hp else HpMode.PIPS
+## PURE: the hp bar shows only for a damaged entity — a full-health board stays clean.
+static func hp_bar_visible(current_hp: int, max_hp: int) -> bool:
+	return max_hp > 0 and current_hp < max_hp
 
 
-## The [enum HpMode] for [param entity_id], branching the entity's max hp against
-## [member HUDConfig.pip_max_hp]. NUMERIC for an unknown id (harmless default).
-func hp_mode_for(entity_id: int) -> HpMode:
-	var pip_max: int = _config.pip_max_hp if _config != null else _DEFAULT_PIP_MAX_HP
-	var u: Dictionary = _reader.unit_info(entity_id)
-	if not u.is_empty():
-		return hp_render_mode(u["hp"], pip_max)
-	var s: Dictionary = _reader.structure_info(entity_id)
-	if not s.is_empty():
-		return hp_render_mode(s["hp"], pip_max)
-	return HpMode.NUMERIC
+## PURE: the exact hp number shows only for the entity under the board cursor.
+static func hp_number_visible(tile: Vector2i, cursor_tile: Vector2i) -> bool:
+	return tile == cursor_tile
+
+
+## Moves the "exact hp" readout to [param tile] (the board cursor; mouse and pad alike).
+func set_cursor_tile(tile: Vector2i) -> void:
+	if tile == _cursor_tile:
+		return
+	_cursor_tile = tile
+	queue_redraw()
+
+
+## The tile under the mouse pointer (the mouse never moves the board cursor by itself).
+func set_hover_tile(tile: Vector2i) -> void:
+	if tile == _hover_tile:
+		return
+	_hover_tile = tile
+	queue_redraw()
+
+
+func _draw_hp_bar(anchor: Vector2, cur: int, mx: int) -> void:
+	var r := Rect2(anchor, HP_BAR_SIZE)
+	draw_rect(r.grow(1.0), HP_BAR_BACK)
+	var frac: float = clampf(float(cur) / float(mx), 0.0, 1.0)
+	draw_rect(Rect2(anchor, Vector2(maxf(1.0, HP_BAR_SIZE.x * frac), HP_BAR_SIZE.y)), HP_BAR_FILL)
 
 
 ## The marker [enum BoardRenderer.GlyphClass] values [param entity_id] should show
@@ -154,16 +175,17 @@ func _draw_entity(entity: EntityState, font: Font) -> void:
 		return
 
 	# hp — anchored via glyph_anchor (never HUD-local math).
-	var pip_max: int = _config.pip_max_hp if _config != null else _DEFAULT_PIP_MAX_HP
+	# ★ 2026-10-01 (user decision): ONE generic bar for every unit and structure, shown only
+	# when damaged; the exact number only under the board cursor. Replaces the pip/numeric
+	# split (ADR-0016), which drew "40/40" over every full-health entity on the board.
 	var hp_anchor: Vector2 = _anchor_source.glyph_anchor(tile, hp_class)
-	if hp_render_mode(mx, pip_max) == HpMode.NUMERIC:
-		if font != null:
-			draw_string(font, hp_anchor, "%d/%d" % [cur, mx], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
-	else:
-		# Discrete pips: chunky neutral squares (hp is state, never a faction hue),
-		# one per current hp, drained one at a time — no smooth bar.
-		for i: int in cur:
-			draw_rect(Rect2(hp_anchor + Vector2(i * 6, 0), Vector2(4, 4)), Color.WHITE)
+	if hp_bar_visible(cur, mx):
+		_draw_hp_bar(hp_anchor, cur, mx)
+	if (hp_number_visible(tile, _cursor_tile) or hp_number_visible(tile, _hover_tile)) and font != null:
+		var text: String = "%d/%d" % [cur, mx]
+		var pos: Vector2 = hp_anchor + Vector2(0, -4)
+		draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, HP_NUMBER_SIZE, 4, Color(0, 0, 0, 0.9))
+		draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, HP_NUMBER_SIZE, Color.WHITE)
 
 	# Markers — each at its own authored GLYPH_OFFSETS sub-position; distinct
 	# SHAPES (non-hue-redundant): has-acted a circle, build badge a number.

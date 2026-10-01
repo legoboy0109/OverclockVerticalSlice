@@ -102,6 +102,9 @@ func _run() -> void:
 			# `--dry` places every unit out of ammo, to check the board's out-of-ammo mark.
 			if OS.get_cmdline_user_args().has("--dry"):
 				u.ammo_spent = Ammo.max_ammo(type)
+			# `--damage` halves every other unit's hp, to check the damaged-only hp bar.
+			if OS.get_cmdline_user_args().has("--damage") and placed.size() % 2 == 0:
+				u.current_hp = maxi(1, type.hp / 2)
 			u.position = Vector2i(x, y)
 			st.entities_by_id[u.entity_id] = u
 			st.grid.place(u.entity_id, x, y)
@@ -114,6 +117,10 @@ func _run() -> void:
 		for n: Node in slice.find_children("*", "CanvasLayer", true, false):
 			if (n as CanvasLayer).layer >= Hd2dLighting.HUD_CANVAS_LAYER:
 				(n as CanvasLayer).visible = false
+	# `--cursor-first` puts the board cursor on the first placed unit (hp-number check).
+	if OS.get_cmdline_user_args().has("--cursor-first") and not placed.is_empty():
+		slice._cursor.grid_pos = placed[0]
+		slice._sync_cursor_highlight()
 	for i: int in 12:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
