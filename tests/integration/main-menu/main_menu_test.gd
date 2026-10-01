@@ -197,5 +197,5 @@ func test_cancelling_the_prompt_returns_focus_to_the_quit_entry() -> void:
 
 func test_version_stamp_names_a_real_build() -> void:
 	var menu: MainMenu = await _make_menu()
-	assert_str(menu.version_text()).contains("vslice-build")
+	assert_str(menu.version_text()).contains("build " + str(ProjectSettings.get_setting("application/config/version")))
 	assert_str(menu.version_text()).not_contains("unversioned")

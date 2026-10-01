@@ -306,7 +306,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _version_stamp() -> String:
 	var v: String = str(ProjectSettings.get_setting("application/config/version", ""))
-	return "vslice-build %s" % v if v != "" else "vslice-build (unversioned)"
+	return "build %s" % v if v != "" else "build (unversioned)"
 
 
 # --- Testable model -----------------------------------------------------------
