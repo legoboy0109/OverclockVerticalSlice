@@ -1,6 +1,6 @@
 ---
 id: ammo_surplus
-description: Vehicles and aircraft +2 more ammo.
+description: Vehicles and aircraft +2 more ammo; units beside a supply structure heal 1 HP at the start of your turn.
 tree: economy
 tier: 3
 research_cost: 1600
@@ -13,6 +13,7 @@ requires_structures:
 exclusive_group: eco_fwd
 factions: []
 ammo_bonus: 2
+supply_heal: 1
 ---
 
 ## Notes

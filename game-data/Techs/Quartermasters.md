@@ -1,6 +1,6 @@
 ---
 id: quartermasters
-description: All upkeep 25% lower.
+description: All upkeep 10% lower.
 tree: economy
 tier: 3
 research_cost: 1600
@@ -12,7 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: eco_lg
 factions: []
-upkeep_discount_pct: 25
+upkeep_discount_pct: 10
 ---
 
 ## Notes

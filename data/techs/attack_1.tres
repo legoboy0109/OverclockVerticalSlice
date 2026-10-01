@@ -1,13 +1,13 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=2 format=3]
 ; GENERATED from game-data/Techs/Heavy Ordnance.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 5a5f57a1ab50d34a58945940177df164b61aa8f1aaa9095c93cb6ff5a191d96a
+; source-sha256: e63406700d4f3fbe317c59328a534f5ea961bfdf5ce977cadcb94fa08e705024
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
 display_name = "Heavy Ordnance"
-description = "+1 attack for all units."
+description = "+1 attack for infantry."
 tier = 1
 research_cost = 800
 research_time = 3
@@ -16,7 +16,7 @@ prerequisites = []
 required_structures = []
 exclusive_group = &"off_t1"
 allowed_factions = []
-attack_bonus = 1
+attack_bonus = 0
 defense_bonus = 0
 attack_range_bonus = 0
 ignores_cover = false
@@ -27,6 +27,7 @@ build_ap_discount = 0
 produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
+infantry_attack_bonus = 1
 vehicle_defense_bonus = 0
 tree = "offense"
 move_cap_bonus = 0

@@ -84,6 +84,8 @@ extends Resource
 @export var frees_pilots: Array[UnitTypeDef] = []
 ## Added to GROUND VEHICLES only (the Holy Cosmic Empire's Doctrine line).
 @export var vehicle_attack_bonus: int = 0
+## Added to INFANTRY only (Heavy Ordnance since 2026-10-01 — +1 for every unit won 24-0 in sims).
+@export var infantry_attack_bonus: int = 0
 @export var vehicle_defense_bonus: int = 0
 
 ## ★ 2026-10-01 — branching tech trees (user-approved draft, design doc "Overclock Tech Trees").

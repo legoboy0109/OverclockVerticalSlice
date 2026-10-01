@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Command Network.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 936135b8388f5100e8c9b425736821087d3efdece7e96cc609f1bb42b4f8c616
+; source-sha256: 327575659d22725f119e4c25861457e042db5c7ac10ae44df790a5e3c33b0c70
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/logistics.tres" id="2"]
@@ -9,7 +9,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Command Network"
-description = "+2 AP every turn."
+description = "+4 AP every turn."
 tier = 3
 research_cost = 1600
 research_time = 4
@@ -29,6 +29,7 @@ build_ap_discount = 0
 produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
+infantry_attack_bonus = 0
 vehicle_defense_bonus = 0
 tree = "economy"
 move_cap_bonus = 0
@@ -62,7 +63,7 @@ rush_ap_discount = 0
 vehicle_rush_half = false
 vehicle_production_turn_discount = 0
 kill_refund_pct = 0
-ap_per_turn_bonus = 2
+ap_per_turn_bonus = 4
 upkeep_discount_pct = 0
 structure_cost_discount_pct = 0
 pop_cap_bonus = 0

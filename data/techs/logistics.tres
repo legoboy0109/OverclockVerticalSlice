@@ -29,6 +29,7 @@ build_ap_discount = 1
 produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
+infantry_attack_bonus = 0
 vehicle_defense_bonus = 0
 tree = "economy"
 move_cap_bonus = 0

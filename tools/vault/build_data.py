@@ -172,6 +172,7 @@ KINDS: dict[str, Kind] = {
         Field("produce_cost_discount_pct", "int", 0),
         Field("frees_pilots", "links", [], target="Units", help="Unit types that stop needing a pilot"),
         Field("vehicle_attack_bonus", "int", 0, help="Attack added to ground vehicles only"),
+        Field("infantry_attack_bonus", "int", 0, help="Attack added to infantry only"),
         Field("vehicle_defense_bonus", "int", 0, help="Defence added to ground vehicles only"),
         Field("tree", "str", "", help="Tree: offense | defense | economy (menu grouping)"),
         Field("move_cap_bonus", "int", 0, help="All units: tiles before the move surcharge"),

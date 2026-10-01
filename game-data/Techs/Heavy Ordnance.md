@@ -1,6 +1,6 @@
 ---
 id: attack_1
-description: +1 attack for all units.
+description: +1 attack for infantry.
 tree: offense
 tier: 1
 research_cost: 800
@@ -10,7 +10,7 @@ requires: []
 requires_structures: []
 exclusive_group: off_t1
 factions: []
-attack_bonus: 1
+infantry_attack_bonus: 1
 ---
 
 ## Notes

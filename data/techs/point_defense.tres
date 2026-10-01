@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Point Defense.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: f6cc3fbc03cd42e81c75789e8e009c6ee702ac741a350848d1f91355f1513871
+; source-sha256: b2c1297b5bcdd2f211bad2251bf6d7853745afa2ce82ddff7287ce182c8589a8
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/fortifications.tres" id="2"]
@@ -9,7 +9,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Point Defense"
-description = "Armed structures get +1 range."
+description = "Armed structures get +1 range; your HQ gets +30 HP."
 tier = 2
 research_cost = 1200
 research_time = 3
@@ -29,6 +29,7 @@ build_ap_discount = 0
 produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
+infantry_attack_bonus = 0
 vehicle_defense_bonus = 0
 tree = "defense"
 move_cap_bonus = 0
@@ -50,7 +51,7 @@ defensive_attack_bonus = 0
 defensive_range_bonus = 1
 defensive_counterattack = false
 defensive_anti_air = 0
-hq_hp_bonus = 0
+hq_hp_bonus = 30
 hq_attack = 0
 hq_range = 0
 build_time_discount = 0

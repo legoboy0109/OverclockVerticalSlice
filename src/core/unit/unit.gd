@@ -191,6 +191,8 @@ static func effective_attack(state: GameState, unit: UnitState) -> int:
 	# ★ 2026-10-01 (tech trees): Combined Arms reaches aircraft too; per-type bonuses (Technicals).
 	if unit.type.unit_class == UnitTypeDef.UnitClass.AIR:
 		doctrine += Research.sum(state, unit.owner, &"aircraft_attack_bonus")
+	elif unit.type.unit_class == UnitTypeDef.UnitClass.INFANTRY:
+		doctrine += Research.sum(state, unit.owner, &"infantry_attack_bonus")
 	doctrine += Research.unit_type_bonus(state, unit.owner, unit.type, &"bonus_unit_attack")
 	return unit.type.attack + Research.attack_bonus(state, unit.owner) + _rank_value(CombatBalance.combat.rank_attack, unit.rank) + crew + doctrine
 

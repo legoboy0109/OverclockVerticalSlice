@@ -1,6 +1,6 @@
 ---
 id: ambush
-description: Infantry standing in Cover get +2 attack.
+description: Infantry standing in Cover get +3 attack.
 tree: offense
 tier: 3
 research_cost: 1600
@@ -12,7 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: off_inf
 factions: []
-infantry_cover_attack: 2
+infantry_cover_attack: 3
 ---
 
 ## Notes

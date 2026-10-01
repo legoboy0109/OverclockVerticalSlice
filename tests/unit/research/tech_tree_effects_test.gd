@@ -111,6 +111,17 @@ func test_effect_infantry_move_cost_discount_reduces_billed_move_cost() -> void:
 
 # --- Attack ----------------------------------------------------------------------------------
 
+func test_effect_infantry_attack_bonus_reaches_infantry_only() -> void:
+	var s := _state()
+	var inf := _unit(s, 0, UnitTypes.TROOPER, Vector2i(2, 2))
+	var tank := _unit(s, 0, UnitTypes.TANK, Vector2i(4, 4))
+	var i0: int = Unit.effective_attack(s, inf)
+	var t0: int = Unit.effective_attack(s, tank)
+	_grant(s, _tech(&"infantry_attack_bonus", 1))
+	assert_int(Unit.effective_attack(s, inf)).is_equal(i0 + 1)
+	assert_int(Unit.effective_attack(s, tank)).is_equal(t0)
+
+
 func test_effect_attack_vs_armor_and_vs_infantry_pick_the_target_class() -> void:
 	var s := _state()
 	var a := _unit(s, 0, UnitTypes.TROOPER, Vector2i(2, 2))

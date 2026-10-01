@@ -1,6 +1,6 @@
 ---
 id: command_network
-description: +2 AP every turn.
+description: +4 AP every turn.
 tree: economy
 tier: 3
 research_cost: 1600
@@ -12,7 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: eco_lg
 factions: []
-ap_per_turn_bonus: 2
+ap_per_turn_bonus: 4
 ---
 
 ## Notes
