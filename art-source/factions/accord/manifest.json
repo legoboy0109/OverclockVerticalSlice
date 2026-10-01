@@ -72,38 +72,82 @@
   {
    "id": "barracks",
    "kind": "struct",
-   "raw": "art-source/factions/accord/sources/barracks_rush.png",
-   "clean": true,
+   "raw": "art-source/generated/zstructs/barracks.png",
    "axis": "w",
-   "px": 0,
-   "keep_accent": 0.25
+   "px": 256,
+   "flatten": true,
+   "cutter": "flood",
+   "hue_max": 60,
+   "keep_accent": 0.15,
+   "smooth": 3,
+   "plate_band": [
+    0.0,
+    0.85
+   ],
+   "accent_colors": 2,
+   "touches": {
+    "base_rim": 1
+   }
   },
   {
    "id": "factory",
    "kind": "struct",
-   "raw": "art-source/factions/accord/sources/factory_rush.png",
-   "clean": true,
+   "raw": "art-source/generated/zstructs/factory_2.png",
    "axis": "w",
-   "px": 0,
-   "keep_accent": 0.25
+   "px": 256,
+   "flatten": true,
+   "cutter": "flood",
+   "hue_max": 60,
+   "keep_accent": 0.15,
+   "smooth": 3,
+   "plate_band": [
+    0.0,
+    0.85
+   ],
+   "accent_colors": 2,
+   "touches": {
+    "base_rim": 1
+   }
   },
   {
    "id": "defensive_structure",
    "kind": "struct",
-   "raw": "art-source/factions/accord/sources/defensive_structure_rush.png",
-   "clean": true,
+   "raw": "art-source/generated/zstructs/defensive_structure_3.png",
    "axis": "w",
-   "px": 0,
-   "keep_accent": 0.25
+   "px": 256,
+   "flatten": true,
+   "cutter": "flood",
+   "hue_max": 60,
+   "keep_accent": 0.15,
+   "smooth": 3,
+   "plate_band": [
+    0.0,
+    0.85
+   ],
+   "accent_colors": 2,
+   "touches": {
+    "base_rim": 1
+   }
   },
   {
    "id": "research_lab",
    "kind": "struct",
-   "raw": "art-source/factions/accord/sources/research_lab_rush.png",
-   "clean": true,
+   "raw": "art-source/generated/zstructs/research_lab_2.png",
    "axis": "w",
-   "px": 0,
-   "keep_accent": 0.25
+   "px": 256,
+   "flatten": true,
+   "cutter": "flood",
+   "hue_max": 60,
+   "keep_accent": 0.15,
+   "smooth": 3,
+   "plate_band": [
+    0.0,
+    0.85
+   ],
+   "accent_colors": 2,
+   "touches": {
+    "base_rim": 1
+   }
   },
   {
    "promote": 30.2,
@@ -178,15 +222,22 @@
   {
    "id": "airfield",
    "kind": "struct",
+   "raw": "art-source/generated/zstructs/airfield_3.png",
    "axis": "w",
    "px": 256,
-   "raw": "art-source/generated/accord/airfield_4.png",
    "flatten": true,
-   "keep_accent": 0.25,
    "cutter": "flood",
-   "declutter": 8,
-   "declutter_smooth": true,
-   "accent_cap": 15
+   "hue_max": 60,
+   "keep_accent": 0.15,
+   "smooth": 3,
+   "plate_band": [
+    0.0,
+    0.85
+   ],
+   "accent_colors": 2,
+   "touches": {
+    "base_rim": 1
+   }
   },
   {
    "id": "artillery",
