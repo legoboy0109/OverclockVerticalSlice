@@ -108,6 +108,12 @@ func _run() -> void:
 			placed.append(u.position)
 			x += 2
 	slice._refresh_occupant_pick_regions()
+	# `--no-hud` hides every screen-space layer at the HUD's level, for clean board backdrops
+	# (UI mockups, 2026-10-01). The HD-2D edge blur (layer 1) stays — it is part of the board look.
+	if OS.get_cmdline_user_args().has("--no-hud"):
+		for n: Node in slice.find_children("*", "CanvasLayer", true, false):
+			if (n as CanvasLayer).layer >= Hd2dLighting.HUD_CANVAS_LAYER:
+				(n as CanvasLayer).visible = false
 	for i: int in 12:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
