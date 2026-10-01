@@ -556,6 +556,9 @@ func _build_match(favoured: int, handicap: int, variant: int) -> GameState:
 	var max_rounds: int = _max_rounds_override if _max_rounds_override > 0 \
 		else map.default_round_limit
 	var state: GameState = MatchSetup.build(map, _factions, starting_player, max_rounds, [0, 1])
+	# Fixed per game (never 0, never random) so the AI's research lean varies across a batch
+	# the way it does across real matches, and every batch stays reproducible.
+	state.match_seed = 1 + variant + 100 * handicap + 1000 * favoured
 
 	# ★ S5-04 mirror seeding: BOTH players get the same unit at mirrored tiles, so
 	# the position differs between variants while staying exactly fair.

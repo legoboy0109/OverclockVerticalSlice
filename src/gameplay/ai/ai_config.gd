@@ -72,6 +72,11 @@ extends Resource
 ## pushed its first fighter past turn 6 (tests/integration/ai-opponent/ai_plays_a_real_opening_test).
 @export var research_min_army: int = 1
 
+## How far a match's seed may lean each tech's research score: a factor in
+## [code][1 - v, 1 + v][/code], fixed for the whole match. Big enough to flip close branch
+## choices from match to match, not to make the AI take a clearly worse tech. 0 = off.
+@export var research_variety: float = 0.5
+
 ## Per-turn discount applied to projected future value.
 @export var economy_decay: float = 0.85
 

@@ -304,6 +304,7 @@ func _build_match() -> void:
 	var map: MapDefinition = VSMap.build()
 	_state = MatchSetup.build(map, settings.factions, settings.starting_player(),
 		settings.round_limit, [AI_PLAYER])
+	_state.match_seed = 1 + randi() % 0x7FFFFFFE   # the AI's research lean for this match (never 0)
 	_reader = GameStateReader.new(_state)
 
 

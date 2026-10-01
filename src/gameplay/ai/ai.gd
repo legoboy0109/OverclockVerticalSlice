@@ -2290,7 +2290,7 @@ static func _score_research_candidates(lookahead: GameState, entity: EntityState
 
 		var cost: int = Research.effective_research_cost(lookahead, tech, player)
 		var ap_surcharge: int = Research.effective_research_ap_surcharge(lookahead, tech, player)
-		var value: float = _tech_research_value(lookahead, player, tech)
+		var value: float = _tech_research_value(lookahead, player, tech) * _research_lean(lookahead, player, tech)
 		var denom: float = ap_equivalent_cost(cost, ap_surcharge)
 		var score: float = _action_score(value / denom, false)
 		if _is_better(score, cost, lab.entity_id, best.score, best.ap_cost, best.entity_id):
@@ -2351,7 +2351,7 @@ static func _tree_effects_marginal_value(s: GameState, p: int, t: TechDef) -> fl
 	ae += AIBalance.ai.range_bonus_attack_equivalent * t.vehicle_range_bonus * veh
 	ae += 0.4 * t.infantry_cover_attack * inf + 0.3 * t.cover_heal * inf
 	ae += 0.3 * (t.infantry_hp_bonus * inf + t.vehicle_hp_bonus * veh) + 0.8 * t.vehicle_self_repair * veh
-	ae += (t.vehicle_attack_bonus + t.vehicle_defense_bonus + t.aircraft_attack_bonus) * veh
+	ae += (t.vehicle_attack_bonus + t.vehicle_defense_bonus + t.aircraft_attack_bonus) * veh + t.infantry_attack_bonus * inf
 	ae += 0.3 * (t.structure_defense_bonus + t.defensive_attack_bonus + t.defensive_range_bonus + t.aura_defense_bonus)
 	ae += 0.01 * t.structure_hp_pct + 0.02 * t.hq_hp_bonus + 0.15 * t.hq_attack + (0.4 if t.defensive_counterattack else 0.0)
 	ae += 0.15 * t.defensive_anti_air + 0.4 * t.build_time_discount + 0.2 * t.ammo_bonus * veh
@@ -2364,6 +2364,19 @@ static func _tree_effects_marginal_value(s: GameState, p: int, t: TechDef) -> fl
 		+ _cheapest_producible_cost(s, p) * 0.5 * (t.kill_refund_pct + t.infantry_cost_discount_pct * inf) / 100.0 \
 		+ 6.0 * t.structure_cost_discount_pct + 3.0 * t.depot_cost_discount_pct
 	return _attack_defense_tech_marginal_value(ae) + ap + credits_to_ap(credits)
+
+
+## This match's fixed lean on [param tech] for [param player]: a factor in
+## [code][1 - research_variety, 1 + research_variety][/code] derived from [member
+## GameState.match_seed], so the AI's research path varies between matches but never within
+## one (and is reproducible from the seed). 1.0 when the seed is 0.
+static func _research_lean(s: GameState, player: int, tech: TechDef) -> float:
+	var v: float = AIBalance.ai.research_variety
+	if s.match_seed == 0 or v <= 0.0:
+		return 1.0
+	var h: int = hash("%d:%d:%s" % [s.match_seed, player, tech.display_name])
+	var frac: float = float(h & 0xFFFF) / 65535.0
+	return 1.0 + v * (2.0 * frac - 1.0)
 
 
 ## [param p]'s units that can fight — everything except Builders.

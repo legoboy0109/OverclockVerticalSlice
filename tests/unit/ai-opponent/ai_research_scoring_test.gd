@@ -208,3 +208,35 @@ func test_same_state_same_choice_and_on_a_clone() -> void:
 	var c: ResearchAction = AI._score_research_candidates(copy, copy.entities_by_id[hq.entity_id], 0, AI._Candidate.new()).action
 	assert_object(b.tech).is_same(a.tech)
 	assert_object(c.tech).is_same(a.tech)
+
+
+# --- Per-match research lean (2026-10-01) -----------------------------------------------------
+
+func test_research_lean_is_neutral_without_a_match_seed() -> void:
+	var state := _state()
+	for t: TechDef in Techs.ALL:
+		assert_float(AI._research_lean(state, 0, t)).is_equal(1.0)
+
+
+func test_research_lean_is_fixed_within_a_match_and_bounded() -> void:
+	var state := _state()
+	state.match_seed = 12345
+	var v: float = AIBalance.ai.research_variety
+	for t: TechDef in Techs.ALL:
+		var lean: float = AI._research_lean(state, 0, t)
+		assert_float(AI._research_lean(state, 0, t)).is_equal(lean)
+		assert_float(lean).is_between(1.0 - v, 1.0 + v)
+
+
+func test_different_matches_open_research_differently() -> void:
+	var first_picks: Dictionary = {}
+	for seed: int in range(1, 41):
+		var state := _state()
+		state.match_seed = seed
+		var hq := _structure(state, 0, Vector2i(2, 2), StructureTypes.HQ)
+		var best := _score(state, hq)
+		if best.action is ResearchAction:
+			first_picks[(best.action as ResearchAction).tech.display_name] = true
+	assert_int(first_picks.size()).override_failure_message(
+		"40 different match seeds all opened with the same tech: %s" % str(first_picks.keys())
+	).is_greater(1)
