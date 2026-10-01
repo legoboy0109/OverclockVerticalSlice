@@ -13,6 +13,17 @@ func _ready() -> void:
 
 
 func _run() -> void:
+	# `-- --setup` shoots only the skirmish setup screen (no settings writes — the full run
+	# below resets the player's settings at the end).
+	if OS.get_cmdline_user_args().has("--setup"):
+		var setup := SkirmishSetup.new()
+		add_child(setup)
+		for i: int in 10:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		_shot("05-skirmish-setup")
+		get_tree().quit()
+		return
 	var menu: Control = load("res://scenes/main_menu.tscn").instantiate()
 	add_child(menu)
 	for i: int in 10:

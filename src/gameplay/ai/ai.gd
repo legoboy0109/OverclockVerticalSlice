@@ -1352,7 +1352,7 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 ## (faction vehicle discount and all-upkeep percentage) — otherwise the Protectorate's AI would
 ## price its discounted vehicles at full cost and never build them.
 static func lifetime_credit_cost(unit_type: UnitTypeDef, state: GameState = null, owner: int = -1) -> float:
-	var upkeep: float = float(unit_type.upkeep)
+	var upkeep: float = float(unit_type.upkeep) if Balance.economy.upkeep_enabled else 0.0
 	if state != null and owner >= 0:
 		upkeep = float(Upkeep.unit_upkeep(state, owner, unit_type) * (100 + Faction.upkeep_pct_delta(state, owner)) / 100)
 	return float(unit_type.produce_cost) + upkeep * float(AIBalance.ai.economy_horizon)

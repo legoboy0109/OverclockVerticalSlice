@@ -1,7 +1,7 @@
 ## SkirmishSetup — the screen between NEW SKIRMISH and the match (user decision 2026-09-28).
 ##
-## Chooses each seat's faction and the three match settings the user chose to expose — AP per
-## turn, round limit, who moves first — and remembers them ([MatchSettings], user://match.cfg)
+## Chooses each seat's faction and the match settings the user chose to expose — AP per
+## turn, round limit, who moves first, map, upkeep on/off — and remembers them ([MatchSettings], user://match.cfg)
 ## so the next skirmish opens on the last choice.
 ##
 ## [b]One control per setting, and every one works the same way:[/b] a button showing the
@@ -60,7 +60,7 @@ func _build() -> void:
 	title.add_theme_color_override("font_color", MainMenu.TITLE_HUE)
 	column.add_child(title)
 
-	for i: int in 6:
+	for i: int in 7:
 		var row := Button.new()
 		row.custom_minimum_size = ROW_SIZE
 		row.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -141,6 +141,8 @@ func _step(row: int, dir: int) -> void:
 			var maps: Array[MapDefinition] = Maps.all()
 			var at: int = maxi(0, maps.find(_settings.map))
 			_settings.choose_map(maps[posmod(at + dir, maps.size())])
+		6:
+			_settings.upkeep_enabled = not _settings.upkeep_enabled
 	_refresh()
 
 
@@ -153,6 +155,7 @@ func _refresh() -> void:
 		"Round limit:     < %d >" % _settings.round_limit,
 		"Moves first:     < %s >" % movers[_settings.first_mover],
 		"Map:             < %s (%dx%d) >" % [_settings.map.display_name, _settings.map.width, _settings.map.height],
+		"Upkeep:          < %s >" % ("On" if _settings.upkeep_enabled else "Off"),
 	]
 	for i: int in _rows.size():
 		_rows[i].text = texts[i]

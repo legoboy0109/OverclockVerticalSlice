@@ -2,7 +2,8 @@
 ## (user://match.cfg, separate from control preferences in settings.cfg).
 ##
 ## The player-facing settings are exactly the ones the user chose to expose (2026-09-28): AP per
-## turn, round limit, who moves first — plus each seat's faction. Everything else stays
+## turn, round limit, who moves first — plus each seat's faction, the map, and (2026-09-30)
+## whether upkeep is on. Everything else stays
 ## designer-owned balance (post-gate backlog: "a setup screen that exposes every tuning constant
 ## is a debug menu, not a game").
 class_name MatchSettings
@@ -27,6 +28,8 @@ var round_limit: int = 80
 var first_mover: int = FirstMover.PLAYER
 ## The board (2026-09-28: bigger maps). Null = the default vertical-slice map.
 var map: MapDefinition = null
+## Unit/structure upkeep on or off (user decision 2026-09-30: test the economy both ways).
+var upkeep_enabled: bool = true
 
 
 ## Settings with nothing chosen: the first playable faction for both seats and the game's own
@@ -63,6 +66,7 @@ static func from_loaded(loaded: SaveGame.Loaded) -> MatchSettings:
 	m.ap_per_turn = loaded.ap_per_turn
 	m.round_limit = loaded.state.max_rounds
 	m.first_mover = FirstMover.PLAYER if loaded.state.starting_player == 0 else FirstMover.AI
+	m.upkeep_enabled = loaded.upkeep_enabled
 	return m
 
 
@@ -92,6 +96,7 @@ func save() -> Error:
 	cfg.set_value("match", "round_limit", round_limit)
 	cfg.set_value("match", "first_mover", first_mover)
 	cfg.set_value("match", "map", map.resource_path if map != null else "")
+	cfg.set_value("match", "upkeep_enabled", upkeep_enabled)
 	return cfg.save(PATH)
 
 
@@ -113,6 +118,7 @@ static func load_saved() -> MatchSettings:
 	m.ap_per_turn = clampi(int(cfg.get_value("match", "ap_per_turn", m.ap_per_turn)), AP_MIN, AP_MAX)
 	m.round_limit = clampi(int(cfg.get_value("match", "round_limit", m.round_limit)), ROUNDS_MIN, ROUNDS_MAX)
 	m.first_mover = clampi(int(cfg.get_value("match", "first_mover", m.first_mover)), 0, 2)
+	m.upkeep_enabled = bool(cfg.get_value("match", "upkeep_enabled", true))
 	var map_path: String = str(cfg.get_value("match", "map", ""))
 	for mp: MapDefinition in Maps.all():
 		if mp.resource_path == map_path:

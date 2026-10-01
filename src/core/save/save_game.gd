@@ -50,6 +50,8 @@ class Loaded extends RefCounted:
 	var state: GameState
 	var ap_per_turn: int
 	var map: MapDefinition
+	## Saves from before the upkeep rule (2026-09-30) were all played with it on.
+	var upkeep_enabled: bool = true
 
 
 ## Summary of a slot for the Save/Load screens, without loading the whole match.
@@ -91,7 +93,8 @@ static func write(slot: String, state: GameState) -> Error:
 	if err != OK:
 		push_error("SaveGame: cannot create %s (%s)" % [dir(), error_string(err)])
 		return err
-	var text: String = JSON.stringify(to_dict(state, Balance.economy.flat_ap_per_turn, VSMap.data()))
+	var text: String = JSON.stringify(to_dict(state, Balance.economy.flat_ap_per_turn, VSMap.data(),
+		Balance.economy.upkeep_enabled))
 	var tmp: String = path_for(slot) + ".tmp"
 	var f := FileAccess.open(tmp, FileAccess.WRITE)
 	if f == null:
@@ -140,11 +143,13 @@ static func info(slot: String) -> SlotInfo:
 # --- State <-> Dictionary -------------------------------------------------------------------
 
 ## The whole save as plain data: header, per-match settings and the encoded [param state].
-static func to_dict(state: GameState, ap_per_turn: int, map: MapDefinition) -> Dictionary:
+static func to_dict(state: GameState, ap_per_turn: int, map: MapDefinition,
+		upkeep_enabled: bool = true) -> Dictionary:
 	return {
 		"version": VERSION,
 		"meta": {"label": describe(state, map), "saved_at": int(Time.get_unix_time_from_system())},
 		"ap_per_turn": ap_per_turn,
+		"upkeep_enabled": upkeep_enabled,
 		"map": map.resource_path if map != null else "",
 		"state": _encode_object(state),
 	}
@@ -163,6 +168,7 @@ static func from_dict(d: Dictionary) -> Loaded:
 	var out := Loaded.new()
 	out.state = state
 	out.ap_per_turn = int(d.get("ap_per_turn", 20))
+	out.upkeep_enabled = bool(d.get("upkeep_enabled", true))
 	out.map = _resolve(str(d.get("map", "")), "MapDefinition") as MapDefinition
 	if out.map == null:
 		push_error("SaveGame: the saved map no longer exists")
