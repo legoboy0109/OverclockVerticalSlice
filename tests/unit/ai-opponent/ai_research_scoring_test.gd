@@ -32,7 +32,20 @@ func _state() -> GameState:
 		state.per_player[i].faction = Factions.NEUTRAL
 		state.per_player[i].current_ap = 20
 		state.per_player[i].current_credits = 5000
+	# The AI researches only once it fields an army (AIConfig.research_min_army), so every
+	# fixture starts with one Trooper well away from the base.
+	_unit(state, 0, Vector2i(12, 12), UnitTypes.TROOPER)
 	return state
+
+
+func test_no_research_before_the_ai_fields_an_army() -> void:
+	var state := GameStateFactory.make_state(2, 0)
+	state.grid = _make_grid()
+	state.per_player[0].faction = Factions.NEUTRAL
+	state.per_player[0].current_ap = 20
+	state.per_player[0].current_credits = 5000
+	var hq := _structure(state, 0, Vector2i(2, 2), StructureTypes.HQ)
+	assert_object(_score(state, hq).action).is_null()
 
 
 func _structure(state: GameState, player: int, pos: Vector2i, type: StructureTypeDef) -> StructureState:
