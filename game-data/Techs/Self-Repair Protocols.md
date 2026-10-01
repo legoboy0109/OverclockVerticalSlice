@@ -3,7 +3,7 @@ id: self_repair_protocols
 description: Ground vehicles heal 1 HP at the start of your turn, even after acting.
 tree: defense
 tier: 3
-research_cost: 3000
+research_cost: 1600
 research_time: 4
 ap_surcharge: 8
 requires:

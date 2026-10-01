@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Shredder Rounds.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: b9d5b80008007e7697aca5bd3ed06124a11638d574556deff942f70106a8b502
+; source-sha256: e4e4d2295f74b67515f1f61624f41994202f5fa80fd2d0a1866b36d52855de0c
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/penetration.tres" id="2"]
@@ -11,7 +11,7 @@ script = ExtResource("1")
 display_name = "Shredder Rounds"
 description = "+2 attack against infantry."
 tier = 3
-research_cost = 3000
+research_cost = 1600
 research_time = 4
 ap_surcharge = 8
 prerequisites = [ExtResource("2")]
@@ -40,7 +40,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

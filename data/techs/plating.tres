@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Plating.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 68f67c95547af1aac98b50be5a9d72a5abb0ada7ced26f2d76830f4637ac0d96
+; source-sha256: cdb59d4dd8a58491412d959c8cb900eb7a1b5f9c03266a16b323f1af2f0df394
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/defense_1.tres" id="2"]
@@ -11,7 +11,7 @@ script = ExtResource("1")
 display_name = "Plating"
 description = "+1 more defense for all units."
 tier = 2
-research_cost = 1800
+research_cost = 1200
 research_time = 3
 ap_surcharge = 6
 prerequisites = [ExtResource("2")]
@@ -40,7 +40,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

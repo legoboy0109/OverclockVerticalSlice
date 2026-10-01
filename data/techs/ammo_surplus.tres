@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Ammo Surplus.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 2482986b4890266d4ec21906c6552a8d855cb34d1f2ef790fa76e4b21525b896
+; source-sha256: f5b5fe5339d7aeb875c714b6f8bb3f656cbf20ae40d6fc94a4f15fb4985d2d6c
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/forward_depots.tres" id="2"]
@@ -11,7 +11,7 @@ script = ExtResource("1")
 display_name = "Ammo Surplus"
 description = "Vehicles and aircraft +2 more ammo."
 tier = 3
-research_cost = 3000
+research_cost = 1600
 research_time = 4
 ap_surcharge = 8
 prerequisites = [ExtResource("2")]
@@ -40,7 +40,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

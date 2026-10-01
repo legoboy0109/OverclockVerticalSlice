@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=7 format=3]
 ; GENERATED from game-data/Techs/Technicals Doctrine.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: c08789e48b135cc989bedd313207a8fd260e6058333957c93b8194094137ebbc
+; source-sha256: 025220e252ed4d406640fadb6ff56e39f1a17bf2248ebdb09e2d18a16525e49f
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/blitz.tres" id="2"]
@@ -14,7 +14,7 @@ script = ExtResource("1")
 display_name = "Technicals Doctrine"
 description = "Gun Trucks and Technicals get +1 attack and +1 move before the surcharge."
 tier = 3
-research_cost = 3000
+research_cost = 1600
 research_time = 4
 ap_surcharge = 8
 prerequisites = [ExtResource("2")]
@@ -43,7 +43,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

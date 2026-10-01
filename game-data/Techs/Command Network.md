@@ -3,7 +3,7 @@ id: command_network
 description: +2 AP every turn.
 tree: economy
 tier: 3
-research_cost: 3000
+research_cost: 1600
 research_time: 4
 ap_surcharge: 8
 requires:

@@ -3,7 +3,7 @@ id: salvage
 description: Destroying an enemy unit returns 20% of its cost to you.
 tree: economy
 tier: 3
-research_cost: 3000
+research_cost: 1600
 research_time: 4
 ap_surcharge: 8
 requires:

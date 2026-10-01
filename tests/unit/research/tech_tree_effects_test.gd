@@ -167,13 +167,24 @@ func _cover_state() -> GameState:
 	return s
 
 
-func test_effect_cover_defense_and_infantry_cover_attack() -> void:
+func test_effect_cover_heal_heals_only_units_in_cover() -> void:
+	var s := _cover_state()
+	var covered := _unit(s, 0, UnitTypes.TROOPER, Vector2i(3, 2))
+	var open := _unit(s, 0, UnitTypes.TROOPER, Vector2i(5, 5))
+	covered.current_hp = 2
+	open.current_hp = 2
+	covered.tiles_moved_this_turn = 1   # moved: Field Repair would not apply, Dig In still does
+	open.tiles_moved_this_turn = 1
+	_grant(s, _tech(&"cover_heal", 1))
+	Research.apply_idle_healing(s, 0)
+	assert_int(covered.current_hp).is_equal(3)
+	assert_int(open.current_hp).is_equal(2)
+
+
+func test_effect_infantry_cover_attack() -> void:
 	var s := _cover_state()
 	var a := _unit(s, 1, UnitTypes.TROOPER, Vector2i(2, 2))
 	var d := _unit(s, 0, UnitTypes.TROOPER, Vector2i(3, 2))
-	var before: int = Combat.damage(s, a, d)
-	_grant(s, _tech(&"cover_defense", 2))
-	assert_int(Combat.damage(s, a, d)).is_equal(maxi(CombatBalance.combat.min_damage, before - 2))
 	# The covered unit attacking out of Cover gets Ambush.
 	var out_before: int = Combat.damage(s, d, a)
 	_grant(s, _tech(&"infantry_cover_attack", 2))

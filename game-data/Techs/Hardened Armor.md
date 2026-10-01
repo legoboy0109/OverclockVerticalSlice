@@ -3,7 +3,7 @@ id: defense_1
 description: +1 defense for all units.
 tree: defense
 tier: 1
-research_cost: 1000
+research_cost: 800
 research_time: 3
 ap_surcharge: 4
 requires: []

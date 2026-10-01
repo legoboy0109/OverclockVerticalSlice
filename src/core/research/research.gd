@@ -454,7 +454,11 @@ static func apply_idle_healing(state: GameState, player: int) -> Array:
 	var amount: int = idle_heal(state, player)
 	# ★ 2026-10-01 (tech trees): Self-Repair Protocols — ground vehicles heal even after acting.
 	var self_repair: int = sum(state, player, &"vehicle_self_repair")
-	if amount <= 0 and self_repair <= 0:
+	# Dig In (reworked 2026-10-01): units Cover protects heal while standing in it. Was +2 defence
+	# in Cover, which did nothing on its own path — Hardened Armor + Plating + Cover already floor
+	# infantry hits at min_damage.
+	var cover_heal: int = sum(state, player, &"cover_heal")
+	if amount <= 0 and self_repair <= 0 and cover_heal <= 0:
 		return []
 	var events: Array = []
 	for e: EntityState in state.entities():
@@ -467,6 +471,9 @@ static func apply_idle_healing(state: GameState, player: int) -> Array:
 		var gain: int = (amount if idle else 0)
 		if unit.type.unit_class == UnitTypeDef.UnitClass.GROUND_VEHICLE:
 			gain += self_repair
+		if cover_heal > 0 and Unit.benefits_from_cover(unit) \
+				and state.grid.is_cover(unit.position.x, unit.position.y):
+			gain += cover_heal
 		if gain <= 0:
 			continue
 		var before: int = unit.current_hp

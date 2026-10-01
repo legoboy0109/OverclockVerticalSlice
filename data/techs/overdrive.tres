@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Overdrive.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 51688f5af75c8dca284b601a82233276603274ed2b55d043bdb8e29d4fed261f
+; source-sha256: 0084075b5754a541da83c06f9c39ee229aa3422187005a427ac646bae2b29126
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/blitz.tres" id="2"]
@@ -11,7 +11,7 @@ script = ExtResource("1")
 display_name = "Overdrive"
 description = "Rushing a vehicle or aircraft costs half the AP."
 tier = 3
-research_cost = 3000
+research_cost = 1600
 research_time = 4
 ap_surcharge = 8
 prerequisites = [ExtResource("2")]
@@ -40,7 +40,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

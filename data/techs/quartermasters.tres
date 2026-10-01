@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Quartermasters.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 5228854c0b0e9d8d774edf1a86208544e711c7f7c770a6548fdcb4cd647488ad
+; source-sha256: df4eb065c28afea09b41f7463e9368de99942f2e20e6b27b083effa7f4dbaa5e
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/logistics.tres" id="2"]
@@ -11,7 +11,7 @@ script = ExtResource("1")
 display_name = "Quartermasters"
 description = "All upkeep 25% lower."
 tier = 3
-research_cost = 3000
+research_cost = 1600
 research_time = 4
 ap_surcharge = 8
 prerequisites = [ExtResource("2")]
@@ -40,7 +40,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

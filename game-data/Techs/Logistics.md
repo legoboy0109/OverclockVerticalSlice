@@ -3,7 +3,7 @@ id: logistics
 description: Producing and building cost 1 less AP.
 tree: economy
 tier: 2
-research_cost: 1800
+research_cost: 1200
 research_time: 3
 ap_surcharge: 6
 requires:

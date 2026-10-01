@@ -1,16 +1,16 @@
 ---
 id: rapid_deployment
-description: All units move 1 more tile before the move surcharge.
+description: All units move 2 more tiles before the move surcharge.
 tree: offense
 tier: 1
-research_cost: 1000
+research_cost: 800
 research_time: 3
 ap_surcharge: 4
 requires: []
 requires_structures: []
 exclusive_group: off_t1
 factions: []
-move_cap_bonus: 1
+move_cap_bonus: 2
 ---
 
 ## Notes

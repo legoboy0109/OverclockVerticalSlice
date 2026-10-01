@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Rapid Construction.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: d11ca2abf050ac673f6ec72285288414973e06f24533d5090ec0b12663ef3080
+; source-sha256: e862fd3130142236778a56019f5964f79ab4fb61b6362c1ab2e5c0fa76fedc91
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/reinforced_concrete.tres" id="2"]
@@ -11,7 +11,7 @@ script = ExtResource("1")
 display_name = "Rapid Construction"
 description = "Structures build 1 turn faster (minimum 1)."
 tier = 3
-research_cost = 3000
+research_cost = 1600
 research_time = 4
 ap_surcharge = 8
 prerequisites = [ExtResource("2")]
@@ -40,7 +40,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

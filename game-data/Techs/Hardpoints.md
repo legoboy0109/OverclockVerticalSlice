@@ -3,7 +3,7 @@ id: hardpoints
 description: Your HQ gets +20 HP and fires (attack 3, range 2).
 tree: defense
 tier: 3
-research_cost: 3000
+research_cost: 1600
 research_time: 4
 ap_surcharge: 8
 requires:

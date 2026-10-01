@@ -117,7 +117,7 @@ func test_a_startable_tech_shows_its_price() -> void:
 	var hq := _structure(state, StructureTypes.HQ, Vector2i(2, 2))
 	var o := _option(state, hq, Techs.ATTACK_I)
 	assert_bool(o.enabled).is_true()
-	assert_str(ActionMenu.research_option_text(o)).is_equal("1000 CR + 4 AP · 3 turns")   # tier 1 = 4 AP (2026-10-01)
+	assert_str(ActionMenu.research_option_text(o)).is_equal("800 CR + 4 AP · 3 turns")   # tier 1 = 4 AP (2026-10-01)
 
 
 func test_a_tier_two_tech_names_its_missing_parent_first() -> void:

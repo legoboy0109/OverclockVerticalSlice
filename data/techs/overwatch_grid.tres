@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Overwatch Grid.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: fddb62030fe8d336f23e4bb04b13155e1472f39834cc0c68edade344a8fe561e
+; source-sha256: aed095a6e387ebb6c699e900c94387ef59e3cd83a658957e81c2652a2265bf9a
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/point_defense.tres" id="2"]
@@ -11,7 +11,7 @@ script = ExtResource("1")
 display_name = "Overwatch Grid"
 description = "Armed structures counterattack."
 tier = 3
-research_cost = 3000
+research_cost = 1600
 research_time = 4
 ap_surcharge = 8
 prerequisites = [ExtResource("2")]
@@ -40,7 +40,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

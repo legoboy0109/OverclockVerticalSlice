@@ -3,7 +3,7 @@ id: mass_production
 description: Vehicles and aircraft take 1 fewer turn to produce (minimum 1).
 tree: economy
 tier: 3
-research_cost: 3000
+research_cost: 1600
 research_time: 4
 ap_surcharge: 8
 requires:

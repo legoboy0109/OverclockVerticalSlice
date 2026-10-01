@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Forward Depots.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: e12b0825ece94a0439852d621ddff08187eec86421c88a066135037ad9451273
+; source-sha256: a1a754b306198304f7397fa16b4c9c4df362ccbb8d6c2298114d2a38f03b43a3
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/supply_lines.tres" id="2"]
@@ -11,7 +11,7 @@ script = ExtResource("1")
 display_name = "Forward Depots"
 description = "Supply structures resupply units up to 2 tiles away."
 tier = 2
-research_cost = 1800
+research_cost = 1200
 research_time = 3
 ap_surcharge = 6
 prerequisites = [ExtResource("2")]
@@ -40,7 +40,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

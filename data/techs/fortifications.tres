@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=2 format=3]
 ; GENERATED from game-data/Techs/Fortifications.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: e898053e0c1ed17ab37434042b78d0557f8d3af4d8c0d84bf7d18ee0f7bc0588
+; source-sha256: 23b77b28e1bc5742e387d302d3b352152db80e59dcfe2a2c7fdf2869ec447bff
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 
@@ -9,7 +9,7 @@ script = ExtResource("1")
 display_name = "Fortifications"
 description = "Structures get +25% HP; armed structures +1 attack."
 tier = 1
-research_cost = 1000
+research_cost = 800
 research_time = 3
 ap_surcharge = 4
 prerequisites = []
@@ -38,7 +38,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

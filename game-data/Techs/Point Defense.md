@@ -3,7 +3,7 @@ id: point_defense
 description: Armed structures get +1 range.
 tree: defense
 tier: 2
-research_cost: 1800
+research_cost: 1200
 research_time: 3
 ap_surcharge: 6
 requires:

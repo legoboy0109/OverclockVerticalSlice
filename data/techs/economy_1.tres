@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=2 format=3]
 ; GENERATED from game-data/Techs/Industrial Base.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: c1bdd4f51c0817886d2da6a87e8415c660179ab14fad00bd638cb26285742d03
+; source-sha256: 2392494ebb9afffabed3810290a04a44c5f410c6278238840df2f36c708f95bb
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 
@@ -9,7 +9,7 @@ script = ExtResource("1")
 display_name = "Industrial Base"
 description = "+500 Credits of income every turn."
 tier = 1
-research_cost = 1000
+research_cost = 800
 research_time = 3
 ap_surcharge = 4
 prerequisites = []
@@ -38,7 +38,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

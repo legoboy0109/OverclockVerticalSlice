@@ -3,7 +3,7 @@ id: bulk_contracts
 description: Structures cost 25% fewer Credits.
 tree: economy
 tier: 3
-research_cost: 3000
+research_cost: 1600
 research_time: 4
 ap_surcharge: 8
 requires:

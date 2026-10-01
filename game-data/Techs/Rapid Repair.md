@@ -3,7 +3,7 @@ id: rapid_repair
 description: Field Repair heals 2 HP instead of 1.
 tree: defense
 tier: 3
-research_cost: 3000
+research_cost: 1600
 research_time: 4
 ap_surcharge: 8
 requires:

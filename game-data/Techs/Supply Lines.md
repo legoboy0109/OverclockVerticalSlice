@@ -3,7 +3,7 @@ id: supply_lines
 description: Vehicles and aircraft +1 ammo; Supply Depots cost 50% less.
 tree: economy
 tier: 1
-research_cost: 1000
+research_cost: 800
 research_time: 3
 ap_surcharge: 4
 requires: []
