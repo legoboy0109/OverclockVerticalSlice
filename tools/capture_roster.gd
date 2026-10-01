@@ -99,6 +99,9 @@ func _run() -> void:
 			u.owner = row
 			u.type = type
 			u.current_hp = type.hp
+			# `--dry` places every unit out of ammo, to check the board's out-of-ammo mark.
+			if OS.get_cmdline_user_args().has("--dry"):
+				u.ammo_spent = Ammo.max_ammo(type)
 			u.position = Vector2i(x, y)
 			st.entities_by_id[u.entity_id] = u
 			st.grid.place(u.entity_id, x, y)

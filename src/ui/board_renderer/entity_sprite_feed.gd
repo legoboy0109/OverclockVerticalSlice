@@ -234,10 +234,14 @@ var _marker_nodes: Dictionary = {}
 ## ★ Live [code]entity_id -> rank badge Sprite2D[/code] for promoted units ([RankBadge]).
 ## In the occupant layer, so it Y-sorts with the units instead of hiding under them.
 var _rank_nodes: Dictionary = {}
+## ★ 2026-10-01: out-of-ammo marks ([AmmoBadge]), keyed like [member _rank_nodes].
+var _ammo_nodes: Dictionary = {}
 
 ## Where the badge sits, relative to the unit's tile position: the tile diamond's lower-right
 ## edge, clear of the body sprite's feet and of the neighbouring tile's unit.
 const RANK_BADGE_OFFSET: Vector2 = Vector2(46.0, -4.0)
+## Mirror of [constant RANK_BADGE_OFFSET] on the unit's left, so both marks can show at once.
+const AMMO_BADGE_OFFSET: Vector2 = Vector2(-46.0, -4.0)
 
 ## Which entities get an ownership decal (Story 009 / S5-08).
 enum MarkerPolicy {
@@ -344,6 +348,7 @@ func _refresh_entity(entity: EntityState) -> void:
 	_last_entity[id] = entity
 	_refresh_marker(entity)
 	_refresh_rank(entity, sprite)
+	_refresh_ammo(entity, sprite)
 	# Applied HERE and not inside _refresh_glow: that method early-returns for any
 	# actor with no authored emission mask, and the body read must not depend on
 	# whether a mask happens to exist. It is also gated behind an unchanged-state
@@ -650,6 +655,37 @@ func _refresh_rank(entity: EntityState, sprite: Sprite2D) -> void:
 	badge.position = sprite.position + RANK_BADGE_OFFSET
 
 
+## Shows the [AmmoBadge] beside a vehicle/aircraft with no ammo left; removes it otherwise.
+func _refresh_ammo(entity: EntityState, sprite: Sprite2D) -> void:
+	var id: int = entity.entity_id
+	if not Ammo.is_empty(entity) or _board == null or _board.occupant_layer == null:
+		_remove_ammo(id)
+		return
+	var badge: Sprite2D = _ammo_nodes.get(id)
+	if badge == null:
+		badge = Sprite2D.new()
+		badge.name = "Ammo%d" % id
+		badge.centered = true
+		badge.texture = AmmoBadge.texture()
+		_ammo_nodes[id] = badge
+		_board.occupant_layer.add_child(badge)
+	badge.position = sprite.position + AMMO_BADGE_OFFSET
+
+
+## The out-of-ammo mark for [param entity_id], or null.
+func ammo_badge(entity_id: int) -> Sprite2D:
+	return _ammo_nodes.get(entity_id)
+
+
+func _remove_ammo(entity_id: int) -> void:
+	var badge: Sprite2D = _ammo_nodes.get(entity_id)
+	_ammo_nodes.erase(entity_id)
+	if badge != null and is_instance_valid(badge):
+		if badge.get_parent() != null:
+			badge.get_parent().remove_child(badge)
+		badge.queue_free()
+
+
 ## The badge node for [param entity_id], or null — for tests and the renderer's own bookkeeping.
 func rank_badge(entity_id: int) -> Sprite2D:
 	return _rank_nodes.get(entity_id)
@@ -906,6 +942,7 @@ func _forget(entity_id: int) -> void:
 	_last_entity.erase(entity_id)
 	_remove_marker(entity_id)
 	_remove_rank(entity_id)
+	_remove_ammo(entity_id)
 	if sprite != null and is_instance_valid(sprite):
 		if sprite.get_parent() != null:
 			sprite.get_parent().remove_child(sprite)
