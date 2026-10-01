@@ -151,7 +151,7 @@ const LEGIBLE_REFERENCE_SIZE: Vector2i = Vector2i(12, 10)
 ## imported from [GameHud] because the plate is the slice's own scene glue, not a
 ## HUD widget — if the two ever need to agree formally, that is the HUD chrome
 ## sign-off's call, not this file's.
-const STATUS_SIDE_RESERVE_PX: float = 240.0
+const STATUS_SIDE_RESERVE_PX: float = 362.0   # ★ 2026-10-01: the 330 px glass cards + gutter
 
 ## Floor for the status plate's clamped width, so a very narrow window degrades to
 ## a small overlapping plate rather than a one-word-per-line column.
@@ -570,13 +570,12 @@ func _build_status_overlay() -> void:
 	# onto the board, so it competed with terrain and sprites for the same pixels.
 	# The 4px outline was a workaround for having no ground; a panel is the fix.
 	# Matches HudPanel's palette so the two read as one HUD rather than two.
-	var backing := StyleBoxFlat.new()
-	backing.bg_color = HudPanel.BACKING
-	backing.border_color = HudPanel.BORDER
-	backing.set_border_width_all(1)
-	backing.set_content_margin_all(10)
-	backing.content_margin_left = 18
-	backing.content_margin_right = 18
+	# ★ 2026-10-01 (holo glass): the same cut-corner glass as every HUD plate.
+	var backing: StyleBoxTexture = UiTheme.glass_box(Color(0.06, 0.10, 0.16, 0.84), UiTheme.EDGE).duplicate()
+	backing.set_content_margin_all(9)
+	backing.content_margin_left = 20
+	backing.content_margin_right = 20
+	_status_label.add_theme_color_override("font_color", UiTheme.TEXT)
 	_status_label.add_theme_stylebox_override("normal", backing)
 	_status_layer.add_child(_status_label)
 	# Re-clamp on resize: the reserve is measured from the screen EDGES (both corner
@@ -730,10 +729,15 @@ func _legend_text() -> String:
 		[&"board_cursor_cycle", "jump cursor"],
 		[&"board_zoom_in", "zoom in"], [&"board_zoom_out", "zoom out"],
 	]:
-		var label: String = InputGlyphs.label_for(pair[0])
+		# ★ 2026-10-01 (holo glass): the key alone, no brackets — "[" read as "[[]".
+		var label: String = InputGlyphs.name_for(pair[0])
+		if label == "":
+			label = InputGlyphs.label_for(pair[0]).trim_prefix("[").trim_suffix("]")
+		if pair[0] == &"ui_up" and label == "Up":
+			label = "Arrows"   # the cursor moves on all four, not just Up
 		if label != "":
 			parts.append("%s %s" % [label, pair[1]])
-	return "   ".join(parts)
+	return "  ·  ".join(parts)
 
 
 ## Renders a refused commit as the status line's transient reason.

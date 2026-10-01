@@ -61,6 +61,7 @@ func _build() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 36)
 	title.add_theme_color_override("font_color", MenuStyle.ACCENT)
+	MenuStyle.glow_label(title, MenuStyle.ACCENT)   # ★ 2026-10-01: holo-glass neon title
 	column.add_child(title)
 
 	_slots.clear()

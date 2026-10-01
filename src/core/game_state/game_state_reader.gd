@@ -103,6 +103,9 @@ func unit_info(entity_id: int) -> Dictionary:
 		"move_cost": unit.type.move_cost,
 		"has_attacked": unit.has_attacked,
 		"attack_range": Unit.effective_attack_range(_state, unit),
+		# ★ 2026-10-01: the unit card (holo-glass HUD) names whose it is and its defence.
+		"owner": unit.owner,
+		"defense": Unit.effective_defense(_state, unit),
 	}
 
 
@@ -247,6 +250,7 @@ func structure_info(entity_id: int) -> Dictionary:
 		"units_produced_this_turn": structure.units_produced_this_turn,
 		"remaining_production_cap": cap - structure.units_produced_this_turn,
 		"cancel_refund": BaseProduction.cancel_refund(structure.type.build_cost),
+		"owner": structure.owner,
 	}
 
 
@@ -289,6 +293,20 @@ func can_afford_produce(player: int, unit_type: UnitTypeDef) -> bool:
 ## The active player's index into [member GameState.per_player] (TR-hud-009,
 ## ADR-0016 §1) — a direct pass-through to [member GameState.active_player].
 ## O(1).
+## [param player]'s faction (read-only), or null before setup. ★ 2026-10-01: the opponent card.
+func faction_of(player: int) -> FactionDef:
+	return _state.faction_of(player) if player >= 0 and player < _state.per_player.size() else null
+
+
+## Living units [param player] owns (on the board).
+func unit_count(player: int) -> int:
+	var n: int = 0
+	for e: EntityState in _state.entities():
+		if e is UnitState and e.owner == player:
+			n += 1
+	return n
+
+
 func active_player() -> int:
 	return _state.active_player
 

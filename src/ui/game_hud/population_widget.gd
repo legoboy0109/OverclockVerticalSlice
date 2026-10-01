@@ -108,9 +108,8 @@ func _draw() -> void:
 	# sits in the same panel as them and is read the same way; a smaller lowercase
 	# label made the cap look like a footnote rather than the third hard limit on
 	# what the player can do this turn.
-	draw_string(font, Vector2(4, 18), "POP %d/%d" % [population_value(), cap_value()],
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 16, color)
-	var reason: String = cap_reason()
-	if reason != "":
-		draw_string(font, Vector2(4, 34), reason,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, AT_CAP_COLOR)
+	# ★ 2026-10-01 (holo glass): value + caption, matching the Credits counter beside it.
+	draw_string(UiTheme.font(600), Vector2(0, 18), "%d / %d" % [population_value(), cap_value()],
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 22, color)
+	draw_string(UiTheme.label_font(), Vector2(1, 31), "AT CAP" if is_at_cap() else "POPULATION",
+		HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.SIZE_LABEL, color if is_at_cap() else UiTheme.TEXT_MUTED)

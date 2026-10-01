@@ -104,24 +104,77 @@ func panel_info() -> Dictionary:
 	return _reader.structure_info(_target_id)
 
 
+## ★ 2026-10-01 (holo glass): the selected-entity CARD — sprite, name, class, a segmented hp
+## bar, ammo and the numbers a player weighs (was a bare "hp 40/40"). Drawn inside the
+## bottom-left glass plate game_hud gives it; [member CARD_SIZE] is that plate's content area.
+const CARD_SIZE: Vector2 = Vector2(300, 96)
+const SPRITE_BOX: float = 84.0
+
+
+func _class_label(info: Dictionary) -> String:
+	var t: Variant = info.get("type")
+	if t is UnitTypeDef:
+		match (t as UnitTypeDef).unit_class:
+			UnitTypeDef.UnitClass.GROUND_VEHICLE:
+				return "GROUND VEHICLE"
+			UnitTypeDef.UnitClass.AIR:
+				return "AIRCRAFT"
+		return "INFANTRY"
+	if info.get("build_status", StructureState.BuildStatus.COMPLETED) == StructureState.BuildStatus.UNDER_CONSTRUCTION:
+		return "UNDER CONSTRUCTION"
+	return "STRUCTURE"
+
+
+func _sprite_for(entity_id: int) -> Texture2D:
+	for e: EntityState in _reader.entities():
+		if e.entity_id == entity_id:
+			var seat_faction: FactionDef = Factions.RUSH if e.owner == 0 else Factions.BOOM
+			var path: String = EntitySpriteCatalog.texture_path(e, seat_faction, "e")
+			return load(path) if path != "" and ResourceLoader.exists(path) else null
+	return null
+
+
 func _draw() -> void:
 	if _reader == null or _target_id == -1:
 		return
 	var info: Dictionary = panel_info()
 	if info.is_empty():
 		return
-	var font: Font = ThemeDB.fallback_font
-	# Edge: pinned = solid 2px accent; peek = thin dimmed (shape/weight channel,
-	# not hue alone). Advisory treatment — the STATE (is_pinned) is what's tested.
-	var edge: Color = Color.WHITE if _pinned else Color(0.55, 0.55, 0.6)
-	draw_rect(Rect2(Vector2(2, 2), size - Vector2(4, 4)), edge, false, 2.0 if _pinned else 1.0)
-	if font != null:
-		draw_string(font, Vector2(6, 18), "hp %d/%d" % [info.get("current_hp", 0), info.get("hp", 0)],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
-		# ★ Ammo (2026-10-01): only for units that use it; empty is called out, not just "0/4".
-		var max_ammo: int = int(info.get("max_ammo", 0))
-		if max_ammo > 0:
-			var ammo: int = int(info.get("ammo", 0))
-			var text: String = "ammo %d/%d" % [ammo, max_ammo] if ammo > 0 else "OUT OF AMMO"
-			draw_string(font, Vector2(6, 34), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12,
-				Color.WHITE if ammo > 0 else Color(1.0, 0.45, 0.35))
+	var owner: int = int(info.get("owner", 0))
+	var hue: Color = UiTheme.player_hue(owner)
+	# Sprite, fitted into the left box, bottom-aligned like it stands on the card.
+	var tex: Texture2D = _sprite_for(_target_id)
+	if tex != null:
+		var sz: Vector2 = tex.get_size()
+		var k: float = minf(SPRITE_BOX / sz.x, SPRITE_BOX / sz.y)
+		var dst := Rect2(Vector2((SPRITE_BOX - sz.x * k) / 2.0, SPRITE_BOX - sz.y * k), sz * k)
+		draw_texture_rect(tex, dst, false)
+	var x: float = SPRITE_BOX + 14.0
+	var t: Variant = info.get("type")
+	var name_text: String = (t.display_name if t != null else "?").to_upper()
+	draw_string(UiTheme.label_font(), Vector2(x, 10), _class_label(info) + ("" if owner == 0 else "  ·  ENEMY"),
+		HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.SIZE_LABEL, hue if owner != 0 else UiTheme.TEXT_MUTED)
+	draw_string(UiTheme.font(700), Vector2(x, 34), name_text, HORIZONTAL_ALIGNMENT_LEFT, CARD_SIZE.x - x, 20, UiTheme.TEXT)
+	# Segmented hp bar: one segment per 2 hp up to 14 segments, so small and large pools both read.
+	var cur: int = int(info.get("current_hp", 0))
+	var mx: int = maxi(1, int(info.get("hp", 1)))
+	var segs: int = clampi(int(ceil(mx / 2.0)), 4, 14)
+	var bar_w: float = CARD_SIZE.x - x
+	var seg_w: float = (bar_w - (segs - 1) * 2.0) / segs
+	var lit: int = int(ceil(float(cur) / mx * segs))
+	for i: int in segs:
+		var c: Color = Color(hue, 0.95) if i < lit else Color(1, 1, 1, 0.12)
+		draw_rect(Rect2(Vector2(x + i * (seg_w + 2.0), 44), Vector2(seg_w, 7)), c)
+	var line: String = "HP %d / %d" % [cur, mx]
+	var max_ammo: int = int(info.get("max_ammo", 0))
+	if max_ammo > 0:
+		var ammo: int = int(info.get("ammo", 0))
+		line += "    AMMO %d / %d" % [ammo, max_ammo] if ammo > 0 else "    OUT OF AMMO"
+	draw_string(UiTheme.font(600), Vector2(x, 68), line, HORIZONTAL_ALIGNMENT_LEFT, bar_w, 13, UiTheme.TEXT)
+	if info.has("effective_attack"):
+		var stats: String = "ATK %d   RNG %d   DEF %d   MOVE %d AP" % [int(info["effective_attack"]),
+			int(info.get("attack_range", 0)), int(info.get("defense", 0)), int(info.get("move_cost", 0))]
+		draw_string(UiTheme.font(500), Vector2(x, 88), stats, HORIZONTAL_ALIGNMENT_LEFT, bar_w, 12, UiTheme.TEXT_MUTED)
+	elif int(info.get("build_status", 1)) == StructureState.BuildStatus.UNDER_CONSTRUCTION:
+		draw_string(UiTheme.font(500), Vector2(x, 88), "READY IN %d TURN(S)" % int(info.get("build_turns_remaining", 0)),
+			HORIZONTAL_ALIGNMENT_LEFT, bar_w, 12, UiTheme.TEXT_MUTED)

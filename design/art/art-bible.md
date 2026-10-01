@@ -215,6 +215,28 @@ Terrain is **angular and geometric, never organic** — faceted planes, hard til
 
 ### 3.4 UI Shape Grammar — Distinct-but-Related
 
+> ### ★ AMENDED 2026-10-01 — Holo-glass UI (user decision, direction B)
+> The user chose the **"Holo Glass"** direction over the "Instrument Panel" this section
+> originally specified (comparison page: three mock-ups over the real board). What changed, and
+> what did NOT:
+> - **Changed — shape:** HUD and menu plates are **frosted glass** (a blurred copy of the board
+>   behind, dark blue tint) with **two cut corners** (top-left, bottom-right) and a **glowing
+>   edge**. This overrides "no ornamental faceting" for HUD chrome specifically; the board's own
+>   shapes are unaffected.
+> - **Changed — glow on chrome:** plate edges glow. A player's own plates (resources, unit card,
+>   End Turn) take **that player's hue** on the edge with a soft inner glow; neutral chrome uses a
+>   quiet blue-grey edge.
+> - **Unchanged — colour rule (§4.6):** no new hues. Only the two player hues, white and the
+>   blue-grey chrome. Hp bars stay neutral (hue = ownership, never health).
+> - **Unchanged — AP is the hero numeral (§7.2):** the largest number on screen, glowing in the
+>   player's hue; projected values stay inert (no glow).
+> - **Typeface (§7.2 "left unlocked") is now Exo 2** (SIL OFL, bundled with its licence),
+>   SemiBold with letter-spacing for small uppercase labels.
+> - **Performance/accessibility:** the blur follows the Edge Blur setting; with it off, plates
+>   fall back to a near-opaque tint so text contrast holds (Steam Deck battery path).
+> Implementation: `src/ui/theme/` (UiTheme, GlassBackdrop, glass_panel.gdshader).
+
+
 The HUD uses a **simple, rectilinear shape language deliberately distinct from the world's faceted-angular unit shapes** — clean panels, thin rules, straightforward rectangles and clear icon forms, with *no ornamental faceting, no hex/crystal motifs borrowed from the board.* The relationship to the world is carried entirely by **color and glow grammar** (Section 2), not by shape: HUD neon behaves exactly like board neon (breathe = has AP/available, flare = spend, clamp = spent/unavailable), so it reads as the same design family without borrowing silhouette complexity.
 
 Why (Pillar 3): if HUD chrome adopted the same busy angular language as units, it would compete with unit silhouettes for the eye. Keeping HUD shapes quiet guarantees that **the most complex silhouettes on screen are always the units** — so the eye is drawn to the board first (Section 1's core promise). The HUD is a *quiet instrument panel* around a loud stage; its restraint is what makes the stage legible.
@@ -540,6 +562,8 @@ Authored jointly with a UX-alignment pass (verdict: SUPPORTS WITH CONCERNS — t
 **Screen-space HUD, zero diegetic information display.** A diegetic/in-world HUD would force game-state reads *through* the same iso depth, occlusion, and value variance §1 P3 / §3.3 work to keep out of readability — foreshortening, occlusion behind foreground tiles, legibility loss against a variable dark stage. Screen-space guarantees the AP counter and cost previews render at **fixed size, contrast, and position regardless of board state** — the meaning of §3.4's "a quiet instrument panel around a loud stage." The one in-world exception is the **board overlay layer** (reachable tiles, per-tile cost badges, target brackets), which is the board's job (system #9) governed by §4.3's Non-Hue Semantic Layer — §7 covers the persistent screen-space frame, not the overlay.
 
 ### 7.2 Typography
+
+> ★ 2026-10-01: the face is **Exo 2** — see the holo-glass amendment under §3.4.
 
 A **geometric sans** (circular bowls, even stroke weight, the readable half of a TRON interface) carrying tech character through proportion/spacing, not gimmick strokes or scanline treatments. One family, two disciplined roles: **Display/Numeric** (tabular figures, condensed, uppercase labels — for the AP counter and all cost numbers) and **Body/Label** (neutral width, mixed case — unit names, menu labels, log). A second unrelated typeface would be the text equivalent of borrowing the board's ornament into the HUD (§3.4).
 

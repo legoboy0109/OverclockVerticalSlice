@@ -136,6 +136,14 @@ func _draw() -> void:
 	var font: Font = ThemeDB.fallback_font
 	if font == null:
 		return
-	draw_string(font, Vector2(4, 18), indicator_text(), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
+	# ★ 2026-10-01 (holo glass): centred on the glass pill game_hud gives this widget.
+	var text: String = indicator_text().to_upper().replace(" — ", "  ·  ")
+	var f: Font = UiTheme.label_font()
+	var w: float = f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+	var mine: bool = _reader != null and _reader.active_player() == _local_player
+	draw_string(f, Vector2((size.x - w) / 2.0, 25), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15,
+		UiTheme.TEXT if mine else UiTheme.TEXT_MUTED)
 	if _banner_active:
-		draw_string(font, Vector2(4, 42), _banner_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color.WHITE)
+		var bw: float = UiTheme.font(700).get_string_size(_banner_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x
+		UiTheme.draw_glow_text(self, UiTheme.font(700), Vector2((size.x - bw) / 2.0, 78), _banner_text, 30,
+			UiTheme.player_hue(_local_player) if mine else UiTheme.player_hue(1 - _local_player))

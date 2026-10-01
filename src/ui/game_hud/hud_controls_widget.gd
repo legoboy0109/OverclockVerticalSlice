@@ -134,9 +134,19 @@ func _make_button(text: String, node_name: String, at: Vector2) -> Button:
 	b.name = node_name
 	b.text = text
 	b.position = at
-	b.custom_minimum_size = Vector2(72, 26)
+	b.custom_minimum_size = Vector2(176, 44)
 	b.focus_mode = Control.FOCUS_ALL
-	b.add_theme_font_size_override("font_size", 12)
+	# ★ 2026-10-01 (holo glass): the one loud button on the HUD — glass with your hue's edge.
+	var hue: Color = UiTheme.player_hue(_local_player)
+	b.add_theme_font_override("font", UiTheme.label_font())
+	b.add_theme_font_size_override("font_size", 16)
+	b.add_theme_color_override("font_color", UiTheme.TEXT)
+	b.add_theme_color_override("font_disabled_color", UiTheme.TEXT_INERT)
+	b.add_theme_stylebox_override("normal", UiTheme.glass_box(Color(0.07, 0.12, 0.19, 0.82), Color(hue, 0.75)))
+	b.add_theme_stylebox_override("hover", UiTheme.glass_box(Color(hue, 0.22), hue))
+	b.add_theme_stylebox_override("pressed", UiTheme.glass_box(Color(hue, 0.35), hue))
+	b.add_theme_stylebox_override("focus", UiTheme.glass_box(Color(0, 0, 0, 0), Color.WHITE, 2))
+	b.add_theme_stylebox_override("disabled", UiTheme.glass_box(Color(0.07, 0.12, 0.19, 0.6), UiTheme.EDGE))
 	add_child(b)
 	return b
 

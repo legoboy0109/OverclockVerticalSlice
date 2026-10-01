@@ -551,6 +551,7 @@ func _build_plate() -> void:
 		_plate = PanelContainer.new()
 		_plate.name = "MenuPlate"
 		_plate.add_theme_stylebox_override("panel", _plate_style())
+		UiTheme.make_glass(_plate, Color(1, 1, 1, 0.32))   # ★ 2026-10-01: holo glass
 		add_child(_plate)
 		_rows_box = VBoxContainer.new()
 		_rows_box.name = "Rows"
@@ -809,6 +810,12 @@ func _make_row(label: String, right: String, enabled: bool, is_reason: bool) -> 
 	row.custom_minimum_size.y = ROW_HEIGHT
 	row.add_theme_font_size_override("font_size", FONT_SIZE)
 	row.flat = true
+	# ★ 2026-10-01 (holo glass): the focused/hovered row is the mock-up B highlight — your hue
+	# fading to the right behind a bright left bar — instead of the engine's outline box.
+	var hl: StyleBoxTexture = UiTheme.highlight_box(UiTheme.player_hue(0))
+	row.add_theme_stylebox_override("focus", hl)
+	row.add_theme_stylebox_override("hover", hl)
+	row.add_theme_stylebox_override("pressed", hl)
 	row.disabled = not enabled
 	# A disabled Button is not focusable in Godot, which is exactly the wanted
 	# behaviour: the row stays VISIBLE and READABLE but keyboard focus steps over
@@ -1022,6 +1029,7 @@ func _build_submenu(items: Array[Dictionary]) -> void:
 	_submenu = PanelContainer.new()
 	_submenu.name = "OptionPlate"
 	_submenu.add_theme_stylebox_override("panel", _plate_style())
+	UiTheme.make_glass(_submenu, Color(1, 1, 1, 0.32))
 	add_child(_submenu)
 	_submenu_box = VBoxContainer.new()
 	_submenu_box.add_theme_constant_override("separation", 2)

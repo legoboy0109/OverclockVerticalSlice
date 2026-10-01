@@ -103,6 +103,7 @@ func _build() -> void:
 	title.position = Vector2(0, 120)
 	title.add_theme_font_size_override("font_size", TITLE_FONT_SIZE)
 	title.add_theme_color_override("font_color", TITLE_HUE)
+	MenuStyle.glow_label(title, TITLE_HUE)   # ★ 2026-10-01: holo-glass neon title
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(title)
 
@@ -204,6 +205,7 @@ func _build_quit_confirm() -> void:
 	plate_style.set_border_width_all(2)
 	plate_style.set_content_margin_all(32)
 	plate.add_theme_stylebox_override("panel", plate_style)
+	UiTheme.make_glass(plate, Color(TITLE_HUE, 0.7), 14.0)   # ★ 2026-10-01: holo glass
 	modal_centre.add_child(plate)
 
 	var column := VBoxContainer.new()

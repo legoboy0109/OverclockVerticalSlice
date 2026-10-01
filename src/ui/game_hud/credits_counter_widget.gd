@@ -50,6 +50,10 @@ func _budget_color() -> Color:
 ## The `CR` resource label (accessibility distinctness, CR-3d). The base class
 ## composes it with the value; the OPPONENT prefix moved to the panel title
 ## (2026-08-24).
+func _caption() -> String:
+	return "CREDITS"
+
+
 func _resource_label() -> String:
 	return "CR"
 
