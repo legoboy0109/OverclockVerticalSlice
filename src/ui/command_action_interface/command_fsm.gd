@@ -454,8 +454,10 @@ static func entry_for(menu: Array[VerbEntry], verb: int) -> VerbEntry:
 ## full rule. Isolated so each verb's rule is independently readable/testable
 ## without re-deriving the others.
 static func _move_entry(state: GameState, entity: EntityState) -> VerbEntry:
+	# ★ 2026-10-01 (user decision): a structure never moves, so the row is STRUCTURAL
+	# (NOT_A_UNIT → hidden), not the situational "no route" it used to show on every building.
 	if not (entity is UnitState):
-		return VerbEntry.new(Verb.MOVE, false, Reason.OUT_OF_RANGE)
+		return VerbEntry.new(Verb.MOVE, false, Reason.NOT_A_UNIT)
 	var unit: UnitState = entity
 
 	# Every tile [method Movement.reachable] returns is affordable BY CONSTRUCTION —
@@ -703,6 +705,13 @@ static func _research_entry(state: GameState, entity: EntityState) -> VerbEntry:
 static func _rush_entry(state: GameState, entity: EntityState) -> VerbEntry:
 	var cost: int = BaseProduction.rush_ap_cost()
 	if not (entity is StructureState) or entity.owner != state.active_player:
+		return VerbEntry.new(Verb.RUSH, false, Reason.NOTHING_TO_RUSH)
+	# ★ 2026-10-01 (user decision): a finished building that can only ever make infantry or
+	# builders (the HQ, a Barracks) can never be rushed — hide the row instead of showing
+	# "infantry can't rush" on it every time. Construction sites and vehicle producers keep it.
+	var structure: StructureState = entity
+	if structure.build_status == StructureState.BuildStatus.COMPLETED \
+			and not structure.type.producible_types.any(BaseProduction.is_rushable_type):
 		return VerbEntry.new(Verb.RUSH, false, Reason.NOTHING_TO_RUSH)
 	var action := RushAction.new()
 	action.structure_id = entity.entity_id
