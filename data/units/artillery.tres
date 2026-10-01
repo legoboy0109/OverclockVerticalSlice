@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Artillery.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: b593cc6e8de2760f28ecf475c7c6cb2b30b54e5c08b6bcba0b09bc6cfa45f9d4
+; source-sha256: b42f3e1c58f9e2566873bd391c3c325abd3be6afd2fea324dfbb61310e65a4bd
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -18,7 +18,7 @@ soft_move_cap = 2
 produce_cost = 1600
 production_turns = 3
 max_ammo = -1
-upkeep = 750
+upkeep = 380
 ground_offset_px = 7
 counts_toward_cap = false
 can_counterattack = false

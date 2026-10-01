@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Builder.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: b6ca0be4a723d14d316771ea2a687f963a665cd39c4db9bf287dbde03f3e5137
+; source-sha256: d5b7952b83f3479abfae4b0af2d8cf4b6f7bc5ff20fd1a4cbce6fbf035d09dd4
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/abilities/repair.tres" id="2"]
@@ -19,7 +19,7 @@ soft_move_cap = 3
 produce_cost = 150
 production_turns = 1
 max_ammo = -1
-upkeep = 40
+upkeep = 30
 ground_offset_px = 8
 counts_toward_cap = true
 can_counterattack = false

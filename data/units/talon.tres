@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Talon.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 49ea01b5a6b3a0effb3805f99705d536ef00d76ebec3104f0a56ce806aa75135
+; source-sha256: 81953c0211eec4141fdb81dbdb3851cda565a1026dc0cfeac11bbfa9508690d0
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -18,7 +18,7 @@ soft_move_cap = 8
 produce_cost = 1500
 production_turns = 2
 max_ammo = -1
-upkeep = 750
+upkeep = 380
 ground_offset_px = 0
 counts_toward_cap = false
 can_counterattack = false

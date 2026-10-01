@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Confessor.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 678bf653cb4c2db735c140d3e34bdc56d23a12e46ccd56ce27d1a2655424f73b
+; source-sha256: bac83da1c84d6a8cad8f0dce1dcb698fc21dc28f1e11518acc86d7e209669cc7
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/abilities/repair.tres" id="2"]
@@ -19,7 +19,7 @@ soft_move_cap = 3
 produce_cost = 600
 production_turns = 1
 max_ammo = -1
-upkeep = 190
+upkeep = 130
 ground_offset_px = 0
 counts_toward_cap = true
 can_counterattack = false

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Knight.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 309726114529b4c4adb0356c35712a4768fbda773f17103570e7a22abea74519
+; source-sha256: 338037fe58de3c42c13c46af889a1e601ce937da6213d99943d897ef9b805b0f
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -18,7 +18,7 @@ soft_move_cap = 3
 produce_cost = 700
 production_turns = 1
 max_ammo = -1
-upkeep = 190
+upkeep = 130
 ground_offset_px = 0
 counts_toward_cap = true
 can_counterattack = false

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Hauler.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 5505a371973ff28dadae73a927e65a20b499468b8210b8c4c9aab5871ffe3a3c
+; source-sha256: f7057e784f341c5b7d210d451df960f1ef60318bc71fcb701e3043031c128d29
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -18,7 +18,7 @@ soft_move_cap = 3
 produce_cost = 1100
 production_turns = 2
 max_ammo = -1
-upkeep = 600
+upkeep = 300
 ground_offset_px = 9
 counts_toward_cap = false
 can_counterattack = false

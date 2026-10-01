@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Skyworks Gunship.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 2165c3ffebf2aac6567ceb98379ee1f1c46704d872eec7c9af3035d942271330
+; source-sha256: eaeeb4b517e3bbd5067d9d3ffdb7b78c9c93bd6f9d5f574fe7dd41f118d07893
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -18,7 +18,7 @@ soft_move_cap = 7
 produce_cost = 1400
 production_turns = 2
 max_ammo = -1
-upkeep = 750
+upkeep = 380
 ground_offset_px = 0
 counts_toward_cap = false
 can_counterattack = false

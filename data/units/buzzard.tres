@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Buzzard.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 2a7802132999e2af216f767c2e50f4f5581e7f828a955f180989dfd54e872e42
+; source-sha256: 6dc5fc98d21c83f4a79de3c45dba4e4994bb9ba7b6fd512f6d03764e56ce7cb4
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/abilities/paradrop.tres" id="2"]
@@ -19,7 +19,7 @@ soft_move_cap = 6
 produce_cost = 1300
 production_turns = 2
 max_ammo = -1
-upkeep = 600
+upkeep = 300
 ground_offset_px = 0
 counts_toward_cap = false
 can_counterattack = false

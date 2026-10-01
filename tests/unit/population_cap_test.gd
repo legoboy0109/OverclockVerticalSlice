@@ -216,7 +216,7 @@ func test_produce_at_the_cap_is_rejected_naming_the_population_cap() -> void:
 
 # --- ★ The cap/upkeep relationship the whole design rests on --------------------
 
-func test_the_cap_sits_just_above_what_upkeep_can_sustain_on_a_realistic_build() -> void:
+func test_upkeep_binds_early_and_the_cap_binds_late_on_a_realistic_build() -> void:
 	# ★★ The intended relationship (population-cap.md, cross-checked against
 	# unit-upkeep.md): you can always field a LITTLE MORE than you can comfortably keep.
 	#
@@ -253,8 +253,18 @@ func test_the_cap_sits_just_above_what_upkeep_can_sustain_on_a_realistic_build()
 	# A fully-researched economy, minus a realistic structure upkeep burden.
 	state.per_player[0].economy_tier = Balance.economy.max_economy_tier
 	var for_army: int = Credits.credit_income(state, 0) - Upkeep.total_upkeep(state, 0)
-	var mean_infantry_upkeep: int = UnitTypes.TROOPER.upkeep  # the roster's typical infantry (150 since 2026-09-29)
+	var mean_infantry_upkeep: int = UnitTypes.TROOPER.upkeep  # the roster's typical infantry (100 since 2026-10-01)
 	var sustainable: int = for_army / mean_infantry_upkeep
 
-	var msg: String = "cap (%d) must exceed the sustainable army (%d) - otherwise upkeep never binds and the cap does all the work" % [cap, sustainable]
-	assert_int(cap).override_failure_message(msg).is_greater(sustainable)
+	# ★ 2026-10-01 (user decision): infantry upkeep ×0.5 to field more vehicles. At a fully
+	# researched economy income now sustains MORE infantry than the cap allows, so late game the
+	# CAP binds and upkeep does not — accepted. Upkeep must still bind before the economy is built
+	# up (below), which is where the armies actually sit (3-5 per side in AI-vs-AI sims).
+	var msg: String = "late game the cap (%d) should bind before upkeep (sustainable %d)" % [cap, sustainable]
+	assert_int(sustainable).override_failure_message(msg).is_greater_equal(cap)
+
+	state.per_player[0].economy_tier = 0
+	var early: int = (Credits.credit_income(state, 0) - Upkeep.total_upkeep(state, 0)) / mean_infantry_upkeep
+	assert_int(early).override_failure_message(
+		"with no economy research upkeep must still bind first (sustainable %d vs cap %d)" % [early, cap]
+	).is_less(cap)

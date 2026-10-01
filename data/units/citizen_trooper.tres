@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Citizen Trooper.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 36123c546c3f8cc70a180b9fb5a5c052bb23297d197b2fbd8e44303697aca67f
+; source-sha256: 014f830736ef0a34bc171e25f8167d604c7addad298c6cbd229a6a5b725b246d
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -18,7 +18,7 @@ soft_move_cap = 4
 produce_cost = 300
 production_turns = 1
 max_ammo = -1
-upkeep = 80
+upkeep = 50
 ground_offset_px = 0
 counts_toward_cap = true
 can_counterattack = false

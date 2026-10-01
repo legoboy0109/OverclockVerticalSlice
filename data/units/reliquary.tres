@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Reliquary.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: b2ccc67d18fd69264e9f53a4dfaa3719734253ad321f8312ed1cefa751df5ce6
+; source-sha256: b930858ab4755aecf348e88bdedcdd30e6ab35f98d4ef0b088d2fb2d14831e12
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -18,7 +18,7 @@ soft_move_cap = 3
 produce_cost = 1200
 production_turns = 2
 max_ammo = -1
-upkeep = 600
+upkeep = 300
 ground_offset_px = 7
 counts_toward_cap = false
 can_counterattack = false

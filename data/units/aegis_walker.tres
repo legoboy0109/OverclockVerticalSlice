@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Aegis Walker.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 5c2a6e1436995fc07ad76d0808c833d7b49c5640fca13c23d7bd2138cb6e2ade
+; source-sha256: 9efd469e8cab6037543ac14a10774a9ee861bf5ef14841074bcc13d6cbf57c88
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -18,7 +18,7 @@ soft_move_cap = 3
 produce_cost = 1400
 production_turns = 2
 max_ammo = -1
-upkeep = 750
+upkeep = 380
 ground_offset_px = 5
 counts_toward_cap = false
 can_counterattack = false

@@ -13,7 +13,7 @@ soft_move_cap: 3
 produce_cost: 1200
 production_turns: 2
 ground_offset_px: 5
-upkeep: 750
+upkeep: 380
 counts_toward_cap: false
 can_counterattack: false
 can_build: false

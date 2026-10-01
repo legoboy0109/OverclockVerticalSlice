@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Inquisitor.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: cea33b0803735105cfe50d3949afdc9a4ca00b436cb79bf72915e9e827ac97ae
+; source-sha256: a51ec3422849063246e0e7d29a03d6b0561c700bdd0170f08094af3496ccaa0d
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/abilities/demolish.tres" id="2"]
@@ -19,7 +19,7 @@ soft_move_cap = 3
 produce_cost = 700
 production_turns = 2
 max_ammo = -1
-upkeep = 190
+upkeep = 130
 ground_offset_px = 0
 counts_toward_cap = true
 can_counterattack = false

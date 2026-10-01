@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Saboteur.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 9f954324263eab3dd842346c56a3914843376e24d10b38ad553afe62fc9788f8
+; source-sha256: 48fbbd3169a2fad2ec9df82818d2ade44696912c9ef8c8c5d794a771fa836041
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/abilities/demolish.tres" id="2"]
@@ -19,7 +19,7 @@ soft_move_cap = 3
 produce_cost = 500
 production_turns = 1
 max_ammo = -1
-upkeep = 150
+upkeep = 100
 ground_offset_px = 0
 counts_toward_cap = true
 can_counterattack = false
