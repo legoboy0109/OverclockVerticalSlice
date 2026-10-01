@@ -137,12 +137,12 @@ func test_every_economy_tree_tech_grants_one_income_tier() -> void:
 
 
 func test_ross_full_economy_overtakes_the_baseline() -> void:
-	# Ross: -300 base, +200 per tier on top of +500/+800/+1200 -> 1,200 early, 4,300 fully researched.
+	# Ross: -300 base, +500 per tier on top of +500/+800/+1200 -> 1,200 early, 5,200 fully researched.
 	var state: GameState = GameStateFactory.make_state(2, 0)
 	state.per_player[0].faction = Factions.MACHINISTS_UNION
 	state.per_player[1].faction = Factions.DEMOCRATIC_ALLIANCE
 	assert_int(Credits.credit_income(state, 0)).is_equal(1200)
 	state.per_player[0].economy_tier = 3
 	state.per_player[1].economy_tier = 3
-	assert_int(Credits.credit_income(state, 0)).is_equal(4300)
+	assert_int(Credits.credit_income(state, 0)).is_equal(5200)
 	assert_int(Credits.credit_income(state, 1)).is_equal(4000)
