@@ -1785,6 +1785,23 @@ static func _ability_matchup_effect(lookahead: GameState, owner: int, unit_type:
 					hit2 += w2 * minf(1.0, float(a.amount) / float(maxi(1, _max_hp_of(e))))
 				if worth2 > 0.0:
 					best = maxf(best, 0.5 * hit2 / worth2)
+			&"capture_vehicle":
+				# ★ 2026-10-01: the Pirate's whole point (it shoots crews, then takes the vehicle).
+				# Unvalued, the AI built ZERO Pirates in every batch, so the Lightless — whose design
+				# leans on stealing vehicles — played without their signature tool. Worth the share of
+				# the enemy's value standing in ground vehicles, at capture_value_fraction (a capture
+				# is not guaranteed: the crew must die first and the Pirate must reach it).
+				var worth3: float = 0.0
+				var vehicles: float = 0.0
+				for e: EntityState in lookahead.entities():
+					if e.owner == owner or e.owner < 0:
+						continue
+					var w3: float = _opponent_paid_ap_equivalent(e)
+					worth3 += w3
+					if e is UnitState and (e as UnitState).type.unit_class == UnitTypeDef.UnitClass.GROUND_VEHICLE:
+						vehicles += w3
+				if worth3 > 0.0:
+					best = maxf(best, minf(1.0, AIBalance.ai.capture_value_fraction * 2.0 * vehicles / worth3))
 	return best
 
 

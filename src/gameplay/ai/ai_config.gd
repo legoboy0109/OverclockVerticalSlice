@@ -229,6 +229,11 @@ extends Resource
 ## infantry is still worth at least this share of its price (it does add capacity).
 @export var producer_quality_min: float = 0.25
 
+## How much of the "enemy value in ground vehicles" a capture-capable unit (the Lightless Pirate) is
+## credited with when the AI decides what to produce (AI._ability_matchup_effect). 0.5 x 2 = an
+## army that is half vehicles makes a Pirate as attractive as a one-shot killer.
+@export var capture_value_fraction: float = 0.5
+
 ## `ap_cost_opponent_paid_for` weight for the enemy HQ (which has no
 ## `build_cost`) — a siege-priority weight, not a sunk-cost figure.
 ## ★★ RAISED 12 -> 60 (S6-07c, user's lever: "make the objective outscore trading").
