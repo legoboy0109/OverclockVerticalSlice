@@ -41,15 +41,6 @@
 class_name IncomeBreakdownWidget
 extends HudReactiveControl
 
-## Drawn in the net figure when net income is negative — the army is eating more
-## than the economy earns. Warm, not alarming: a deficit is a legitimate tempo
-## play, not an error state.
-const NET_NEGATIVE_COLOR: Color = Color(0.93, 0.45, 0.35)
-## Drawn in the net figure when net income is positive or zero.
-const NET_POSITIVE_COLOR: Color = Color(0.55, 0.87, 0.60)
-## The projected-net figure shown during a purchase preview (AC-20) — dimmer than
-## the live figures so a projection never reads as state.
-const PREVIEW_COLOR: Color = Color(0.75, 0.75, 0.80)
 
 var _config: HUDConfig = null
 var _player: int = 0
@@ -70,6 +61,7 @@ func configure(config: HUDConfig, player: int) -> void:
 func toggle() -> void:
 	_expanded = not _expanded
 	queue_redraw()
+	_sync()
 
 
 func _on_action_applied(_result: ActionResult) -> void:
@@ -79,6 +71,7 @@ func _on_action_applied(_result: ActionResult) -> void:
 	# leaving it up would show a projection from a stale baseline.
 	_preview_upkeep_delta = -1
 	queue_redraw()
+	_sync()
 
 
 # --- Purchase preview (AC-20) -------------------------------------------------
@@ -89,12 +82,14 @@ func _on_action_applied(_result: ActionResult) -> void:
 func open_preview(upkeep_delta: int) -> void:
 	_preview_upkeep_delta = maxi(0, upkeep_delta)
 	queue_redraw()
+	_sync()
 
 
 ## Clears the purchase preview (selection cleared, or the purchase committed).
 func close_preview() -> void:
 	_preview_upkeep_delta = -1
 	queue_redraw()
+	_sync()
 
 
 ## Whether a purchase preview is currently open.
@@ -154,33 +149,65 @@ func is_expanded() -> bool:
 	return _expanded
 
 
+# ★ 2026-10-01 (holo glass): a small glass card under the top plate — a ledger of where
+# the turn's Credits come from and go. Text sits on a child over the plate (a GlassBackdrop
+# paints over its parent's own _draw). Net is the one emphasised figure: your hue when in
+# surplus, plain white with a DEFICIT caption when not (no red/green — art bible §4.6).
+const CARD_W: float = 250.0
+var _plate: Control = null
+var _text: Control = null
+
+
+func _ready() -> void:
+	super()
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_plate = Control.new()
+	_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_plate)
+	GlassBackdrop.attach(_plate)
+	_text = Control.new()
+	_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_text.draw.connect(_draw_card)
+	_plate.add_child(_text)
+	_sync()
+
+
+func _card_height() -> float:
+	return 150.0 if is_previewing() else 124.0
+
+
+func _sync() -> void:
+	if _plate == null:
+		return
+	_plate.visible = _expanded and _reader != null
+	_plate.size = Vector2(CARD_W, _card_height())
+	_text.size = _plate.size
+	_text.queue_redraw()
+
+
 func _draw() -> void:
+	_sync()
+
+
+func _row(ci: CanvasItem, y: float, label: String, value: String, color: Color, size_px: int = 14) -> void:
+	ci.draw_string(UiTheme.label_font(), Vector2(14, y), label, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.SIZE_LABEL,
+		UiTheme.TEXT_MUTED)
+	var f: Font = UiTheme.font(600)
+	var w: float = f.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x
+	ci.draw_string(f, Vector2(CARD_W - 14 - w, y), value, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px, color)
+
+
+func _draw_card() -> void:
 	if not _expanded or _reader == null:
 		return
-	var font: Font = ThemeDB.fallback_font
-	if font == null:
-		return
-
-	# Line 1 — where gross comes from. Context, small, neutral.
-	draw_string(font, Vector2(4, 12),
-		"income  base %d  +tiers %d" % [base_value(), tiers_value()],
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.78, 0.78, 0.82))
-
-	# Line 2 — the subtraction, stated as arithmetic so the relationship is legible
-	# rather than implied by adjacency.
-	draw_string(font, Vector2(4, 26),
-		"gross %d  −  upkeep %d" % [gross_value(), upkeep_value()],
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.78, 0.78, 0.82))
-
-	# Line 3 — ★ net, the load-bearing figure: larger, and the only coloured one.
+	var t: Control = _text
+	_row(t, 24, "BASE INCOME", "+%d" % base_value(), UiTheme.TEXT)
+	_row(t, 44, "RESEARCH TIERS", "+%d" % tiers_value(), UiTheme.TEXT)
+	_row(t, 64, "UPKEEP", "-%d" % upkeep_value(), UiTheme.TEXT)
+	t.draw_line(Vector2(14, 76), Vector2(CARD_W - 14, 76), Color(UiTheme.EDGE, 0.6), 1.0)
 	var net: int = net_value()
-	draw_string(font, Vector2(4, 46), "net %+d" % net,
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 16,
-		NET_NEGATIVE_COLOR if net < 0 else NET_POSITIVE_COLOR)
-
-	# Line 4 — the projection, only while a purchase is being considered (AC-20).
+	var hue: Color = UiTheme.player_hue(_player)
+	_row(t, 102, "DEFICIT / TURN" if net < 0 else "NET / TURN", "%+d" % net, UiTheme.TEXT if net < 0 else hue, 22)
 	if is_previewing():
-		var projected: int = previewed_net_value()
-		draw_string(font, Vector2(4, 62),
-			"after purchase:  net %+d  (−%d upkeep)" % [projected, _preview_upkeep_delta],
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, PREVIEW_COLOR)
+		_row(t, 134, "AFTER PURCHASE", "%+d  (-%d upkeep)" % [previewed_net_value(), _preview_upkeep_delta],
+			UiTheme.TEXT_MUTED, 13)

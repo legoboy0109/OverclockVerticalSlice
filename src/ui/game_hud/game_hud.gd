@@ -139,8 +139,17 @@ func assemble(reader: GameStateReader, config: HUDConfig, cmd: CommandInterface,
 	_income_breakdown = IncomeBreakdownWidget.new()
 	_income_breakdown.bind(reader)
 	_income_breakdown.configure(config, local_player)
-	_income_breakdown.position = Vector2(0, 52)   # opens below the plate
+	_income_breakdown.position = Vector2(-20, 52)   # opens below the plate
 	_credits_counter.add_child(_income_breakdown)
+	# ★ 2026-10-01: clicking the Credits figure opens/closes the breakdown (nothing could
+	# open it before — toggle() had no caller).
+	_credits_counter.size = Vector2(92, 44)
+	_credits_counter.mouse_filter = Control.MOUSE_FILTER_STOP
+	_credits_counter.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_credits_counter.tooltip_text = "Click for the income breakdown"
+	_credits_counter.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			_income_breakdown.toggle())
 
 	# --- OPPONENT: same figures, muted, so the comparison is direct ------------
 	if config.show_opponent_ap:

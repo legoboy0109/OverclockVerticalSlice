@@ -121,6 +121,9 @@ func _run() -> void:
 	if OS.get_cmdline_user_args().has("--cursor-first") and not placed.is_empty():
 		slice._cursor.grid_pos = placed[0]
 		slice._sync_cursor_highlight()
+	# `--income` opens the Credits breakdown card.
+	if OS.get_cmdline_user_args().has("--income"):
+		slice._hud.income_breakdown().toggle()
 	# `--game-over=<winner>` ends the match (HQ destroyed) to capture the game-over screen.
 	for a: String in OS.get_cmdline_user_args():
 		if a.begins_with("--game-over="):
