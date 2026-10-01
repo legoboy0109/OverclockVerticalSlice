@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Sentinel Mech.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: b942c08b0e50317de324ee9155e9ab04ac917f99e229ead20ee3d3cc3a851324
+; source-sha256: 6f3a956feabf02e0612cdfec74ffede8bc0e1d88b553e5169019da34d0dcd48e
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -19,6 +19,7 @@ produce_cost = 1200
 production_turns = 2
 max_ammo = -1
 upkeep = 750
+ground_offset_px = 5
 counts_toward_cap = false
 can_counterattack = false
 can_build = false

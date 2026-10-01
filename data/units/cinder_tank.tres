@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Cinder Tank.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 6226e59192c823fd8de5cb66185ec0a38ed0092194a158781ce57776d2a95828
+; source-sha256: d6a1aa21b7379c35914275ccee6625f45b36a8efcb2e175d2e218404a7193d7c
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -19,6 +19,7 @@ produce_cost = 1900
 production_turns = 2
 max_ammo = -1
 upkeep = 1050
+ground_offset_px = 5
 counts_toward_cap = false
 can_counterattack = false
 can_build = false

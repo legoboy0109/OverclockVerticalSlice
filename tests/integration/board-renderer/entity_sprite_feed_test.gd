@@ -720,3 +720,25 @@ func test_glow_overlay_keeps_its_own_soft_material() -> void:
 	assert_object(glow).is_not_null()
 	assert_object(glow.material).is_not_same(body.material)
 	assert_bool(glow.use_parent_material).is_false()
+
+
+func test_unit_ground_offset_lowers_the_sprite_by_that_many_screen_px() -> void:
+	# ★ 2026-10-01 (user request): per-unit art nudge so walkers/vehicles sit IN their tile.
+	var base_type: UnitTypeDef = UnitTypes.TROOPER.duplicate()
+	base_type.ground_offset_px = 0
+	var lowered: UnitTypeDef = UnitTypes.TROOPER.duplicate()
+	lowered.ground_offset_px = 8
+	var a := UnitState.new()
+	a.type = base_type
+	var b := UnitState.new()
+	b.type = lowered
+	var tex_size := Vector2(100, 120)
+	var scale := Vector2(0.5, 0.5)
+	var off_a: Vector2 = EntitySpriteFeed._pivot_offset(a, tex_size, scale)
+	var off_b: Vector2 = EntitySpriteFeed._pivot_offset(b, tex_size, scale)
+	# offset is in texture px; × scale = screen px.
+	assert_float((off_b.y - off_a.y) * scale.y).is_equal_approx(8.0, 0.001)
+
+
+func test_shipped_builder_sits_lower_on_its_tile() -> void:
+	assert_int(UnitTypes.BUILDER.ground_offset_px).is_greater(0)

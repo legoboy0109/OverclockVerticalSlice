@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Cathedral Tank.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 3d0dc5c684a79bd02bc3c134ed488bdf76053d44c95fe4c2e9eb0d18cc357141
+; source-sha256: d1dce45fd37811eadc9e19046091f78f7170b46a979cf24b5747ad67b6a6dd76
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -19,6 +19,7 @@ produce_cost = 1900
 production_turns = 2
 max_ammo = -1
 upkeep = 900
+ground_offset_px = 10
 counts_toward_cap = false
 can_counterattack = false
 can_build = false

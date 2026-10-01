@@ -1132,6 +1132,9 @@ static func _pivot_offset(entity: EntityState, texture_size: Vector2, scale: Vec
 	var inset: float = 0.0
 	if entity is StructureState and scale.y != 0.0:
 		inset = STRUCTURE_GROUND_INSET_PX / scale.y
+	elif entity is UnitState and scale.y != 0.0 and (entity as UnitState).type != null:
+		# ★ 2026-10-01: per-unit art nudge (vault `ground_offset_px`, + = lower on the tile).
+		inset = float((entity as UnitState).type.ground_offset_px) / scale.y
 	return Vector2(-texture_size.x * 0.5, -texture_size.y + inset)
 
 

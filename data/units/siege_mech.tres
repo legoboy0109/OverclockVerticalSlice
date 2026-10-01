@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Siege Mech.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: f74581d9e2a20fa8def2e6e07cdee47852189c9a67e1e8c855d7b754546f5fe5
+; source-sha256: 3882b81ae76a9a427f910b761892200b7e1ef585243d5f5f19ae81eab6cb2401
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -19,6 +19,7 @@ produce_cost = 1800
 production_turns = 2
 max_ammo = -1
 upkeep = 1050
+ground_offset_px = 4
 counts_toward_cap = false
 can_counterattack = false
 can_build = false

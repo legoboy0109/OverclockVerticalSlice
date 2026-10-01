@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Scrap Tank.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 36781e71767d3338d5b81c8ede057ae278793563ec6222041b40b2aed964f6b6
+; source-sha256: 4532a6f0b8099665ec90cf4091ff5ea116e0d20efd5e16d4abac1ad551ed076b
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -19,6 +19,7 @@ produce_cost = 1300
 production_turns = 2
 max_ammo = -1
 upkeep = 600
+ground_offset_px = 10
 counts_toward_cap = false
 can_counterattack = false
 can_build = false

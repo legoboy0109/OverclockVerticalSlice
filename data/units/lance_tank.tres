@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Lance Tank.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: da67d14cc1a479b2cce1a434daa9b09e9e7183d0ad3ee793e19bdc595ec31c4a
+; source-sha256: ef71b58d297b65e1fb9c5a31f738b059c6adf008b024a8879c3c72fa016b30d1
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -19,6 +19,7 @@ produce_cost = 1800
 production_turns = 2
 max_ammo = -1
 upkeep = 1050
+ground_offset_px = 7
 counts_toward_cap = false
 can_counterattack = false
 can_build = false
