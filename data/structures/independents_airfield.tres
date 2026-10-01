@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Structures/Lightless Airfield.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 60bd238003c32c3558a31b53df0a391600e8b1d5c7ac9871d3ecb8ca3004e6de
+; source-sha256: 464953c679c7c1c9d9f667c9a686346c6b1f7709ecfb8cb03947f5c2a1ea11cb
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/buzzard.tres" id="2"]
@@ -24,6 +24,7 @@ attack_range = 0
 defense = 0
 can_counterattack = false
 can_research = false
+resupplies = true
 can_target = Array[int]([0, 1])
 targeting_mode = 0
 min_range = 1

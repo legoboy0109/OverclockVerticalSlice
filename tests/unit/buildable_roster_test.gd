@@ -61,7 +61,8 @@ func test_every_buildable_structure_does_something() -> void:
 		gates.append_array(tech.required_structures)
 	for type: StructureTypeDef in _slice_roster():
 		var useful: bool = not type.producible_types.is_empty() or type.cap_bonus > 0 \
-			or type.attack > 0 or type.can_research or gates.has(type)
+			or type.attack > 0 or type.can_research or gates.has(type) \
+			or type.resupplies   # ★ 2026-10-01: a Supply Depot's job is refilling ammo
 		assert_bool(useful).override_failure_message(
 			"%s is buildable but produces nothing, grants no cap, gates no tech and cannot " % type.display_name +
 			"attack — a player would pay a Builder for a building that does nothing."

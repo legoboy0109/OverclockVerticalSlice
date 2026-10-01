@@ -60,6 +60,8 @@ const KNOWN_FIELDS: Array[String] = [
 	"disembarked_this_turn", "embarked_this_turn", "pilot", "cargo",
 	# ★ Promotion — a lookahead that lost rank would misprice every veteran.
 	"merit", "rank",
+	# ★ Ammo (2026-10-01) — a lookahead that forgot spent ammo would plan shots it can't fire.
+	"ammo_spent",
 ]
 
 

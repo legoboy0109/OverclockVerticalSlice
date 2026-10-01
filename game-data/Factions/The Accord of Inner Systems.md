@@ -7,6 +7,7 @@ structures:
 - '[[Barracks]]'
 - '[[Factory]]'
 - '[[Airfield]]'
+- '[[Supply Depot]]'
 - '[[Research Lab]]'
 - '[[Defensive Structure]]'
 techs:

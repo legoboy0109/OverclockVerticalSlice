@@ -118,3 +118,10 @@ func _draw() -> void:
 	if font != null:
 		draw_string(font, Vector2(6, 18), "hp %d/%d" % [info.get("current_hp", 0), info.get("hp", 0)],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.WHITE)
+		# ★ Ammo (2026-10-01): only for units that use it; empty is called out, not just "0/4".
+		var max_ammo: int = int(info.get("max_ammo", 0))
+		if max_ammo > 0:
+			var ammo: int = int(info.get("ammo", 0))
+			var text: String = "ammo %d/%d" % [ammo, max_ammo] if ammo > 0 else "OUT OF AMMO"
+			draw_string(font, Vector2(6, 34), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12,
+				Color.WHITE if ammo > 0 else Color(1.0, 0.45, 0.35))

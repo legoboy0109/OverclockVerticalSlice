@@ -1,21 +1,22 @@
-[gd_resource type="Resource" script_class="FactionDef" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="FactionDef" load_steps=9 format=3]
 ; GENERATED from game-data/Factions/Wolf Citizens' Front.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: e03b4fb039801760511097a637712840a02d3649a127f932e275c917231d1ae0
+; source-sha256: 7cd03fed1dffa44ebe8c589eb072de6d501fd521ce0edc9cf0f2f4be6f41e8dc
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/structures/solar_barracks.tres" id="2"]
 [ext_resource type="Resource" path="res://data/structures/solar_factory.tres" id="3"]
 [ext_resource type="Resource" path="res://data/structures/solar_airfield.tres" id="4"]
-[ext_resource type="Resource" path="res://data/structures/research_lab.tres" id="5"]
-[ext_resource type="Resource" path="res://data/structures/autonomous_defence_node.tres" id="6"]
-[ext_resource type="Script" path="res://src/core/faction/faction_unit_delta.gd" id="7"]
+[ext_resource type="Resource" path="res://data/structures/supply_depot.tres" id="5"]
+[ext_resource type="Resource" path="res://data/structures/research_lab.tres" id="6"]
+[ext_resource type="Resource" path="res://data/structures/autonomous_defence_node.tres" id="7"]
+[ext_resource type="Script" path="res://src/core/faction/faction_unit_delta.gd" id="8"]
 
 [resource]
 script = ExtResource("1")
 display_name = "Wolf Citizens' Front"
 description = "Cheap, fast, numerous: a mobile citizen army of specialists that wins on tempo and loses every straight exchange."
 playable = true
-structures = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")]
+structures = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")]
 techs = []
 infantry_cap_delta = 1
 base_income_delta = -100

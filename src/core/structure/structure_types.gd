@@ -46,6 +46,8 @@ const EMPIRE_BARRACKS: StructureTypeDef = preload("res://data/structures/empire_
 const EMPIRE_FACTORY: StructureTypeDef = preload("res://data/structures/empire_factory.tres")
 const EMPIRE_AIRFIELD: StructureTypeDef = preload("res://data/structures/empire_airfield.tres")
 const CATHEDRAL: StructureTypeDef = preload("res://data/structures/cathedral.tres")
+# ★ Ammo (2026-10-01): the shared forward resupply point every faction can build.
+const SUPPLY_DEPOT: StructureTypeDef = preload("res://data/structures/supply_depot.tres")
 
 ## ★ Every structure type in the roster, in declaration order. See
 ## [constant UnitTypes.ALL] for why this exists — a coverage guard that keeps its
@@ -55,7 +57,7 @@ const ALL: Array[StructureTypeDef] = [HQ, FACTORY, BARRACKS, DEFENSIVE_STRUCTURE
 	INDEPENDENTS_BARRACKS, INDEPENDENTS_FACTORY, INDEPENDENTS_AIRFIELD,
 	UNION_BARRACKS, UNION_FACTORY, UNION_AIRFIELD, BULWARK,
 	PROTECTORATE_BARRACKS, PROTECTORATE_FACTORY, PROTECTORATE_AIRFIELD, PROTECTORATE_DEFENCE,
-	EMPIRE_BARRACKS, EMPIRE_FACTORY, EMPIRE_AIRFIELD, CATHEDRAL]
+	EMPIRE_BARRACKS, EMPIRE_FACTORY, EMPIRE_AIRFIELD, CATHEDRAL, SUPPLY_DEPOT]
 
 ## Every structure a Builder may raise, in [constant ALL] order — decided by each type's
 ## [member StructureTypeDef.buildable] (the vault's `buildable` checkbox). The single source

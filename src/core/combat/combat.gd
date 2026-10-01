@@ -341,6 +341,10 @@ static func legal_targets_from(state: GameState, attacker: EntityState, from_til
 	# this turn is done. No targets means no attack AND no counterattack, from one place.
 	if attacker is UnitState and (not Unit.is_functional(state, attacker) or (attacker as UnitState).turn_ended):
 		return []
+	# ★ Ammo (2026-10-01): an empty vehicle/aircraft has nothing to fire — no attack AND no
+	# counter, from this one place, exactly like the unpiloted case above.
+	if Ammo.is_empty(attacker):
+		return []
 	if attacker.type.targeting_mode == UnitTypeDef.TargetingMode.AREA:
 		return _area_targets_from(state, attacker, from_tile)
 	var results: Array[TargetResult] = []
@@ -524,6 +528,8 @@ static func validate(state: GameState, action: AttackAction) -> int:
 	if attacker is UnitState:
 		if not Unit.can_attack(attacker):
 			return Action.Reason.ILLEGAL_TARGET   # already attacked this turn
+		if Ammo.is_empty(attacker):
+			return Action.Reason.OUT_OF_AMMO      # named, so the player is told why (2026-10-01)
 	elif attacker is StructureState:
 		if attacker.build_status != StructureState.BuildStatus.COMPLETED:
 			return Action.Reason.NOT_COMPLETED    # only a Completed structure fires (Rule 8; BP-002 attack-inertness — a fresh Under-Construction Defensive Structure is inert for ATTACK)
@@ -600,6 +606,7 @@ static func apply(state: GameState, action: AttackAction) -> Array[Event]:
 	var cost: int = attack_cost_for(attacker)
 	AP.spend(state, attacker.owner, cost)
 	attacker.has_attacked = true
+	Ammo.spend(attacker)   # no-op for infantry and structures
 	# ★ 2026-08-25: acting clears the stand-down mark. It records "I am finished
 	# with this one", and the player has visibly changed their mind — leaving it
 	# set would keep the entity dim and skipped while it still had a turn left.
@@ -645,6 +652,7 @@ static func apply(state: GameState, action: AttackAction) -> Array[Event]:
 	# straight-line block, never a loop or a call back into apply()).
 	if target.current_hp > 0 and target.type.can_counterattack and _in_defenders_profile(state, target, attacker):
 		var counter_dmg: int = damage(state, target, attacker)   # roles swapped
+		Ammo.spend(target)   # a counter is still a shot fired (2026-10-01)
 		_apply_damage_to(attacker, counter_dmg)                  # polymorphic — attacker may be a StructureState (Story 005)
 		# Roles swapped here too: the counter's DamageEvent names the DEFENDER as
 		# its attacker_id, which is what makes the renderer lunge the right body.

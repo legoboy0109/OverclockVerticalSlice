@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=4 format=3]
 ; GENERATED from game-data/Structures/Front Factory.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: ea74560b0c93519d467b0cab18996cbdd79ea319c4fc5a31e6a84841c8d0a97b
+; source-sha256: 30eed6df552571f564a125c528f91fe7d4cdf9f1e65979c4e9a3ef315d7458a8
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/gun_truck.tres" id="2"]
@@ -25,6 +25,7 @@ attack_range = 0
 defense = 0
 can_counterattack = false
 can_research = false
+resupplies = true
 can_target = Array[int]([0, 1])
 targeting_mode = 0
 min_range = 1

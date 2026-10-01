@@ -15,6 +15,7 @@ attack_range: 0
 defense: 2
 can_counterattack: false
 can_research: true
+resupplies: true
 can_target:
 - infantry
 - ground_vehicle

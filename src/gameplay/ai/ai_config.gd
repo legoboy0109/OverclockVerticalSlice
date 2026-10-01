@@ -203,6 +203,11 @@ extends Resource
 ## Must stay above [member pass_threshold] (0.15) or the AI will decline to siege at all.
 @export var siege_value_per_tile_closed: float = 0.20
 
+## ★ Ammo (2026-10-01): value per tile an EMPTY vehicle/aircraft closes on its nearest own
+## resupplying structure. Above the siege rate so a dry unit always heads home rather than
+## being folded into the push, and above [member pass_threshold] so the move is committed.
+@export var resupply_value_per_tile_closed: float = 0.25
+
 ## Tolerance below which two `action_score` values are treated as tied,
 ## triggering the deterministic tie-break (lowest `ap_cost`, then lowest
 ## entity ID) instead of a fragile raw-float `==`.

@@ -7,6 +7,7 @@ structures:
 - '[[Lightless Barracks]]'
 - '[[Lightless Factory]]'
 - '[[Lightless Airfield]]'
+- '[[Supply Depot]]'
 - '[[Research Lab]]'
 - '[[Defensive Structure]]'
 techs: []

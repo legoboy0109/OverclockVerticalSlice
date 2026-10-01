@@ -64,6 +64,11 @@ extends Resource
 ## [member TechDef.required_structures].
 @export var can_research: bool = false
 
+## ★ Ammo (2026-10-01): at the start of its owner's turn a COMPLETED structure with this flag
+## refills every own unit standing next to it (4-neighbour). HQ, factories, airfields and the
+## Supply Depot carry it ([method Ammo.resupply_turn]).
+@export var resupplies: bool = false
+
 ## Whether a Builder may raise this structure (2026-09-28). The ONE place the build roster
 ## is decided — every build list in the game reads [code]StructureTypes.BUILDABLE[/code],
 ## which filters on this. (It used to be four hand-kept lists that had to agree.)
