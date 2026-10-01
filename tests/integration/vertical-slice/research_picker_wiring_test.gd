@@ -91,7 +91,7 @@ func test_choosing_a_tech_from_the_picker_starts_research_at_the_hq() -> void:
 		"no enabled Research row on the HQ menu").is_true()
 	await get_tree().process_frame
 	# ★ 2026-10-01: the row label is the name alone; the description is a second line.
-	assert_bool(_press_row(_menu(root), "Attack Tech")).override_failure_message(
+	assert_bool(_press_row(_menu(root), "Heavy Ordnance")).override_failure_message(
 		"no enabled Attack Tech row in the research picker: %s" % [_row_texts(_menu(root))]).is_true()
 	await get_tree().process_frame
 	assert_object(hq.research_target).override_failure_message(

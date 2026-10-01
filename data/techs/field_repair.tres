@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Field Repair.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: c1cb9cd628b41d65bcfd85a8eaa727fcfb41114635fff516a708f5e7d10b192e
+; source-sha256: 169d66f6af1c2216385b879cd84cffc39f4d8a0ebad2fe84192369f3998193b4
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/defense_1.tres" id="2"]
@@ -11,12 +11,12 @@ script = ExtResource("1")
 display_name = "Field Repair"
 description = "Units that neither move nor attack heal 1 HP at the start of your turn."
 tier = 2
-research_cost = 1500
+research_cost = 1800
 research_time = 3
-ap_surcharge = 2
+ap_surcharge = 6
 prerequisites = [ExtResource("2")]
 required_structures = [ExtResource("3")]
-exclusive_group = &"defence"
+exclusive_group = &"def_ha"
 allowed_factions = []
 attack_bonus = 0
 defense_bonus = 0
@@ -30,7 +30,7 @@ produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
 vehicle_defense_bonus = 0
-tree = ""
+tree = "defense"
 move_cap_bonus = 0
 vehicle_move_cap_bonus = 0
 infantry_move_cost_discount = 0
@@ -71,6 +71,7 @@ production_cap_bonus = 0
 aura_defense_bonus = 0
 bonus_unit_attack = 0
 aircraft_attack_bonus = 0
+replaces = []
 bonus_unit_move_cap = 0
 bonus_unit_types = []
 aura_structures = []

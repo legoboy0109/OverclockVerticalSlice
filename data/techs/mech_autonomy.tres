@@ -1,23 +1,25 @@
-[gd_resource type="Resource" script_class="TechDef" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="TechDef" load_steps=7 format=3]
 ; GENERATED from game-data/Techs/Mech Autonomy.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: e97bcdcf0382d479a650491072df68d6251ff1a2611b9c1e4ea1d8672398aad9
+; source-sha256: bb8d24bddb8b1830030995fc6a0e29df98f52c7cc731b7d9bd12659da2f73af3
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
-[ext_resource type="Resource" path="res://data/structures/research_lab.tres" id="2"]
-[ext_resource type="Resource" path="res://data/units/sentinel_mech.tres" id="3"]
-[ext_resource type="Resource" path="res://data/units/breaker_mech.tres" id="4"]
+[ext_resource type="Resource" path="res://data/techs/logistics.tres" id="2"]
+[ext_resource type="Resource" path="res://data/structures/research_lab.tres" id="3"]
+[ext_resource type="Resource" path="res://data/units/sentinel_mech.tres" id="4"]
+[ext_resource type="Resource" path="res://data/units/breaker_mech.tres" id="5"]
+[ext_resource type="Resource" path="res://data/techs/command_network.tres" id="6"]
 
 [resource]
 script = ExtResource("1")
 display_name = "Mech Autonomy"
 description = "Sentinel and Breaker mechs no longer need pilots. Crewed ones eject their pilot."
-tier = 2
-research_cost = 2000
-research_time = 3
-ap_surcharge = 2
-prerequisites = []
-required_structures = [ExtResource("2")]
-exclusive_group = &""
+tier = 3
+research_cost = 3000
+research_time = 4
+ap_surcharge = 8
+prerequisites = [ExtResource("2")]
+required_structures = [ExtResource("3")]
+exclusive_group = &"eco_lg"
 allowed_factions = []
 attack_bonus = 0
 defense_bonus = 0
@@ -28,10 +30,10 @@ economy_tier_bonus = 0
 produce_ap_discount = 0
 build_ap_discount = 0
 produce_cost_discount_pct = 0
-frees_pilots = [ExtResource("3"), ExtResource("4")]
+frees_pilots = [ExtResource("4"), ExtResource("5")]
 vehicle_attack_bonus = 0
 vehicle_defense_bonus = 0
-tree = ""
+tree = "economy"
 move_cap_bonus = 0
 vehicle_move_cap_bonus = 0
 infantry_move_cost_discount = 0
@@ -72,6 +74,7 @@ production_cap_bonus = 0
 aura_defense_bonus = 0
 bonus_unit_attack = 0
 aircraft_attack_bonus = 0
+replaces = [ExtResource("6")]
 bonus_unit_move_cap = 0
 bonus_unit_types = []
 aura_structures = []

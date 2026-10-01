@@ -1,20 +1,20 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=2 format=3]
-; GENERATED from game-data/Techs/Defense Tech.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 3425e1c320bda7cb5b1d4ba88315d9099de9e0207ec911baa6404d87cd11d8e3
+; GENERATED from game-data/Techs/Hardened Armor.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 638968b95b9db1dc0afad7256870930a1b4dcb4c5ee33ebf5ba9fb5110193d09
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
-display_name = "Defense Tech"
-description = "+1 defense for all your units."
+display_name = "Hardened Armor"
+description = "+1 defense for all units."
 tier = 1
 research_cost = 1000
-research_time = 4
-ap_surcharge = -1
+research_time = 3
+ap_surcharge = 4
 prerequisites = []
 required_structures = []
-exclusive_group = &""
+exclusive_group = &"def_t1"
 allowed_factions = []
 attack_bonus = 0
 defense_bonus = 1
@@ -28,7 +28,7 @@ produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
 vehicle_defense_bonus = 0
-tree = ""
+tree = "defense"
 move_cap_bonus = 0
 vehicle_move_cap_bonus = 0
 infantry_move_cost_discount = 0
@@ -69,6 +69,7 @@ production_cap_bonus = 0
 aura_defense_bonus = 0
 bonus_unit_attack = 0
 aircraft_attack_bonus = 0
+replaces = []
 bonus_unit_move_cap = 0
 bonus_unit_types = []
 aura_structures = []

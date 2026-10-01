@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Logistics.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: f8c02b45ac5d6e95297c5e3e5bd93d5c4f5d5dbd6e3f051b88912b43fcc1bb1b
+; source-sha256: d2593e39c44de72865994307f6d5ef2bba8376f072dd3655fa4ec2bc68a8e1eb
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/economy_1.tres" id="2"]
@@ -11,12 +11,12 @@ script = ExtResource("1")
 display_name = "Logistics"
 description = "Producing and building cost 1 less AP."
 tier = 2
-research_cost = 1500
+research_cost = 1800
 research_time = 3
-ap_surcharge = 2
+ap_surcharge = 6
 prerequisites = [ExtResource("2")]
 required_structures = [ExtResource("3")]
-exclusive_group = &"economy"
+exclusive_group = &"eco_ib"
 allowed_factions = []
 attack_bonus = 0
 defense_bonus = 0
@@ -30,7 +30,7 @@ produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
 vehicle_defense_bonus = 0
-tree = ""
+tree = "economy"
 move_cap_bonus = 0
 vehicle_move_cap_bonus = 0
 infantry_move_cost_discount = 0
@@ -71,6 +71,7 @@ production_cap_bonus = 0
 aura_defense_bonus = 0
 bonus_unit_attack = 0
 aircraft_attack_bonus = 0
+replaces = []
 bonus_unit_move_cap = 0
 bonus_unit_types = []
 aura_structures = []

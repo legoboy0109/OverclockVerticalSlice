@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="FactionDef" load_steps=9 format=3]
+[gd_resource type="Resource" script_class="FactionDef" load_steps=51 format=3]
 ; GENERATED from game-data/Factions/Ross Foundry Collective.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 512891c1cbe9c029717465ce434ea0d2d5bf7ba1e757c694157788500b39527b
+; source-sha256: 8e0f693dea222e3dc361789f703b2327fcb78f2b619898fbee01f6122250b21f
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/structures/union_barracks.tres" id="2"]
@@ -9,7 +9,49 @@
 [ext_resource type="Resource" path="res://data/structures/supply_depot.tres" id="5"]
 [ext_resource type="Resource" path="res://data/structures/research_lab.tres" id="6"]
 [ext_resource type="Resource" path="res://data/structures/bulwark.tres" id="7"]
-[ext_resource type="Script" path="res://src/core/faction/faction_unit_delta.gd" id="8"]
+[ext_resource type="Resource" path="res://data/techs/attack_1.tres" id="8"]
+[ext_resource type="Resource" path="res://data/techs/rapid_deployment.tres" id="9"]
+[ext_resource type="Resource" path="res://data/techs/penetration.tres" id="10"]
+[ext_resource type="Resource" path="res://data/techs/volley.tres" id="11"]
+[ext_resource type="Resource" path="res://data/techs/blitz.tres" id="12"]
+[ext_resource type="Resource" path="res://data/techs/infiltrators.tres" id="13"]
+[ext_resource type="Resource" path="res://data/techs/armor_piercing.tres" id="14"]
+[ext_resource type="Resource" path="res://data/techs/shredder_rounds.tres" id="15"]
+[ext_resource type="Resource" path="res://data/techs/long_guns.tres" id="16"]
+[ext_resource type="Resource" path="res://data/techs/fire_discipline.tres" id="17"]
+[ext_resource type="Resource" path="res://data/techs/combined_arms.tres" id="18"]
+[ext_resource type="Resource" path="res://data/techs/overdrive.tres" id="19"]
+[ext_resource type="Resource" path="res://data/techs/ambush.tres" id="20"]
+[ext_resource type="Resource" path="res://data/techs/sappers.tres" id="21"]
+[ext_resource type="Resource" path="res://data/techs/defense_1.tres" id="22"]
+[ext_resource type="Resource" path="res://data/techs/fortifications.tres" id="23"]
+[ext_resource type="Resource" path="res://data/techs/plating.tres" id="24"]
+[ext_resource type="Resource" path="res://data/techs/field_repair.tres" id="25"]
+[ext_resource type="Resource" path="res://data/techs/point_defense.tres" id="26"]
+[ext_resource type="Resource" path="res://data/techs/slab_walls.tres" id="27"]
+[ext_resource type="Resource" path="res://data/techs/reactive_armor.tres" id="28"]
+[ext_resource type="Resource" path="res://data/techs/dig_in.tres" id="29"]
+[ext_resource type="Resource" path="res://data/techs/rapid_repair.tres" id="30"]
+[ext_resource type="Resource" path="res://data/techs/triage.tres" id="31"]
+[ext_resource type="Resource" path="res://data/techs/overwatch_grid.tres" id="32"]
+[ext_resource type="Resource" path="res://data/techs/flak_batteries.tres" id="33"]
+[ext_resource type="Resource" path="res://data/techs/hardpoints.tres" id="34"]
+[ext_resource type="Resource" path="res://data/techs/rapid_construction.tres" id="35"]
+[ext_resource type="Resource" path="res://data/techs/economy_1.tres" id="36"]
+[ext_resource type="Resource" path="res://data/techs/supply_lines.tres" id="37"]
+[ext_resource type="Resource" path="res://data/techs/foundry.tres" id="38"]
+[ext_resource type="Resource" path="res://data/techs/logistics.tres" id="39"]
+[ext_resource type="Resource" path="res://data/techs/forward_depots.tres" id="40"]
+[ext_resource type="Resource" path="res://data/techs/rapid_requisition.tres" id="41"]
+[ext_resource type="Resource" path="res://data/techs/assembly_lines.tres" id="42"]
+[ext_resource type="Resource" path="res://data/techs/salvage.tres" id="43"]
+[ext_resource type="Resource" path="res://data/techs/command_network.tres" id="44"]
+[ext_resource type="Resource" path="res://data/techs/quartermasters.tres" id="45"]
+[ext_resource type="Resource" path="res://data/techs/field_workshops.tres" id="46"]
+[ext_resource type="Resource" path="res://data/techs/ammo_surplus.tres" id="47"]
+[ext_resource type="Resource" path="res://data/techs/bulk_contracts.tres" id="48"]
+[ext_resource type="Resource" path="res://data/techs/emergency_draft.tres" id="49"]
+[ext_resource type="Script" path="res://src/core/faction/faction_unit_delta.gd" id="50"]
 
 [resource]
 script = ExtResource("1")
@@ -17,7 +59,7 @@ display_name = "Ross Foundry Collective"
 description = "Weak early, overwhelming late: crews for the best machines in the game, guarded by the strongest defences."
 playable = true
 structures = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")]
-techs = []
+techs = [ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17"), ExtResource("18"), ExtResource("19"), ExtResource("20"), ExtResource("21"), ExtResource("22"), ExtResource("23"), ExtResource("24"), ExtResource("25"), ExtResource("26"), ExtResource("27"), ExtResource("28"), ExtResource("29"), ExtResource("30"), ExtResource("31"), ExtResource("32"), ExtResource("33"), ExtResource("34"), ExtResource("35"), ExtResource("36"), ExtResource("37"), ExtResource("38"), ExtResource("39"), ExtResource("40"), ExtResource("41"), ExtResource("42"), ExtResource("43"), ExtResource("44"), ExtResource("45"), ExtResource("46"), ExtResource("47"), ExtResource("48"), ExtResource("49")]
 infantry_cap_delta = 0
 base_income_delta = -300
 econ_tier_bonus_delta = 200

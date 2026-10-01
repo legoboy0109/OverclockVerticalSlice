@@ -29,7 +29,8 @@ func test_every_buildable_structure_does_something() -> void:
 			gates.append_array(t.required_structures)
 		for s: StructureTypeDef in (f.structures if not f.structures.is_empty() else StructureTypes.BUILDABLE):
 			var useful: bool = not s.producible_types.is_empty() or s.cap_bonus > 0 or s.attack > 0 \
-				or s.can_research or gates.has(s) or s.resupplies
+				or s.can_research or gates.has(s) or s.resupplies \
+				or s.counts_as.any(func(c: StructureTypeDef) -> bool: return gates.has(c))   # a faction's own Lab
 			assert_bool(useful).override_failure_message(
 				"%s can build %s, which does nothing." % [f.display_name, s.display_name]).is_true()
 

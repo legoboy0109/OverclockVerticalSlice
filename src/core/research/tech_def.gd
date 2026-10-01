@@ -171,6 +171,9 @@ extends Resource
 ## Tiles before the surcharge for bonus_unit_types
 @export var bonus_unit_move_cap: int = 0
 ## Unit types that get [member bonus_unit_attack] / [member bonus_unit_move_cap].
+## ★ A faction swap: this tech stands in for the listed shared techs — it occupies their slot and
+## satisfies any tech that requires them (Research.availability).
+@export var replaces: Array[TechDef] = []
 ## Attack for aircraft (Combined Arms reaches them; vehicle_attack_bonus is ground-only).
 @export var aircraft_attack_bonus: int = 0
 @export var bonus_unit_types: Array[UnitTypeDef] = []

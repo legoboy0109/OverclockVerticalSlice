@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Plating.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: be01c45604127c44544f524b89e07feb6d13e44dca0a33421d59a4e89db89f26
+; source-sha256: 68f67c95547af1aac98b50be5a9d72a5abb0ada7ced26f2d76830f4637ac0d96
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/defense_1.tres" id="2"]
@@ -9,14 +9,14 @@
 [resource]
 script = ExtResource("1")
 display_name = "Plating"
-description = "+1 more defense for all your units."
+description = "+1 more defense for all units."
 tier = 2
-research_cost = 1500
+research_cost = 1800
 research_time = 3
-ap_surcharge = 2
+ap_surcharge = 6
 prerequisites = [ExtResource("2")]
 required_structures = [ExtResource("3")]
-exclusive_group = &"defence"
+exclusive_group = &"def_ha"
 allowed_factions = []
 attack_bonus = 0
 defense_bonus = 1
@@ -30,7 +30,7 @@ produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
 vehicle_defense_bonus = 0
-tree = ""
+tree = "defense"
 move_cap_bonus = 0
 vehicle_move_cap_bonus = 0
 infantry_move_cost_discount = 0
@@ -71,6 +71,7 @@ production_cap_bonus = 0
 aura_defense_bonus = 0
 bonus_unit_attack = 0
 aircraft_attack_bonus = 0
+replaces = []
 bonus_unit_move_cap = 0
 bonus_unit_types = []
 aura_structures = []

@@ -46,6 +46,16 @@ static func has_tech(state: GameState, player: int, tech: TechDef) -> bool:
 	return tech in state.per_player[player].completed_techs
 
 
+## Whether [param player] has [param tech] OR a faction swap that replaces it (2026-10-01).
+static func has_tech_or_swap(state: GameState, player: int, tech: TechDef) -> bool:
+	if has_tech(state, player, tech):
+		return true
+	for t: TechDef in state.per_player[player].completed_techs:
+		if tech in t.replaces:
+			return true
+	return false
+
+
 ## Whether [param tech] is in progress at any structure [param player] owns.
 static func is_under_research(state: GameState, player: int, tech: TechDef) -> bool:
 	for e: EntityState in state.entities():
@@ -75,7 +85,7 @@ static func availability(state: GameState, player: int, tech: TechDef) -> int:
 	if _is_excluded(state, player, tech):
 		return Action.Reason.TECH_EXCLUDED
 	for prereq: TechDef in tech.prerequisites:
-		if not has_tech(state, player, prereq):
+		if not has_tech_or_swap(state, player, prereq):
 			return Action.Reason.PREREQUISITE_MISSING
 	for structure_type: StructureTypeDef in tech.required_structures:
 		if not _owns_completed(state, player, structure_type):

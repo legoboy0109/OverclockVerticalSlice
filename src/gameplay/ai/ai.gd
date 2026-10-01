@@ -2331,7 +2331,51 @@ static func _tech_research_value(lookahead: GameState, player: int, tech: TechDe
 	if tech.economy_tier_bonus != 0:
 		total += _research_value(tech.research_time, AIBalance.ai.economy_horizon, \
 			credits_to_ap(_economy_tech_marginal_value(Balance.economy.econ_tier_bonus, 0, 0)))
+	var tree_value: float = _tree_effects_marginal_value(lookahead, player, tech)
+	if tree_value > 0.0:
+		total += _research_value(tech.research_time, horizon, tree_value)
 	return total
+
+
+## ★ 2026-10-01 (tech trees): per-turn AP-equivalent of the branching-tree effects. Combat effects
+## are counted as ATTACK-POINT EQUIVALENTS (ae) — a fraction of one flat attack point, scaled by
+## the share of the army they touch — and converted the way Attack Tech is; AP and Credit effects
+## are converted directly. Deliberately coarse: its job is that every tech has a sensible,
+## positive price so the AI walks all three trees, not that it plays the tree optimally.
+static func _tree_effects_marginal_value(s: GameState, p: int, t: TechDef) -> float:
+	var inf: float = _class_share(s, p, UnitTypeDef.UnitClass.INFANTRY)
+	var veh: float = maxf(0.25, 1.0 - _class_share(s, p, UnitTypeDef.UnitClass.INFANTRY))
+	var ae: float = 0.0
+	ae += 0.4 * t.move_cap_bonus + 0.3 * t.vehicle_move_cap_bonus * veh + 0.5 * t.infantry_move_cost_discount * inf
+	ae += 0.6 * (t.attack_vs_armor + t.attack_vs_infantry) + 0.25 * t.infantry_attack_vs_structures * inf
+	ae += AIBalance.ai.range_bonus_attack_equivalent * t.vehicle_range_bonus * veh
+	ae += 0.4 * (t.infantry_cover_attack + t.cover_defense) * inf
+	ae += 0.3 * (t.infantry_hp_bonus * inf + t.vehicle_hp_bonus * veh) + 0.8 * t.vehicle_self_repair * veh
+	ae += (t.vehicle_attack_bonus + t.vehicle_defense_bonus + t.aircraft_attack_bonus) * veh
+	ae += 0.3 * (t.structure_defense_bonus + t.defensive_attack_bonus + t.defensive_range_bonus + t.aura_defense_bonus)
+	ae += 0.01 * t.structure_hp_pct + 0.02 * t.hq_hp_bonus + 0.15 * t.hq_attack + (0.4 if t.defensive_counterattack else 0.0)
+	ae += 0.15 * t.defensive_anti_air + 0.4 * t.build_time_discount + 0.2 * t.ammo_bonus * veh
+	ae += 0.15 * t.resupply_range * veh + 0.3 * t.supply_heal + 0.6 * t.vehicle_production_turn_discount * veh
+	ae += 0.3 * t.pop_cap_bonus + 0.6 * t.production_cap_bonus + 0.5 * t.bonus_unit_attack + 0.3 * t.bonus_unit_move_cap
+	ae += 0.5 if not t.frees_pilots.is_empty() else 0.0
+	var ap: float = float(t.ap_per_turn_bonus) + 2.0 * t.attack_ap_discount + 0.5 * t.rush_ap_discount \
+		+ (1.0 if t.vehicle_rush_half else 0.0)
+	var credits: float = Upkeep.total_upkeep(s, p) * t.upkeep_discount_pct / 100.0 \
+		+ _cheapest_producible_cost(s, p) * 0.5 * (t.kill_refund_pct + t.infantry_cost_discount_pct * inf) / 100.0 \
+		+ 6.0 * t.structure_cost_discount_pct + 3.0 * t.depot_cost_discount_pct
+	return _attack_defense_tech_marginal_value(ae) + ap + credits_to_ap(credits)
+
+
+## Share of [param p]'s units of class [param cls] (0.5 with no army yet, so early picks aren't 0).
+static func _class_share(s: GameState, p: int, cls: int) -> float:
+	var n: int = 0
+	var k: int = 0
+	for e: EntityState in s.entities():
+		if e is UnitState and e.owner == p and not (e as UnitState).type.can_build:
+			n += 1
+			if (e as UnitState).type.unit_class == cls:
+				k += 1
+	return 0.5 if n == 0 else float(k) / n
 
 
 ## Volley's marginal value (CR-14): [member TechDef.attack_range_bonus] benefits only a

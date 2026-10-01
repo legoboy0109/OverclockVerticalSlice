@@ -70,7 +70,7 @@ func test_a_busy_hq_dims_the_research_row() -> void:
 	var e := _entry(state, hq, CommandFSM.Verb.RESEARCH)
 	assert_bool(e.enabled).is_false()
 	assert_int(e.reason & CommandFSM.Reason.RESEARCH_BUSY).is_not_equal(0)
-	assert_str(CommandFSM.research_status_text(hq)).is_equal("Researching Attack Tech - 2 turns")
+	assert_str(CommandFSM.research_status_text(hq)).is_equal("Researching Heavy Ordnance - 2 turns")
 
 
 func test_a_broke_hq_dims_the_research_row() -> void:
@@ -117,7 +117,7 @@ func test_a_startable_tech_shows_its_price() -> void:
 	var hq := _structure(state, StructureTypes.HQ, Vector2i(2, 2))
 	var o := _option(state, hq, Techs.ATTACK_I)
 	assert_bool(o.enabled).is_true()
-	assert_str(ActionMenu.research_option_text(o)).is_equal("1000 CR + 1 AP · 3 turns")
+	assert_str(ActionMenu.research_option_text(o)).is_equal("1000 CR + 4 AP · 3 turns")   # tier 1 = 4 AP (2026-10-01)
 
 
 func test_a_tier_two_tech_names_its_missing_parent_first() -> void:
@@ -125,7 +125,7 @@ func test_a_tier_two_tech_names_its_missing_parent_first() -> void:
 	var hq := _structure(state, StructureTypes.HQ, Vector2i(2, 2))
 	var o := _option(state, hq, Techs.PENETRATION)
 	assert_bool(o.enabled).is_false()
-	assert_str(ActionMenu.research_option_text(o)).is_equal("Needs Attack Tech")
+	assert_str(ActionMenu.research_option_text(o)).is_equal("Needs Heavy Ordnance")
 
 
 func test_a_tier_two_tech_names_the_missing_lab() -> void:
