@@ -176,7 +176,49 @@ extends Resource
 ##
 ## Left as a live knob because it becomes correct the moment the AI gains a hold-position
 ## behaviour. Until then it should stay 0.
+## ★ 2026-10-01: that behaviour now exists, but only for a player owning a Cover tech — see
+## [member cover_seek_discount] / [member cover_hold_radius]. Without one, still 0.
 @export var cover_tile_discount: int = 0
+
+## ★ Cover play (2026-10-01, user direction: "make the AI use cover when it has Ambush or Dig In").
+## Applies only to infantry of a player owning a Cover tech (a nonzero
+## [code]infantry_cover_attack[/code] or [code]cover_heal[/code]):
+## [br]• An advancing unit counts a Cover tile as [member cover_seek_discount] tiles nearer than
+## it is, so it will take a little less ground to end in Cover.
+## [br]• A unit already in Cover HOLDS — no advance or siege step — while an enemy is within
+## [member cover_hold_radius] tiles, unless its group is pushing for the HQ. It still attacks from
+## where it stands (Ambush applies) and heals there (Dig In). This is the "stays put" half the
+## [member cover_tile_discount] measurement said was missing.
+@export var cover_seek_discount: int = 2
+@export var cover_hold_radius: int = 5
+
+## ★ Saving for vehicles (2026-10-01, user direction: "tune the AI to use more vehicles").
+## Measured: with a Factory standing idle, 340 of 351 turns the AI could not afford a Tank — it
+## held ~560 Credits against a 1,400 price because it spent every Credit on infantry as soon as it
+## had it. When a vehicle/aircraft at an idle producer outscores the best infantry buy by
+## [member vehicle_save_margin], and net income covers the gap within [member vehicle_save_turns]
+## turns, the AI keeps that vehicle's price in reserve: no infantry production or research may
+## spend below it (Builders exempt). Off = the old spend-everything behaviour.
+@export var vehicle_saving: bool = true
+@export var vehicle_save_turns: int = 3
+@export var vehicle_save_margin: float = 1.0
+
+## ★ Army mix (2026-10-01). Saving alone barely moved vehicle counts (16 -> 19 per 12 games):
+## on value per lifetime Credit the AI rates a Heavy above a Tank in most matchups, so it never
+## WANTS the vehicle it could save for. Below [member vehicle_share_target] of its fighters being
+## vehicles/aircraft, those types' production value is multiplied by up to
+## [code]1 + vehicle_mix_bonus[/code], tapering to 1 as the share reaches the target. 0 = off.
+@export var vehicle_share_target: float = 0.3
+@export var vehicle_mix_bonus: float = 0.6
+
+## ★ Upkeep room for a vehicle (2026-10-01). The mix bonus alone moved little (17 -> 21 vehicles
+## per 12 games) because the real limit is UPKEEP: the AI's army upkeep averaged ~1,500/turn,
+## i.e. its whole income, filled with infantry first — so a Tank's 750/turn never fitted, and
+## buying one anyway tipped it into deficit (which freezes production). While vehicles are under
+## [member vehicle_share_target], an idle vehicle producer exists and the AI fields at least
+## [member vehicle_room_min_army] fighters, it buys no infantry whose upkeep would leave less net
+## income than the best vehicle's upkeep. Losses then free budget for the vehicle instead.
+@export var vehicle_room_min_army: int = 3
 
 ## `ap_cost_opponent_paid_for` weight for the enemy HQ (which has no
 ## `build_cost`) — a siege-priority weight, not a sunk-cost figure.

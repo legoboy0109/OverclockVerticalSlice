@@ -447,6 +447,14 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 	var pushing: bool = _push_ready(lookahead, unit, hq)
 	if pushing:
 		siege_rate *= AIBalance.ai.push_siege_multiplier
+	# ★ Cover play (2026-10-01): see AIConfig.cover_hold_radius / cover_seek_discount.
+	var cover_play: bool = Unit.benefits_from_cover(unit) and _owns_cover_tech(lookahead, unit.owner)
+	if cover_play and not pushing and not is_wounded_and_threatened \
+			and lookahead.grid.is_cover(unit.position.x, unit.position.y) \
+			and nearest_enemy_dist_before <= AIBalance.ai.cover_hold_radius:
+		return best   # hold: attacks from here are scored by the attack scorers, not here
+	var cover_discount: int = AIBalance.ai.cover_tile_discount \
+		+ (AIBalance.ai.cover_seek_discount if cover_play else 0)
 	var siege_found: bool = false
 	var siege_efficient: bool = false
 	var siege_tile: Vector2i = Vector2i.ZERO
@@ -571,7 +579,7 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 		# advance still closes real distance; the discount only chooses WHICH closing tile,
 		# never whether to close. A unit can now accept slightly less progress to end in
 		# cover, which is the entire point.
-		var effective_dist: int = dist_after - (AIBalance.ai.cover_tile_discount if dest_is_cover else 0)
+		var effective_dist: int = dist_after - (cover_discount if dest_is_cover else 0)
 		var take: bool = false
 		# ★ AP priority (2026-09-29): a tile whose per-tile score clears pass_threshold always
 		# beats one that does not. The fold otherwise keeps the FURTHEST tile, and a far tile
@@ -1298,7 +1306,15 @@ static func _consider_attack(lookahead: GameState, attacker: EntityState, target
 	if not AP.can_afford(lookahead, attacker.owner, ap_cost):
 		return best
 
+	# ★ 2026-10-01: preview from the tile the attack is FIRED from. Damage can depend on where the
+	# attacker stands (Ambush: +attack from Cover), and the preview used to read the unit's
+	# current tile — so a unit in Cover believed it kept Ambush after stepping out to shoot, and a
+	# unit stepping INTO Cover to shoot never counted it. Restored immediately; nothing else reads
+	# the position in between.
+	var real_pos: Vector2i = attacker.position
+	attacker.position = from_tile
 	var hp_removed: int = mini(Combat.preview_damage(lookahead, attacker, target), _current_hp_of(target))
+	attacker.position = real_pos
 	var is_kill: bool = hp_removed >= _current_hp_of(target)
 	var value: float = _combat_value(hp_removed, is_kill, target)
 	# ★ TP-7: a crew-targeting attack on a crewed vehicle hits the PILOT. Value what really
@@ -1517,6 +1533,9 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 	var enemy_hq: StructureState = _enemy_hq(lookahead, producer.owner)
 	var axis_horizontal: bool = _axis_is_horizontal(_own_hq(lookahead, producer.owner), enemy_hq)
 	var local := _Candidate.new()
+	var reserve: int = _vehicle_savings_reserve(lookahead, producer.owner)
+	var room: int = _vehicle_upkeep_room(lookahead, producer.owner)
+	var net_income: int = Upkeep.net_credit_income(lookahead, producer.owner) if room > 0 else 0
 
 	for unit_type: UnitTypeDef in producer.type.producible_types:
 		# ★ Faction-aware AI (2026-09-28): how much this type is worth AGAINST THIS ENEMY, computed
@@ -1538,6 +1557,14 @@ static func _score_production_candidates(lookahead: GameState, entity: EntitySta
 		if lookahead.per_player[producer.owner].in_deficit:
 			continue
 		if not Population.can_field(lookahead, producer.owner, unit_type):
+			continue
+		# Saving for a vehicle: nothing but a vehicle/aircraft or a Builder may dip into the reserve.
+		if reserve > 0 and not unit_type.can_build and unit_type.unit_class == UnitTypeDef.UnitClass.INFANTRY \
+				and lookahead.per_player[producer.owner].current_credits - cost < reserve:
+			continue
+		# Upkeep room for a vehicle: no infantry that would eat the budget the vehicle needs.
+		if room > 0 and not unit_type.can_build and unit_type.unit_class == UnitTypeDef.UnitClass.INFANTRY \
+				and net_income - Upkeep.unit_upkeep(lookahead, producer.owner, unit_type) < room:
 			continue
 		for tile: Vector2i in deploy_tiles:
 			var multiplier: float = _reachability_multiplier(lookahead, producer.owner, tile, unit_type)
@@ -1661,7 +1688,28 @@ static func _matchup_multiplier(lookahead: GameState, owner: int, unit_type: Uni
 	# escaped the penalty and became the cheapest-looking buy (Solar 1,233 Volunteers, Independents
 	# 920 Saboteurs). A Medic or a Self-Destructing Volunteer has to live to use its ability.
 	var durability: float = _durability_factor(lookahead, owner, unit_type)
-	return AIBalance.ai.matchup_floor + AIBalance.ai.matchup_scale * maxf(effect, ability_effect) * durability + bonus
+	return (AIBalance.ai.matchup_floor + AIBalance.ai.matchup_scale * maxf(effect, ability_effect) * durability + bonus) \
+		* _vehicle_mix_factor(lookahead, owner, unit_type)
+
+
+## Army-mix multiplier for an ARMED vehicle/aircraft type: up to 1 + [member AIConfig.vehicle_mix_bonus]
+## while vehicles are under [member AIConfig.vehicle_share_target] of [param owner]'s fighters,
+## tapering linearly to 1.0 at the target. 1.0 for infantry and everything unarmed.
+static func _vehicle_mix_factor(s: GameState, owner: int, unit_type: UnitTypeDef) -> float:
+	var cfg: AIConfig = AIBalance.ai
+	if unit_type.unit_class == UnitTypeDef.UnitClass.INFANTRY or cfg.vehicle_share_target <= 0.0:
+		return 1.0
+	var fighters: int = 0
+	var vehicles: int = 0
+	for e: EntityState in s.entities():
+		if e is UnitState and e.owner == owner and not (e as UnitState).type.can_build \
+				and (e as UnitState).type.attack > 0:
+			fighters += 1
+			if (e as UnitState).type.unit_class != UnitTypeDef.UnitClass.INFANTRY:
+				vehicles += 1
+	var share: float = float(vehicles) / fighters if fighters > 0 else 0.0
+	var gap: float = clampf((cfg.vehicle_share_target - share) / cfg.vehicle_share_target, 0.0, 1.0)
+	return 1.0 + cfg.vehicle_mix_bonus * gap
 
 
 ## How long [param unit_type] lasts against [param owner]'s current enemy, as a multiplier on its
@@ -2289,6 +2337,8 @@ static func _score_research_candidates(lookahead: GameState, entity: EntityState
 			continue
 
 		var cost: int = Research.effective_research_cost(lookahead, tech, player)
+		if lookahead.per_player[player].current_credits - cost < _vehicle_savings_reserve(lookahead, player):
+			continue
 		var ap_surcharge: int = Research.effective_research_ap_surcharge(lookahead, tech, player)
 		var value: float = _tech_research_value(lookahead, player, tech) * _research_lean(lookahead, player, tech)
 		var denom: float = ap_equivalent_cost(cost, ap_surcharge)
@@ -2377,6 +2427,90 @@ static func _research_lean(s: GameState, player: int, tech: TechDef) -> float:
 	var h: int = hash("%d:%d:%s" % [s.match_seed, player, tech.display_name])
 	var frac: float = float(h & 0xFFFF) / 65535.0
 	return 1.0 + v * (2.0 * frac - 1.0)
+
+
+## True when [param p] owns a tech that pays a unit for standing in Cover (Ambush, Dig In).
+static func _owns_cover_tech(s: GameState, p: int) -> bool:
+	return Research.sum(s, p, &"infantry_cover_attack") > 0 or Research.sum(s, p, &"cover_heal") > 0
+
+
+## Credits [param owner] should keep in reserve this turn to buy a vehicle/aircraft (0 = not
+## saving). See [member AIConfig.vehicle_saving]. Compares types on the same value/lifetime-cost
+## scale production scores on, without the per-tile reachability term.
+static func _vehicle_savings_reserve(s: GameState, owner: int) -> int:
+	var cfg: AIConfig = AIBalance.ai
+	if not cfg.vehicle_saving or s.per_player[owner].in_deficit:
+		return 0
+	var credits: int = s.per_player[owner].current_credits
+	var best_vehicle: float = 0.0
+	var vehicle_cost: int = 0
+	var best_infantry: float = 0.0
+	for e: EntityState in s.entities():
+		if not (e is StructureState) or e.owner != owner:
+			continue
+		var st: StructureState = e
+		if st.build_status != StructureState.BuildStatus.COMPLETED or st.type.producible_types.is_empty():
+			continue
+		var idle: bool = st.producing_type == null
+		for t: UnitTypeDef in st.type.producible_types:
+			if t.can_build or t.attack <= 0 or not Population.can_field(s, owner, t):
+				continue
+			var sc: float = _unit_type_score(s, owner, t)
+			if t.unit_class == UnitTypeDef.UnitClass.INFANTRY:
+				best_infantry = maxf(best_infantry, sc)
+			elif idle and sc > best_vehicle:
+				best_vehicle = sc
+				vehicle_cost = Unit.effective_produce_cost(s, t, owner)
+	if vehicle_cost <= credits or best_vehicle <= best_infantry * cfg.vehicle_save_margin:
+		return 0
+	var net: int = Upkeep.net_credit_income(s, owner)
+	if net <= 0 or vehicle_cost - credits > net * cfg.vehicle_save_turns:
+		return 0
+	return vehicle_cost
+
+
+## Upkeep [param owner] should keep free for a vehicle/aircraft this turn (0 = none). See
+## [member AIConfig.vehicle_room_min_army]. The vehicle is the best-scoring armed one an idle
+## producer can make.
+static func _vehicle_upkeep_room(s: GameState, owner: int) -> int:
+	var cfg: AIConfig = AIBalance.ai
+	if cfg.vehicle_share_target <= 0.0 or _fighter_count(s, owner) < cfg.vehicle_room_min_army:
+		return 0
+	var best: float = 0.0
+	var upkeep: int = 0
+	var vehicles: int = 0
+	var fighters: int = 0
+	for e: EntityState in s.entities():
+		if e is UnitState and e.owner == owner and not (e as UnitState).type.can_build and (e as UnitState).type.attack > 0:
+			fighters += 1
+			if (e as UnitState).type.unit_class != UnitTypeDef.UnitClass.INFANTRY:
+				vehicles += 1
+	if fighters > 0 and float(vehicles) / fighters >= cfg.vehicle_share_target:
+		return 0
+	for e: EntityState in s.entities():
+		if not (e is StructureState) or e.owner != owner:
+			continue
+		var st: StructureState = e
+		if st.build_status != StructureState.BuildStatus.COMPLETED or st.producing_type != null:
+			continue
+		for t: UnitTypeDef in st.type.producible_types:
+			if t.can_build or t.attack <= 0 or t.unit_class == UnitTypeDef.UnitClass.INFANTRY \
+					or not Population.can_field(s, owner, t):
+				continue
+			var sc: float = _unit_type_score(s, owner, t)
+			if sc > best:
+				best = sc
+				upkeep = Upkeep.unit_upkeep(s, owner, t)
+	return upkeep
+
+
+## Production score of [param t] for [param owner] with a neutral deploy tile — the same
+## value / (AP + lifetime Credits) ratio [method _score_production_candidates] uses.
+static func _unit_type_score(s: GameState, owner: int, t: UnitTypeDef) -> float:
+	var value: float = credits_to_ap(_production_value(t, 1.0)) * _matchup_multiplier(s, owner, t)
+	var denom: float = float(BaseProduction.effective_produce_ap_cost(s, owner)) \
+		+ credits_to_ap(lifetime_credit_cost(t, s, owner))
+	return value / denom
 
 
 ## [param p]'s units that can fight — everything except Builders.
