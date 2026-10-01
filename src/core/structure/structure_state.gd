@@ -98,6 +98,16 @@ enum BuildStatus { UNDER_CONSTRUCTION, COMPLETED }
 ## falls back to any other legal deploy tile, and only fails if the producer has none.
 @export var production_tile: Vector2i = Vector2i.ZERO
 
+## ★ 2026-10-01: units in production in this structure's EXTRA slots (beyond the one above),
+## for a producer with more than one slot ([method BaseProduction.production_slots] — Ross
+## Barracks, or Factories with Assembly Lines). Parallel lists: type, turns left, and the
+## deploy tile as an (x, y) pair in [member extra_tiles] (a flat list so saves can store it).
+## The primary slot is always filled first; when it completes or is cancelled the first extra
+## is promoted into it, so everything that reads [member producing_type] keeps working.
+@export var extra_types: Array[UnitTypeDef] = []
+@export var extra_turns: PackedInt32Array = PackedInt32Array()
+@export var extra_tiles: PackedInt32Array = PackedInt32Array()
+
 @export var units_produced_this_turn: int = 0
 
 ## The tech this structure is researching, or [code]null[/code] when idle (CR-14:

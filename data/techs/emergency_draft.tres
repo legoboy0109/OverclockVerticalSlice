@@ -69,6 +69,7 @@ structure_cost_discount_pct = 0
 pop_cap_bonus = 2
 infantry_cost_discount_pct = 0
 production_cap_bonus = 0
+factory_slot_bonus = 0
 aura_defense_bonus = 0
 bonus_unit_attack = 0
 aircraft_attack_bonus = 0

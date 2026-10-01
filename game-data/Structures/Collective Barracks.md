@@ -8,6 +8,7 @@ upkeep: 100
 max_count: 2
 cap_bonus: 4
 production_cap: 4
+production_slots: 2
 produces:
 - '[[Machinist]]'
 - '[[Foreman]]'

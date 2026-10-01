@@ -1,6 +1,6 @@
 ---
 id: assembly_lines
-description: Factories can produce 2 units per turn.
+description: Factories can build 2 units at once.
 tree: economy
 tier: 3
 research_cost: 1600
@@ -15,6 +15,7 @@ factions: []
 replaces:
 - '[[Mass Production]]'
 production_cap_bonus: 1
+factory_slot_bonus: 1
 ---
 
 ## Notes
