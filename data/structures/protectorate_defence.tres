@@ -17,6 +17,7 @@ upkeep = 100
 max_count = 2
 cap_bonus = 0
 production_cap = 0
+production_slots = 1
 producible_types = []
 attack = 3
 attack_range = 2

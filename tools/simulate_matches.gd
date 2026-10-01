@@ -128,6 +128,9 @@ var _plans: Array = [[], []]
 ## techs on a path are reachable without depending on whether the AI chooses to build one.
 var _free_lab: bool = false
 
+## Keys "game|player|type" already reported by SIM_FIRST_BUILD.
+var _first_built: Dictionary = {}
+
 ## Restricts the batch to a single handicap cell (-1 = all). The sweep only needs +1, and a
 ## full batch is ~25 minutes against ~7 for one cell.
 var _only_handicap: int = -1
@@ -461,6 +464,11 @@ func _run_one_turn(state: GameState, game: int = 0, turn: int = 0, favoured: int
 		if result.ok and action is BuildAction:
 			var bkey: String = (action as BuildAction).structure_type.display_name
 			_built[bkey] = _built.get(bkey, 0) + 1
+			# First time this seat raises this type, this game: SIM_FIRST_BUILD,game,player,type,round.
+			var fkey: String = "%d|%d|%s" % [game, state.active_player, bkey]
+			if not _first_built.has(fkey):
+				_first_built[fkey] = true
+				print("SIM_FIRST_BUILD,%d,%d,%s,%d" % [game, state.active_player, bkey, state.round_number])
 		if result.ok and action is RushAction:
 			# Counted under SIM_BUILT so the existing summary prints it (2026-10-01).
 			_built["Rush"] = _built.get("Rush", 0) + 1

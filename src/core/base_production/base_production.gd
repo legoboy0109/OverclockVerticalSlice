@@ -419,13 +419,62 @@ static func effective_build_time(state: GameState, structure_type: StructureType
 ## production is committed, so its cap slot was reserved at commit — re-checking would
 ## double-count it against itself and could refuse to deliver a unit already paid for.
 static func _complete_production(state: GameState, producer: StructureState) -> Array[Event]:
-	var unit_type: UnitTypeDef = producer.producing_type
-	var tile: Vector2i = producer.production_tile
+	var events: Array[Event] = _deploy(state, producer, producer.producing_type, producer.production_tile)
+	if events.is_empty():
+		# Boxed in. Hold the unit — it is paid for, and the block is usually temporary.
+		producer.production_turns_remaining = 1
+		return events
+	producer.producing_type = null
+	producer.production_turns_remaining = 0
+	_promote_extra(producer)
+	return events
+
+
+## Moves the first extra-slot unit into the primary slot (see [member StructureState.extra_types]).
+static func _promote_extra(producer: StructureState) -> void:
+	if producer.producing_type != null or producer.extra_types.is_empty():
+		return
+	producer.producing_type = producer.extra_types[0]
+	producer.production_turns_remaining = producer.extra_turns[0]
+	producer.production_tile = Vector2i(producer.extra_tiles[0], producer.extra_tiles[1])
+	_remove_extra(producer, 0)
+
+
+static func _remove_extra(producer: StructureState, i: int) -> void:
+	producer.extra_types.remove_at(i)
+	producer.extra_turns.remove_at(i)
+	producer.extra_tiles.remove_at(2 * i)
+	producer.extra_tiles.remove_at(2 * i)
+
+
+## How many units [param producer] may have in production at once: its type's
+## [member StructureTypeDef.production_slots], plus Assembly Lines' slot for a vehicle/aircraft
+## producer ([code]factory_slot_bonus[/code]). Never below 1.
+static func production_slots(state: GameState, producer: StructureState) -> int:
+	var slots: int = producer.type.production_slots
+	for t: UnitTypeDef in producer.type.producible_types:
+		if t.unit_class != UnitTypeDef.UnitClass.INFANTRY:
+			slots += Research.sum(state, producer.owner, &"factory_slot_bonus")
+			break
+	return maxi(1, slots)
+
+
+## Units [param producer] has in production, across all slots.
+static func units_in_production(producer: StructureState) -> int:
+	return (1 if producer.producing_type != null else 0) + producer.extra_types.size()
+
+
+## True when [param producer] can start another unit now (a slot is free).
+static func has_free_slot(state: GameState, producer: StructureState) -> bool:
+	return units_in_production(producer) < production_slots(state, producer)
+
+
+## Places a finished [param unit_type] beside [param producer] (falling back to any legal deploy
+## tile if [param tile] is taken). Returns the deploy event, or nothing when boxed in.
+static func _deploy(state: GameState, producer: StructureState, unit_type: UnitTypeDef, tile: Vector2i) -> Array[Event]:
 	var legal: Array[Vector2i] = legal_deploy_tiles(state, producer, null)
 	if not (tile in legal):
 		if legal.is_empty():
-			# Boxed in. Hold the unit — it is paid for, and the block is usually temporary.
-			producer.production_turns_remaining = 1
 			return [] as Array[Event]
 		tile = legal[0]
 
@@ -442,10 +491,7 @@ static func _complete_production(state: GameState, producer: StructureState) -> 
 	Promotion.apply_rank(state, unit)
 	state.next_entity_id += 1
 	var placed: bool = state.grid.place(unit.entity_id, tile.x, tile.y)
-	assert(placed, "BaseProduction._complete_production: Grid.place failed on a tile legal_deploy_tiles accepted — legal_deploy_tiles/Grid desync.")
-
-	producer.producing_type = null
-	producer.production_turns_remaining = 0
+	assert(placed, "BaseProduction._deploy: Grid.place failed on a tile legal_deploy_tiles accepted — legal_deploy_tiles/Grid desync.")
 
 	var evt := UnitDeployedEvent.new()
 	evt.entity_id = unit.entity_id
@@ -468,6 +514,19 @@ static func advance_build_timers(state: GameState, player: int) -> Array[Event]:
 		# ⚠ Deliberately ticks BEFORE the under-construction guard below: a COMPLETED
 		# producer is exactly the case that has a unit in flight, and an early `continue`
 		# would freeze every queue on the board.
+		# Extra slots first (walking back so removal is safe), then the primary — so a unit
+		# promoted into the primary this pass is not ticked twice.
+		for i: int in range(structure.extra_types.size() - 1, -1, -1):
+			structure.extra_turns[i] -= 1
+			if structure.extra_turns[i] > 0:
+				continue
+			var placed_evts: Array[Event] = _deploy(state, structure, structure.extra_types[i],
+				Vector2i(structure.extra_tiles[2 * i], structure.extra_tiles[2 * i + 1]))
+			if placed_evts.is_empty():
+				structure.extra_turns[i] = 1   # boxed in: hold, as the primary does
+			else:
+				events.append_array(placed_evts)
+				_remove_extra(structure, i)
 		if structure.producing_type != null:
 			structure.production_turns_remaining -= 1
 			if structure.production_turns_remaining <= 0:
@@ -632,6 +691,7 @@ static func apply_cancel_production(state: GameState, action: CancelProductionAc
 
 	producer.producing_type = null
 	producer.production_turns_remaining = 0
+	_promote_extra(producer)
 
 	var evt := ProductionCancelledEvent.new()
 	evt.entity_id = producer.entity_id
@@ -908,7 +968,8 @@ static func validate_produce(state: GameState, action: ProduceAction) -> int:
 	# ★ S8-28: one unit at a time. A producer with a build in flight is busy until it
 	# completes — this is what replaced the flat per-structure cooldown, so the wait is
 	# now a property of WHAT is being made rather than of the building making it.
-	if producer.producing_type != null:
+	# ★ 2026-10-01: "busy" means every production slot is full (Ross Barracks have 2).
+	if not has_free_slot(state, producer):
 		return Action.Reason.PRODUCER_ON_COOLDOWN
 	# Dual-cost (ADR-0006 pivot): effective_produce_cost is the Credit main cost;
 	# produce also spends a PRODUCE_AP_COST AP surcharge. Legal iff BOTH afford.
@@ -968,9 +1029,17 @@ static func apply_produce(state: GameState, action: ProduceAction) -> Array[Even
 	# placed by advance_build_timers when the timer reaches zero. Costs are spent HERE,
 	# at commit, so a queued unit is already paid for — which is what makes PC-3
 	# ("units under production count against the cap") meaningful rather than a loophole.
-	producer.producing_type = action.unit_type
-	producer.production_turns_remaining = effective_production_turns(state, action.unit_type, player)
-	producer.production_tile = action.tile
+	var turns: int = effective_production_turns(state, action.unit_type, player)
+	if producer.producing_type == null:
+		producer.producing_type = action.unit_type
+		producer.production_turns_remaining = turns
+		producer.production_tile = action.tile
+	else:
+		# A second (or later) slot — see StructureState.extra_types.
+		producer.extra_types.append(action.unit_type)
+		producer.extra_turns.append(turns)
+		producer.extra_tiles.append(action.tile.x)
+		producer.extra_tiles.append(action.tile.y)
 
 	producer.units_produced_this_turn += 1
 	# ★ 2026-08-25: acting clears the stand-down mark. It records "I am finished
@@ -983,5 +1052,5 @@ static func apply_produce(state: GameState, action: ProduceAction) -> Array[Even
 	evt.unit_type = action.unit_type
 	evt.owner = player
 	evt.tile = action.tile
-	evt.turns_remaining = producer.production_turns_remaining
+	evt.turns_remaining = turns
 	return [evt] as Array[Event]

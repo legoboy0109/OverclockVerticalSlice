@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=5 format=3]
 ; GENERATED from game-data/Structures/Collective Barracks.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: b725ea18945fa0287f0df9aef239e039b1c009a76439ac6e0a2e1da2cf0ccffd
+; source-sha256: eebfcc7cb553a2762b012c3f11fe2a588c4ba4b74b0bd4691911518c17cae76e
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/machinist.tres" id="2"]
@@ -20,6 +20,7 @@ upkeep = 100
 max_count = 2
 cap_bonus = 4
 production_cap = 4
+production_slots = 2
 producible_types = [ExtResource("2"), ExtResource("3"), ExtResource("4")]
 attack = 0
 attack_range = 0

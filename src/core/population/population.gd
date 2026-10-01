@@ -77,9 +77,11 @@ static func current_population(state: GameState, player: int) -> int:
 		if e.owner != player or not (e is StructureState):
 			continue
 		var st: StructureState = e as StructureState
-		if st.producing_type == null or not st.producing_type.counts_toward_cap:
-			continue
-		count += 1
+		if st.producing_type != null and st.producing_type.counts_toward_cap:
+			count += 1
+		for t: UnitTypeDef in st.extra_types:   # extra production slots (2026-10-01)
+			if t.counts_toward_cap:
+				count += 1
 	return count
 
 

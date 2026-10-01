@@ -53,6 +53,9 @@ extends Resource
 @export var build_cost: int
 @export var build_time: int
 @export var production_cap: int = 0
+## Units this structure can have IN PRODUCTION at once (2026-10-01; Ross Barracks have 2).
+## Distinct from [member production_cap], which limits how many may be STARTED per turn.
+@export var production_slots: int = 1
 @export var producible_types: Array[UnitTypeDef] = []
 @export var attack: int = 0
 @export var attack_range: int = 0

@@ -20,6 +20,7 @@ upkeep = 200
 max_count = 1
 cap_bonus = 0
 production_cap = 1
+production_slots = 1
 producible_types = [ExtResource("2"), ExtResource("3"), ExtResource("4")]
 attack = 0
 attack_range = 0

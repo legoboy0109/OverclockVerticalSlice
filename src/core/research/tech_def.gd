@@ -166,6 +166,9 @@ extends Resource
 @export var infantry_cost_discount_pct: int = 0
 ## Extra units per turn per producer
 @export var production_cap_bonus: int = 0
+## Extra production slots for vehicle/aircraft producers (Assembly Lines, 2026-10-01). The per-turn
+## [member production_cap_bonus] alone did nothing — a producer could only hold one unit at once.
+@export var factory_slot_bonus: int = 0
 ## Defence for structures beside an aura structure (see aura_structures)
 @export var aura_defense_bonus: int = 0
 ## Attack for bonus_unit_types
