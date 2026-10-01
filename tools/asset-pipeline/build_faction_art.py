@@ -25,6 +25,9 @@ Manifest (JSON):
           crop/flatten/tol tune. Every asset approved before the switch is pinned to
           "flood" in its manifest so a rebuild reproduces it exactly.
   tol   = cutout.py background tolerance (default 22); raise for soft ground shadows.
+  plate_band = [lo, span] structure plating value map (default [0.12, 0.26], for pale
+          renders); [0, 1] for renders already prompted dark.
+  hue_max = palette-lock warm hue limit (default 45); raise (60) for amber-lit renders.
   accent_sat = palette-lock accent saturation gate (default 0.25); raise to stop browns
           turning orange.
   flatten = true to remove a gradient/vignette background before cutout.
@@ -32,6 +35,8 @@ Manifest (JSON):
           smooth art); skips cutout and resize.
   smooth = median pre-filter size (default 7); lower (3) keeps thin frames, e.g. Sniper.
   accent_edges = rim width in cells (1-2): faction colour only on the rims of orange regions (over-orange art).
+  accent_colors = palette entries reserved for accent in pixelize (e.g. 2) — small lit
+          features on dark renders otherwise lose their colour to grey shades.
   keep_accent = cell share of accent (e.g. 0.25) that keeps thin neon trim in pixelize.
   declutter = min accent shape size in art cells (e.g. 8): smaller specks become plating.
   declutter_smooth = true to shave ragged accent fringes (opening) before declutter.
@@ -99,7 +104,9 @@ RUSH_HUE = 20.0
 
 
 def palette_lock(im: Image.Image, structure: bool = False,
-                 accent_sat: float = ACCENT_SAT_MIN) -> Image.Image:
+                 accent_sat: float = ACCENT_SAT_MIN,
+                 hue_max: float = ACCENT_HUE_MAX,
+                 plate_band: tuple[float, float] = (0.12, 0.26)) -> Image.Image:
     """Force a raw render onto the house palette: slate armour, rush-orange accent.
 
     SDXL paints "slate grey" as warm brown-grey and "orange" anywhere from red-brown to
@@ -111,7 +118,9 @@ def palette_lock(im: Image.Image, structure: bool = False,
     a = np.asarray(im.convert("RGBA")).copy()
     rgb = a[..., :3].astype(np.float64) / 255.0
     h, s, v = _hsv(rgb)
-    warm = (h <= ACCENT_HUE_MAX) | (h >= ACCENT_HUE_WRAP_MIN)
+    # hue_max: Z-Image paints "orange glow" as amber (hue 44-50), straddling recolor's 45
+    # — raise it (manifest `hue_max`, e.g. 60) so a lit window locks whole, not half.
+    warm = (h <= hue_max) | (h >= ACCENT_HUE_WRAP_MIN)
     # accent_sat: raise it (manifest `accent_sat`, e.g. 0.5) when a render's browns and
     # rust shadows are being promoted to faction orange — at recolor's 0.25 they are,
     # and the unit floods orange with no grey/orange split (Order Knight, 2026-09-30).
@@ -125,7 +134,10 @@ def palette_lock(im: Image.Image, structure: bool = False,
         # Art bible §5.1: "the stage is dark so the actors can be light" — structures
         # stay near-black #1B2130 (v .19) with facets lifted to #33405A (v .35). SDXL
         # paints gothic stone pale, so compress plating value into that band.
-        v2 = np.where(accent, v2, 0.12 + 0.26 * v)
+        # plate_band (manifest `plate_band`: [lo, span]): renders prompted dark already
+        # (Z-Image buildings, v .2-.5) went near-black under the default and lost every
+        # wall; [0, 1] keeps their own values.
+        v2 = np.where(accent, v2, plate_band[0] + plate_band[1] * v)
     a[..., :3] = np.clip(_from_hsv(h2, s2, v2) * 255.0 + 0.5, 0, 255).astype(np.uint8)
     return Image.fromarray(a, "RGBA")
 
@@ -222,6 +234,7 @@ def apply_touches(px: Image.Image, touches: dict | None, mask: bool = False,
                "bone": [[x, y], ...],           # pale detail pixels, drawn over the body
                "accent": [[x, y], ...],         # extra faction-colour pixels
                "ground_rows": [y, ...],         # warm cells in these rows -> shadow
+               "base_rim": n,                   # neon on the lowest n cells per column
                "erase": [[x0, y0, x1, y1], ...],  # clear a cell rectangle (inclusive)
                "lines": [[x0, y0, x1, y1, ink, width], ...]}  # draw weapons etc.
     `ink` is a LINE_RGB key; width 1 or 2 (2 = the line plus the row under it). After
@@ -270,6 +283,22 @@ def apply_touches(px: Image.Image, touches: dict | None, mask: bool = False,
         for r in rows:
             for x in np.nonzero(warm[r])[0]:
                 grid[r, x] = 0 if mask else (*GROUND_RGB, 255)
+    # base_rim: n — faction neon on the lowest n body cells of every column, i.e. the front
+    # edges of a structure's base plate. Renders that keep the building dark (Z-Image
+    # "orange ONLY on the door", 2026-09-30) carry ~2% accent: too little to read
+    # ownership. A plate rim is the house convention (Bulwark, Defence Node, Order
+    # Airfield) and sits on the ground, where it never clutters the building itself.
+    rim = int(touches.get("base_rim", 0))
+    if rim:
+        s = sprite[::FACTOR, ::FACTOR]
+        ink = np.all(s[..., :3] == OUTLINE_RGB, axis=-1)
+        body = (s[..., 3] > 0) & ~ink
+        for x in range(gw):
+            ys = np.nonzero(body[:, x])[0]
+            if ys.size:
+                for y in range(ys[-1], max(ys[-1] - rim, -1), -1):
+                    if body[y, x]:
+                        grid[y, x] = 255 if mask else (*TOUCH_ACCENT, 255)
     erase = touches.get("erase", [])
     lines = touches.get("lines", [])
     for x0, y0, x1, y1 in erase:
@@ -468,13 +497,16 @@ def build(asset: dict, dry: bool, tmp: str) -> list[str]:
         im = _fit(trim(im), asset["axis"], asset["px"])
     master = im if asset.get("lock") is False else palette_lock(
         im, structure=asset["kind"] == "struct",
-        accent_sat=float(asset.get("accent_sat", ACCENT_SAT_MIN)))
+        accent_sat=float(asset.get("accent_sat", ACCENT_SAT_MIN)),
+        hue_max=float(asset.get("hue_max", ACCENT_HUE_MAX)),
+        plate_band=tuple(asset.get("plate_band", (0.12, 0.26))))
     clean_path = os.path.join(CLEANED, f"{aid}_rush_hd2d_clean.png")
     if not dry:
         master.save(clean_path)
     src = _tmp(master, tmp, f"{aid}_rush.png")
     touches = asset.get("touches")
-    px_opts = {"keep_accent": float(asset.get("keep_accent", 0)), "smooth": int(asset.get("smooth", 7))}
+    px_opts = {"keep_accent": float(asset.get("keep_accent", 0)), "smooth": int(asset.get("smooth", 7)),
+               "accent_colors": int(asset.get("accent_colors", 0))}
     relock = asset.get("lock") is not False
     accent_sat = float(asset.get("accent_sat", ACCENT_SAT_MIN))
 

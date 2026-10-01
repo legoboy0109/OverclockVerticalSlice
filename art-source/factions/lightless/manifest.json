@@ -280,12 +280,20 @@
    "axis": "w",
    "px": 256,
    "flatten": true,
-   "crop": 0.02,
-   "keep_accent": 0.25,
+   "keep_accent": 0.15,
    "id": "independents_barracks",
-   "raw": "art-source/generated/lightless/independents_barracks_3.png",
-   "accent_edges": true,
-   "cutter": "flood"
+   "raw": "art-source/generated/zstructs/independents_barracks.png",
+   "cutter": "flood",
+   "hue_max": 60,
+   "smooth": 3,
+   "plate_band": [
+    0.0,
+    0.85
+   ],
+   "accent_colors": 2,
+   "touches": {
+    "base_rim": 1
+   }
   },
   {
    "kind": "struct",

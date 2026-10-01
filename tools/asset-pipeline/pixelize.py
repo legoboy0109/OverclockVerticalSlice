@@ -73,7 +73,7 @@ def _up(a: np.ndarray, factor: int) -> np.ndarray:
 
 def pixelize(im: Image.Image, factor: int = 4, colors: int = 12,
              alpha_cut: float = 0.45, outline: bool = True, smooth: int = 7,
-             keep_accent: float = 0.0) -> Image.Image:
+             keep_accent: float = 0.0, accent_colors: int = 0) -> Image.Image:
     """Pixelize an RGBA sprite. See module doc for geometry guarantees.
 
     Method (chosen 2026-09-29 against area-average at 24 and 12 colours, and majority
@@ -96,12 +96,29 @@ def pixelize(im: Image.Image, factor: int = 4, colors: int = 12,
     out = np.zeros((gh, gw, 4), dtype=np.uint8)
     if opaque.any():
         # Quantize ONLY opaque pixels — the keyed-out field would steal a palette slot.
-        q = Image.fromarray(a[..., :3][opaque].reshape(1, -1, 3).astype(np.uint8), "RGB").quantize(
-            colors, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
-        n = len(q.getpalette()) // 3
-        pal = np.array(q.getpalette()[: n * 3], dtype=np.uint8).reshape(-1, 3)
+        px = a[..., :3][opaque].astype(np.uint8)
+        groups = [np.ones(len(px), bool)]
+        budgets = [colors]
+        if accent_colors > 0:
+            # accent_colors: reserve palette entries for accent pixels. MEDIANCUT splits by
+            # population, so a small lit door or flag on a building of many grey shades got
+            # no palette entry of its own and was majority-voted into grey (Z-Image
+            # buildings, 2026-09-30).
+            ph, ps = _hue(px), _sat(px)
+            pa = ((ph <= 60) | (ph >= 335)) & (ps >= 0.45) & (px.max(axis=1) >= 60)
+            if pa.any() and (~pa).any():
+                groups, budgets = [~pa, pa], [colors - accent_colors, accent_colors]
+        pal_parts, flat = [], np.zeros(len(px), np.int64)
+        for g, k in zip(groups, budgets):
+            q = Image.fromarray(px[g].reshape(1, -1, 3), "RGB").quantize(
+                k, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
+            n = len(q.getpalette()) // 3
+            off = sum(len(pp) for pp in pal_parts)
+            pal_parts.append(np.array(q.getpalette()[: n * 3], dtype=np.uint8).reshape(-1, 3))
+            flat[g] = np.asarray(q).reshape(-1) + off
+        pal = np.concatenate(pal_parts)
         idx = np.full(alpha.shape, -1, dtype=np.int64)
-        idx[opaque] = np.asarray(q).reshape(-1)
+        idx[opaque] = flat
         cells = idx.reshape(gh, factor, gw, factor).transpose(0, 2, 1, 3).reshape(gh, gw, -1)
         # Per-cell majority via one-hot counts (vectorised; -1 = transparent, ignored).
         counts = np.stack([(cells == k).sum(axis=2) for k in range(len(pal))], axis=2)

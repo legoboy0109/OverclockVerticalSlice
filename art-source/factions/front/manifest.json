@@ -273,11 +273,20 @@
    "axis": "w",
    "px": 256,
    "flatten": true,
-   "keep_accent": 0.25,
+   "keep_accent": 0.15,
    "id": "solar_barracks",
-   "raw": "art-source/generated/front/solar_barracks_3.png",
-   "accent_edges": true,
-   "cutter": "flood"
+   "raw": "art-source/generated/zstructs/solar_barracks.png",
+   "cutter": "flood",
+   "hue_max": 60,
+   "smooth": 3,
+   "plate_band": [
+    0.0,
+    0.85
+   ],
+   "accent_colors": 2,
+   "touches": {
+    "base_rim": 1
+   }
   },
   {
    "kind": "struct",
@@ -297,12 +306,20 @@
    "kind": "struct",
    "axis": "w",
    "px": 256,
-   "raw": "art-source/generated/front/solar_airfield_clean.png",
+   "raw": "art-source/generated/zstructs/solar_airfield.png",
    "flatten": true,
-   "crop": 0.02,
-   "keep_accent": 0.25,
-   "accent_edges": 1,
-   "cutter": "flood"
+   "keep_accent": 0.15,
+   "cutter": "flood",
+   "hue_max": 60,
+   "smooth": 3,
+   "plate_band": [
+    0.0,
+    0.85
+   ],
+   "accent_colors": 2,
+   "touches": {
+    "base_rim": 1
+   }
   },
   {
    "kind": "struct",
