@@ -4,8 +4,8 @@ unit_class: ground_vehicle
 can_target:
 - infantry
 - ground_vehicle
-hp: 12
-attack: 4
+hp: 15
+attack: 5
 attack_range: 1
 defense: 0
 move_cost: 2

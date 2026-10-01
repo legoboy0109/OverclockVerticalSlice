@@ -2,7 +2,7 @@
 id: autonomous_lifter
 unit_class: air
 can_target: []
-hp: 8
+hp: 10
 attack: 0
 attack_range: 0
 defense: 0

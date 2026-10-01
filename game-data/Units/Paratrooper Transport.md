@@ -2,7 +2,7 @@
 id: paratrooper_transport
 unit_class: air
 can_target: []
-hp: 7
+hp: 9
 attack: 0
 attack_range: 0
 defense: 0

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Skyworks Interceptor.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: c6ca3821841de97e1de3cc5faf6e76b33694ef9e064081e15961ffee7b82b975
+; source-sha256: 9668e63e911dd3698c2b1cba55ebc1a030e76c193703fa771e0ec185e2369ce7
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -9,8 +9,8 @@ script = ExtResource("1")
 display_name = "Skyworks Interceptor"
 unit_class = 2
 can_target = Array[int]([2])
-hp = 9
-attack = 7
+hp = 11
+attack = 9
 attack_range = 2
 defense = 0
 move_cost = 1

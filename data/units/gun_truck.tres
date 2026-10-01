@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Gun Truck.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 48599f67c91a0cb229e3d22a31a8b38650df9c928a40031077fcf674294c2405
+; source-sha256: fe4c3c4a303da3bad4839902239a28c39367ef008cc12fddd74eea502aaf1ddd
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -9,8 +9,8 @@ script = ExtResource("1")
 display_name = "Gun Truck"
 unit_class = 1
 can_target = Array[int]([0, 1])
-hp = 12
-attack = 4
+hp = 15
+attack = 5
 attack_range = 1
 defense = 0
 move_cost = 2

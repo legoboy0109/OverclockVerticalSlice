@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Transport.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 2419cdf75c83be429a21849023ddbd605225781e7755bfccf47046e6a481cd2c
+; source-sha256: 6de7e117123dcfb90469f8ba58ce42937335617c92964bbc0cfab9faa5ea6daf
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -9,7 +9,7 @@ script = ExtResource("1")
 display_name = "Transport"
 unit_class = 1
 can_target = Array[int]([])
-hp = 16
+hp = 20
 attack = 0
 attack_range = 0
 defense = 0

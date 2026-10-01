@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Reliquary.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: b930858ab4755aecf348e88bdedcdd30e6ab35f98d4ef0b088d2fb2d14831e12
+; source-sha256: 5212e0b8d9cd22d2b31de3523ceeb8b062937d797a9cfe2f579048bfac5d00f6
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -9,7 +9,7 @@ script = ExtResource("1")
 display_name = "Reliquary"
 unit_class = 1
 can_target = Array[int]([])
-hp = 18
+hp = 23
 attack = 0
 attack_range = 0
 defense = 2

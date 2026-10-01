@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Technical.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: e9f6adaeeb3548c7facb715bee32c54d3fba920cc1418929e0d9184681d193dc
+; source-sha256: 41a3513f48230e1b773c59879576acb92be130696d10386ee69a313e2023a222
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -9,8 +9,8 @@ script = ExtResource("1")
 display_name = "Technical"
 unit_class = 1
 can_target = Array[int]([0, 1])
-hp = 12
-attack = 4
+hp = 15
+attack = 5
 attack_range = 1
 defense = 0
 move_cost = 2

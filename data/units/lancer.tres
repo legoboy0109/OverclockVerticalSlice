@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Lancer.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 9a1a5fa43144f01c8c8a88fd6339a945b362113f3d7520b80eb5fceb8bcf9e2a
+; source-sha256: 07a98bed3480b9607f78c968dd9e6efb81e3bbb3c1dcb9e2bb3c4df5d5912282
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -9,8 +9,8 @@ script = ExtResource("1")
 display_name = "Lancer"
 unit_class = 1
 can_target = Array[int]([0, 1])
-hp = 22
-attack = 7
+hp = 28
+attack = 9
 attack_range = 2
 defense = 0
 move_cost = 2

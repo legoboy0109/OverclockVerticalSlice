@@ -3,8 +3,8 @@ id: skyworks_interceptor
 unit_class: air
 can_target:
 - air
-hp: 9
-attack: 7
+hp: 11
+attack: 9
 attack_range: 2
 defense: 0
 move_cost: 1

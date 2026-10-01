@@ -4,8 +4,8 @@ unit_class: air
 can_target:
 - infantry
 - ground_vehicle
-hp: 7
-attack: 6
+hp: 9
+attack: 8
 attack_range: 2
 defense: 2
 move_cost: 1

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Buzzard.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 6dc5fc98d21c83f4a79de3c45dba4e4994bb9ba7b6fd512f6d03764e56ce7cb4
+; source-sha256: b203228e5bd87f142a18fd27f04c34ee7994fd23a6b75755f4d58fa75c0bc9af
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/abilities/paradrop.tres" id="2"]
@@ -10,8 +10,8 @@ script = ExtResource("1")
 display_name = "Buzzard"
 unit_class = 2
 can_target = Array[int]([0, 1])
-hp = 6
-attack = 3
+hp = 8
+attack = 4
 attack_range = 1
 defense = 0
 move_cost = 1

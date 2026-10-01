@@ -2,7 +2,7 @@
 id: transport
 unit_class: ground_vehicle
 can_target: []
-hp: 16
+hp: 20
 attack: 0
 attack_range: 0
 defense: 0

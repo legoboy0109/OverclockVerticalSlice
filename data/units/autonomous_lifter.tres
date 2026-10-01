@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Autonomous Lifter.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 26f108fe165696f33ae22b8ec9c847da5afbe1a35330388fe2f9f46ced2570a9
+; source-sha256: 986e4d0640840a8ed99b228104fd203c31a9c0c5aa8693950c8697f53a4d5dc7
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -9,7 +9,7 @@ script = ExtResource("1")
 display_name = "Autonomous Lifter"
 unit_class = 2
 can_target = Array[int]([])
-hp = 8
+hp = 10
 attack = 0
 attack_range = 0
 defense = 0

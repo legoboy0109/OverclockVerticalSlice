@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Helicopter.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 01d5e9c7638dc7fab2d5285a404447edf74bae5c2a3907fce63d2f4150a12226
+; source-sha256: 8e2666452b97b74bd1941660e97d48f4f6617d38e6c06cff8c055e5d9f80c0eb
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -9,8 +9,8 @@ script = ExtResource("1")
 display_name = "Helicopter"
 unit_class = 2
 can_target = Array[int]([0, 1, 2])
-hp = 9
-attack = 5
+hp = 11
+attack = 6
 attack_range = 2
 defense = 0
 move_cost = 1

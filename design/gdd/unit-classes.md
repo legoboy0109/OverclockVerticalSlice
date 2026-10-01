@@ -8,6 +8,13 @@
 > thing that moves: a unit on the ground. Four of the six factions field vehicles and aircraft, and
 > those are not "units with bigger numbers" — they interact with terrain, with each other, and with
 > the board differently. Getting this taxonomy right is what stops each faction inventing its own.
+>
+> ★ **2026-10-01 (user decision) — every vehicle and aircraft got +25% HP and +25% attack**
+> (rounded; unarmed transports stay at 0 attack), the same day vehicle upkeep was halved, "to
+> balance the higher cost and time investment and make games faster once they become accessible".
+> Measured over 72 AI-vs-AI games across all six factions: average length 56 -> 50 turns and the
+> faction win-rate spread narrowed from 17-88% to 29-62%. Stat tables in the faction GDDs predate
+> this; the live numbers are in `game-data/Units/` (the source of truth).
 
 ---
 

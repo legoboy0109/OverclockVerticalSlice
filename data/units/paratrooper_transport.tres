@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Paratrooper Transport.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 202f27f3f3d4b9b7b8613ec58fdd7209e1433d8dfd3846219f0cde07129ade22
+; source-sha256: ca2a0c175c969c9bd368ce8f8693101f6658ae2b93f74c70ea44de10b55478a3
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/abilities/paradrop.tres" id="2"]
@@ -10,7 +10,7 @@ script = ExtResource("1")
 display_name = "Paratrooper Transport"
 unit_class = 2
 can_target = Array[int]([])
-hp = 7
+hp = 9
 attack = 0
 attack_range = 0
 defense = 0

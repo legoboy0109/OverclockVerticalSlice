@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Strafer.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 987597c16191d51bd9291d5b6e54012176371c53f9a6f54387e207a23c893f3b
+; source-sha256: 60d658fc6eb1804e474f7d796103b9d0b0ac37683adc72cfb6dbe4ebe54b52a3
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -9,8 +9,8 @@ script = ExtResource("1")
 display_name = "Strafer"
 unit_class = 2
 can_target = Array[int]([0, 1])
-hp = 7
-attack = 5
+hp = 9
+attack = 6
 attack_range = 2
 defense = 0
 move_cost = 1

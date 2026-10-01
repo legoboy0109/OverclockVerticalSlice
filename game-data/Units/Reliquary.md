@@ -2,7 +2,7 @@
 id: reliquary
 unit_class: ground_vehicle
 can_target: []
-hp: 18
+hp: 23
 attack: 0
 attack_range: 0
 defense: 2

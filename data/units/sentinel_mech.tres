@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Sentinel Mech.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 14bcdcf5a2c9bd90e5cd70a361d6a82b61dcd9190e87f56be302c3310416df10
+; source-sha256: 28f52a3e958167e910a586b7cb43bbaecd2bcf2a06c6e9ffbdcc3a253d11e428
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -9,8 +9,8 @@ script = ExtResource("1")
 display_name = "Sentinel Mech"
 unit_class = 1
 can_target = Array[int]([0, 1])
-hp = 20
-attack = 6
+hp = 25
+attack = 8
 attack_range = 2
 defense = 0
 move_cost = 2

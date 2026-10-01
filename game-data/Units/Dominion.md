@@ -3,8 +3,8 @@ id: dominion
 unit_class: air
 can_target:
 - air
-hp: 7
-attack: 7
+hp: 9
+attack: 9
 attack_range: 2
 defense: 2
 move_cost: 1

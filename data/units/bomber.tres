@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Bomber.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 8bf1acd02b704d9ef1b3e9f41c53a39e7d4e74c75a7a1a24921d4eb3bcb20eb7
+; source-sha256: e06ec9d7135397137b857893a4c58298b36f78bde6e74bb05e8dbef7c4c7439a
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -9,8 +9,8 @@ script = ExtResource("1")
 display_name = "Bomber"
 unit_class = 2
 can_target = Array[int]([0, 1])
-hp = 6
-attack = 7
+hp = 8
+attack = 9
 attack_range = 1
 defense = 0
 move_cost = 1

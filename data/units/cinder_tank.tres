@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Cinder Tank.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 4ece8ce9361f85dade48988eb68a873f6f0318627055053a16e8bfb2bef951d5
+; source-sha256: 87cae8f22d418ae5ada74da77da776182e43faddbdf262e9d77bfbc9688d5f48
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -9,8 +9,8 @@ script = ExtResource("1")
 display_name = "Cinder Tank"
 unit_class = 1
 can_target = Array[int]([0, 1])
-hp = 22
-attack = 7
+hp = 28
+attack = 9
 attack_range = 4
 defense = 0
 move_cost = 2

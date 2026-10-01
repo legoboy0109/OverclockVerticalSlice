@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Hauler.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: f7057e784f341c5b7d210d451df960f1ef60318bc71fcb701e3043031c128d29
+; source-sha256: 20d79b5270ff1037cb2ea97d9b593ff5248acf0f1b7a4701f5c5ecaf7c94b247
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -9,7 +9,7 @@ script = ExtResource("1")
 display_name = "Hauler"
 unit_class = 1
 can_target = Array[int]([])
-hp = 18
+hp = 23
 attack = 0
 attack_range = 0
 defense = 0

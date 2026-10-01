@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Battery.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 53be990aea82f6d86ba1962d0b0751f6893d2eee0f18296cd9038374d2019826
+; source-sha256: 3ff501ae4b416a32e15eafb10fdfbe89eb6d6b00d37f5179172880ae58d96c40
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -9,8 +9,8 @@ script = ExtResource("1")
 display_name = "Battery"
 unit_class = 1
 can_target = Array[int]([0, 1])
-hp = 16
-attack = 8
+hp = 20
+attack = 10
 attack_range = 5
 defense = 0
 move_cost = 3

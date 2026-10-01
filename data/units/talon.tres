@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Talon.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 81953c0211eec4141fdb81dbdb3851cda565a1026dc0cfeac11bbfa9508690d0
+; source-sha256: b306064c56fd09084cf7db432ba91befa67da90e6f394e3626d22e3a4e2ead9c
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -9,8 +9,8 @@ script = ExtResource("1")
 display_name = "Talon"
 unit_class = 2
 can_target = Array[int]([2])
-hp = 7
-attack = 8
+hp = 9
+attack = 10
 attack_range = 2
 defense = 0
 move_cost = 1

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Lance Tank.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: fc90cc35e99a52b83adce5784dec21800815b69532a0c4c81c989d066ac92cb2
+; source-sha256: a52fda5aa3de6485c9fc2379daf21ebbbaf5cca341d8e9430a3030690400360b
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -9,8 +9,8 @@ script = ExtResource("1")
 display_name = "Lance Tank"
 unit_class = 1
 can_target = Array[int]([0, 1])
-hp = 22
-attack = 8
+hp = 28
+attack = 10
 attack_range = 3
 defense = 0
 move_cost = 2

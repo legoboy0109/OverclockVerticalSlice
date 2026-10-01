@@ -3,8 +3,8 @@ id: fighter
 unit_class: air
 can_target:
 - air
-hp: 7
-attack: 6
+hp: 9
+attack: 8
 attack_range: 2
 defense: 0
 move_cost: 1

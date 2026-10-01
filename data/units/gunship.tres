@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Gunship.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 5ac98b3021af88a3fcb0b8e328308641f89f7635681e95ab13ebdc8ac348141a
+; source-sha256: 06896fa1a33d5af14f341b9c75c7b69ad8c3f8233bba0015a3435b2f51374981
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -9,8 +9,8 @@ script = ExtResource("1")
 display_name = "Gunship"
 unit_class = 2
 can_target = Array[int]([0, 1])
-hp = 8
-attack = 5
+hp = 10
+attack = 6
 attack_range = 1
 defense = 0
 move_cost = 1

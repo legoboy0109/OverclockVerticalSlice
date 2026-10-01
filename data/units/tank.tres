@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Tank.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: e4823006f99d228157c27a8e750537ba9d181c7e6bad339316938452708cb554
+; source-sha256: 652511423376f9e602e1df4acf7e1176bf4174c01bd71b2fe372b4d3cba0d113
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -9,8 +9,8 @@ script = ExtResource("1")
 display_name = "Tank"
 unit_class = 1
 can_target = Array[int]([0, 1])
-hp = 22
-attack = 7
+hp = 28
+attack = 9
 attack_range = 2
 defense = 0
 move_cost = 2
