@@ -97,6 +97,7 @@ const ENTRY_LABELS: Dictionary = {
 	# drain, and sees no other consequence — which reads as a bug, not as a build.
 	&"ProductionStartedEvent": "Production started",
 	&"ProductionCancelledEvent": "Production cancelled",
+	&"RushedEvent": "Rushed",
 	&"UnitMovedEvent": "Unit moved",
 	&"UnitDestroyedEvent": "Unit destroyed",
 	&"DamageEvent": "Damage dealt",

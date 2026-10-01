@@ -230,3 +230,10 @@ extends Resource
 ## may override this per-tech via `TechDef.ap_surcharge` (Research-owned), which
 ## defaults to this value.
 @export var research_ap_cost: int = 1
+
+## ★ 2026-09-30 (user decision): AP to RUSH a construction site or a vehicle/aircraft in
+## production — each rush removes one turn from its timer, never below "ready at the start of
+## the owner's next turn", so a rushed thing is still never usable the turn it was rushed.
+## Flat per turn removed (not scaled by price) so the cost reads at a glance. ⚠ Starting value,
+## untuned: against a 20-AP turn, 4 = one rush costs about two moves.
+@export var rush_ap_cost: int = 4

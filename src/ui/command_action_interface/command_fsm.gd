@@ -130,7 +130,7 @@ const NO_SINGLE_COST: int = -1
 ## verb of the selected thing exactly like Produce/Build — never a HUD control.
 ## Appended at the end, never inserted, for the same ordinal-stability reason as
 ## [constant Verb.BUILD].
-enum Verb { MOVE, ATTACK, PRODUCE, WAIT, CANCEL_BUILD, DISBAND, BUILD, RESEARCH, CANCEL_RESEARCH, ABILITY }
+enum Verb { MOVE, ATTACK, PRODUCE, WAIT, CANCEL_BUILD, DISBAND, BUILD, RESEARCH, CANCEL_RESEARCH, ABILITY, RUSH }
 
 ## Disablement reason flags (powers of two — see [member VerbEntry.reason]'s
 ## doc comment for why this is a bitmask, not a single code). Each flag names
@@ -160,6 +160,10 @@ enum Reason {
 	NOTHING_RESEARCHABLE = 131072, ## Research: [method Research.legal_research_targets] is empty for this player right now — every tech is already researched, excluded, or gated. SITUATIONAL.
 	NO_ABILITIES = 524288,        ## Ability: nothing this unit carries could be used right now, and it carries no catalogue ability either. STRUCTURAL — hidden (every ground unit can embark, so an always-dim row would be noise).
 	NOTHING_IN_RESEARCH = 262144,  ## Cancel Research: this researcher has no [member StructureState.research_target] to cancel. STRUCTURAL for the row's purposes — hidden, mirrors NOT_UNDER_CONSTRUCTION.
+	# ★ Rush (2026-09-30), appended to preserve every existing bit value.
+	NOTHING_TO_RUSH = 1048576,     ## Rush: not an own structure that is under construction or producing. STRUCTURAL — hidden.
+	NOT_RUSHABLE = 2097152,        ## Rush: producing infantry or a builder, which can't be rushed (user decision). SITUATIONAL — shown, so the rule is learned.
+	RUSH_AT_MINIMUM = 4194304,     ## Rush: already ready at the start of the next turn — the floor. SITUATIONAL.
 }
 
 
@@ -368,6 +372,7 @@ static func menu_model(state: GameState, entity: EntityState) -> Array[VerbEntry
 	menu.append(_produce_entry(state, entity))
 	menu.append(_build_entry(state, entity))
 	menu.append(_research_entry(state, entity))
+	menu.append(_rush_entry(state, entity))
 	menu.append(_wait_entry(entity))
 	menu.append(_cancel_build_entry(state, entity))
 	menu.append(_cancel_research_entry(state, entity))
@@ -686,6 +691,37 @@ static func _research_entry(state: GameState, entity: EntityState) -> VerbEntry:
 ## already exposes [member StructureState.research_target]/
 ## [member StructureState.research_turns_remaining] as public state, exactly like
 ## [method _is_stood_down] reads [member UnitState.stood_down] directly.
+## Builds the Rush [VerbEntry] (2026-09-30) — the menu face of [method BaseProduction.validate_rush],
+## mapping its answer onto flags rather than re-deriving the rule (Pass-Through Invariant).
+## Carries the rush's AP price, since like Attack it is one number known up front.
+static func _rush_entry(state: GameState, entity: EntityState) -> VerbEntry:
+	var cost: int = BaseProduction.rush_ap_cost()
+	if not (entity is StructureState) or entity.owner != state.active_player:
+		return VerbEntry.new(Verb.RUSH, false, Reason.NOTHING_TO_RUSH)
+	var action := RushAction.new()
+	action.structure_id = entity.entity_id
+	match BaseProduction.validate_rush(state, action):
+		Action.Reason.OK:
+			return VerbEntry.new(Verb.RUSH, true, Reason.NONE, cost)
+		Action.Reason.NOT_RUSHABLE:
+			return VerbEntry.new(Verb.RUSH, false, Reason.NOT_RUSHABLE)
+		Action.Reason.RUSH_AT_MINIMUM:
+			return VerbEntry.new(Verb.RUSH, false, Reason.RUSH_AT_MINIMUM)
+		Action.Reason.CANT_AFFORD:
+			return VerbEntry.new(Verb.RUSH, false, Reason.INSUFFICIENT_AP, cost)
+	return VerbEntry.new(Verb.RUSH, false, Reason.NOTHING_TO_RUSH)
+
+
+## The Rush row's effect, e.g. "3 > 2 turns", or "" when [param entity] has nothing to rush.
+static func rush_preview_text(entity: EntityState) -> String:
+	if not (entity is StructureState):
+		return ""
+	var turns: int = BaseProduction.rush_turns_remaining(entity as StructureState)
+	if turns < 2:
+		return ""
+	return "%d > %d turns" % [turns, turns - 1]
+
+
 static func research_status_text(entity: EntityState) -> String:
 	if not (entity is StructureState):
 		return ""

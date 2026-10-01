@@ -886,6 +886,10 @@ func _announce_research(result: ActionResult) -> void:
 			_flash_msg("Research started: %s (%d turns)." % [e.tech.display_name, e.turns_remaining])
 		elif e is ResearchCancelledEvent and e.owner == LOCAL_PLAYER:
 			_flash_msg("Research cancelled: %s (+%d CR back)." % [e.tech.display_name, e.refund])
+		elif e is RushedEvent and e.owner == LOCAL_PLAYER:
+			var what: String = "construction" if e.construction else e.unit_type.display_name
+			_flash_msg("Rushed %s: ready %s (-%d AP)." % [what,
+				"next turn" if e.turns_remaining <= 1 else "in %d turns" % e.turns_remaining, e.ap_cost])
 		elif e is UnitEmbarkedEvent:
 			var who: String = "as pilot" if e.as_pilot else "as a passenger"
 			_flash_msg("Embarked %s." % who)
@@ -1312,6 +1316,12 @@ func _on_menu_verb_chosen(verb: int) -> void:
 			var disband := DisbandAction.new()
 			disband.entity_id = entity.entity_id # action.player set by commit.
 			_cmd.dispatch_commit(disband, _state)
+		CommandFSM.Verb.RUSH:
+			# One press, one turn off — repeatable while the row stays enabled, and the
+			# menu re-opens after the commit showing the new timer.
+			var rush := RushAction.new()
+			rush.structure_id = entity.entity_id # action.player set by commit.
+			_cmd.dispatch_commit(rush, _state)
 		CommandFSM.Verb.CANCEL_RESEARCH:
 			# Second press of the arm-then-confirm gate, like Disband above.
 			var cancel_research := CancelResearchAction.new()
