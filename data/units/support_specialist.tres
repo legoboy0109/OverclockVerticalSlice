@@ -20,6 +20,7 @@ produce_cost = 600
 production_turns = 1
 max_ammo = -1
 upkeep = 230
+ground_offset_px = 0
 counts_toward_cap = true
 can_counterattack = false
 can_build = false

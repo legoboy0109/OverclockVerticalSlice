@@ -108,6 +108,8 @@ KINDS: dict[str, Kind] = {
         Field("max_ammo", "int", -1, lo=-1, hi=20,
               help="Attacks before resupply; -1 = class default (vehicles 4, aircraft 3, infantry unlimited); 0 = unlimited"),
         Field("upkeep", "int", 0, help="Credits per turn"),
+        Field("ground_offset_px", "int", 0, lo=-32, hi=32,
+              help="Screen px to draw the sprite lower on its tile (art sitting high); 0 = feet on the tile centre"),
         Field("counts_toward_cap", "bool", True),
         Field("can_counterattack", "bool", False),
         Field("can_build", "bool", False),

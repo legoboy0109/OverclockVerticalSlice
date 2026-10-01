@@ -12,6 +12,7 @@ move_cost: 2
 soft_move_cap: 3
 produce_cost: 1800
 production_turns: 2
+ground_offset_px: 7
 upkeep: 1050
 counts_toward_cap: false
 can_counterattack: false

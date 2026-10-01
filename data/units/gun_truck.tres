@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Gun Truck.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 51dc5ea1d2e7781ef2c2636f4e43c103e0b27d6076fd10ea0d3541fcd448b710
+; source-sha256: fcb319f15adfe1a452ef74d52ce125e3d87cf78a678b00936fd6bee8ccd5665c
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -19,6 +19,7 @@ produce_cost = 900
 production_turns = 2
 max_ammo = -1
 upkeep = 450
+ground_offset_px = 5
 counts_toward_cap = false
 can_counterattack = false
 can_build = false

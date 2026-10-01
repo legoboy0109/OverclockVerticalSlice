@@ -158,3 +158,8 @@ enum AreaShape { SINGLE, BURST, LINE }
 ## -1 = the class default ([member CombatConfig.vehicle_ammo] / [member CombatConfig.air_ammo];
 ## infantry never use ammo); 0 = unlimited. Read through [method Ammo.max_ammo], never directly.
 @export var max_ammo: int = -1
+
+## ★ 2026-10-01 (user request): screen pixels to draw this unit's sprite BELOW its tile's
+## ground point, for art whose feet/hull sit visually high (the Builder's splayed legs).
+## Presentation only — never read by rules. 0 = feet on the tile centre.
+@export var ground_offset_px: int = 0
