@@ -383,15 +383,22 @@
   {
    "id": "empire_factory",
    "kind": "struct",
-   "raw": "art-source/generated/order/empire_factory_2.png",
+   "raw": "art-source/generated/zstructs/empire_factory_2.png",
    "axis": "w",
    "px": 256,
    "flatten": true,
    "cutter": "flood",
-   "declutter": 8,
-   "declutter_smooth": true,
-   "accent_cap": 15,
-   "accent_sat": 0.5
+   "hue_max": 60,
+   "keep_accent": 0.15,
+   "smooth": 3,
+   "plate_band": [
+    0.0,
+    0.85
+   ],
+   "accent_colors": 2,
+   "touches": {
+    "base_rim": 1
+   }
   },
   {
    "id": "empire_airfield",

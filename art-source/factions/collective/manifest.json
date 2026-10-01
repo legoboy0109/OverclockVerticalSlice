@@ -506,12 +506,20 @@
    "kind": "struct",
    "axis": "w",
    "px": 256,
-   "raw": "art-source/generated/collective/union_factory.png",
+   "raw": "art-source/generated/zstructs/union_factory_2.png",
    "flatten": true,
-   "crop": 0.02,
-   "keep_accent": 0.25,
-   "accent_edges": true,
-   "cutter": "flood"
+   "keep_accent": 0.15,
+   "cutter": "flood",
+   "hue_max": 60,
+   "smooth": 3,
+   "plate_band": [
+    0.0,
+    0.85
+   ],
+   "accent_colors": 2,
+   "touches": {
+    "base_rim": 1
+   }
   },
   {
    "id": "union_airfield",
