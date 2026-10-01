@@ -3,7 +3,7 @@ id: forward_depots
 description: Supply structures resupply units up to 2 tiles away.
 tree: economy
 tier: 2
-research_cost: 1800
+research_cost: 1200
 research_time: 3
 ap_surcharge: 6
 requires:

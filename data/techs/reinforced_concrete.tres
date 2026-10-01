@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Reinforced Concrete.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: ae950ea461f04a289ba25fff5b8ccff42c530a3ba17785e550fb007db97ab0b2
+; source-sha256: 6991904702030187b807a0fe321269c0661955be9bc7c09c879c077392b762a0
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/fortifications.tres" id="2"]
@@ -11,7 +11,7 @@ script = ExtResource("1")
 display_name = "Reinforced Concrete"
 description = "All structures get +1 defense."
 tier = 2
-research_cost = 1800
+research_cost = 1200
 research_time = 3
 ap_surcharge = 6
 prerequisites = [ExtResource("2")]
@@ -29,6 +29,7 @@ build_ap_discount = 0
 produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
+infantry_attack_bonus = 0
 vehicle_defense_bonus = 0
 tree = "defense"
 move_cap_bonus = 0
@@ -40,7 +41,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

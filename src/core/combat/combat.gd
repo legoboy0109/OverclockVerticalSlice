@@ -74,9 +74,6 @@ static func damage(state: GameState, attacker: EntityState, defender: EntityStat
 	if attacker is UnitState and Research.ignores_cover(state, attacker.owner):
 		cover = 0
 	var def: int = Unit.effective_defense(state, defender) if defender is UnitState else _structure_defense(state, defender)
-	# ★ 2026-10-01 (tech trees): Dig In — defence while standing in Cover (whoever Cover protects).
-	if defender is UnitState and Unit.benefits_from_cover(defender) and state.grid.is_cover(defender.position.x, defender.position.y):
-		def += Research.sum(state, defender.owner, &"cover_defense")
 	var atk: int = _effective_attack_for(state, attacker) + _target_bonus(state, attacker, defender)
 	# DT-3: resistance is ONE additive term; MIN_DAMAGE still floors every landed hit (DT-5).
 	return max(CombatBalance.combat.min_damage, atk - cover - def - resistance(defender, dtype))

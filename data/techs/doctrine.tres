@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=5 format=3]
 ; GENERATED from game-data/Techs/Doctrine.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 4eab20b626623a87ebd2bd7dbdf902a65956c153c77622383e6972fb4f5a743d
+; source-sha256: 55d245cba8004a291e789dd2e5ccb9b9c7ab9f7b4375b989ceeb460441765296
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/blitz.tres" id="2"]
@@ -12,7 +12,7 @@ script = ExtResource("1")
 display_name = "Doctrine"
 description = "Ground vehicles get +1 attack and +1 defense."
 tier = 3
-research_cost = 3000
+research_cost = 1600
 research_time = 4
 ap_surcharge = 8
 prerequisites = [ExtResource("2")]
@@ -30,6 +30,7 @@ build_ap_discount = 0
 produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 1
+infantry_attack_bonus = 0
 vehicle_defense_bonus = 1
 tree = "offense"
 move_cap_bonus = 0
@@ -41,7 +42,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

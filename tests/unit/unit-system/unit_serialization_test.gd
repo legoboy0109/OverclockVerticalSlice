@@ -65,6 +65,7 @@ const KNOWN_FIELDS: Array[String] = [
 	# ★ Tech trees (2026-10-01) — cached tech bonuses; a lookahead that lost them would misjudge
 	# hp, reach, ammo and attack price.
 	"tech_hp_bonus", "tech_move_bonus", "tech_ammo_bonus", "tech_attack_ap_discount",
+	"tech_move_cost_discount",
 ]
 
 

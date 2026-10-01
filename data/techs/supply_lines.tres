@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=2 format=3]
 ; GENERATED from game-data/Techs/Supply Lines.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 842cda6c29020aa14119d34da16d01e751dbf2e9ba0f485672869e00cbf98e74
+; source-sha256: 6a827b10b9ed5928d6b21651d56f5f2f6758ebbbdcc45b2073f562eb8787b1cf
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 
@@ -9,7 +9,7 @@ script = ExtResource("1")
 display_name = "Supply Lines"
 description = "Vehicles and aircraft +1 ammo; Supply Depots cost 50% less."
 tier = 1
-research_cost = 1000
+research_cost = 800
 research_time = 3
 ap_surcharge = 4
 prerequisites = []
@@ -27,6 +27,7 @@ build_ap_discount = 0
 produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
+infantry_attack_bonus = 0
 vehicle_defense_bonus = 0
 tree = "economy"
 move_cap_bonus = 0
@@ -38,7 +39,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

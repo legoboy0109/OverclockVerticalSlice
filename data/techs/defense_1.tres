@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=2 format=3]
 ; GENERATED from game-data/Techs/Hardened Armor.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 638968b95b9db1dc0afad7256870930a1b4dcb4c5ee33ebf5ba9fb5110193d09
+; source-sha256: c40b4c56f0af6b85e6dec2d3d37c79622d2f13b602556a3773b09c05101bc163
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 
@@ -9,7 +9,7 @@ script = ExtResource("1")
 display_name = "Hardened Armor"
 description = "+1 defense for all units."
 tier = 1
-research_cost = 1000
+research_cost = 800
 research_time = 3
 ap_surcharge = 4
 prerequisites = []
@@ -27,6 +27,7 @@ build_ap_discount = 0
 produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
+infantry_attack_bonus = 0
 vehicle_defense_bonus = 0
 tree = "defense"
 move_cap_bonus = 0
@@ -38,7 +39,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

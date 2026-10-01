@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=5 format=3]
 ; GENERATED from game-data/Techs/Strip the Wrecks.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 47c888730e9d3a2ea5b146ce2252c4de512081349b081a5720485909ea079bc8
+; source-sha256: 14723d1fdec2fc1f6607b3a16e5a5fada52d30593394b9644016bb1770fe3a38
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/foundry.tres" id="2"]
@@ -12,7 +12,7 @@ script = ExtResource("1")
 display_name = "Strip the Wrecks"
 description = "Destroying an enemy unit returns 40% of its cost to you."
 tier = 3
-research_cost = 3000
+research_cost = 1600
 research_time = 4
 ap_surcharge = 8
 prerequisites = [ExtResource("2")]
@@ -30,6 +30,7 @@ build_ap_discount = 0
 produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
+infantry_attack_bonus = 0
 vehicle_defense_bonus = 0
 tree = "economy"
 move_cap_bonus = 0
@@ -41,7 +42,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

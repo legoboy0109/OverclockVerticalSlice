@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Quartermasters.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 5228854c0b0e9d8d774edf1a86208544e711c7f7c770a6548fdcb4cd647488ad
+; source-sha256: 63435e223d7ecde033e50781ef5e38db9bebb3d1bac895f22cbe341f0f43bdf7
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/logistics.tres" id="2"]
@@ -9,9 +9,9 @@
 [resource]
 script = ExtResource("1")
 display_name = "Quartermasters"
-description = "All upkeep 25% lower."
+description = "All upkeep 10% lower."
 tier = 3
-research_cost = 3000
+research_cost = 1600
 research_time = 4
 ap_surcharge = 8
 prerequisites = [ExtResource("2")]
@@ -29,6 +29,7 @@ build_ap_discount = 0
 produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
+infantry_attack_bonus = 0
 vehicle_defense_bonus = 0
 tree = "economy"
 move_cap_bonus = 0
@@ -40,7 +41,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0
@@ -63,7 +64,7 @@ vehicle_rush_half = false
 vehicle_production_turn_discount = 0
 kill_refund_pct = 0
 ap_per_turn_bonus = 0
-upkeep_discount_pct = 25
+upkeep_discount_pct = 10
 structure_cost_discount_pct = 0
 pop_cap_bonus = 0
 infantry_cost_discount_pct = 0

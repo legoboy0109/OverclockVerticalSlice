@@ -3,7 +3,7 @@ id: fire_discipline
 description: Attacks cost 1 less AP (minimum 1).
 tree: offense
 tier: 3
-research_cost: 3000
+research_cost: 1600
 research_time: 4
 ap_surcharge: 8
 requires:

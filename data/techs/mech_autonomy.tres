@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=7 format=3]
 ; GENERATED from game-data/Techs/Mech Autonomy.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: bb8d24bddb8b1830030995fc6a0e29df98f52c7cc731b7d9bd12659da2f73af3
+; source-sha256: cebf257ea67a263ee275b0bc55849dd691dba48a474ffcb3fd9253de49d4a448
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/logistics.tres" id="2"]
@@ -14,7 +14,7 @@ script = ExtResource("1")
 display_name = "Mech Autonomy"
 description = "Sentinel and Breaker mechs no longer need pilots. Crewed ones eject their pilot."
 tier = 3
-research_cost = 3000
+research_cost = 1600
 research_time = 4
 ap_surcharge = 8
 prerequisites = [ExtResource("2")]
@@ -32,6 +32,7 @@ build_ap_discount = 0
 produce_cost_discount_pct = 0
 frees_pilots = [ExtResource("4"), ExtResource("5")]
 vehicle_attack_bonus = 0
+infantry_attack_bonus = 0
 vehicle_defense_bonus = 0
 tree = "economy"
 move_cap_bonus = 0
@@ -43,7 +44,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

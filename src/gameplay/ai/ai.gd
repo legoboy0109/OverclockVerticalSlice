@@ -2277,6 +2277,8 @@ static func _score_research_candidates(lookahead: GameState, entity: EntityState
 		return best
 	if economy_investments_committed >= AIBalance.ai.max_economy_investments_per_turn:
 		return best
+	if _fighter_count(lookahead, player) < AIBalance.ai.research_min_army:
+		return best
 
 	for tech: TechDef in Research.legal_research_targets(lookahead, player):
 		var action := ResearchAction.new()
@@ -2288,7 +2290,7 @@ static func _score_research_candidates(lookahead: GameState, entity: EntityState
 
 		var cost: int = Research.effective_research_cost(lookahead, tech, player)
 		var ap_surcharge: int = Research.effective_research_ap_surcharge(lookahead, tech, player)
-		var value: float = _tech_research_value(lookahead, player, tech)
+		var value: float = _tech_research_value(lookahead, player, tech) * _research_lean(lookahead, player, tech)
 		var denom: float = ap_equivalent_cost(cost, ap_surcharge)
 		var score: float = _action_score(value / denom, false)
 		if _is_better(score, cost, lab.entity_id, best.score, best.ap_cost, best.entity_id):
@@ -2300,15 +2302,13 @@ static func _score_research_candidates(lookahead: GameState, entity: EntityState
 ## Sums [method _research_value] over every effect [param tech] carries (CR-14: effects
 ## are data, so a tech can in principle carry more than one nonzero field, even though
 ## none of the nine shipped techs currently do) — the dispatch point [method
-## _score_research_candidates] calls once per tech. Every permanent army-wide effect
-## (attack/defense/range/cover-ignore/heal/AP-discounts/cost-discount — everything except
-## Economy Tech) uses [member AIConfig.tech_value_horizon], the SAME horizon [method
-## _attack_defense_tech_marginal_value]'s GDD precedent already established for a
-## permanent buff that pays out for the rest of the match; Economy Tech alone uses
-## [member AIConfig.economy_horizon] (an income projection, matching [method _economy_value]'s
-## own horizon) per the GDD's [code]research_value[/code] formula note.
+## _score_research_candidates] calls once per tech. ★ 2026-10-01: every effect is valued over
+## [method _tech_horizon] at [member AIConfig.tech_value_decay] — a tech pays out for the rest of
+## the match (user direction: "value tech more since it will have a more universal impact
+## throughout the game") — except Economy Tech's income, which stays on the short
+## [member AIConfig.economy_horizon] like every other income projection (see that knob's note).
 static func _tech_research_value(lookahead: GameState, player: int, tech: TechDef) -> float:
-	var horizon: int = AIBalance.ai.tech_value_horizon
+	var horizon: int = _tech_horizon(lookahead)
 	var total: float = 0.0
 	if tech.attack_bonus != 0:
 		total += _research_value(tech.research_time, horizon, \
@@ -2329,7 +2329,7 @@ static func _tech_research_value(lookahead: GameState, player: int, tech: TechDe
 		total += _research_value(tech.research_time, horizon, \
 			_foundry_tech_marginal_value(lookahead, player, tech))
 	if tech.economy_tier_bonus != 0:
-		total += _research_value(tech.research_time, AIBalance.ai.economy_horizon, \
+		total += _research_value(tech.research_time, mini(horizon, AIBalance.ai.economy_horizon), \
 			credits_to_ap(_economy_tech_marginal_value(Balance.economy.econ_tier_bonus, 0, 0)))
 	var tree_value: float = _tree_effects_marginal_value(lookahead, player, tech)
 	if tree_value > 0.0:
@@ -2349,9 +2349,9 @@ static func _tree_effects_marginal_value(s: GameState, p: int, t: TechDef) -> fl
 	ae += 0.4 * t.move_cap_bonus + 0.3 * t.vehicle_move_cap_bonus * veh + 0.5 * t.infantry_move_cost_discount * inf
 	ae += 0.6 * (t.attack_vs_armor + t.attack_vs_infantry) + 0.25 * t.infantry_attack_vs_structures * inf
 	ae += AIBalance.ai.range_bonus_attack_equivalent * t.vehicle_range_bonus * veh
-	ae += 0.4 * (t.infantry_cover_attack + t.cover_defense) * inf
+	ae += 0.4 * t.infantry_cover_attack * inf + 0.3 * t.cover_heal * inf
 	ae += 0.3 * (t.infantry_hp_bonus * inf + t.vehicle_hp_bonus * veh) + 0.8 * t.vehicle_self_repair * veh
-	ae += (t.vehicle_attack_bonus + t.vehicle_defense_bonus + t.aircraft_attack_bonus) * veh
+	ae += (t.vehicle_attack_bonus + t.vehicle_defense_bonus + t.aircraft_attack_bonus) * veh + t.infantry_attack_bonus * inf
 	ae += 0.3 * (t.structure_defense_bonus + t.defensive_attack_bonus + t.defensive_range_bonus + t.aura_defense_bonus)
 	ae += 0.01 * t.structure_hp_pct + 0.02 * t.hq_hp_bonus + 0.15 * t.hq_attack + (0.4 if t.defensive_counterattack else 0.0)
 	ae += 0.15 * t.defensive_anti_air + 0.4 * t.build_time_discount + 0.2 * t.ammo_bonus * veh
@@ -2364,6 +2364,28 @@ static func _tree_effects_marginal_value(s: GameState, p: int, t: TechDef) -> fl
 		+ _cheapest_producible_cost(s, p) * 0.5 * (t.kill_refund_pct + t.infantry_cost_discount_pct * inf) / 100.0 \
 		+ 6.0 * t.structure_cost_discount_pct + 3.0 * t.depot_cost_discount_pct
 	return _attack_defense_tech_marginal_value(ae) + ap + credits_to_ap(credits)
+
+
+## This match's fixed lean on [param tech] for [param player]: a factor in
+## [code][1 - research_variety, 1 + research_variety][/code] derived from [member
+## GameState.match_seed], so the AI's research path varies between matches but never within
+## one (and is reproducible from the seed). 1.0 when the seed is 0.
+static func _research_lean(s: GameState, player: int, tech: TechDef) -> float:
+	var v: float = AIBalance.ai.research_variety
+	if s.match_seed == 0 or v <= 0.0:
+		return 1.0
+	var h: int = hash("%d:%d:%s" % [s.match_seed, player, tech.display_name])
+	var frac: float = float(h & 0xFFFF) / 65535.0
+	return 1.0 + v * (2.0 * frac - 1.0)
+
+
+## [param p]'s units that can fight — everything except Builders.
+static func _fighter_count(s: GameState, p: int) -> int:
+	var n: int = 0
+	for e: EntityState in s.entities():
+		if e is UnitState and e.owner == p and not (e as UnitState).type.can_build:
+			n += 1
+	return n
 
 
 ## Share of [param p]'s units of class [param cls] (0.5 with no army yet, so early picks aren't 0).
@@ -2547,8 +2569,17 @@ static func _lab_value(lookahead: GameState, player: int) -> float:
 static func _research_value(research_time: int, horizon: int, marginal_tech_value: float) -> float:
 	var decayed_sum: float = 0.0
 	for t in range(research_time + 1, horizon + 1):
-		decayed_sum += marginal_tech_value * pow(AIBalance.ai.economy_decay, t)
+		decayed_sum += marginal_tech_value * pow(AIBalance.ai.tech_value_decay, t)
 	return decayed_sum
+
+
+## Turns a tech is valued over: [member AIConfig.tech_value_horizon], capped by the rounds the
+## match has left (no cap when the match has no round limit).
+static func _tech_horizon(s: GameState) -> int:
+	var h: int = AIBalance.ai.tech_value_horizon
+	if s.max_rounds > 0:
+		h = mini(h, maxi(0, s.max_rounds - s.round_number))
+	return h
 
 
 ## `marginal_tech_value(tech, t)` for Attack/Defense Tech (GDD Formulas,

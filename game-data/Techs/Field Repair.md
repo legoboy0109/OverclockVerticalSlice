@@ -3,7 +3,7 @@ id: field_repair
 description: Units that neither move nor attack heal 1 HP at the start of your turn.
 tree: defense
 tier: 2
-research_cost: 1800
+research_cost: 1200
 research_time: 3
 ap_surcharge: 6
 requires:

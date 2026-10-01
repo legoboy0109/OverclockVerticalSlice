@@ -84,6 +84,8 @@ extends Resource
 @export var frees_pilots: Array[UnitTypeDef] = []
 ## Added to GROUND VEHICLES only (the Holy Cosmic Empire's Doctrine line).
 @export var vehicle_attack_bonus: int = 0
+## Added to INFANTRY only (Heavy Ordnance since 2026-10-01 — +1 for every unit won 24-0 in sims).
+@export var infantry_attack_bonus: int = 0
 @export var vehicle_defense_bonus: int = 0
 
 ## ★ 2026-10-01 — branching tech trees (user-approved draft, design doc "Overclock Tech Trees").
@@ -108,8 +110,8 @@ extends Resource
 @export var attack_ap_discount: int = 0
 ## Infantry attack while standing in Cover
 @export var infantry_cover_attack: int = 0
-## Defence for units standing in Cover
-@export var cover_defense: int = 0
+## HP healed at turn start by units standing in Cover
+@export var cover_heal: int = 0
 ## Infantry max HP
 @export var infantry_hp_bonus: int = 0
 ## Vehicle (ground) max HP

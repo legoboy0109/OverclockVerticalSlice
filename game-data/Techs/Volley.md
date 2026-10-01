@@ -3,7 +3,7 @@ id: volley
 description: +1 attack range for all your units that can attack.
 tree: offense
 tier: 2
-research_cost: 1800
+research_cost: 1200
 research_time: 3
 ap_surcharge: 6
 requires:

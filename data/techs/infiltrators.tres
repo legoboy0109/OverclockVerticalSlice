@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Infiltrators.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: d464708a0ba39c52141542acda0c8ea2618269bf719afd3c98ad7a0a0b0efe0a
+; source-sha256: a909b0314ddff8f0ade542eac51301271288e8b208481d6135ddc8a1902ac369
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/rapid_deployment.tres" id="2"]
@@ -11,7 +11,7 @@ script = ExtResource("1")
 display_name = "Infiltrators"
 description = "Infantry pay 1 less AP per tile (minimum 1)."
 tier = 2
-research_cost = 1800
+research_cost = 1200
 research_time = 3
 ap_surcharge = 6
 prerequisites = [ExtResource("2")]
@@ -29,6 +29,7 @@ build_ap_discount = 0
 produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
+infantry_attack_bonus = 0
 vehicle_defense_bonus = 0
 tree = "offense"
 move_cap_bonus = 0
@@ -40,7 +41,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

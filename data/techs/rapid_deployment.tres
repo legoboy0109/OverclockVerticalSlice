@@ -1,15 +1,15 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=2 format=3]
 ; GENERATED from game-data/Techs/Rapid Deployment.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: ea0c8a1f0726977ab81a143e4ea5dcea1cd9cdbed2de75c36f97a3c9c221b825
+; source-sha256: 00fc29486e0d34876b72017c7a449953e83eae7849e1a6e9beff4b59dfd86c11
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
 display_name = "Rapid Deployment"
-description = "All units move 1 more tile before the move surcharge."
+description = "All units move 2 more tiles before the move surcharge."
 tier = 1
-research_cost = 1000
+research_cost = 800
 research_time = 3
 ap_surcharge = 4
 prerequisites = []
@@ -27,9 +27,10 @@ build_ap_discount = 0
 produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
+infantry_attack_bonus = 0
 vehicle_defense_bonus = 0
 tree = "offense"
-move_cap_bonus = 1
+move_cap_bonus = 2
 vehicle_move_cap_bonus = 0
 infantry_move_cost_discount = 0
 attack_vs_armor = 0
@@ -38,7 +39,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

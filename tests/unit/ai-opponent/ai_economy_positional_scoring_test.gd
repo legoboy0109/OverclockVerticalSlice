@@ -703,9 +703,10 @@ func test_research_value_math_is_implemented_per_spec_attack_tech_worked_example
 	var marginal: float = AI._attack_defense_tech_marginal_value(1.0)
 	var value: float = AI._research_value(3, AIBalance.ai.tech_value_horizon, marginal)
 
-	# Assert — marginal_tech_value = 1/1.5*1.5 = 1.0; Sum_{t=4..10} 1.0*0.85^t ~= 2.3644.
+	# Assert — marginal_tech_value = 1/1.5*1.5 = 1.0; Sum_{t=4..20} 1.0*0.9^t ~= 5.4668
+	# (2026-10-01: horizon 10 -> 20, tech decay 0.9 — techs valued over the longer match).
 	assert_float(marginal).is_equal_approx(1.0, 0.0001)
-	assert_float(value).is_equal_approx(2.3644, 0.001)
+	assert_float(value).is_equal_approx(5.4668, 0.001)
 
 
 # --- Regression guard: positional scoring must never outscore/replace a ----

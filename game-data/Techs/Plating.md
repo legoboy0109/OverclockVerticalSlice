@@ -3,7 +3,7 @@ id: plating
 description: +1 more defense for all units.
 tree: defense
 tier: 2
-research_cost: 1800
+research_cost: 1200
 research_time: 3
 ap_surcharge: 6
 requires:

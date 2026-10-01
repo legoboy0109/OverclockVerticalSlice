@@ -3,7 +3,7 @@ id: mech_autonomy
 description: Sentinel and Breaker mechs no longer need pilots. Crewed ones eject their pilot.
 tree: economy
 tier: 3
-research_cost: 3000
+research_cost: 1600
 research_time: 4
 ap_surcharge: 8
 requires:

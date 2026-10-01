@@ -3,7 +3,7 @@ id: fortifications
 description: Structures get +25% HP; armed structures +1 attack.
 tree: defense
 tier: 1
-research_cost: 1000
+research_cost: 800
 research_time: 3
 ap_surcharge: 4
 requires: []

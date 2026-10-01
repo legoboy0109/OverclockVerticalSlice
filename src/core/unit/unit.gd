@@ -64,11 +64,13 @@ static func reset_turn_flags(unit: UnitState) -> void:
 		reset_turn_flags(passenger)
 
 
-## [param unit]'s AP cost per tile, including its pilot's crew bonus (TP-5d), floored at
-## [constant MIN_MOVE_COST] so no crew makes movement free (Dijkstra monotonicity, CR-3).
+## [param unit]'s AP cost per tile, including its pilot's crew bonus (TP-5d) and the cached
+## Infiltrators discount, floored at [constant MIN_MOVE_COST] so nothing makes movement free
+## (Dijkstra monotonicity, CR-3). ★ This — not [method effective_move_cost] — is what Movement
+## actually bills; a per-tile effect that only touches effective_move_cost does nothing in play.
 static func crewed_move_cost(unit: UnitState) -> int:
 	var bonus: int = unit.pilot.type.crew_bonus_move_cost if unit.pilot != null else 0
-	return maxi(MIN_MOVE_COST, unit.type.move_cost + bonus)
+	return maxi(MIN_MOVE_COST, unit.type.move_cost + bonus - unit.tech_move_cost_discount)
 
 
 ## Everyone riding in [param unit]: its pilot (if any) then its cargo, one level deep.
@@ -189,6 +191,8 @@ static func effective_attack(state: GameState, unit: UnitState) -> int:
 	# ★ 2026-10-01 (tech trees): Combined Arms reaches aircraft too; per-type bonuses (Technicals).
 	if unit.type.unit_class == UnitTypeDef.UnitClass.AIR:
 		doctrine += Research.sum(state, unit.owner, &"aircraft_attack_bonus")
+	elif unit.type.unit_class == UnitTypeDef.UnitClass.INFANTRY:
+		doctrine += Research.sum(state, unit.owner, &"infantry_attack_bonus")
 	doctrine += Research.unit_type_bonus(state, unit.owner, unit.type, &"bonus_unit_attack")
 	return unit.type.attack + Research.attack_bonus(state, unit.owner) + _rank_value(CombatBalance.combat.rank_attack, unit.rank) + crew + doctrine
 

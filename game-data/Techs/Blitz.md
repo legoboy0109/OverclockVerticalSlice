@@ -3,7 +3,7 @@ id: blitz
 description: Vehicles and aircraft move 2 more tiles before the surcharge.
 tree: offense
 tier: 2
-research_cost: 1800
+research_cost: 1200
 research_time: 3
 ap_surcharge: 6
 requires:

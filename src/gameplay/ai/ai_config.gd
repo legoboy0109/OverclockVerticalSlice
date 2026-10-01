@@ -56,8 +56,26 @@ extends Resource
 ## `research_value`.
 @export var economy_horizon: int = 6
 
-## Horizon for permanent army-wide buffs (Attack/Defense Tech).
-@export var tech_value_horizon: int = 10
+## Horizon for permanent tech effects (turns). ★ 2026-10-01: raised 10 -> 20: a tech is
+## permanent, so counting only 10 turns made research lose to units every time — in sims the AI
+## never researched past tier 1. Capped by the rounds the match has left ([method AI._tech_horizon]).
+## Income techs (Economy Tech) stay on [member economy_horizon] like every other income projection:
+## at 20 turns +500 Credits/turn outscored the whole opening and the AI fielded no army.
+@export var tech_value_horizon: int = 20
+
+## Per-turn discount for tech value. Gentler than [member economy_decay] (0.85) because a
+## tech's payoff is certain and permanent, where projected income/positions are speculative.
+@export var tech_value_decay: float = 0.9
+
+## Research is not considered until the AI owns this many fighting (non-Builder) units.
+## ★ 2026-10-01: with tier 1 at 800 Credits the AI could afford Industrial Base on turn 1, which
+## pushed its first fighter past turn 6 (tests/integration/ai-opponent/ai_plays_a_real_opening_test).
+@export var research_min_army: int = 1
+
+## How far a match's seed may lean each tech's research score: a factor in
+## [code][1 - v, 1 + v][/code], fixed for the whole match. Big enough to flip close branch
+## choices from match to match, not to make the AI take a clearly worse tech. 0 = off.
+@export var research_variety: float = 0.5
 
 ## Per-turn discount applied to projected future value.
 @export var economy_decay: float = 0.85

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Bulk Contracts.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: b5fb764c53d0d63a7446435abdf8f50317309923fd02465f0f51458b3851e017
+; source-sha256: 0639707993efb4ba873d039c900dcca5735ad465d5a3bf4acecb33a75c3cc754
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/rapid_requisition.tres" id="2"]
@@ -11,7 +11,7 @@ script = ExtResource("1")
 display_name = "Bulk Contracts"
 description = "Structures cost 25% fewer Credits."
 tier = 3
-research_cost = 3000
+research_cost = 1600
 research_time = 4
 ap_surcharge = 8
 prerequisites = [ExtResource("2")]
@@ -29,6 +29,7 @@ build_ap_discount = 0
 produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
+infantry_attack_bonus = 0
 vehicle_defense_bonus = 0
 tree = "economy"
 move_cap_bonus = 0
@@ -40,7 +41,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

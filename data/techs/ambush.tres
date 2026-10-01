@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Ambush.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: eea80524a4d0bf28a9c7af61b8373f69e41b48d7163d3d9370fa9d072dedaea2
+; source-sha256: 795c4dc5e388314f7ef6a7bbe941bf192c87579b663838c464fe4a8da687ee39
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/infiltrators.tres" id="2"]
@@ -9,9 +9,9 @@
 [resource]
 script = ExtResource("1")
 display_name = "Ambush"
-description = "Infantry standing in Cover get +2 attack."
+description = "Infantry standing in Cover get +3 attack."
 tier = 3
-research_cost = 3000
+research_cost = 1600
 research_time = 4
 ap_surcharge = 8
 prerequisites = [ExtResource("2")]
@@ -29,6 +29,7 @@ build_ap_discount = 0
 produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
+infantry_attack_bonus = 0
 vehicle_defense_bonus = 0
 tree = "offense"
 move_cap_bonus = 0
@@ -39,8 +40,8 @@ attack_vs_infantry = 0
 infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
-infantry_cover_attack = 2
-cover_defense = 0
+infantry_cover_attack = 3
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

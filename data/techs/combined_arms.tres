@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Combined Arms.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 9d3ca1affe444d1d33d20fa2f873e90422f03cc21ace2b7a182c1dc2030a6cc6
+; source-sha256: c702c24df6850d29409474e16eed3e855005e6a93c6a225278114e3903b0fa5d
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/blitz.tres" id="2"]
@@ -11,7 +11,7 @@ script = ExtResource("1")
 display_name = "Combined Arms"
 description = "+1 attack for ground vehicles and aircraft."
 tier = 3
-research_cost = 3000
+research_cost = 1600
 research_time = 4
 ap_surcharge = 8
 prerequisites = [ExtResource("2")]
@@ -29,6 +29,7 @@ build_ap_discount = 0
 produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 1
+infantry_attack_bonus = 0
 vehicle_defense_bonus = 0
 tree = "offense"
 move_cap_bonus = 0
@@ -40,7 +41,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

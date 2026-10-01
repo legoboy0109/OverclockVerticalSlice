@@ -176,6 +176,12 @@ static var _dispatch_registered: bool = false
 ## tiebreak_metric].
 @export var max_rounds: int = 0
 
+## ★ 2026-10-01: per-match seed for the AI's research "lean" ([method AI._research_lean]) so it
+## does not research the identical path every match. Set once at match start by the real game
+## (random) and by the simulator (fixed per game); saved with the match so a resumed game keeps
+## its lean. [code]0[/code] (fixtures, tests) = no lean — the AI stays fully deterministic.
+@export var match_seed: int = 0
+
 ## Which metric decides the winner when [member max_rounds] is reached with no
 ## HQ destroyed. See [enum TiebreakMetric].
 ##

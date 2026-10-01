@@ -3,7 +3,7 @@ id: slab_walls
 description: All structures get +2 defense.
 tree: defense
 tier: 2
-research_cost: 1800
+research_cost: 1200
 research_time: 3
 ap_surcharge: 6
 requires:

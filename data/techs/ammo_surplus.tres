@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Ammo Surplus.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 2482986b4890266d4ec21906c6552a8d855cb34d1f2ef790fa76e4b21525b896
+; source-sha256: f4b64a0a081ab0dfb2cad80a901c709a6ffa2b1254c5d955fd62cf2c7181469e
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/forward_depots.tres" id="2"]
@@ -9,9 +9,9 @@
 [resource]
 script = ExtResource("1")
 display_name = "Ammo Surplus"
-description = "Vehicles and aircraft +2 more ammo."
+description = "Vehicles and aircraft +2 more ammo; units beside a supply structure heal 1 HP at the start of your turn."
 tier = 3
-research_cost = 3000
+research_cost = 1600
 research_time = 4
 ap_surcharge = 8
 prerequisites = [ExtResource("2")]
@@ -29,6 +29,7 @@ build_ap_discount = 0
 produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
+infantry_attack_bonus = 0
 vehicle_defense_bonus = 0
 tree = "economy"
 move_cap_bonus = 0
@@ -40,7 +41,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0
@@ -57,7 +58,7 @@ build_time_discount = 0
 ammo_bonus = 2
 depot_cost_discount_pct = 0
 resupply_range = 0
-supply_heal = 0
+supply_heal = 1
 rush_ap_discount = 0
 vehicle_rush_half = false
 vehicle_production_turn_discount = 0

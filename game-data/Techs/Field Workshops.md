@@ -3,7 +3,7 @@ id: field_workshops
 description: Units beside a supply structure heal 2 HP at the start of your turn.
 tree: economy
 tier: 3
-research_cost: 3000
+research_cost: 1600
 research_time: 4
 ap_surcharge: 8
 requires:

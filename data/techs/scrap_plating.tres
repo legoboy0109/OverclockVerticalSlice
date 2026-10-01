@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=3 format=3]
 ; GENERATED from game-data/Techs/Scrap Plating.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: a2f4961a9d6684e06049b54fd7ddbf6b96cac43e68281950697aeb02d883d7a3
+; source-sha256: 0e71e4b6006df5c797dac8766858b588529d6c99cb96741f4ddb80e9a0744bbf
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/defense_1.tres" id="2"]
@@ -10,7 +10,7 @@ script = ExtResource("1")
 display_name = "Scrap Plating"
 description = "+1 defense for all units; ground vehicles +2 max HP."
 tier = 1
-research_cost = 1000
+research_cost = 800
 research_time = 3
 ap_surcharge = 4
 prerequisites = []
@@ -28,6 +28,7 @@ build_ap_discount = 0
 produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
+infantry_attack_bonus = 0
 vehicle_defense_bonus = 0
 tree = "defense"
 move_cap_bonus = 0
@@ -39,7 +40,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_defense = 0
+cover_heal = 0
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 2
 vehicle_self_repair = 0

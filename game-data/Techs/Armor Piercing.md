@@ -3,7 +3,7 @@ id: armor_piercing
 description: +2 attack against vehicles, aircraft and structures.
 tree: offense
 tier: 3
-research_cost: 3000
+research_cost: 1600
 research_time: 4
 ap_surcharge: 8
 requires:
