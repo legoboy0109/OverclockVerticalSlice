@@ -153,6 +153,21 @@ static func state_token(entity: EntityState) -> String:
 	return STATE_IDLE
 
 
+## The art token for a structure IN ITS CURRENT STATE: [constant CONSTRUCTION_TOKEN] while it
+## is UNDER_CONSTRUCTION, else its type's own token. ★ 2026-09-30 (user decision): every
+## construction site shares one generic sprite (foundation, scaffold, crane) and keeps it until
+## completion — no per-type sites, no progress stages. The sprite and the glow mask both
+## resolve through here, so they can never disagree about which art is on the board.
+static func structure_token(structure: StructureState) -> String:
+	if structure.build_status == StructureState.BuildStatus.UNDER_CONSTRUCTION:
+		return CONSTRUCTION_TOKEN
+	return type_token_for(structure.type)
+
+
+## Art token of the shared construction-site sprite (struct_construction_<faction>_<state>.png).
+const CONSTRUCTION_TOKEN: String = "construction"
+
+
 ## Resolves the full [code]res://[/code] texture path for [param entity] owned by
 ## [param faction] and drawn at [param facing], per the art-bible §8.2 convention:
 ## [codeblock]
@@ -180,6 +195,6 @@ static func texture_path(entity: EntityState, faction: FactionDef, facing: Strin
 		var struct_type: StructureTypeDef = (entity as StructureState).type
 		if struct_type == null:
 			return ""
-		var struct_name: String = type_token_for(struct_type)
+		var struct_name: String = structure_token(entity as StructureState)
 		return "%sstruct_%s_%s_%s.png" % [STRUCTURES_DIR, struct_name, faction_str, state]
 	return ""
