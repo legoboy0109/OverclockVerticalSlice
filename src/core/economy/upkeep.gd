@@ -51,12 +51,16 @@ extends RefCounted
 ## percentage: its authored upkeep, with the faction's vehicle discount or surcharge
 ## ([method Faction.vehicle_upkeep_pct_delta]) for anything that is not infantry. Floored at 0.
 static func unit_upkeep(state: GameState, player: int, unit_type: UnitTypeDef) -> int:
+	if not Balance.economy.upkeep_enabled:
+		return 0   # match rule: upkeep off (EconomyConfig.upkeep_enabled)
 	if unit_type.unit_class == UnitTypeDef.UnitClass.INFANTRY:
 		return unit_type.upkeep
 	return maxi(0, unit_type.upkeep * (100 + Faction.vehicle_upkeep_pct_delta(state, player)) / 100)
 
 
 static func total_upkeep(state: GameState, player: int) -> int:
+	if not Balance.economy.upkeep_enabled:
+		return 0   # match rule: upkeep off — structures included, so no partial drain survives
 	var total: int = 0
 	for e: EntityState in state.entities():
 		if e.owner != player:

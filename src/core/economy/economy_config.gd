@@ -82,6 +82,12 @@ extends Resource
 
 # --- Upkeep (the Credit drain; S6-02, unit-upkeep.md) ------------------------
 
+## ★ 2026-09-30 (user decision): match rule — false turns the whole upkeep drain off (units AND
+## structures cost nothing per turn), for testing the economy with and without it. Chosen on the
+## skirmish setup screen ([member MatchSettings.upkeep_enabled]) and applied to the per-match
+## copy by [method Balance.apply_match]; the shipped config keeps it on.
+@export var upkeep_enabled: bool = true
+
 ## Divisor in the derived-upkeep convention. Lower = harsher, smaller armies,
 ## faster games. ★ Tune this to hit a TARGET EQUILIBRIUM ARMY of 7-9 units rather
 ## than for its own sake — the army size is the number with a felt meaning.

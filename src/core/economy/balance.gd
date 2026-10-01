@@ -14,10 +14,12 @@ var base_economy: EconomyConfig = preload("res://data/balance/economy_config.tre
 var economy: EconomyConfig = base_economy
 
 
-## Starts a match's economy: a fresh copy of the shipped values with the player's AP choice.
-func apply_match(ap_per_turn: int) -> void:
+## Starts a match's economy: a fresh copy of the shipped values with the player's AP choice
+## and upkeep rule.
+func apply_match(ap_per_turn: int, upkeep_enabled: bool = true) -> void:
 	economy = base_economy.duplicate()
 	economy.flat_ap_per_turn = ap_per_turn
+	economy.upkeep_enabled = upkeep_enabled
 
 
 ## Back to the shipped values (tests, the simulator, leaving a match).

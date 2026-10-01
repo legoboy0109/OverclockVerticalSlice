@@ -292,14 +292,14 @@ func _build_match() -> void:
 	if SaveGame.pending != null:
 		var loaded: SaveGame.Loaded = SaveGame.pending
 		SaveGame.pending = null
-		Balance.apply_match(loaded.ap_per_turn)
+		Balance.apply_match(loaded.ap_per_turn, loaded.upkeep_enabled)
 		VSMap.select(loaded.map)
 		_state = loaded.state
 		MatchSettings.current = MatchSettings.from_loaded(loaded)   # Restart replays this matchup
 		_reader = GameStateReader.new(_state)
 		return
 	var settings: MatchSettings = MatchSettings.active()
-	Balance.apply_match(settings.ap_per_turn)
+	Balance.apply_match(settings.ap_per_turn, settings.upkeep_enabled)
 	VSMap.select(settings.map)   # ★ the chosen board; every map reader follows it
 	var map: MapDefinition = VSMap.build()
 	_state = MatchSetup.build(map, settings.factions, settings.starting_player(),
