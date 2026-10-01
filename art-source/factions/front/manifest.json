@@ -293,13 +293,20 @@
    "axis": "w",
    "px": 256,
    "flatten": true,
-   "keep_accent": 0.25,
+   "keep_accent": 0.15,
    "id": "solar_factory",
-   "raw": "art-source/generated/front/solar_factory_4.png",
+   "raw": "art-source/generated/zstructs/solar_factory.png",
    "cutter": "flood",
-   "declutter": 8,
-   "declutter_smooth": true,
-   "accent_cap": 15
+   "hue_max": 60,
+   "smooth": 3,
+   "plate_band": [
+    0.0,
+    0.85
+   ],
+   "accent_colors": 2,
+   "touches": {
+    "base_rim": 1
+   }
   },
   {
    "id": "solar_airfield",
