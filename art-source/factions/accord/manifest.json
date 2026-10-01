@@ -52,11 +52,22 @@
   {
    "id": "hq",
    "kind": "struct",
-   "raw": "art-source/factions/accord/sources/hq_rush.png",
-   "clean": true,
+   "raw": "art-source/generated/zstructs/hq.png",
    "axis": "w",
-   "px": 0,
-   "keep_accent": 0.25
+   "px": 256,
+   "flatten": true,
+   "cutter": "flood",
+   "hue_max": 60,
+   "keep_accent": 0.15,
+   "smooth": 3,
+   "plate_band": [
+    0.0,
+    0.85
+   ],
+   "accent_colors": 2,
+   "touches": {
+    "base_rim": 1
+   }
   },
   {
    "id": "barracks",

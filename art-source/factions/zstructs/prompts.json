@@ -3,12 +3,19 @@
  "head": "single isolated sci-fi building, isometric 2:1 dimetric view from above, standing on a flat square base plate,",
  "tail": "the whole building is dark charcoal gunmetal grey, almost black, matte; NO orange anywhere except the glowing parts named above, which are small and bright neon orange; flat cel-shaded 2D game art, flat colors, hard clean edges, large simple shapes, plain flat light grey background, whole building visible with wide margin, centered",
  "neg_extra": "orange walls, orange containers, rust, brown, brick, red roof, multiple buildings, text, watermark, people, terrain, trees, cropped",
- "size": ["--width", "1024", "--height", "1024"],
+ "size": [
+  "--width",
+  "1024",
+  "--height",
+  "1024"
+ ],
  "structs": {
   "empire_factory": "gothic cathedral-like foundry hall built of dark grey stone, a huge pointed-arch vehicle bay door glowing with orange furnace light from inside, one tall bell-tower chimney, thin orange glowing line along the edge of the base plate",
   "solar_barracks": "compact militia barracks made of stacked dark grey corrugated shipping containers with a sandbag wall, a single small orange banner flag on a pole on the roof, one thin orange light strip above the door",
   "solar_airfield": "small flat dark grey landing pad with a low dark grey prefab hangar tent and a thin radio mast, orange glowing landing circle markings painted on the pad",
   "union_factory": "huge heavy boxy dark grey industrial foundry with a giant vehicle bay door glowing orange from the furnace inside, two tall dark smokestacks, a crane gantry on the roof, a single orange hazard stripe band along the base",
-  "independents_barracks": "small scavenger hideout made of stacked dark gunmetal grey shipping containers and welded scrap plates, a patched dark tarp doorway lit orange from inside, one small orange lantern on a watch platform, asymmetric jagged roofline"
+  "independents_barracks": "small scavenger hideout made of stacked dark gunmetal grey shipping containers and welded scrap plates, a patched dark tarp doorway lit orange from inside, one small orange lantern on a watch platform, asymmetric jagged roofline",
+  "solar_factory": "compact low militia vehicle workshop built from dark grey corrugated prefab panels and welded steel, a wide roll-up garage door glowing orange from the work lights inside, a short row of small orange lit windows, a small rooftop vent, wide low building",
+  "hq": "fortified military command headquarters: a heavy squat armored command bunker with sloped dark grey armor walls, a tall communications antenna tower with a small orange beacon light on top, a row of narrow orange lit command windows, a reinforced blast door lit orange, compact and imposing"
  }
 }
