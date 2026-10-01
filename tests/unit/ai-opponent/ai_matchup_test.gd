@@ -391,7 +391,7 @@ func _trooper_army() -> GameState:
 func test_a_durable_unit_rates_higher_than_a_glass_cannon() -> void:
 	var state := _trooper_army()
 	var mech: UnitTypeDef = load("res://data/units/sentinel_mech.tres")   # 20 hp: ~7 hits
-	var glass: UnitTypeDef = load("res://data/units/marksman.tres")      # 3 hp: 1 hit
+	var glass: UnitTypeDef = load("res://data/units/sniper.tres")        # 3 hp: 1 hit (was the Marksman until it went to 5 hp, 2026-10-01)
 	assert_float(AI._durability_factor(state, 0, mech)).is_greater(AI._durability_factor(state, 0, glass))
 	assert_float(AI._durability_factor(state, 0, glass)).is_equal(AIBalance.ai.durability_min)
 	assert_float(AI._durability_factor(state, 0, mech)).is_equal(AIBalance.ai.durability_max)

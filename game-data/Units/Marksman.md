@@ -4,7 +4,7 @@ unit_class: infantry
 can_target:
 - infantry
 - ground_vehicle
-hp: 3
+hp: 5
 attack: 5
 attack_range: 4
 defense: 0
