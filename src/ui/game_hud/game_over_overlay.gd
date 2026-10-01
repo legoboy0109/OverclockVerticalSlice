@@ -49,14 +49,7 @@ extends HudReactiveControl
 ## enough that the final position stays readable underneath — players want to see
 ## what the board looked like when it ended.
 const SCRIM_COLOR: Color = Color(0.0, 0.0, 0.0, 0.72)
-const VICTORY_COLOR: Color = Color(0.55, 0.87, 0.60)
-const DEFEAT_COLOR: Color = Color(0.93, 0.45, 0.35)
-const REASON_COLOR: Color = Color(0.88, 0.88, 0.92)
-const DETAIL_COLOR: Color = Color(0.72, 0.72, 0.78)
 
-const RESULT_FONT_SIZE: int = 44
-const REASON_FONT_SIZE: int = 16
-const DETAIL_FONT_SIZE: int = 13
 
 ## The local player, to render VICTORY (this seat won) vs DEFEAT.
 var _local_player: int = 0
@@ -66,8 +59,46 @@ func configure(local_player: int) -> void:
 	_local_player = local_player
 
 
+# ★ 2026-10-01 (holo glass): a centred glass plate carries the result. The text is drawn on a
+# child laid over the plate (a GlassBackdrop paints over its parent's own _draw), so the order
+# is: scrim (this node) -> plate -> text.
+const PLATE_SIZE: Vector2 = Vector2(560, 186)
+var _plate: Control = null
+var _text_layer: Control = null
+
+
+func _ready() -> void:
+	super()
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_plate = Control.new()
+	_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_plate.size = PLATE_SIZE
+	add_child(_plate)
+	_text_layer = Control.new()
+	_text_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_text_layer.size = PLATE_SIZE
+	_text_layer.draw.connect(_draw_text)
+	_plate.add_child(_text_layer)
+	resized.connect(_sync_plate)
+	_sync_plate()
+
+
+func _sync_plate() -> void:
+	if _plate == null:
+		return
+	_plate.position = ((size - PLATE_SIZE) * 0.5).floor()
+	_plate.visible = is_showing()
+	if _plate.visible and _plate.get_child_count() == 1:
+		# Built lazily so the plate edge can take the WINNER's hue.
+		var hue: Color = UiTheme.player_hue(winning_player())
+		var b := GlassBackdrop.attach(_plate, Color(hue, 0.75), 18.0)
+		b.cut_px = 18.0
+	_text_layer.queue_redraw()
+
+
 func _on_action_applied(_result: ActionResult) -> void:
 	# match_status/winner/win_reason are read live in the getters/_draw; just repaint.
+	_sync_plate()
 	queue_redraw()
 
 
@@ -134,33 +165,28 @@ func _metric_name() -> String:
 func _draw() -> void:
 	if not is_showing():
 		return
-	var font: Font = ThemeDB.fallback_font
-	if font == null:
-		return
-
 	draw_rect(Rect2(Vector2.ZERO, size), SCRIM_COLOR)
 
-	var centre_y: float = size.y * 0.5
+
+## The plate's text: the result glowing in the WINNER's hue (yours on a victory, theirs on a
+## defeat — the art bible allows no "success green / failure red"), the reason, then the
+## tiebreak figures for a round-limit result.
+func _draw_text() -> void:
+	if not is_showing():
+		return
+	var t: Control = _text_layer
+	var w: float = PLATE_SIZE.x
 	var result: String = result_text()
-	var result_color: Color = VICTORY_COLOR if is_local_victory() else DEFEAT_COLOR
-
-	# Result — centred, large, the only thing readable at a glance.
-	var result_w: float = font.get_string_size(
-		result, HORIZONTAL_ALIGNMENT_LEFT, -1, RESULT_FONT_SIZE).x
-	draw_string(font, Vector2((size.x - result_w) * 0.5, centre_y - 18),
-		result, HORIZONTAL_ALIGNMENT_LEFT, -1, RESULT_FONT_SIZE, result_color)
-
-	# Reason — one line, always present.
-	var reason: String = reason_text()
-	var reason_w: float = font.get_string_size(
-		reason, HORIZONTAL_ALIGNMENT_LEFT, -1, REASON_FONT_SIZE).x
-	draw_string(font, Vector2((size.x - reason_w) * 0.5, centre_y + 16),
-		reason, HORIZONTAL_ALIGNMENT_LEFT, -1, REASON_FONT_SIZE, REASON_COLOR)
-
-	# Figures — round-limit results only, where nothing died to explain the outcome.
+	var hue: Color = UiTheme.player_hue(winning_player())
+	var big: Font = UiTheme.font(800)
+	var rw: float = big.get_string_size(result, HORIZONTAL_ALIGNMENT_LEFT, -1, 60).x
+	UiTheme.draw_glow_text(t, big, Vector2((w - rw) * 0.5, 92), result, 60, hue)
+	var reason: String = reason_text().to_upper()
+	var lf: Font = UiTheme.label_font()
+	var rsw: float = lf.get_string_size(reason, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+	t.draw_string(lf, Vector2((w - rsw) * 0.5, 134), reason, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, UiTheme.TEXT)
 	var detail: String = detail_text()
 	if detail != "":
-		var detail_w: float = font.get_string_size(
-			detail, HORIZONTAL_ALIGNMENT_LEFT, -1, DETAIL_FONT_SIZE).x
-		draw_string(font, Vector2((size.x - detail_w) * 0.5, centre_y + 40),
-			detail, HORIZONTAL_ALIGNMENT_LEFT, -1, DETAIL_FONT_SIZE, DETAIL_COLOR)
+		var dw: float = UiTheme.font(500).get_string_size(detail, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+		t.draw_string(UiTheme.font(500), Vector2((w - dw) * 0.5, 166), detail, HORIZONTAL_ALIGNMENT_LEFT, -1, 14,
+			UiTheme.TEXT_MUTED)

@@ -121,6 +121,15 @@ func _run() -> void:
 	if OS.get_cmdline_user_args().has("--cursor-first") and not placed.is_empty():
 		slice._cursor.grid_pos = placed[0]
 		slice._sync_cursor_highlight()
+	# `--game-over=<winner>` ends the match (HQ destroyed) to capture the game-over screen.
+	for a: String in OS.get_cmdline_user_args():
+		if a.begins_with("--game-over="):
+			st.match_status = GameState.MatchStatus.GAME_OVER
+			st.winner = int(a.split("=")[1])
+			st.win_reason = GameState.WinReason.HQ_DESTROYED
+			var ov: GameOverOverlay = slice._hud.game_over_overlay()
+			ov._sync_plate()
+			ov.queue_redraw()
 	for i: int in 12:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw

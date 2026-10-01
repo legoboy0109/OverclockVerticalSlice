@@ -374,6 +374,12 @@ var _armed_verb: int = -1
 ## from the same state the verb rows were built from — so the submenu can never show a
 ## different world from the row that opened it.
 var _research_options: Array[CommandFSM.ResearchOption] = []
+## ★ 2026-10-01 (holo glass): the research picker opens as a CENTRED panel with a title and
+## two-line rows (name over description). As a side submenu beside the HQ it ran off the left
+## edge of the screen and cut every tech's name in half.
+var _submenu_centred: bool = false
+const RESEARCH_PANEL_WIDTH: float = 640.0
+const RESEARCH_ROW_HEIGHT: float = 50.0
 var _research_status: String = ""
 var _research_refund: String = ""
 var _rush_preview: String = ""
@@ -684,6 +690,8 @@ func _fill(box: VBoxContainer, items: Array[Dictionary]) -> void:
 			item["label"], item["right"], item["enabled"], item["is_reason"]
 		)
 		row.pressed.connect(item["on_press"])
+		if item.has("sub"):
+			_add_row_description(row, item["sub"], item["enabled"])
 		# Tagged so _row_for can find a row whose LABEL has changed (an armed
 		# destructive verb no longer reads as its own name).
 		row.set_meta(&"verb", item.get("verb", -1))
@@ -694,7 +702,31 @@ func _fill(box: VBoxContainer, items: Array[Dictionary]) -> void:
 	# Applied after the loop so every row in a list is the same width — a ragged
 	# list of buttons reads as a rendering fault rather than as a menu.
 	for row: Button in rows:
-		row.custom_minimum_size.x = widest
+		row.custom_minimum_size.x = maxf(widest, RESEARCH_PANEL_WIDTH) if row.has_meta(&"two_line") else widest
+
+
+## Turns [param row] into a two-line entry: its name at the top, [param text] beneath in a
+## smaller muted face (research descriptions — the choice between Penetration and Volley
+## needs them, and they no longer have to share one line with the name).
+func _add_row_description(row: Button, text: String, enabled: bool) -> void:
+	row.set_meta(&"two_line", true)
+	row.custom_minimum_size.y = RESEARCH_ROW_HEIGHT
+	# The Button draws its label centred; push it up by padding the bottom.
+	for state: String in ["normal", "hover", "focus", "pressed", "disabled"]:
+		var sb: StyleBox = row.get_theme_stylebox(state)
+		if sb != null:
+			sb = sb.duplicate()
+			sb.content_margin_bottom = 20
+			row.add_theme_stylebox_override(state, sb)
+	var d := Label.new()
+	d.text = text
+	d.add_theme_font_size_override("font_size", 12)
+	d.add_theme_color_override("font_color", UiTheme.TEXT_MUTED if enabled else UiTheme.TEXT_INERT)
+	d.position = Vector2(12, 26)
+	d.size = Vector2(RESEARCH_PANEL_WIDTH - 24, 18)
+	d.clip_text = true
+	d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(d)
 
 
 ## Joins a verb's AP price to whatever else its right-hand column says, dropping
@@ -928,13 +960,24 @@ func _open_research_submenu() -> void:
 	var items: Array[Dictionary] = []
 	for option: CommandFSM.ResearchOption in _research_options:
 		items.append({
-			"label": "%s - %s" % [option.tech.display_name, option.tech.description],
+			"label": option.tech.display_name,
+			"sub": option.tech.description,
 			"right": research_option_text(option),
 			"enabled": option.enabled,
 			"is_reason": not option.enabled,
 			"on_press": _on_research_row_pressed.bind(option.tech),
 		})
 	_build_submenu(items)
+	_submenu_centred = true
+	# Title row above the techs.
+	var title := Label.new()
+	title.text = "RESEARCH"
+	title.add_theme_font_override("font", UiTheme.label_font())
+	title.add_theme_font_size_override("font_size", 15)
+	title.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	_submenu_box.add_child(title)
+	_submenu_box.move_child(title, 0)
+	_reposition()
 
 
 ## The right-hand text of one research row: the price when it can be started, otherwise
@@ -1047,6 +1090,7 @@ func _build_submenu(items: Array[Dictionary]) -> void:
 ## Tears the submenu down and restores the parent plate's opacity. Safe to call
 ## when no submenu exists.
 func _close_submenu() -> void:
+	_submenu_centred = false
 	if _submenu != null:
 		_submenu.queue_free()
 		_submenu = null
@@ -1102,7 +1146,10 @@ func _reposition() -> void:
 	_plate.position = Vector2(plate_x, plate_y)
 	_plate.size = plate_size
 
-	if _submenu != null:
+	if _submenu != null and _submenu_centred:
+		_submenu.position = ((view - sub_size) * 0.5).floor()
+		_submenu.size = sub_size
+	elif _submenu != null:
 		var sub_x: float = plate_x - sub_size.x if to_the_left else plate_x + plate_size.x
 		var sub_y: float = clampf(
 			plate_y, SAFE_MARGIN_PX, maxf(SAFE_MARGIN_PX, view.y - sub_size.y - SAFE_MARGIN_PX)
