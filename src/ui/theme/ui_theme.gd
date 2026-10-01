@@ -138,3 +138,45 @@ static func glass_box(fill: Color, edge: Color, edge_px: int = 1, cut: int = int
 	_boxes[key] = box
 	return box
 
+
+## Turns [param c]'s own panel draw into holo glass: for a Control whose canvas item draws ONLY
+## a background (a PanelContainer's stylebox — its rows are separate child nodes), the glass
+## shader goes straight on it, blur included. Never use on a Button/Label (it would shade text).
+static func make_glass(c: Control, edge: Color = EDGE, glow_px: float = 0.0) -> void:
+	c.material = glass_material()
+	var apply := func() -> void:
+		var blur: bool = blur_enabled()
+		c.set_instance_shader_parameter(&"rect_size", c.size)
+		c.set_instance_shader_parameter(&"edge_color", edge)
+		c.set_instance_shader_parameter(&"tint", TINT if blur else TINT_FLAT)
+		c.set_instance_shader_parameter(&"cut_px", CUT_PX)
+		c.set_instance_shader_parameter(&"glow_px", glow_px)
+		glass_material().set_shader_parameter(&"blur_lod", 2.2 if blur else 0.0)
+	c.resized.connect(apply)
+	if c.is_inside_tree():
+		apply.call()
+	else:
+		c.ready.connect(apply, CONNECT_ONE_SHOT)
+
+
+## The focused/hovered row of a glass menu: the player's hue fading out to the right, with a
+## bright 3 px bar on the left — mock-up B's highlight.
+static func highlight_box(hue: Color) -> StyleBoxTexture:
+	var key: String = "hl|" + hue.to_html()
+	if _boxes.has(key):
+		return _boxes[key]
+	var w: int = 64
+	var img := Image.create(w, 4, false, Image.FORMAT_RGBA8)
+	for x: int in w:
+		var c: Color = Color(1, 1, 1, 1) if x < 3 else Color(hue, 0.38 * (1.0 - float(x) / w))
+		for y: int in 4:
+			img.set_pixel(x, y, c)
+	var box := StyleBoxTexture.new()
+	box.texture = ImageTexture.create_from_image(img)
+	box.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
+	box.texture_margin_left = 3
+	box.content_margin_left = 10
+	box.content_margin_right = 8
+	_boxes[key] = box
+	return box
+
