@@ -107,6 +107,13 @@ func set_device_for_test(device: Device) -> void:
 ## ★ Falls back to the other device's binding rather than returning nothing. A label naming the
 ## wrong device is a smaller failure than a control the player cannot discover at all — and the
 ## fallback is visible in play, whereas an empty string looks like an action with no shortcut.
+const _KEY_DISPLAY: Dictionary = {
+	"BracketLeft": "[", "BracketRight": "]", "Equal": "=", "Minus": "-", "Escape": "Esc",
+	"Comma": ",", "Period": ".", "Slash": "/", "Semicolon": ";", "Apostrophe": "'",
+	"QuoteLeft": "`", "BackSlash": "\\", "Backspace": "Bksp",
+}
+
+
 func label_for(action: StringName) -> String:
 	var name: String = _raw_label(action, _device)
 	if name == "":
@@ -141,5 +148,7 @@ func _raw_label(action: StringName, device: Device) -> String:
 			var code: int = key.physical_keycode if key.physical_keycode != 0 else key.keycode
 			var text: String = OS.get_keycode_string(code)
 			if text != "":
-				return text
+				# ★ 2026-10-01: punctuation keys read as the symbol on the keycap, not the
+				# engine's internal name ("BracketLeft", "Equal" in the old hint bar).
+				return _KEY_DISPLAY.get(text, text)
 	return ""

@@ -291,14 +291,35 @@ func _insufficient_noun() -> String:
 	return "budget"
 
 
+## ★ 2026-10-01 (holo glass): true for the one "hero" numeral on the HUD (the player's AP —
+## art bible §7.2: the biggest number on screen). Overridden by [ApCounterWidget].
+func _is_hero() -> bool:
+	return false
+
+
+## The small uppercase caption under the value ("CREDITS", "AP / 20"). Overridable.
+func _caption() -> String:
+	return _resource_label()
+
+
 func _draw() -> void:
 	var font: Font = ThemeDB.fallback_font
 	if font == null:
 		return # headless / no font — the display model is still valid; skip pixels.
-	var font_size: int = 16
-	var text: String = _committed_text()
+	var hero: bool = _is_hero() and not _is_opponent
+	var value_size: int = UiTheme.SIZE_HERO if hero else 22
+	var color: Color = _budget_color()
+	var value_text: String = "%d" % _committed
+	var base: Vector2 = Vector2(0, value_size - 4)
+	if hero:
+		UiTheme.draw_glow_text(self, UiTheme.font(700), base, value_text, value_size, color)
+	else:
+		draw_string(UiTheme.font(600), base, value_text, HORIZONTAL_ALIGNMENT_LEFT, -1, value_size, color)
+	var w: float = UiTheme.font(700).get_string_size(value_text, HORIZONTAL_ALIGNMENT_LEFT, -1, value_size).x
 	if showing_echo():
-		text += "  -> %d" % _projected # ASCII arrow — the engine fallback font has no U+2192 glyph (renders as a tofu box).
-	elif insufficient_budget():
-		text += "  (insufficient %s)" % _insufficient_noun()
-	draw_string(font, Vector2(4, font_size + 2), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, _budget_color())
+		# The projected value — inert typography, never glow (art bible §7.4).
+		draw_string(UiTheme.font(600), base + Vector2(w + 8, 0), "-> %d" % _projected,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, int(value_size * 0.55), UiTheme.TEXT)
+	var caption: String = ("NOT ENOUGH %s" % _insufficient_noun().to_upper()) if insufficient_budget() else _caption()
+	draw_string(UiTheme.label_font(), Vector2(1, value_size + 9), caption, HORIZONTAL_ALIGNMENT_LEFT, -1,
+		UiTheme.SIZE_LABEL, UiTheme.TEXT if insufficient_budget() else UiTheme.TEXT_MUTED)

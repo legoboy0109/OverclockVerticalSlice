@@ -47,6 +47,12 @@ const CONTENT_TOP: float = 26.0
 const PAD_X: float = 12.0
 
 var _title: String = ""
+var _backdrop: GlassBackdrop = null
+var _title_label: Label = null
+## ★ 2026-10-01 (holo glass): an ownership plate (your card) takes your hue on its edge with a
+## soft inner glow; neutral chrome keeps the quiet blue-grey edge.
+var _accent: Color = UiTheme.EDGE
+var _glow: float = 0.0
 
 
 ## Sets the panel's heading and its fixed size. Size is explicit rather than
@@ -56,7 +62,31 @@ func configure(title: String, panel_size: Vector2) -> void:
 	_title = title
 	custom_minimum_size = panel_size
 	size = panel_size
+	if _title_label != null:
+		_title_label.text = title
 	queue_redraw()
+
+
+## Tints the plate's edge (and adds a soft inner glow) — for panels that belong to a player.
+func set_accent(color: Color, glow_px: float = 10.0) -> void:
+	_accent = color
+	_glow = glow_px
+	if _backdrop != null:
+		_backdrop.edge_color = Color(color, 0.55)
+		_backdrop.glow_px = glow_px
+
+
+func _ready() -> void:
+	_backdrop = GlassBackdrop.attach(self, Color(_accent, 0.55) if _glow > 0.0 else UiTheme.EDGE, _glow)
+	_title_label = Label.new()
+	_title_label.text = _title
+	_title_label.position = Vector2(PAD_X, 5)
+	_title_label.add_theme_font_override("font", UiTheme.label_font())
+	_title_label.add_theme_font_size_override("font_size", TITLE_FONT_SIZE)
+	_title_label.add_theme_color_override("font_color", UiTheme.TEXT_MUTED)
+	_title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_title_label)
+	move_child(_title_label, 1)
 
 
 ## Adds a widget inside the panel at [param offset] from the content origin (just
@@ -66,14 +96,3 @@ func add_content(node: Control, offset: Vector2) -> void:
 	add_child(node)
 
 
-func _draw() -> void:
-	var r := Rect2(Vector2.ZERO, size)
-	draw_rect(r, BACKING, true)
-	draw_rect(r, BORDER, false, BORDER_WIDTH)
-	if _title == "":
-		return
-	var font: Font = ThemeDB.fallback_font
-	if font == null:
-		return
-	draw_string(font, Vector2(PAD_X, 17), _title, HORIZONTAL_ALIGNMENT_LEFT, -1,
-		TITLE_FONT_SIZE, TITLE)

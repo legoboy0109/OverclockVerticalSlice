@@ -35,7 +35,16 @@ func _read_committed_value() -> int:
 
 ## The tactical/AP neon hue (muted for the opponent counter, CR-3b).
 func _budget_color() -> Color:
-	return Color(0.55, 0.55, 0.6) if _is_opponent else Color(0.2, 1.0, 0.9)
+	# ★ 2026-10-01 (holo glass): AP glows in the player's own hue — it is THEIR tempo.
+	return Color(0.55, 0.55, 0.6) if _is_opponent else UiTheme.player_hue(_player)
+
+
+func _is_hero() -> bool:
+	return true
+
+
+func _caption() -> String:
+	return "AP / %d" % Balance.economy.flat_ap_per_turn
 
 
 ## The `AP` resource label. ★ Added 2026-08-24 — this counter previously rendered

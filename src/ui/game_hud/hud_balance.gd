@@ -38,6 +38,8 @@ var hud: HUDConfig = preload("res://data/ui/hud_config.tres")
 
 
 func _ready() -> void:
+	# ★ 2026-10-01: the holo-glass UI's typeface, installed before any UI is built.
+	UiTheme.install()
 	enforce_ap_tick_within_input_lock(hud, InputConfig.new())
 
 

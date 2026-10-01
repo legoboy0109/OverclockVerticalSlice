@@ -110,25 +110,28 @@ func assemble(reader: GameStateReader, config: HUDConfig, cmd: CommandInterface,
 	# than a rewrite of nine widgets.
 
 	# --- YOU: the three budgets that drive every decision, in one place ---------
+	# ★ 2026-10-01 (holo glass, UI direction B): one row — AP as the glowing hero numeral, then
+	# Credits and Population — on a glass plate edged in the player's own hue.
 	_player_panel = HudPanel.new()
-	_player_panel.configure("YOU", Vector2(232, 118))
-	_player_panel.position = Vector2(16, 12)
+	_player_panel.configure("", Vector2(330, 80))
+	_player_panel.position = Vector2(16, 14)
+	_player_panel.set_accent(UiTheme.player_hue(local_player))
 	add_child(_player_panel)
 
 	_ap_counter = ApCounterWidget.new()
 	_ap_counter.bind(reader)
 	_ap_counter.configure(config, local_player)
-	_player_panel.add_content(_ap_counter, Vector2(0, 0))
+	_player_panel.add_content(_ap_counter, Vector2(2, -16))
 
 	_credits_counter = CreditsCounterWidget.new()
 	_credits_counter.bind(reader)
 	_credits_counter.configure(config, local_player)
-	_player_panel.add_content(_credits_counter, Vector2(0, 24))
+	_player_panel.add_content(_credits_counter, Vector2(132, -2))
 
 	_population = PopulationWidget.new()
 	_population.bind(reader)
 	_population.configure(local_player)
-	_player_panel.add_content(_population, Vector2(0, 52))
+	_player_panel.add_content(_population, Vector2(230, -2))
 
 	# The income breakdown stays parented to the Credits counter — it is that
 	# counter's on-demand detail, and anchoring it anywhere else would let the two
@@ -136,39 +139,59 @@ func assemble(reader: GameStateReader, config: HUDConfig, cmd: CommandInterface,
 	_income_breakdown = IncomeBreakdownWidget.new()
 	_income_breakdown.bind(reader)
 	_income_breakdown.configure(config, local_player)
-	_income_breakdown.position = Vector2(96, -14)
+	_income_breakdown.position = Vector2(0, 52)   # opens below the plate
 	_credits_counter.add_child(_income_breakdown)
 
 	# --- OPPONENT: same figures, muted, so the comparison is direct ------------
 	if config.show_opponent_ap:
+		# ★ 2026-10-01 (holo glass): the opponent card names WHO you fight and their army size,
+		# edged in their hue. Their AP/Credits counters still exist (their display models are
+		# tested) but are not shown: their AP reads 0 for your whole turn, which says nothing.
 		_opponent_panel = HudPanel.new()
-		_opponent_panel.configure("OPPONENT", Vector2(184, 88))
+		_opponent_panel.configure("", Vector2(300, 60))
 		_opponent_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-		_opponent_panel.position = Vector2(-200, 12)
+		_opponent_panel.position = Vector2(-316, 14)
+		_opponent_panel.set_accent(UiTheme.player_hue(opponent), 0.0)
 		add_child(_opponent_panel)
+
+		var summary := OpponentSummaryWidget.new()
+		summary.bind(reader)
+		summary.configure(opponent)
+		summary.size = Vector2(276, 40)
+		_opponent_panel.add_content(summary, Vector2(0, -14))
 
 		_ap_counter_opponent = ApCounterWidget.new()
 		_ap_counter_opponent.bind(reader)
 		_ap_counter_opponent.configure(config, opponent, true) # muted opponent AP.
-		_opponent_panel.add_content(_ap_counter_opponent, Vector2(0, 0))
+		_ap_counter_opponent.visible = false
+		_opponent_panel.add_child(_ap_counter_opponent)
 
 		_credits_counter_opponent = CreditsCounterWidget.new()
 		_credits_counter_opponent.bind(reader)
 		_credits_counter_opponent.configure(config, opponent, true) # muted opponent Credits.
-		_opponent_panel.add_content(_credits_counter_opponent, Vector2(0, 24))
+		_credits_counter_opponent.visible = false
+		_opponent_panel.add_child(_credits_counter_opponent)
 
 	_turn_banner = TurnBannerWidget.new()
 	_turn_banner.bind(reader)
 	_turn_banner.configure(config, local_player)
-	_turn_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_turn_banner.position = Vector2(-80, 12)
-	add_child(_turn_banner)
+	# The banner sits INSIDE a glass pill, after the pill's backdrop, so the glass draws behind
+	# the banner's hand-drawn text (as the banner's own child it would paint over it).
+	var pill := Control.new()
+	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pill.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	pill.size = Vector2(340, 40)
+	pill.position = Vector2(-170, 14)
+	add_child(pill)
+	GlassBackdrop.attach(pill)
+	_turn_banner.size = Vector2(340, 40)
+	pill.add_child(_turn_banner)
 
 	# --- LOG: what just happened, bottom-left, clear of the action strip --------
 	_action_log_panel = HudPanel.new()
-	_action_log_panel.configure("LOG", Vector2(210, 150))
+	_action_log_panel.configure("LOG", Vector2(330, 96))
 	_action_log_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	_action_log_panel.position = Vector2(16, -166)
+	_action_log_panel.position = Vector2(16, -258)
 	add_child(_action_log_panel)
 
 	_action_log = ActionLogWidget.new()
@@ -177,29 +200,34 @@ func assemble(reader: GameStateReader, config: HUDConfig, cmd: CommandInterface,
 	_action_log_panel.add_content(_action_log, Vector2(0, 0))
 
 	# --- ACTIONS: the two commit verbs, on a ground so they read as buttons -----
+	# ★ 2026-10-01 (holo glass): End Turn is its own glass button, so the plate is just a
+	# quiet holder for it and the idle-unit notice above it.
 	_actions_panel = HudPanel.new()
-	_actions_panel.configure("ACTIONS", Vector2(200, 66))
+	_actions_panel.configure("", Vector2(200, 78))
 	_actions_panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_actions_panel.position = Vector2(-216, -82)
+	_actions_panel.position = Vector2(-216, -94)
 	add_child(_actions_panel)
 
 	_controls = HudControlsWidget.new()
 	_controls.bind(reader)
 	_controls.configure(config, local_player, buildable_types)
 	_controls.attach_interface(cmd)
-	_actions_panel.add_content(_controls, Vector2(0, 0))
+	_actions_panel.add_content(_controls, Vector2(0, -4))
 
 	# --- SELECTED: the inspected entity, on the same ground as everything else ---
+	# ★ 2026-10-01 (holo glass): the selected-entity CARD, bottom-left like mock-up B.
 	_detail_panel_panel = HudPanel.new()
-	_detail_panel_panel.configure("SELECTED", Vector2(196, 104))
-	_detail_panel_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	_detail_panel_panel.position = Vector2(-212, -52)
+	_detail_panel_panel.configure("", Vector2(330, 128))
+	_detail_panel_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_detail_panel_panel.position = Vector2(16, -144)
+	_detail_panel_panel.set_accent(UiTheme.player_hue(local_player))
 	add_child(_detail_panel_panel)
 
 	_detail_panel = DetailPanelWidget.new()
 	_detail_panel.bind(reader)
 	_detail_panel.attach_interface(cmd)
-	_detail_panel_panel.add_content(_detail_panel, Vector2(0, 0))
+	_detail_panel.size = DetailPanelWidget.CARD_SIZE
+	_detail_panel_panel.add_content(_detail_panel, Vector2(0, -10))
 
 	_game_over_overlay = GameOverOverlay.new()
 	_game_over_overlay.bind(reader)
