@@ -634,6 +634,85 @@ static func apply_cancel_production(state: GameState, action: CancelProductionAc
 	return [evt] as Array[Event]
 
 
+# --- Rush (user decision 2026-09-30) -----------------------------------------------------
+
+## True when a unit of [param unit_type] in production may be rushed: vehicles and aircraft,
+## never infantry or anything that can build (a Builder is infantry today, but [member
+## UnitTypeDef.can_build] is the capability the rule names, so a build-capable vehicle is
+## excluded too).
+static func is_rushable_type(unit_type: UnitTypeDef) -> bool:
+	return unit_type != null and unit_type.unit_class != UnitTypeDef.UnitClass.INFANTRY \
+		and not unit_type.can_build
+
+
+## The timer a rush on [param structure] would cut — its construction turns while
+## UNDER_CONSTRUCTION, else its production turns while producing — or -1 when it has neither.
+## Ignores whether the producing type is rushable; [method validate_rush] reports that.
+static func rush_turns_remaining(structure: StructureState) -> int:
+	if structure.build_status == StructureState.BuildStatus.UNDER_CONSTRUCTION:
+		return structure.build_turns_remaining
+	if structure.producing_type != null:
+		return structure.production_turns_remaining
+	return -1
+
+
+## AP one rush costs (flat — [member EconomyConfig.rush_ap_cost]).
+static func rush_ap_cost() -> int:
+	return Balance.economy.rush_ap_cost
+
+
+## Rejection cause for [method apply_rush], or [constant Action.Reason.OK].
+##
+## ★ The floor is a timer of 1, not 0: timers tick at the START of the owner's turn
+## ([method advance_build_timers]), so 1 already means "ready next turn". Allowing 0 would
+## need a same-turn completion path, which is exactly what the rule forbids.
+## AP only — not gated by the deficit lock, which guards Credit spending.
+static func validate_rush(state: GameState, action: RushAction) -> int:
+	if state.match_status != GameState.MatchStatus.IN_PROGRESS:
+		return Action.Reason.GAME_OVER
+	var player: int = state.active_player
+	var e: EntityState = state.entities_by_id.get(action.structure_id)
+	if e == null or not (e is StructureState):
+		return Action.Reason.NO_SUCH_ENTITY
+	var structure: StructureState = e as StructureState
+	if structure.owner != player:
+		return Action.Reason.ILLEGAL_TARGET
+	var turns: int = rush_turns_remaining(structure)
+	if turns < 0:
+		return Action.Reason.NOTHING_TO_RUSH
+	if structure.build_status != StructureState.BuildStatus.UNDER_CONSTRUCTION \
+			and not is_rushable_type(structure.producing_type):
+		return Action.Reason.NOT_RUSHABLE
+	if turns <= 1:
+		return Action.Reason.RUSH_AT_MINIMUM
+	if not AP.can_afford(state, player, rush_ap_cost()):
+		return Action.Reason.CANT_AFFORD
+	return Action.Reason.OK
+
+
+## Spends [method rush_ap_cost] AP and removes one turn from the structure's timer.
+static func apply_rush(state: GameState, action: RushAction) -> Array[Event]:
+	if validate_rush(state, action) != Action.Reason.OK:
+		return []
+	var player: int = state.active_player
+	var structure: StructureState = state.entities_by_id[action.structure_id]
+	var cost: int = rush_ap_cost()
+	AP.spend(state, player, cost)
+	var evt := RushedEvent.new()
+	evt.entity_id = structure.entity_id
+	evt.owner = player
+	evt.ap_cost = cost
+	if structure.build_status == StructureState.BuildStatus.UNDER_CONSTRUCTION:
+		structure.build_turns_remaining -= 1
+		evt.construction = true
+		evt.turns_remaining = structure.build_turns_remaining
+	else:
+		structure.production_turns_remaining -= 1
+		evt.unit_type = structure.producing_type
+		evt.turns_remaining = structure.production_turns_remaining
+	return [evt] as Array[Event]
+
+
 static func apply_cancel(state: GameState, action: CancelBuildAction) -> Array[Event]:
 	if validate_cancel(state, action) != Action.Reason.OK:
 		return []

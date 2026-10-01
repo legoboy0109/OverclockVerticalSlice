@@ -525,6 +525,8 @@ static func _ensure_dispatch_registered() -> void:
 	# is one verb through the same validate-then-apply gate as everything else (AB-4).
 	register_verb(Action.Verb.USE_ABILITY, Ability.validate, Ability.apply)
 	register_verb(Action.Verb.DISBAND, Upkeep.validate_disband, Upkeep.apply_disband)
+	# ★ 2026-09-30: Rush — AP for one turn off a construction/production timer.
+	register_verb(Action.Verb.RUSH, BaseProduction.validate_rush, BaseProduction.apply_rush)
 	register_verb(Action.Verb.WAIT, _validate_wait, _apply_wait)
 	_dispatch_registered = true
 

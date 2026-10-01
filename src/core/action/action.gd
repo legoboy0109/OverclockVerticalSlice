@@ -44,7 +44,7 @@ extends RefCounted
 ## ⚠ APPENDED ONLY, never inserted — CommandFSM and several callers index this by
 ## ordinal, and renumbering an existing verb silently rewires every one of them.
 ## (S8-13 learned this when appending BUILD; CANCEL_PRODUCTION follows the rule.)
-enum Verb { MOVE, ATTACK, BUILD, PRODUCE, RESEARCH, CANCEL_BUILD, END_TURN, DISBAND, WAIT, CANCEL_PRODUCTION, CANCEL_RESEARCH, USE_ABILITY }
+enum Verb { MOVE, ATTACK, BUILD, PRODUCE, RESEARCH, CANCEL_BUILD, END_TURN, DISBAND, WAIT, CANCEL_PRODUCTION, CANCEL_RESEARCH, USE_ABILITY, RUSH }
 
 ## Every rejection cause [method GameState.apply_action] can return, plus
 ## [constant Reason.OK] for a passing [code]validate()[/code]. Deliberately an
@@ -125,6 +125,13 @@ enum Reason {
 	VEHICLE_UNPILOTED,
 	# No room: the transport is full, or it will not take this class (TP-2).
 	TRANSPORT_FULL,
+	# ★ Rush (2026-09-30), appended to preserve ordinals.
+	# The structure has nothing rushable: not under construction and not producing.
+	NOTHING_TO_RUSH,
+	# What it is producing can't be rushed — infantry and builders (user decision).
+	NOT_RUSHABLE,
+	# Already ready at the start of its owner's next turn — the floor a rush can't go under.
+	RUSH_AT_MINIMUM,
 }
 
 ## Which verb this is — the dispatch key [method GameState.apply_action] uses

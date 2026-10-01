@@ -178,6 +178,7 @@ const VERB_LABELS: Dictionary = {
 	CommandFSM.Verb.RESEARCH: "Research",
 	CommandFSM.Verb.ABILITY: "Ability",
 	CommandFSM.Verb.CANCEL_RESEARCH: "Cancel Research",
+	CommandFSM.Verb.RUSH: "Rush",
 }
 
 ## The verbs that DESTROY something for a partial refund, and therefore take the
@@ -240,6 +241,9 @@ const REASON_LABELS: Dictionary = {
 	CommandFSM.Reason.RESEARCH_BUSY: "researching already",
 	CommandFSM.Reason.NOTHING_RESEARCHABLE: "nothing to research",
 	CommandFSM.Reason.NOTHING_IN_RESEARCH: "nothing to cancel",
+	CommandFSM.Reason.NOTHING_TO_RUSH: "nothing to rush",
+	CommandFSM.Reason.NOT_RUSHABLE: "infantry can't rush",
+	CommandFSM.Reason.RUSH_AT_MINIMUM: "ready next turn",
 }
 
 ## Player-facing phrasing for an [enum Action.Reason] a validator returned when a
@@ -278,6 +282,9 @@ const COMMIT_REJECTION_LABELS: Dictionary = {
 	Action.Reason.TECH_FACTION_RESTRICTED: "not available to your faction",
 	Action.Reason.NOTHING_IN_RESEARCH: "nothing to cancel",
 	Action.Reason.IN_DEFICIT: "in deficit",
+	Action.Reason.NOTHING_TO_RUSH: "nothing to rush",
+	Action.Reason.NOT_RUSHABLE: "infantry and builders can't be rushed",
+	Action.Reason.RUSH_AT_MINIMUM: "already ready next turn",
 }
 
 
@@ -302,6 +309,7 @@ const REASON_ORDER: Array[int] = [
 	CommandFSM.Reason.NOT_A_RESEARCHER,
 	CommandFSM.Reason.NOT_UNDER_CONSTRUCTION,
 	CommandFSM.Reason.NOTHING_IN_RESEARCH,
+	CommandFSM.Reason.NOTHING_TO_RUSH,
 	CommandFSM.Reason.NOT_A_UNIT,
 	CommandFSM.Reason.NOTHING_BLOCKED,
 	CommandFSM.Reason.NOT_COMPLETED,
@@ -313,6 +321,8 @@ const REASON_ORDER: Array[int] = [
 	CommandFSM.Reason.NO_BUILD_SPACE,
 	CommandFSM.Reason.RESEARCH_BUSY,
 	CommandFSM.Reason.NOTHING_RESEARCHABLE,
+	CommandFSM.Reason.NOT_RUSHABLE,
+	CommandFSM.Reason.RUSH_AT_MINIMUM,
 	CommandFSM.Reason.POPULATION_CAP_REACHED,
 	CommandFSM.Reason.INSUFFICIENT_CREDITS,
 	CommandFSM.Reason.INSUFFICIENT_AP,
@@ -363,6 +373,7 @@ var _armed_verb: int = -1
 var _research_options: Array[CommandFSM.ResearchOption] = []
 var _research_status: String = ""
 var _research_refund: String = ""
+var _rush_preview: String = ""
 var _ability_options: Array[CommandFSM.AbilityOption] = []
 
 
@@ -449,6 +460,7 @@ func open(state: GameState, entity: EntityState, anchor_screen: Vector2, \
 	_ability_options = CommandFSM.ability_options(state, entity)
 	_research_status = CommandFSM.research_status_text(entity)
 	_research_refund = ""
+	_rush_preview = CommandFSM.rush_preview_text(entity)
 	if entity is StructureState and (entity as StructureState).research_target != null:
 		_research_refund = "+%d CR back" % CommandFSM.cancel_research_preview(state, entity)
 	_fill_rows(
@@ -605,6 +617,9 @@ func _fill_rows(model: Array[CommandFSM.VerbEntry], \
 			# Busy is the one research state worth naming precisely: WHAT is being
 			# researched and WHEN it lands is the question a player selecting their HQ has.
 			right = _research_status
+		elif entry.verb == CommandFSM.Verb.RUSH and entry.enabled:
+			# Price AND effect: what one press buys is the whole decision.
+			right = _priced(entry.ap_cost, _rush_preview)
 		elif entry.verb == CommandFSM.Verb.CANCEL_RESEARCH and entry.enabled:
 			right = _research_refund # see the refund before either press, like Cancel Build
 		elif not entry.enabled:
@@ -742,7 +757,8 @@ static func _is_inapplicable(entry: CommandFSM.VerbEntry) -> bool:
 		or (entry.reason & CommandFSM.Reason.NOT_A_UNIT) != 0 \
 		or (entry.reason & CommandFSM.Reason.NOT_A_PRODUCER) != 0 \
 		or (entry.reason & CommandFSM.Reason.NOT_A_BUILDER) != 0 \
-		or (entry.reason & CommandFSM.Reason.NOTHING_BLOCKED) != 0
+		or (entry.reason & CommandFSM.Reason.NOTHING_BLOCKED) != 0 \
+		or (entry.reason & CommandFSM.Reason.NOTHING_TO_RUSH) != 0
 
 
 ## The Disband row's payout, or empty for anything that cannot be disbanded.
