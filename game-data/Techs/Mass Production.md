@@ -1,6 +1,6 @@
 ---
 id: mass_production
-description: Vehicles and aircraft take 1 fewer turn to produce (minimum 1).
+description: Vehicles and aircraft take 1 fewer turn to produce (minimum 1). +1,200 Credits of income every turn.
 tree: economy
 tier: 3
 research_cost: 1600
@@ -12,6 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: eco_fd
 factions: []
+economy_tier_bonus: 1
 vehicle_production_turn_discount: 1
 ---
 

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=5 format=3]
 ; GENERATED from game-data/Techs/Assembly Lines.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 5aabc45cc17b1c4f6433b8db7c872d4ecf9c8d3cdee566f0b28273424d843316
+; source-sha256: ce508d442bbba662821ece084da0e40b917bfac342f6e40b692a58489f731247
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/foundry.tres" id="2"]
@@ -10,7 +10,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Assembly Lines"
-description = "Factories can build 2 units at once."
+description = "Factories can build 2 units at once. +1,200 Credits of income every turn."
 tier = 3
 research_cost = 1600
 research_time = 4
@@ -24,7 +24,7 @@ defense_bonus = 0
 attack_range_bonus = 0
 ignores_cover = false
 idle_heal = 0
-economy_tier_bonus = 0
+economy_tier_bonus = 1
 produce_ap_discount = 0
 build_ap_discount = 0
 produce_cost_discount_pct = 0

@@ -1,6 +1,6 @@
 ---
 id: mech_autonomy
-description: Sentinel and Breaker mechs no longer need pilots. Crewed ones eject their pilot.
+description: Sentinel and Breaker mechs no longer need pilots. Crewed ones eject their pilot. +1,200 Credits of income every turn.
 tree: economy
 tier: 3
 research_cost: 1600
@@ -12,6 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: eco_lg
 factions: []
+economy_tier_bonus: 1
 replaces:
 - '[[Command Network]]'
 frees_pilots:

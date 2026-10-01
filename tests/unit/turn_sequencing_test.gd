@@ -38,7 +38,7 @@
 # the outpost's own no-income-effect case); where the test's point IS that a
 # same-turn completion is observed by the income snapshot, it uses the real
 # Techs.ECONOMY_I so the assertion exercises the genuine economy_tier_bonus
-# path (Balance.economy.econ_tier_bonus), not a stale stand-in number.
+# path (Credits.tier_income), not a stale stand-in number.
 #
 # Naming follows tests/README.md: [system]_[feature]_test.gd + test_[scenario]_[expected].
 extends GdUnitTestSuite
@@ -364,7 +364,7 @@ func test_step2_flag_reset_and_step3_timers_both_complete_before_step4_when_both
 	assert_int(state.per_player[0].economy_tier).is_equal(1)
 	# ★ S6-02: NET banks, not gross -- the outpost and HQ that own upkeep this turn.
 	assert_int(state.per_player[0].current_credits) \
-		.is_equal(maxi(0, Balance.economy.base_income + Balance.economy.econ_tier_bonus - Upkeep.total_upkeep(state, 0)))
+		.is_equal(maxi(0, Balance.economy.base_income + Credits.tier_income(1) - Upkeep.total_upkeep(state, 0)))
 	assert_int(state.per_player[0].current_ap).is_equal(Balance.economy.flat_ap_per_turn) # flat, economy-independent
 
 

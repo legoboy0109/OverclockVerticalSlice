@@ -78,7 +78,7 @@ func test_economy_tech_raises_income_by_one_tier() -> void:
 	var ps: PlayerState = state.per_player[0]
 	ps.completed_techs.append(Techs.ECONOMY_I)
 	ps.economy_tier += Techs.ECONOMY_I.economy_tier_bonus # what completion writes
-	assert_int(Credits.credit_income(state, 0)).is_equal(before + Balance.economy.econ_tier_bonus)
+	assert_int(Credits.credit_income(state, 0)).is_equal(before + Credits.tier_income(1))
 
 
 func test_tech_effects_are_per_player() -> void:

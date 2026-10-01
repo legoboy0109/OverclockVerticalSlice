@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Logistics.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 09e035d754d6859e800f22b88fc33a0f961fd79e2ab1c6320a2c87a1a7092113
+; source-sha256: 6d4904aa9af75ffc60ae9f7f11716c3cc1f9a9adc0cb2d1feb72b159d6a5923e
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/economy_1.tres" id="2"]
@@ -9,7 +9,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Logistics"
-description = "Producing and building cost 1 less AP."
+description = "Producing and building cost 1 less AP. +800 Credits of income every turn."
 tier = 2
 research_cost = 1200
 research_time = 3
@@ -23,7 +23,7 @@ defense_bonus = 0
 attack_range_bonus = 0
 ignores_cover = false
 idle_heal = 0
-economy_tier_bonus = 0
+economy_tier_bonus = 1
 produce_ap_discount = 1
 build_ap_discount = 1
 produce_cost_discount_pct = 0

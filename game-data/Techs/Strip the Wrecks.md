@@ -1,6 +1,6 @@
 ---
 id: strip_the_wrecks
-description: Destroying an enemy unit returns 40% of its cost to you.
+description: Destroying an enemy unit returns 40% of its cost to you. +1,200 Credits of income every turn.
 tree: economy
 tier: 3
 research_cost: 1600
@@ -12,6 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: eco_fd
 factions: []
+economy_tier_bonus: 1
 replaces:
 - '[[Salvage]]'
 kill_refund_pct: 40

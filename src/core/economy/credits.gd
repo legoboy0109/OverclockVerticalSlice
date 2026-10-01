@@ -47,7 +47,26 @@ extends RefCounted
 static func credit_income_breakdown(state: GameState, player: int) -> Dictionary:
 	var cfg: EconomyConfig = Balance.economy
 	var tier: int = clampi(state.per_player[player].economy_tier, 0, cfg.max_economy_tier)
-	return {"base": cfg.base_income + Faction.base_income_delta(state, player), "tiers": (cfg.econ_tier_bonus + Faction.econ_tier_bonus_delta(state, player)) * tier}   # D4 intercept + slope
+	return {"base": cfg.base_income + Faction.base_income_delta(state, player),
+		"tiers": tier_income(tier) + Faction.econ_tier_bonus_delta(state, player) * tier}   # D4 intercept + slope
+
+
+## Income the first [param tier] economy tiers add together (before any faction slope):
+## the sum of the first [param tier] entries of [member EconomyConfig.econ_tier_bonuses].
+static func tier_income(tier: int) -> int:
+	var bonuses: PackedInt32Array = Balance.economy.econ_tier_bonuses
+	var total: int = 0
+	for i: int in mini(tier, bonuses.size()):
+		total += bonuses[i]
+	return total
+
+
+## What [param player]'s NEXT economy tier would add to their income (0 at the ceiling).
+static func next_tier_income(state: GameState, player: int) -> int:
+	var tier: int = state.per_player[player].economy_tier
+	if tier >= Balance.economy.max_economy_tier:
+		return 0
+	return tier_income(tier + 1) - tier_income(tier) + Faction.econ_tier_bonus_delta(state, player)
 
 
 ## Returns [param player]'s total Credit income for this turn — the sum of
@@ -55,8 +74,8 @@ static func credit_income_breakdown(state: GameState, player: int) -> Dictionary
 ## cross-system reads at all (the old formula needed Base & Production's outpost
 ## count and Research's tech term; it now needs neither).
 ##
-## [b]Range: 1000 .. 2500.[/b] That upper bound is a hard ceiling reached by
-## researching every economy tier, and nothing in the game can raise it further.
+## [b]Range: base .. base + sum(econ_tier_bonuses) (+ faction slope).[/b] That upper bound is a
+## hard ceiling reached by researching every economy tier; nothing can raise it further.
 static func credit_income(state: GameState, player: int) -> int:
 	var b: Dictionary = credit_income_breakdown(state, player)
 	return b["base"] + b["tiers"]

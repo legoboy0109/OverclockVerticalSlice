@@ -31,14 +31,15 @@ func test_config_credit_income_curve_knobs_at_adr0006_defaults() -> void:
 	# Credit quantities are ×100. See design/gdd/ap-economy.md.
 	var cfg: EconomyConfig = Balance.economy
 	assert_int(cfg.base_income).is_equal(1500)   # 2026-09-29: 1000 -> 1500 (user decision)
-	assert_int(cfg.econ_tier_bonus).is_equal(500)
+	assert_int(cfg.econ_tier_bonuses.size()).is_equal(cfg.max_economy_tier)
+	assert_array(Array(cfg.econ_tier_bonuses)).is_equal([500, 800, 1200])   # 2026-10-01 (user decision)
 	assert_int(cfg.max_economy_tier).is_equal(3)
 	assert_int(cfg.econ_tier_costs.size()).is_equal(cfg.max_economy_tier)
 	assert_int(cfg.econ_tier_costs[0]).is_equal(1000)
 
 	# ★ The regression that matters: the income ceiling is HARD and finite.
 	# An unbounded economy is what the PIVOT verdict diagnosed.
-	assert_int(cfg.base_income + cfg.econ_tier_bonus * cfg.max_economy_tier).is_equal(3000)
+	assert_int(cfg.base_income + Credits.tier_income(cfg.max_economy_tier)).is_equal(4000)
 
 
 # --- AP tactical budget knobs (pivot: flat per-turn + capped carryover) ------

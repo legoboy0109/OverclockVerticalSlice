@@ -1,6 +1,6 @@
 ---
 id: levy_en_masse
-description: +4 population cap; infantry cost 10% less.
+description: +4 population cap; infantry cost 10% less. +1,200 Credits of income every turn.
 tree: economy
 tier: 3
 research_cost: 1600
@@ -12,6 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: eco_rr
 factions: []
+economy_tier_bonus: 1
 replaces:
 - '[[Emergency Draft]]'
 pop_cap_bonus: 4

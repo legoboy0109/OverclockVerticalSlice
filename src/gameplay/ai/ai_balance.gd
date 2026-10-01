@@ -39,7 +39,7 @@ func _ready() -> void:
 ## Enforces TR-ai-008: `lethal_floor_bonus` must exceed the uncapped
 ## first-Economy-Outpost `action_score` ceiling, or a non-lethal boom could
 ## silently outscore a finishing blow (CR-7 broken). Computes
-## `economy_ceiling_score = econ_tier_bonus * Σ_{t=1..economy_horizon}
+## `economy_ceiling_score = econ_tier_bonuses[0] * Σ_{t=1..economy_horizon}
 ## economy_decay^t / first_tier_cost` (the GDD's
 ## `LETHAL_FLOOR_BONUS` row / `action_score` symbol table formula, verbatim)
 ## and fails loudly — [method @GlobalScope.push_error] plus [method OS.crash]
@@ -64,7 +64,7 @@ static func _check_lethal_floor_invariant(cfg: AIConfig, economy_cfg: EconomyCon
 
 
 ## Pure computation of the invariant's right-hand side:
-## `econ_tier_bonus * Σ_{t=1}^{economy_horizon} economy_decay^t / first_tier_cost`.
+## `econ_tier_bonuses[0] * Σ_{t=1}^{economy_horizon} economy_decay^t / first_tier_cost`.
 ## No side effects, no Autoload reads — callable directly from tests.
 ##
 ## [b]★ RE-POINTED 2026-08-24 (S6-01).[/b] This read `OUTPOST_BONUS_TIER1` and the
@@ -82,4 +82,5 @@ static func economy_ceiling_score(cfg: AIConfig, economy_cfg: EconomyConfig) -> 
 	for t in range(1, cfg.economy_horizon + 1):
 		decayed_sum += pow(cfg.economy_decay, t)
 	var first_tier_cost: int = economy_cfg.econ_tier_costs[0] if not economy_cfg.econ_tier_costs.is_empty() else 1
-	return float(economy_cfg.econ_tier_bonus) * decayed_sum / float(first_tier_cost)
+	var first_tier_bonus: int = economy_cfg.econ_tier_bonuses[0] if not economy_cfg.econ_tier_bonuses.is_empty() else 0
+	return float(first_tier_bonus) * decayed_sum / float(first_tier_cost)

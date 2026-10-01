@@ -1,6 +1,6 @@
 ---
 id: rapid_requisition
-description: Rush costs 2 AP per turn instead of 4.
+description: Rush costs 2 AP per turn instead of 4. +800 Credits of income every turn.
 tree: economy
 tier: 2
 research_cost: 1200
@@ -12,6 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: eco_sl
 factions: []
+economy_tier_bonus: 1
 rush_ap_discount: 2
 ---
 

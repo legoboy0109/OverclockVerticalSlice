@@ -383,7 +383,7 @@ func test_economy_tech_pays_out_the_turn_it_completes() -> void:
 	var before: int = Credits.credit_income(state, 0)
 	state.start_turn(0)
 	assert_int(state.per_player[0].economy_tier).is_equal(1)
-	assert_int(Credits.credit_income(state, 0)).is_equal(before + Balance.economy.econ_tier_bonus)
+	assert_int(Credits.credit_income(state, 0)).is_equal(before + Credits.tier_income(1))
 
 
 # --- Cancel ------------------------------------------------------------------------
