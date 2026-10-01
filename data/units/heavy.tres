@@ -18,6 +18,7 @@ move_cost = 3
 soft_move_cap = 2
 produce_cost = 700
 production_turns = 2
+max_ammo = -1
 upkeep = 230
 counts_toward_cap = true
 can_counterattack = false

@@ -54,4 +54,14 @@ extends Resource
 ## Merit per destroyed enemy unit / destroyed enemy structure / non-killing hit (PV-1).
 @export var merit_per_kill: int = 3
 @export var merit_per_structure: int = 2
+
+# --- Ammo (user decision 2026-10-01) ---------------------------------------------------------
+
+## Default attacks a ground vehicle carries before it must resupply (UnitTypeDef.max_ammo = -1).
+## ⚠ Starting value, untuned.
+@export var vehicle_ammo: int = 4
+
+## Default attacks an aircraft carries before it must resupply. Lower than vehicles: aircraft
+## strike from anywhere, so the trip home is their cost.
+@export var air_ammo: int = 3
 @export var merit_per_hit: int = 1

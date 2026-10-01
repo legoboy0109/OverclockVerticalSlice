@@ -397,6 +397,9 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 	var is_wounded_and_threatened: bool = (_is_wounded(unit) or is_builder) and threat.found
 	if is_builder and not is_wounded_and_threatened:
 		return best
+	# ★ Ammo (2026-10-01): a dry vehicle/aircraft is useless at the front — it goes home instead.
+	if Ammo.is_empty(unit):
+		return _score_resupply_candidates(lookahead, unit, best)
 
 	# Single best advance, folded once after the loop. Every straight-line advance
 	# ties at POSITIONAL_VALUE_PER_TILE_CLOSED (dist_closed == tiles_moved, AC-20),
@@ -609,6 +612,55 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 		best = _Candidate.new(_make_move_action(unit, siege_tile, siege_tiles_moved), siege_score, siege_ap_cost, unit.entity_id)
 
 	return best
+
+
+## ★ Ammo (2026-10-01): the move that takes an empty [param unit] closest to a tile beside its
+## nearest own resupplying structure (HQ, factory, airfield, Supply Depot), folded into
+## [param best]. Already beside one = stay (refilled at the start of the next turn). Strictly
+## closing moves only, so it can never ping-pong. No supplier = no candidate.
+static func _score_resupply_candidates(lookahead: GameState, unit: UnitState, best: _Candidate) -> _Candidate:
+	var suppliers: Array[Vector2i] = []
+	for e: EntityState in lookahead.entities():
+		if e.owner == unit.owner and e is StructureState and Ammo.is_resupplier(e as StructureState):
+			suppliers.append(e.position)
+	if suppliers.is_empty():
+		return best
+	var dist_before: int = _distance_to_any(lookahead, unit.position, suppliers)
+	if dist_before <= 1:
+		return best
+	var found: bool = false
+	var tile: Vector2i = Vector2i.ZERO
+	var tiles_moved_best: int = 0
+	var dist_best: int = dist_before
+	var score_best: float = 0.0
+	var cost_best: int = 0
+	for r: Movement.ReachableTile in Movement.reachable(lookahead, unit):
+		if not AP.can_afford(lookahead, unit.owner, r.min_cost):
+			continue
+		var tiles_moved: int = _tiles_moved_for(unit, r.min_cost)
+		if tiles_moved <= 0:
+			continue
+		var d: int = _distance_to_any(lookahead, r.tile, suppliers)
+		if d >= dist_before or d < 1:
+			continue
+		var score: float = float(dist_before - d) * AIBalance.ai.resupply_value_per_tile_closed / float(tiles_moved)
+		if not found or d < dist_best or (d == dist_best and r.min_cost < cost_best):
+			found = true
+			tile = r.tile
+			tiles_moved_best = tiles_moved
+			dist_best = d
+			score_best = score
+			cost_best = r.min_cost
+	if found and _is_better(score_best, cost_best, unit.entity_id, best.score, best.ap_cost, best.entity_id):
+		best = _Candidate.new(_make_move_action(unit, tile, tiles_moved_best), score_best, cost_best, unit.entity_id)
+	return best
+
+
+static func _distance_to_any(state: GameState, from: Vector2i, targets: Array[Vector2i]) -> int:
+	var out: int = 1 << 30
+	for t: Vector2i in targets:
+		out = mini(out, state.grid.manhattan_distance(from, t))
+	return out
 
 
 ## ★ AP-aware moves (2026-09-29): true when reaching [param tiles_moved] tiles takes [param unit]

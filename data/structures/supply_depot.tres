@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=2 format=3]
+; GENERATED from game-data/Structures/Supply Depot.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 9c7a589a11fe007125bac0729cafa059cc692a7ccae98897463e898f98641c73
+
+[ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Supply Depot"
+buildable = true
+art_id = &"research_lab"
+counts_as = []
+hp = 10
+build_cost = 500
+build_time = 2
+upkeep = 100
+max_count = 0
+cap_bonus = 0
+production_cap = 0
+producible_types = []
+attack = 0
+attack_range = 0
+defense = 0
+can_counterattack = false
+can_research = false
+resupplies = true
+can_target = Array[int]([0, 1])
+targeting_mode = 0
+min_range = 1
+damage_type = 0
+resist_kinetic = 0
+resist_emf = 0
+resist_incendiary = 0

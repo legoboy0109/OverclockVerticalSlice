@@ -1,21 +1,22 @@
-[gd_resource type="Resource" script_class="FactionDef" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="FactionDef" load_steps=9 format=3]
 ; GENERATED from game-data/Factions/Ross Foundry Collective.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 85cfc14225f004fb608d71823324f83a1237ebb5f714f6ea9c4394b579b55fef
+; source-sha256: 512891c1cbe9c029717465ce434ea0d2d5bf7ba1e757c694157788500b39527b
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/structures/union_barracks.tres" id="2"]
 [ext_resource type="Resource" path="res://data/structures/union_factory.tres" id="3"]
 [ext_resource type="Resource" path="res://data/structures/union_airfield.tres" id="4"]
-[ext_resource type="Resource" path="res://data/structures/research_lab.tres" id="5"]
-[ext_resource type="Resource" path="res://data/structures/bulwark.tres" id="6"]
-[ext_resource type="Script" path="res://src/core/faction/faction_unit_delta.gd" id="7"]
+[ext_resource type="Resource" path="res://data/structures/supply_depot.tres" id="5"]
+[ext_resource type="Resource" path="res://data/structures/research_lab.tres" id="6"]
+[ext_resource type="Resource" path="res://data/structures/bulwark.tres" id="7"]
+[ext_resource type="Script" path="res://src/core/faction/faction_unit_delta.gd" id="8"]
 
 [resource]
 script = ExtResource("1")
 display_name = "Ross Foundry Collective"
 description = "Weak early, overwhelming late: crews for the best machines in the game, guarded by the strongest defences."
 playable = true
-structures = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")]
+structures = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")]
 techs = []
 infantry_cap_delta = 0
 base_income_delta = -300

@@ -132,6 +132,8 @@ enum Reason {
 	NOT_RUSHABLE,
 	# Already ready at the start of its owner's next turn — the floor a rush can't go under.
 	RUSH_AT_MINIMUM,
+	# ★ Ammo (2026-10-01): a vehicle/aircraft with no ammo left can't attack until resupplied.
+	OUT_OF_AMMO,
 }
 
 ## Which verb this is — the dispatch key [method GameState.apply_action] uses

@@ -94,6 +94,9 @@ func unit_info(entity_id: int) -> Dictionary:
 	return {
 		"type": unit.type,
 		"current_hp": unit.current_hp,
+		# ★ Ammo (2026-10-01): -1 / 0 when the unit doesn't use ammo.
+		"ammo": Ammo.remaining(unit),
+		"max_ammo": Ammo.max_ammo(unit.type),
 		"hp": Unit.effective_max_hp(unit),
 		"rank": unit.rank,
 		"effective_attack": Unit.effective_attack(_state, unit),

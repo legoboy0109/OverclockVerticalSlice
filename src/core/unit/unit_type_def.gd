@@ -153,3 +153,8 @@ enum AreaShape { SINGLE, BURST, LINE }
 ## ⚠ Chosen by the user from three candidate curves; the gentler one, so only the two
 ## most powerful units carry a delay and the early game keeps its pace.
 @export var production_turns: int = 1
+
+## ★ Ammo (user decision 2026-10-01): attacks this unit can make before it must resupply.
+## -1 = the class default ([member CombatConfig.vehicle_ammo] / [member CombatConfig.air_ammo];
+## infantry never use ammo); 0 = unlimited. Read through [method Ammo.max_ammo], never directly.
+@export var max_ammo: int = -1

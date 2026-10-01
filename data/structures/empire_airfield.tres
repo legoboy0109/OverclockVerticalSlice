@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=4 format=3]
 ; GENERATED from game-data/Structures/Order Airfield.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 3cc9d80b2f11bcccaf625bc53dc34b4c134e4644da1d9f8623c9459e29fcfebd
+; source-sha256: 2420be14447699c65cc5b990439379fda6a04044cff1fbbe107a1c2778a225a3
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/seraph.tres" id="2"]
@@ -25,6 +25,7 @@ attack_range = 0
 defense = 0
 can_counterattack = false
 can_research = false
+resupplies = true
 can_target = Array[int]([0, 1])
 targeting_mode = 0
 min_range = 1

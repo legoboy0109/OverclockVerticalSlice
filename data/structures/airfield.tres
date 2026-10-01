@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=5 format=3]
 ; GENERATED from game-data/Structures/Airfield.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: fff15b1e1eca958dba999bffb6faafa6746d067f76773d4282721ef1c506daee
+; source-sha256: 848a75f11f041bde9820909cee53a0932870a004e45c1bdac7f8506007ec6a3f
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/fighter.tres" id="2"]
@@ -26,6 +26,7 @@ attack_range = 0
 defense = 0
 can_counterattack = false
 can_research = false
+resupplies = true
 can_target = Array[int]([0, 1])
 targeting_mode = 0
 min_range = 1
