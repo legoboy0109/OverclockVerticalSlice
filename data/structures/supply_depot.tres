@@ -10,6 +10,7 @@ display_name = "Supply Depot"
 buildable = true
 art_id = &""
 counts_as = []
+requires_structures = []
 hp = 10
 build_cost = 500
 build_time = 2

@@ -184,3 +184,13 @@ func test_upkeep_room_is_kept_for_a_vehicle_once_the_army_is_big_enough() -> voi
 	for i: int in AIBalance.ai.vehicle_room_min_army:
 		_unit(state, 0, UnitTypes.TROOPER, Vector2i(5, 3 + i))
 	assert_int(AI._vehicle_upkeep_room(state, 0)).is_greater(0)
+
+
+func test_a_pirate_is_worth_more_the_more_ground_vehicles_the_enemy_fields() -> void:
+	# 2026-10-01: Capture Vehicle was unvalued, so the AI never built a single Pirate.
+	var state := _state()
+	_unit(state, 1, UnitTypes.TROOPER, Vector2i(12, 3))
+	var infantry_only: float = AI._ability_matchup_effect(state, 0, UnitTypes.PIRATE)
+	_unit(state, 1, UnitTypes.TANK, Vector2i(12, 5))
+	_unit(state, 1, UnitTypes.TANK, Vector2i(12, 7))
+	assert_float(AI._ability_matchup_effect(state, 0, UnitTypes.PIRATE)).is_greater(infantry_only)

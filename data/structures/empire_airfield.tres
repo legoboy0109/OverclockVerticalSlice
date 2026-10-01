@@ -1,10 +1,11 @@
-[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=5 format=3]
 ; GENERATED from game-data/Structures/Order Airfield.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 2420be14447699c65cc5b990439379fda6a04044cff1fbbe107a1c2778a225a3
+; source-sha256: 5ca52ddab685e9dfc6309f14e0741e8c934519026881fa347434fbb2cf3362d5
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
-[ext_resource type="Resource" path="res://data/units/seraph.tres" id="2"]
-[ext_resource type="Resource" path="res://data/units/dominion.tres" id="3"]
+[ext_resource type="Resource" path="res://data/structures/empire_factory.tres" id="2"]
+[ext_resource type="Resource" path="res://data/units/seraph.tres" id="3"]
+[ext_resource type="Resource" path="res://data/units/dominion.tres" id="4"]
 
 [resource]
 script = ExtResource("1")
@@ -12,6 +13,7 @@ display_name = "Order Airfield"
 buildable = false
 art_id = &""
 counts_as = []
+requires_structures = [ExtResource("2")]
 hp = 12
 build_cost = 1200
 build_time = 3
@@ -20,7 +22,7 @@ max_count = 1
 cap_bonus = 0
 production_cap = 1
 production_slots = 1
-producible_types = [ExtResource("2"), ExtResource("3")]
+producible_types = [ExtResource("3"), ExtResource("4")]
 attack = 0
 attack_range = 0
 defense = 0

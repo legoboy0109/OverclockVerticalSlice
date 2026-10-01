@@ -11,6 +11,7 @@ display_name = "Cathedral"
 buildable = false
 art_id = &""
 counts_as = [ExtResource("2")]
+requires_structures = []
 hp = 12
 build_cost = 900
 build_time = 2

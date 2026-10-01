@@ -10,6 +10,7 @@ display_name = "Autonomous Defence Node"
 buildable = false
 art_id = &""
 counts_as = []
+requires_structures = []
 hp = 8
 build_cost = 300
 build_time = 1

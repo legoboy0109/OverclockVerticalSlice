@@ -71,7 +71,7 @@ func _make_grid() -> GridState:
 	return grid
 
 
-# current_credits defaults to StructureTypes.FACTORY.build_cost (4, the
+# current_credits defaults to StructureTypes.BARRACKS.build_cost (4, the
 # Credit-denominated main cost post-pivot) so a legal build fixture is
 # affordable unless a test explicitly drives it lower. current_ap defaults
 # independently to Balance.economy.build_ap_cost (2, the AP surcharge) --
@@ -80,7 +80,7 @@ func _make_state(current_ap: int = -1, current_credits: int = -1) -> GameState:
 	var state := GameStateFactory.make_state(2, 0)
 	state.grid = _make_grid()
 	var ap: int = current_ap if current_ap >= 0 else Balance.economy.build_ap_cost
-	var credits: int = current_credits if current_credits >= 0 else StructureTypes.FACTORY.build_cost
+	var credits: int = current_credits if current_credits >= 0 else StructureTypes.BARRACKS.build_cost
 	state.per_player[0].current_ap = ap
 	state.per_player[1].current_ap = ap
 	state.per_player[0].current_credits = credits
@@ -172,11 +172,11 @@ func test_impassable_tile_never_offered_and_build_there_is_rejected() -> void:
 	_place(state, unit)
 	state.grid.terrain[state.grid.index(6, 5)] = GridState.Terrain.IMPASSABLE
 	# Act
-	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.FACTORY)
+	var tiles := BaseProduction.legal_build_tiles(state, 0, StructureTypes.BARRACKS)
 	# Assert -- never offered.
 	assert_bool(Vector2i(6, 5) in tiles).is_false()
 	# Act -- build() there is rejected.
-	var action := _make_build_action(Vector2i(6, 5), StructureTypes.FACTORY, 0)
+	var action := _make_build_action(Vector2i(6, 5), StructureTypes.BARRACKS, 0)
 	assert_int(BaseProduction.validate_build(state, action)).is_equal(Action.Reason.NOT_LEGAL_BUILD_TILE)
 
 
@@ -192,7 +192,7 @@ func test_occupied_tile_never_offered_and_build_there_is_rejected() -> void:
 	# Assert -- never offered.
 	assert_bool(Vector2i(6, 5) in tiles).is_false()
 	# Act -- build() there is rejected.
-	var action := _make_build_action(Vector2i(6, 5), StructureTypes.FACTORY, 0)
+	var action := _make_build_action(Vector2i(6, 5), StructureTypes.BARRACKS, 0)
 	assert_int(BaseProduction.validate_build(state, action)).is_equal(Action.Reason.NOT_LEGAL_BUILD_TILE)
 
 
@@ -205,7 +205,7 @@ func test_affordable_legal_build_spends_credits_and_ap_surcharge_places_under_co
 	var unit := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5))
 	_place(state, unit)
 	var tile := Vector2i(6, 5)
-	var action := _make_build_action(tile, StructureTypes.FACTORY, 0)
+	var action := _make_build_action(tile, StructureTypes.BARRACKS, 0)
 	assert_int(BaseProduction.validate_build(state, action)).is_equal(Action.Reason.OK)
 	# Act
 	var events: Array[Event] = BaseProduction.apply_build(state, action)
@@ -220,7 +220,7 @@ func test_affordable_legal_build_spends_credits_and_ap_surcharge_places_under_co
 	var structure: StructureState = placed
 	assert_int(structure.build_status).is_equal(StructureState.BuildStatus.UNDER_CONSTRUCTION)
 	assert_int(structure.owner).is_equal(0)
-	assert_object(structure.type).is_same(StructureTypes.FACTORY)
+	assert_object(structure.type).is_same(StructureTypes.BARRACKS)
 	# Blocks/targets immediately (single atomic apply -- Grid already updated).
 	assert_bool(state.grid.is_passable(tile.x, tile.y)).is_false()
 	# The placement event leads.
@@ -253,7 +253,7 @@ func test_fresh_under_construction_structure_is_inert_for_completed_outpost_coun
 	var state := _make_state()
 	var unit := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5))
 	_place(state, unit)
-	var action := _make_build_action(Vector2i(6, 5), StructureTypes.FACTORY, 0)
+	var action := _make_build_action(Vector2i(6, 5), StructureTypes.BARRACKS, 0)
 	BaseProduction.apply_build(state, action)
 	# Act / Assert -- zero contribution until Completed.
 	assert_int(_completed_factory_count(state, 0)).is_equal(0)
@@ -267,7 +267,7 @@ func test_unaffordable_build_credits_short_rejected_credits_and_grid_unchanged()
 	var unit := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5))
 	_place(state, unit)
 	var tile := Vector2i(6, 5)
-	var action := _make_build_action(tile, StructureTypes.FACTORY, 0)
+	var action := _make_build_action(tile, StructureTypes.BARRACKS, 0)
 	# Act
 	var reason: int = BaseProduction.validate_build(state, action)
 	# Assert
@@ -291,7 +291,7 @@ func test_commit_revalidation_rejects_when_tile_becomes_occupied_between_preview
 	var unit := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5))
 	_place(state, unit)
 	var tile := Vector2i(6, 5)
-	var action := _make_build_action(tile, StructureTypes.FACTORY, 0)
+	var action := _make_build_action(tile, StructureTypes.BARRACKS, 0)
 	assert_int(BaseProduction.validate_build(state, action)).is_equal(Action.Reason.OK)
 	# Act -- tile becomes occupied before commit.
 	var intruder := _make_unit(2, 1, UnitTypes.SCOUT, tile)
@@ -435,7 +435,7 @@ func test_structure_placed_adjacent_to_unit_that_later_moves_away_remains_no_ree
 	var unit := _make_unit(1, 0, UnitTypes.BUILDER, Vector2i(5, 5))
 	_place(state, unit)
 	var tile := Vector2i(6, 5)
-	var action := _make_build_action(tile, StructureTypes.FACTORY, 0)
+	var action := _make_build_action(tile, StructureTypes.BARRACKS, 0)
 	BaseProduction.apply_build(state, action)
 	assert_object(state.entity_at(tile)).is_not_null()
 	# Act -- the unit "moves away" (simulated directly via Grid, out of this
@@ -460,7 +460,7 @@ func test_two_builds_same_turn_both_succeed_parallel_construction_ap_gated() -> 
 	# by the first structure it raises. The claim under test is unchanged and still
 	# worth pinning — nothing gates a player to ONE build per turn, so with the
 	# Builders and the funds you may raise two.
-	var state := _make_state(Balance.economy.build_ap_cost * 2, StructureTypes.FACTORY.build_cost * 2)
+	var state := _make_state(Balance.economy.build_ap_cost * 2, StructureTypes.BARRACKS.build_cost * 2)
 	# ⚠ Ids well clear of 0..n: `next_entity_id` starts at 0, so a structure raised
 	# mid-test would otherwise be allocated an id a hand-placed fixture is already
 	# using, and the "was the Builder consumed?" assertions would read the new
@@ -470,12 +470,12 @@ func test_two_builds_same_turn_both_succeed_parallel_construction_ap_gated() -> 
 	_place(state, _make_unit(102, 0, UnitTypes.BUILDER, Vector2i(3, 5)))
 	var tile_a := Vector2i(6, 5)
 	var tile_b := Vector2i(2, 5)
-	var action_a := _make_build_action(tile_a, StructureTypes.FACTORY, 0, 101)
+	var action_a := _make_build_action(tile_a, StructureTypes.BARRACKS, 0, 101)
 	# Act -- first build.
 	assert_int(BaseProduction.validate_build(state, action_a)).is_equal(Action.Reason.OK)
 	BaseProduction.apply_build(state, action_a)
 	# Act -- second build, same turn, by the OTHER Builder.
-	var action_b := _make_build_action(tile_b, StructureTypes.FACTORY, 0, 102)
+	var action_b := _make_build_action(tile_b, StructureTypes.BARRACKS, 0, 102)
 	assert_int(BaseProduction.validate_build(state, action_b)).is_equal(Action.Reason.OK)
 	BaseProduction.apply_build(state, action_b)
 	# Assert -- both succeeded; both pools fully spent (Credits 8-4-4=0, AP 4-2-2=0).
@@ -492,13 +492,13 @@ func test_one_builder_cannot_raise_a_second_structure() -> void:
 	# The other half of "consumed": funds alone are not enough. A player who can
 	# afford two buildings but owns one Builder gets one building.
 	# Arrange -- fully funded for two, but only one Builder on the board.
-	var state := _make_state(Balance.economy.build_ap_cost * 2, StructureTypes.FACTORY.build_cost * 2)
+	var state := _make_state(Balance.economy.build_ap_cost * 2, StructureTypes.BARRACKS.build_cost * 2)
 	_place(state, _make_unit(101, 0, UnitTypes.BUILDER, Vector2i(5, 5)))
-	var first := _make_build_action(Vector2i(6, 5), StructureTypes.FACTORY, 0, 101)
+	var first := _make_build_action(Vector2i(6, 5), StructureTypes.BARRACKS, 0, 101)
 	assert_int(BaseProduction.validate_build(state, first)).is_equal(Action.Reason.OK)
 	BaseProduction.apply_build(state, first)
 	# Act -- the same Builder is asked for a second structure.
-	var second := _make_build_action(Vector2i(4, 5), StructureTypes.FACTORY, 0, 101)
+	var second := _make_build_action(Vector2i(4, 5), StructureTypes.BARRACKS, 0, 101)
 	# Assert -- refused, and refused for the RIGHT reason: the builder is gone, not
 	# that the tile is bad or the player is broke.
 	assert_int(BaseProduction.validate_build(state, second)).override_failure_message(

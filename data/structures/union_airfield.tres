@@ -1,10 +1,11 @@
-[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=5 format=3]
 ; GENERATED from game-data/Structures/Collective Airfield.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: fd7995988f7f6ee4334e3e72619e1ff1d19e34068a220368ce4932e6b0db4a5d
+; source-sha256: 60000e01f46a94e14d135e2dfa07cec34fdab443b3c0cc78b9d87b41bbf2f46f
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
-[ext_resource type="Resource" path="res://data/units/skyworks_gunship.tres" id="2"]
-[ext_resource type="Resource" path="res://data/units/skyworks_interceptor.tres" id="3"]
+[ext_resource type="Resource" path="res://data/structures/union_factory.tres" id="2"]
+[ext_resource type="Resource" path="res://data/units/skyworks_gunship.tres" id="3"]
+[ext_resource type="Resource" path="res://data/units/skyworks_interceptor.tres" id="4"]
 
 [resource]
 script = ExtResource("1")
@@ -12,6 +13,7 @@ display_name = "Collective Airfield"
 buildable = false
 art_id = &""
 counts_as = []
+requires_structures = [ExtResource("2")]
 hp = 12
 build_cost = 1200
 build_time = 3
@@ -20,7 +22,7 @@ max_count = 1
 cap_bonus = 0
 production_cap = 1
 production_slots = 1
-producible_types = [ExtResource("2"), ExtResource("3")]
+producible_types = [ExtResource("3"), ExtResource("4")]
 attack = 0
 attack_range = 0
 defense = 0

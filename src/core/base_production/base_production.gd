@@ -208,6 +208,24 @@ static func _clears_enemy_standoff(state: GameState, player: int, tile: Vector2i
 ## O(1) affordability check plus one [method legal_build_tiles] call (already
 ## budgeted O(friendly_count * 4 * enemy_structure_count), control-manifest
 ## Performance Guardrail).
+## The structure [param player] still needs before raising [param structure_type] — the first of
+## its [member StructureTypeDef.requires_structures] — or null when the requirement is met (they
+## own a COMPLETED one of the listed types, directly or via [member StructureTypeDef.counts_as]).
+static func missing_prerequisite(state: GameState, player: int, structure_type: StructureTypeDef) -> StructureTypeDef:
+	if structure_type == null or structure_type.requires_structures.is_empty():
+		return null
+	for e: EntityState in state.entities():
+		if not (e is StructureState) or e.owner != player:
+			continue
+		var st: StructureState = e
+		if st.build_status != StructureState.BuildStatus.COMPLETED:
+			continue
+		for req: StructureTypeDef in structure_type.requires_structures:
+			if st.type == req or req in st.type.counts_as:
+				return null
+	return structure_type.requires_structures[0]
+
+
 static func validate_build(state: GameState, action: BuildAction) -> int:
 	var player: int = state.active_player
 	# ★ Faction v2 (D5): a player may only raise their own faction's structures.
@@ -225,6 +243,9 @@ static func validate_build(state: GameState, action: BuildAction) -> int:
 	# real cause -- a player at their maximum may also be broke, but the cap is why.
 	if not can_build_more(state, player, action.structure_type):
 		return Action.Reason.STRUCTURE_MAX_REACHED
+	# ★ 2026-10-01: build prerequisites (Factory after Barracks, Airfield after Factory).
+	if missing_prerequisite(state, player, action.structure_type) != null:
+		return Action.Reason.PREREQUISITE_MISSING
 	if not Credits.can_afford(state, player, cost):
 		return Action.Reason.CANT_AFFORD_CREDITS
 	if not AP.can_afford(state, player, effective_build_ap_cost(state, player)):

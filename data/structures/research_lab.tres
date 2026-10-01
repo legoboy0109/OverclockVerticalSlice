@@ -10,6 +10,7 @@ display_name = "Research Lab"
 buildable = true
 art_id = &""
 counts_as = []
+requires_structures = []
 hp = 12
 build_cost = 800
 build_time = 2

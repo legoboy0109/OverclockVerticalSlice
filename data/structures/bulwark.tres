@@ -10,6 +10,7 @@ display_name = "Bulwark"
 buildable = false
 art_id = &""
 counts_as = []
+requires_structures = []
 hp = 14
 build_cost = 600
 build_time = 2

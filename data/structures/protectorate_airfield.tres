@@ -1,11 +1,12 @@
-[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=6 format=3]
 ; GENERATED from game-data/Structures/Mandate Airfield.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 7c6b4cd8fc3626ded17ed35ca24fc21f09c41765511db80a5664708896dbad78
+; source-sha256: b4da55ee920df2cf8353877aa706bafbe79b966706131749ca4d62e9b507e702
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
-[ext_resource type="Resource" path="res://data/units/strafer.tres" id="2"]
-[ext_resource type="Resource" path="res://data/units/autonomous_lifter.tres" id="3"]
-[ext_resource type="Resource" path="res://data/units/talon.tres" id="4"]
+[ext_resource type="Resource" path="res://data/structures/protectorate_factory.tres" id="2"]
+[ext_resource type="Resource" path="res://data/units/strafer.tres" id="3"]
+[ext_resource type="Resource" path="res://data/units/autonomous_lifter.tres" id="4"]
+[ext_resource type="Resource" path="res://data/units/talon.tres" id="5"]
 
 [resource]
 script = ExtResource("1")
@@ -13,6 +14,7 @@ display_name = "Mandate Airfield"
 buildable = false
 art_id = &""
 counts_as = []
+requires_structures = [ExtResource("2")]
 hp = 12
 build_cost = 1200
 build_time = 3
@@ -21,7 +23,7 @@ max_count = 1
 cap_bonus = 0
 production_cap = 1
 production_slots = 1
-producible_types = [ExtResource("2"), ExtResource("3"), ExtResource("4")]
+producible_types = [ExtResource("3"), ExtResource("4"), ExtResource("5")]
 attack = 0
 attack_range = 0
 defense = 0

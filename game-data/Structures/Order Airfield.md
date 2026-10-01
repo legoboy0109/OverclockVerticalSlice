@@ -2,6 +2,8 @@
 id: empire_airfield
 buildable: false
 counts_as: []
+requires_structures:
+- '[[Order Factory]]'
 hp: 12
 build_cost: 1200
 build_time: 3

@@ -1,6 +1,8 @@
 ---
 id: solar_factory
 buildable: false
+requires_structures:
+- '[[Front Barracks]]'
 hp: 14
 build_cost: 1000
 build_time: 3

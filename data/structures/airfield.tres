@@ -1,11 +1,12 @@
-[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="StructureTypeDef" load_steps=6 format=3]
 ; GENERATED from game-data/Structures/Airfield.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 848a75f11f041bde9820909cee53a0932870a004e45c1bdac7f8506007ec6a3f
+; source-sha256: 99ecf41700e1525bf068dc0be7a2739010948bd543b82171023eb61fd609c6e1
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
-[ext_resource type="Resource" path="res://data/units/fighter.tres" id="2"]
-[ext_resource type="Resource" path="res://data/units/bomber.tres" id="3"]
-[ext_resource type="Resource" path="res://data/units/helicopter.tres" id="4"]
+[ext_resource type="Resource" path="res://data/structures/factory.tres" id="2"]
+[ext_resource type="Resource" path="res://data/units/fighter.tres" id="3"]
+[ext_resource type="Resource" path="res://data/units/bomber.tres" id="4"]
+[ext_resource type="Resource" path="res://data/units/helicopter.tres" id="5"]
 
 [resource]
 script = ExtResource("1")
@@ -13,6 +14,7 @@ display_name = "Airfield"
 buildable = true
 art_id = &""
 counts_as = []
+requires_structures = [ExtResource("2")]
 hp = 12
 build_cost = 1200
 build_time = 3
@@ -21,7 +23,7 @@ max_count = 1
 cap_bonus = 0
 production_cap = 1
 production_slots = 1
-producible_types = [ExtResource("2"), ExtResource("3"), ExtResource("4")]
+producible_types = [ExtResource("3"), ExtResource("4"), ExtResource("5")]
 attack = 0
 attack_range = 0
 defense = 0

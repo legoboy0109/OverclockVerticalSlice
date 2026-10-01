@@ -1785,6 +1785,23 @@ static func _ability_matchup_effect(lookahead: GameState, owner: int, unit_type:
 					hit2 += w2 * minf(1.0, float(a.amount) / float(maxi(1, _max_hp_of(e))))
 				if worth2 > 0.0:
 					best = maxf(best, 0.5 * hit2 / worth2)
+			&"capture_vehicle":
+				# ★ 2026-10-01: the Pirate's whole point (it shoots crews, then takes the vehicle).
+				# Unvalued, the AI built ZERO Pirates in every batch, so the Lightless — whose design
+				# leans on stealing vehicles — played without their signature tool. Worth the share of
+				# the enemy's value standing in ground vehicles, at capture_value_fraction (a capture
+				# is not guaranteed: the crew must die first and the Pirate must reach it).
+				var worth3: float = 0.0
+				var vehicles: float = 0.0
+				for e: EntityState in lookahead.entities():
+					if e.owner == owner or e.owner < 0:
+						continue
+					var w3: float = _opponent_paid_ap_equivalent(e)
+					worth3 += w3
+					if e is UnitState and (e as UnitState).type.unit_class == UnitTypeDef.UnitClass.GROUND_VEHICLE:
+						vehicles += w3
+				if worth3 > 0.0:
+					best = maxf(best, minf(1.0, AIBalance.ai.capture_value_fraction * 2.0 * vehicles / worth3))
 	return best
 
 
@@ -2072,6 +2089,8 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 			continue
 		if not BaseProduction.can_build_more(lookahead, player, structure_type):
 			continue
+		if BaseProduction.missing_prerequisite(lookahead, player, structure_type) != null:
+			continue   # Factory needs a Barracks, Airfield a Factory (2026-10-01)
 
 		# ★ 2026-08-25: a structure is raised BY a Builder, on a tile beside THAT
 		# unit, and the Builder is consumed. So the AI must pick a builder, not just
@@ -2142,13 +2161,16 @@ static func _capacity_value(lookahead: GameState, player: int, structure_type: S
 	# the units IT makes. This read the player's globally cheapest unit (a 200-Credit Scout), so
 	# a Factory was valued as a slow Scout factory and lost to a Barracks every time — the AI
 	# raised ~1 Factory per side per game. Now: the cheapest ARMED type this structure produces.
-	# ⚠ Measured: priced that way with no further rule, the Factory came FIRST (median round 1,
-	# 59% vehicles) and the opening had no infantry producer. So a producer with no infantry
-	# of its own only earns its own-unit price once an infantry producer exists (any build
-	# status): Barracks first, then the Factory a couple of rounds later.
-	var own_price_ok: bool = produces and AIBalance.ai.producer_value_own_units \
-		and (_makes_armed_infantry(structure_type) or _has_infantry_producer(lookahead, player))
+	# ⚠ Measured twice. (1) With no ordering, the Factory came FIRST (median round 1, 59%
+	# vehicles) — now prevented by the Factory-needs-Barracks build rule itself. (2) Priced by
+	# PRICE alone, infantry factions (Order, Lightless) sank their one Builder into Factories and
+	# Airfields full of poor-value units — Order 53 -> 11 Inquisitors and 16 -> 5 Cathedrals.
+	# So a vehicle/aircraft producer's price is scaled by how good its units are next to the
+	# faction's best infantry (_producer_quality, never above 1).
+	var own_price_ok: bool = produces and AIBalance.ai.producer_value_own_units
 	var marginal_cost: float = _cheapest_armed_cost_of(lookahead, player, structure_type) if own_price_ok else 0.0
+	if marginal_cost > 0.0 and not _makes_armed_infantry(structure_type):
+		marginal_cost *= _producer_quality(lookahead, player, structure_type)
 	if marginal_cost <= 0.0:
 		marginal_cost = _cheapest_producible_cost(lookahead, player)
 	if marginal_cost <= 0.0:
@@ -2196,12 +2218,23 @@ static func _makes_armed_infantry(structure_type: StructureTypeDef) -> bool:
 	return false
 
 
-## True when [param player] owns an armed-infantry producer, completed or under construction.
-static func _has_infantry_producer(s: GameState, player: int) -> bool:
-	for e: EntityState in s.entities():
-		if e is StructureState and e.owner == player and _makes_armed_infantry((e as StructureState).type):
-			return true
-	return false
+## How good [param structure_type]'s best armed unit is next to [param player]'s best armed
+## infantry, on the production value-per-lifetime-cost scale and WITHOUT the army-mix bonus
+## (which would make every vehicle look better than it is): best_vehicle / best_infantry,
+## clamped to [[member AIConfig.producer_quality_min], 1]. 1 when there is no infantry to compare.
+static func _producer_quality(s: GameState, player: int, structure_type: StructureTypeDef) -> float:
+	var best_here: float = 0.0
+	for t: UnitTypeDef in structure_type.producible_types:
+		if t.attack > 0 and not t.can_build:
+			best_here = maxf(best_here, _unit_type_score(s, player, t) / _vehicle_mix_factor(s, player, t))
+	var best_inf: float = 0.0
+	for st: StructureTypeDef in Faction.buildable(s, player):
+		for t: UnitTypeDef in st.producible_types:
+			if t.unit_class == UnitTypeDef.UnitClass.INFANTRY and t.attack > 0 and not t.can_build:
+				best_inf = maxf(best_inf, _unit_type_score(s, player, t))
+	if best_inf <= 0.0:
+		return 1.0
+	return clampf(best_here / best_inf, AIBalance.ai.producer_quality_min, 1.0)
 
 
 ## Credit cost of the cheapest ARMED unit [param structure_type] produces for [param player]
