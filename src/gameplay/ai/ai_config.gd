@@ -208,6 +208,22 @@ extends Resource
 ## being folded into the push, and above [member pass_threshold] so the move is committed.
 @export var resupply_value_per_tile_closed: float = 0.25
 
+## ★ Supply Depots (2026-10-01). A depot is valued by the resupply trip it saves: the sum, over
+## every own ammo-using unit, of how many tiles nearer its nearest supplier would be with the
+## depot on the candidate tile, times this rate (AP-equivalent per unit-tile). A depot at home
+## saves nothing — the HQ and factories already supply there — so it scores ~0 on its own.
+@export var depot_value_per_unit_tile: float = 0.15
+
+## A depot is only worth considering once this many own vehicles/aircraft exist.
+@export var depot_min_units: int = 2
+
+## The most Supply Depots (built + under construction) the AI keeps at once.
+@export var depot_max_owned: int = 2
+
+## A Builder only walks forward to raise a depot when some ammo-using unit is at least this many
+## tiles from its nearest supplier — a shorter trip is not worth risking the Builder.
+@export var depot_trip_trigger_tiles: int = 5
+
 ## Tolerance below which two `action_score` values are treated as tied,
 ## triggering the deterministic tie-break (lowest `ap_cost`, then lowest
 ## entity ID) instead of a fragile raw-float `==`.
