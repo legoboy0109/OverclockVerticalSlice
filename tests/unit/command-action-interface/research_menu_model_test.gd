@@ -156,3 +156,18 @@ func test_an_unaffordable_tech_names_the_short_pool() -> void:
 	state.per_player[0].current_credits = 5000
 	state.per_player[0].current_ap = 0
 	assert_str(ActionMenu.research_option_text(_option(state, hq, Techs.ATTACK_I))).ends_with("needs AP")
+
+
+func test_tree_view_shows_researched_then_the_next_pair_only() -> void:
+	# ★ 2026-10-01 (branching trees).
+	var state := _state()
+	var hq := _structure(state, StructureTypes.HQ, Vector2i(2, 2))
+	_structure(state, StructureTypes.RESEARCH_LAB, Vector2i(4, 2))
+	GameStateFactory.grant_tech(state, 0, Techs.ATTACK_I)
+	var view := CommandFSM.research_tree_view(CommandFSM.research_options(state, hq), "offense")
+	var names: Array[String] = []
+	for o: CommandFSM.ResearchOption in view:
+		names.append(o.tech.display_name)
+	assert_array(names).is_equal(["Heavy Ordnance", "Penetration", "Volley"])
+	assert_str(CommandFSM.research_tree_summary(CommandFSM.research_options(state, hq), "offense")).is_equal(
+		"Heavy Ordnance  ·  next: choose 1 of 2")
