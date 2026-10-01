@@ -153,6 +153,11 @@ static func validate(state: GameState, action: UseAbilityAction) -> int:
 					or v.pilot != null or not v.cargo.is_empty():
 				return Action.Reason.ILLEGAL_TARGET
 			return Action.Reason.OK
+		&"crew_shot":
+			# An ENEMY vehicle with a pilot aboard — the shot only ever hits the crew.
+			if not (target is UnitState) or target.owner == unit.owner or (target as UnitState).pilot == null:
+				return Action.Reason.ILLEGAL_TARGET
+			return Action.Reason.OK
 	return Action.Reason.UNKNOWN_VERB
 
 
@@ -270,6 +275,18 @@ static func apply(state: GameState, action: UseAbilityAction) -> Array[Event]:
 			c.pilot_id = unit.entity_id
 			c.new_owner = unit.owner
 			events.append(c)
+			return events
+		&"crew_shot":
+			# Same rule as a crew-targeting attack (Combat TP-7): the pilot takes the hit; if it
+			# dies the vehicle is left intact and empty, ready for a Pirate's Capture Vehicle.
+			var vehicle: UnitState = state.entity_at(tile)
+			var pdmg: int = maxi(CombatBalance.combat.min_damage, ability.amount - Unit.effective_defense(state, vehicle.pilot))
+			Unit.apply_hp_delta(vehicle.pilot, -pdmg)
+			if vehicle.pilot.current_hp <= 0:
+				vehicle.pilot = null
+			used.amount = pdmg
+			events.append(used)
+			events.append(DamageEvent.new(unit.entity_id, vehicle.entity_id, pdmg))
 			return events
 	events.append(used)
 	return events

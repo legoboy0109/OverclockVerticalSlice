@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+; GENERATED from game-data/Abilities/Crew Shot.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 240a33e3e3500aa3add3614457f6ebfca583e004e74e79531445bf4a939a048b
+
+[ext_resource type="Script" path="res://src/core/ability/ability_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Crew Shot"
+id = &"crew_shot"
+description = "Shoot the pilot of an enemy vehicle within 4 tiles for 6 damage. Kills most pilots, leaving the vehicle empty for a Pirate to take."
+ap_cost = 3
+credit_cost = 0
+ability_range = 4
+cooldown = 2
+uses_per_match = 0
+amount = 6

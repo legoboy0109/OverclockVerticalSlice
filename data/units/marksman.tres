@@ -1,8 +1,9 @@
-[gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UnitTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Units/Marksman.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 09e968f1a1d965507a14fd773e4ad114308bf6aa3f2790b98719a9d3517f421d
+; source-sha256: db08a6d8a9040cc74af652d00d0ac2bac6646bb4e43a9c22dd901edf0d1ce5d4
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/abilities/crew_shot.tres" id="2"]
 
 [resource]
 script = ExtResource("1")
@@ -31,7 +32,7 @@ resist_emf = 2
 resist_incendiary = 0
 area_shape = 0
 area_length = 4
-abilities = []
+abilities = [ExtResource("2")]
 can_pilot = false
 requires_pilot = false
 transport_capacity = 0

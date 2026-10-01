@@ -85,6 +85,7 @@ it gets a unit that is cheaper, or tougher, or that also does something else.**
 | `DEMOLISH` | Attack with `DEMOLISH_BONUS` added vs **structures only**. No effect on units | 3 | 0 | 1 | 2 | Protectorate demolitions |
 | `SELF_DESTRUCT` | Destroy self; deal `SELF_DESTRUCT_DAMAGE` in a `BURST` centred on self. ★ Hits friendlies (DT-8) | 1 | 0 | 0 | — (`uses_per_match` 1) | Solar suicide bomber |
 | `CAPTURE_VEHICLE` | ★ **Board** an adjacent **unpiloted ground** vehicle: the actor moves into it and becomes its pilot, and ownership transfers with them. Ground only — an aircraft cannot be boarded. Subject to the new owner's population cap | 3 | 0 | 1 | 1 | ★ Independents pirate |
+| `CREW_SHOT` | ★ **2026-10-01.** Shoot the **pilot** of an enemy crewed vehicle for `CREW_SHOT_DAMAGE` (less the pilot's defence). The vehicle takes nothing; a dead pilot leaves it empty — capturable by `CAPTURE_VEHICLE` | 3 | 0 | 4 | 2 | ★ Independents Marksman, to pair with the Pirate (user direction) |
 | `PARADROP` | Deploy a carried unit to any empty tile within `PARADROP_RANGE` of the transport, ignoring terrain and pathing | 3 | 0 | 3 | 2 | Solar paratrooper transport |
 | `EMBARK` / `DISEMBARK` | Load into / unload from an adjacent transport. See `transport-and-pilots.md` | 1 | 0 | 1 | 0 | Alliance, Solar, Protectorate transports |
 | `FORTIFY` | Gain `FORTIFY_DEFENSE` defense until the start of this unit's next turn. Ends if the unit moves | 1 | 0 | 0 | 0 | Machinist's Union early defence; Empire vehicles |
@@ -100,6 +101,7 @@ it gets a unit that is cheaper, or tougher, or that also does something else.**
 | `PARADROP_RANGE` | **3** tiles | |
 | `FORTIFY_DEFENSE` | **+2** | Against a 2–6 attack band, a real but not absolute tilt |
 | `SPOT_BONUS` | **+1** tile | |
+| `CREW_SHOT_DAMAGE` | **6** | Kills every infantry pilot except the Knight (7 hp) |
 
 > ### ★ `CAPTURE_VEHICLE` resolves as boarding, not as a remote seizure
 >
@@ -123,6 +125,14 @@ it gets a unit that is cheaper, or tougher, or that also does something else.**
 > user's — the one shape that reliably becomes degenerate. Its guards: it requires an **unpiloted**
 > vehicle (so the opponent must have made a mistake or taken a loss), costs 3 AP, has a cooldown,
 > and is capped by population. **Watch it in playtest specifically.**
+
+> ### ★ 2026-10-01 — Pirate made viable; Crew Shot added (user direction)
+>
+> In AI-vs-AI sims the AI built **zero** Pirates: at 4 hp and range 1 it had to walk up to vehicles
+> that shoot from 2–5 tiles, and nothing killed crews for it, so `CAPTURE_VEHICLE` almost never had
+> a target. The Pirate is now **8 hp, range 2**, and the Marksman carries `CREW_SHOT` — the Lightless
+> kill crews from range and walk in to take the vehicle. The AI values both abilities by the share
+> of the enemy's value in crewed ground vehicles (`AIConfig.capture_value_fraction`).
 
 ## Formulas
 

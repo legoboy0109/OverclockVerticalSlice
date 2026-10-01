@@ -1163,6 +1163,14 @@ static func _ability_value(lookahead: GameState, unit: UnitState, ability: Abili
 			return total
 		&"capture_vehicle":
 			return credits_to_ap(float((target as UnitState).type.produce_cost))
+		&"crew_shot":
+			# A dead pilot leaves the vehicle unable to act and open to capture: worth
+			# capture_value_fraction of the vehicle. A non-lethal shot is just pilot damage.
+			var v: UnitState = target
+			var pdmg: int = maxi(CombatBalance.combat.min_damage, ability.amount - Unit.effective_defense(lookahead, v.pilot))
+			if pdmg >= v.pilot.current_hp:
+				return credits_to_ap(float(v.type.produce_cost)) * AIBalance.ai.capture_value_fraction
+			return _combat_value(pdmg, false, v.pilot)
 	return 0.0
 
 
@@ -1785,8 +1793,9 @@ static func _ability_matchup_effect(lookahead: GameState, owner: int, unit_type:
 					hit2 += w2 * minf(1.0, float(a.amount) / float(maxi(1, _max_hp_of(e))))
 				if worth2 > 0.0:
 					best = maxf(best, 0.5 * hit2 / worth2)
-			&"capture_vehicle":
-				# ★ 2026-10-01: the Pirate's whole point (it shoots crews, then takes the vehicle).
+			&"crew_shot", &"capture_vehicle":
+				# ★ 2026-10-01: Crew Shot (Marksman) and Capture Vehicle (Pirate) both feed on the
+				# enemy's crewed ground vehicles. Capture: the Pirate's whole point (it shoots crews, then takes the vehicle).
 				# Unvalued, the AI built ZERO Pirates in every batch, so the Lightless — whose design
 				# leans on stealing vehicles — played without their signature tool. Worth the share of
 				# the enemy's value standing in ground vehicles, at capture_value_fraction (a capture

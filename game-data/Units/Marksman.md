@@ -24,7 +24,8 @@ resist_emf: 2
 resist_incendiary: 0
 area_shape: single
 area_length: 4
-abilities: []
+abilities:
+- '[[Crew Shot]]'
 can_pilot: false
 requires_pilot: false
 transport_capacity: 0
