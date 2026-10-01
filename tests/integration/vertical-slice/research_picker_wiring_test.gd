@@ -90,7 +90,8 @@ func test_choosing_a_tech_from_the_picker_starts_research_at_the_hq() -> void:
 	assert_bool(_press_row(_menu(root), "Research")).override_failure_message(
 		"no enabled Research row on the HQ menu").is_true()
 	await get_tree().process_frame
-	assert_bool(_press_row(_menu(root), "Attack Tech - ")).override_failure_message(
+	# ★ 2026-10-01: the row label is the name alone; the description is a second line.
+	assert_bool(_press_row(_menu(root), "Attack Tech")).override_failure_message(
 		"no enabled Attack Tech row in the research picker: %s" % [_row_texts(_menu(root))]).is_true()
 	await get_tree().process_frame
 	assert_object(hq.research_target).override_failure_message(
@@ -108,7 +109,7 @@ func test_the_picker_shows_locked_techs_with_their_reason() -> void:
 	var texts: Array[String] = _row_texts(_menu(root))
 	var found: bool = false
 	for t: String in texts:
-		if t.begins_with("Penetration - "):
+		if t == "Penetration":   # ★ 2026-10-01: name alone; description is a second line
 			found = true
 	assert_bool(found).override_failure_message("Penetration missing from the picker: %s" % [texts]).is_true()
 
