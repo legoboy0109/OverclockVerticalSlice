@@ -251,6 +251,7 @@ static func choose_action(state: GameState, economy_investments_committed: int, 
 		best = _score_build_and_economy_candidates(lookahead, entity, economy_investments_committed, best)
 		best = _score_research_candidates(lookahead, entity, economy_investments_committed, best)
 		best = _score_cancel_build_candidates(lookahead, entity, builds_committed_this_turn, best)
+		best = _score_rush_candidates(lookahead, entity, best)
 		best = _score_crewing_candidates(lookahead, entity, best)
 		best = _score_transport_candidates(lookahead, entity, best)
 		best = _score_ability_candidates(lookahead, entity, best)
@@ -396,7 +397,12 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 	var is_builder: bool = unit.type.can_build
 	var is_wounded_and_threatened: bool = (_is_wounded(unit) or is_builder) and threat.found
 	if is_builder and not is_wounded_and_threatened:
-		return best
+		# ★ Supply Depots (2026-10-01): the one reason a healthy Builder leaves home — to
+		# carry a forward depot toward an army whose resupply trip has grown long.
+		return _score_depot_escort_candidates(lookahead, unit, best)
+	# ★ Ammo (2026-10-01): a dry vehicle/aircraft is useless at the front — it goes home instead.
+	if Ammo.is_empty(unit):
+		return _score_resupply_candidates(lookahead, unit, best)
 
 	# Single best advance, folded once after the loop. Every straight-line advance
 	# ties at POSITIONAL_VALUE_PER_TILE_CLOSED (dist_closed == tiles_moved, AC-20),
@@ -609,6 +615,241 @@ static func _score_positional_and_retreat_candidates(lookahead: GameState, unit:
 		best = _Candidate.new(_make_move_action(unit, siege_tile, siege_tiles_moved), siege_score, siege_ap_cost, unit.entity_id)
 
 	return best
+
+
+## ★ Ammo (2026-10-01): the move that takes an empty [param unit] closest to a tile beside its
+## nearest own resupplying structure (HQ, factory, airfield, Supply Depot), folded into
+## [param best]. Already beside one = stay (refilled at the start of the next turn). Strictly
+## closing moves only, so it can never ping-pong. No supplier = no candidate.
+static func _score_resupply_candidates(lookahead: GameState, unit: UnitState, best: _Candidate) -> _Candidate:
+	var suppliers: Array[Vector2i] = []
+	for e: EntityState in lookahead.entities():
+		if e.owner == unit.owner and e is StructureState and Ammo.is_resupplier(e as StructureState):
+			suppliers.append(e.position)
+	if suppliers.is_empty():
+		return best
+	var dist_before: int = _distance_to_any(lookahead, unit.position, suppliers)
+	if dist_before <= 1:
+		return best
+	var found: bool = false
+	var tile: Vector2i = Vector2i.ZERO
+	var tiles_moved_best: int = 0
+	var dist_best: int = dist_before
+	var score_best: float = 0.0
+	var cost_best: int = 0
+	for r: Movement.ReachableTile in Movement.reachable(lookahead, unit):
+		if not AP.can_afford(lookahead, unit.owner, r.min_cost):
+			continue
+		var tiles_moved: int = _tiles_moved_for(unit, r.min_cost)
+		if tiles_moved <= 0:
+			continue
+		var d: int = _distance_to_any(lookahead, r.tile, suppliers)
+		if d >= dist_before or d < 1:
+			continue
+		var score: float = float(dist_before - d) * AIBalance.ai.resupply_value_per_tile_closed / float(tiles_moved)
+		if not found or d < dist_best or (d == dist_best and r.min_cost < cost_best):
+			found = true
+			tile = r.tile
+			tiles_moved_best = tiles_moved
+			dist_best = d
+			score_best = score
+			cost_best = r.min_cost
+	if found and _is_better(score_best, cost_best, unit.entity_id, best.score, best.ap_cost, best.entity_id):
+		best = _Candidate.new(_make_move_action(unit, tile, tiles_moved_best), score_best, cost_best, unit.entity_id)
+	return best
+
+
+## ★ Rush (2026-10-01): one turn off [param entity]'s construction or vehicle production, when
+## legal ([method BaseProduction.validate_rush] — the rules' own answer, never re-derived).
+## Value = [member AIConfig.rush_turn_value_fraction] × the item's Credit cost in AP-equivalent,
+## × [member AIConfig.rush_threat_multiplier] with an enemy unit within
+## [member AIConfig.rush_threat_radius]; score = value / rush AP.
+static func _score_rush_candidates(lookahead: GameState, entity: EntityState, best: _Candidate) -> _Candidate:
+	if not (entity is StructureState) or entity.owner != lookahead.active_player:
+		return best
+	var structure: StructureState = entity
+	var action := RushAction.new()
+	action.player = entity.owner
+	action.structure_id = entity.entity_id
+	if BaseProduction.validate_rush(lookahead, action) != Action.Reason.OK:
+		return best
+	var credits: int
+	if structure.build_status == StructureState.BuildStatus.UNDER_CONSTRUCTION:
+		credits = BaseProduction.effective_build_cost(lookahead, structure.type, entity.owner)
+	else:
+		credits = Unit.effective_produce_cost(lookahead, structure.producing_type, entity.owner)
+	var value: float = credits_to_ap(float(credits)) * AIBalance.ai.rush_turn_value_fraction
+	if _enemy_unit_within(lookahead, structure.position, entity.owner, AIBalance.ai.rush_threat_radius):
+		value *= AIBalance.ai.rush_threat_multiplier
+	var cost: int = BaseProduction.rush_ap_cost()
+	var score: float = value / float(cost)
+	if _is_better(score, cost, entity.entity_id, best.score, best.ap_cost, best.entity_id):
+		best = _Candidate.new(action, score, cost, entity.entity_id)
+	return best
+
+
+static func _enemy_unit_within(state: GameState, tile: Vector2i, player: int, radius: int) -> bool:
+	for e: EntityState in state.entities():
+		if e is UnitState and e.owner != player and state.grid.manhattan_distance(e.position, tile) <= radius:
+			return true
+	return false
+
+
+## A structure whose only job is resupply (the Supply Depot) — not a producer that also supplies.
+static func _is_depot(t: StructureTypeDef) -> bool:
+	return t.resupplies and t.producible_types.is_empty() and t != StructureTypes.HQ
+
+
+## Positions of [param player]'s completed resupplying structures.
+static func _supplier_tiles(state: GameState, player: int) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for e: EntityState in state.entities():
+		if e.owner == player and e is StructureState and Ammo.is_resupplier(e as StructureState):
+			out.append(e.position)
+	return out
+
+
+## [param player]'s units that use ammo, on the board (passengers are carried home by their ride).
+static func _ammo_units(state: GameState, player: int) -> Array[UnitState]:
+	var out: Array[UnitState] = []
+	for e: EntityState in state.entities():
+		if e.owner == player and e is UnitState and Ammo.uses_ammo((e as UnitState).type):
+			out.append(e)
+	return out
+
+
+## Depots [param player] owns, built or under construction.
+static func _depot_count(state: GameState, player: int) -> int:
+	var n: int = 0
+	for e: EntityState in state.entities():
+		if e.owner == player and e is StructureState and _is_depot((e as StructureState).type):
+			n += 1
+	return n
+
+
+## AP-equivalent value of a depot on [param tile]: Σ over ammo units of the tiles it takes off
+## their trip to the nearest supplier, × [member AIConfig.depot_value_per_unit_tile].
+static func _depot_value_at(state: GameState, tile: Vector2i, units: Array[UnitState], suppliers: Array[Vector2i]) -> float:
+	var saved: int = 0
+	for u: UnitState in units:
+		var now: int = _distance_to_any(state, u.position, suppliers) if not suppliers.is_empty() else 1 << 20
+		var with_depot: int = state.grid.manhattan_distance(u.position, tile)
+		saved += maxi(0, now - with_depot)
+	return float(saved) * AIBalance.ai.depot_value_per_unit_tile
+
+
+## Best depot build for [param player] over every Builder and every tile beside it, folded into
+## [param best]. Mirrors the generic build path's gates (affordability, deficit, maximums).
+static func _score_depot_build(lookahead: GameState, player: int, structure_type: StructureTypeDef, best: _Candidate) -> _Candidate:
+	var units: Array[UnitState] = _ammo_units(lookahead, player)
+	if units.size() < AIBalance.ai.depot_min_units or _depot_count(lookahead, player) >= AIBalance.ai.depot_max_owned:
+		return best
+	var cost: int = BaseProduction.effective_build_cost(lookahead, structure_type, player)
+	var ap_cost: int = BaseProduction.effective_build_ap_cost(lookahead, player)
+	if not Credits.can_afford(lookahead, player, cost) or not AP.can_afford(lookahead, player, ap_cost) \
+			or lookahead.per_player[player].in_deficit or not BaseProduction.can_build_more(lookahead, player, structure_type):
+		return best
+	var suppliers: Array[Vector2i] = _supplier_tiles(lookahead, player)
+	var best_value: float = 0.0
+	var best_builder: UnitState = null
+	var best_tile: Vector2i = Vector2i.ZERO
+	for b: UnitState in BaseProduction.builders_of(lookahead, player):
+		for t: Vector2i in BaseProduction.legal_build_tiles_for(lookahead, b):
+			var v: float = _depot_value_at(lookahead, t, units, suppliers)
+			if v > best_value + AIBalance.ai.score_tie_epsilon:
+				best_value = v
+				best_builder = b
+				best_tile = t
+	if best_builder == null:
+		return best
+	var score: float = _action_score(best_value / ap_equivalent_cost(cost, ap_cost), false)
+	var candidate_entity_id: int = _lowest_owned_entity_id(lookahead, player)
+	if _is_better(score, cost, candidate_entity_id, best.score, best.ap_cost, best.entity_id):
+		var action := BuildAction.new()
+		action.player = player
+		action.structure_type = structure_type
+		action.builder_id = best_builder.entity_id
+		action.tile = best_tile
+		best = _Candidate.new(action, score, cost, candidate_entity_id)
+	return best
+
+
+## The Builder's forward walk (2026-10-01): when some vehicle/aircraft is
+## [member AIConfig.depot_trip_trigger_tiles]+ from its nearest supplier and a depot is
+## affordable and allowed, move the Builder toward that unit — only onto tiles no enemy can
+## reach next turn, strictly closing, so it never strolls into guns or ping-pongs.
+static func _score_depot_escort_candidates(lookahead: GameState, builder: UnitState, best: _Candidate) -> _Candidate:
+	var player: int = builder.owner
+	var depot_type: StructureTypeDef = null
+	for t: StructureTypeDef in Faction.buildable(lookahead, player):
+		if _is_depot(t):
+			depot_type = t
+			break
+	if depot_type == null or not BaseProduction.can_build_more(lookahead, player, depot_type):
+		return best
+	var units: Array[UnitState] = _ammo_units(lookahead, player)
+	if units.size() < AIBalance.ai.depot_min_units or _depot_count(lookahead, player) >= AIBalance.ai.depot_max_owned:
+		return best
+	if not Credits.can_afford(lookahead, player, BaseProduction.effective_build_cost(lookahead, depot_type, player)):
+		return best
+	var suppliers: Array[Vector2i] = _supplier_tiles(lookahead, player)
+	var goal: UnitState = null
+	var goal_trip: int = AIBalance.ai.depot_trip_trigger_tiles - 1
+	for u: UnitState in units:
+		var trip: int = _distance_to_any(lookahead, u.position, suppliers) if not suppliers.is_empty() else 1 << 20
+		if trip > goal_trip:
+			goal_trip = trip
+			goal = u
+	if goal == null:
+		return best
+	var dist_before: int = lookahead.grid.manhattan_distance(builder.position, goal.position)
+	if dist_before <= 2:
+		return best   # close enough to build beside the army; the depot build scores it
+	var found: bool = false
+	var tile: Vector2i = Vector2i.ZERO
+	var moved: int = 0
+	var dist_best: int = dist_before
+	var cost_best: int = 0
+	for r: Movement.ReachableTile in Movement.reachable(lookahead, builder):
+		if not AP.can_afford(lookahead, player, r.min_cost):
+			continue
+		var tiles_moved: int = _tiles_moved_for(builder, r.min_cost)
+		if tiles_moved <= 0:
+			continue
+		var d: int = lookahead.grid.manhattan_distance(r.tile, goal.position)
+		if d >= dist_before or _tile_in_enemy_reach(lookahead, r.tile, player):
+			continue
+		if not found or d < dist_best or (d == dist_best and r.min_cost < cost_best):
+			found = true
+			tile = r.tile
+			moved = tiles_moved
+			dist_best = d
+			cost_best = r.min_cost
+	if not found:
+		return best
+	var score: float = float(dist_before - dist_best) * AIBalance.ai.resupply_value_per_tile_closed / float(moved)
+	if _is_better(score, cost_best, builder.entity_id, best.score, best.ap_cost, best.entity_id):
+		best = _Candidate.new(_make_move_action(builder, tile, moved), score, cost_best, builder.entity_id)
+	return best
+
+
+## True when any enemy could reach [param tile] with an attack next turn (move + range).
+static func _tile_in_enemy_reach(state: GameState, tile: Vector2i, player: int) -> bool:
+	for e: EntityState in state.entities():
+		if e.owner == player or e.owner < 0:
+			continue
+		if not (e is UnitState) and not (e is StructureState and (e as StructureState).type.attack > 0):
+			continue
+		if state.grid.manhattan_distance(e.position, tile) <= _threat_reach_of(state, e):
+			return true
+	return false
+
+
+static func _distance_to_any(state: GameState, from: Vector2i, targets: Array[Vector2i]) -> int:
+	var out: int = 1 << 30
+	for t: Vector2i in targets:
+		out = mini(out, state.grid.manhattan_distance(from, t))
+	return out
 
 
 ## ★ AP-aware moves (2026-09-29): true when reaching [param tiles_moved] tiles takes [param unit]
@@ -1756,6 +1997,12 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 		# Research Lab now has a model too (_lab_value, dispatched from _economy_value) —
 		# the value of the best tier-2 tech it would unlock, discounted. Defensive
 		# Structure remains excluded today because it genuinely has no model yet.
+		# ★ Supply Depots (2026-10-01): valued per TILE (the trip it saves), so it picks its own
+		# builder and tile instead of the generic first-builder / _best_build_tile path below.
+		if _is_depot(structure_type):
+			if not cap_reached:
+				best = _score_depot_build(lookahead, player, structure_type, best)
+			continue
 		var prospective_value: float = _economy_value(lookahead, player, structure_type)
 		if prospective_value <= 0.0:
 			continue

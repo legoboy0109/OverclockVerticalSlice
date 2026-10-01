@@ -7,6 +7,7 @@ structures:
 - '[[Mandate Barracks]]'
 - '[[Mandate Factory]]'
 - '[[Mandate Airfield]]'
+- '[[Supply Depot]]'
 - '[[Research Lab]]'
 - '[[Mandate Defence]]'
 techs:

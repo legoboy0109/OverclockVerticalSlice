@@ -7,6 +7,7 @@ structures:
 - '[[Collective Barracks]]'
 - '[[Collective Factory]]'
 - '[[Collective Airfield]]'
+- '[[Supply Depot]]'
 - '[[Research Lab]]'
 - '[[Bulwark]]'
 techs: []

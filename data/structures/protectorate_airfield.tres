@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=5 format=3]
 ; GENERATED from game-data/Structures/Mandate Airfield.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 93a4f47b24055e4e60b0ae664eac675caf2789be31cd90935fdf19f7b7e9b80c
+; source-sha256: 7c6b4cd8fc3626ded17ed35ca24fc21f09c41765511db80a5664708896dbad78
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/strafer.tres" id="2"]
@@ -26,6 +26,7 @@ attack_range = 0
 defense = 0
 can_counterattack = false
 can_research = false
+resupplies = true
 can_target = Array[int]([0, 1])
 targeting_mode = 0
 min_range = 1

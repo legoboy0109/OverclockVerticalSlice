@@ -1,21 +1,22 @@
-[gd_resource type="Resource" script_class="FactionDef" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="FactionDef" load_steps=9 format=3]
 ; GENERATED from game-data/Factions/The Lightless.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 9b899633cdbabecd60cd78454feb31ec216dfa5c2489dffa0932c1494d3626e5
+; source-sha256: 09c66bf4bb91f0b3a667dfc630106769fee7b8e27e3361d0e7ab4c7ad8a5be49
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/structures/independents_barracks.tres" id="2"]
 [ext_resource type="Resource" path="res://data/structures/independents_factory.tres" id="3"]
 [ext_resource type="Resource" path="res://data/structures/independents_airfield.tres" id="4"]
-[ext_resource type="Resource" path="res://data/structures/research_lab.tres" id="5"]
-[ext_resource type="Resource" path="res://data/structures/defensive_structure.tres" id="6"]
-[ext_resource type="Script" path="res://src/core/faction/faction_unit_delta.gd" id="7"]
+[ext_resource type="Resource" path="res://data/structures/supply_depot.tres" id="5"]
+[ext_resource type="Resource" path="res://data/structures/research_lab.tres" id="6"]
+[ext_resource type="Resource" path="res://data/structures/defensive_structure.tres" id="7"]
+[ext_resource type="Script" path="res://src/core/faction/faction_unit_delta.gd" id="8"]
 
 [resource]
 script = ExtResource("1")
 display_name = "The Lightless"
 description = "Poor, few and dangerous: every soldier a specialist, and their best vehicles are the ones they steal."
 playable = true
-structures = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6")]
+structures = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")]
 techs = []
 infantry_cap_delta = -1
 base_income_delta = -200

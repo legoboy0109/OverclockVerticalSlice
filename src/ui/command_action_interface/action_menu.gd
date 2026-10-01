@@ -244,6 +244,7 @@ const REASON_LABELS: Dictionary = {
 	CommandFSM.Reason.NOTHING_TO_RUSH: "nothing to rush",
 	CommandFSM.Reason.NOT_RUSHABLE: "infantry can't rush",
 	CommandFSM.Reason.RUSH_AT_MINIMUM: "ready next turn",
+	CommandFSM.Reason.OUT_OF_AMMO: "out of ammo",
 }
 
 ## Player-facing phrasing for an [enum Action.Reason] a validator returned when a
@@ -285,6 +286,7 @@ const COMMIT_REJECTION_LABELS: Dictionary = {
 	Action.Reason.NOTHING_TO_RUSH: "nothing to rush",
 	Action.Reason.NOT_RUSHABLE: "infantry and builders can't be rushed",
 	Action.Reason.RUSH_AT_MINIMUM: "already ready next turn",
+	Action.Reason.OUT_OF_AMMO: "out of ammo — resupply beside an HQ, factory, airfield or depot",
 }
 
 
@@ -314,6 +316,7 @@ const REASON_ORDER: Array[int] = [
 	CommandFSM.Reason.NOTHING_BLOCKED,
 	CommandFSM.Reason.NOT_COMPLETED,
 	CommandFSM.Reason.ALREADY_ATTACKED,
+	CommandFSM.Reason.OUT_OF_AMMO,
 	CommandFSM.Reason.OUT_OF_RANGE,
 	CommandFSM.Reason.NO_TARGETS,
 	CommandFSM.Reason.PRODUCTION_CAP_REACHED,

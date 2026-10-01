@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=7 format=3]
 ; GENERATED from game-data/Structures/Collective Factory.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: d019784297cab92b4792bd25e5cc685498372ff307bf2b3180c929ef6798b336
+; source-sha256: 2a8046829b7f6ec77ba575e20fb44a7b26711191a68c959d7e0f011ce83366ab
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/walker.tres" id="2"]
@@ -28,6 +28,7 @@ attack_range = 0
 defense = 0
 can_counterattack = false
 can_research = false
+resupplies = true
 can_target = Array[int]([0, 1])
 targeting_mode = 0
 min_range = 1

@@ -1,24 +1,25 @@
-[gd_resource type="Resource" script_class="FactionDef" load_steps=18 format=3]
+[gd_resource type="Resource" script_class="FactionDef" load_steps=19 format=3]
 ; GENERATED from game-data/Factions/The Accord of Inner Systems.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: f789fcfb37ed24ce8f5189120f798ae094ef060f0689e41bfb9cbb7871377ea5
+; source-sha256: fd8b313543f302baaa3a352201aa5c76901de4fac67fac0ae4e0f8815a9cda1f
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/structures/hq.tres" id="2"]
 [ext_resource type="Resource" path="res://data/structures/barracks.tres" id="3"]
 [ext_resource type="Resource" path="res://data/structures/factory.tres" id="4"]
 [ext_resource type="Resource" path="res://data/structures/airfield.tres" id="5"]
-[ext_resource type="Resource" path="res://data/structures/research_lab.tres" id="6"]
-[ext_resource type="Resource" path="res://data/structures/defensive_structure.tres" id="7"]
-[ext_resource type="Resource" path="res://data/techs/attack_1.tres" id="8"]
-[ext_resource type="Resource" path="res://data/techs/defense_1.tres" id="9"]
-[ext_resource type="Resource" path="res://data/techs/economy_1.tres" id="10"]
-[ext_resource type="Resource" path="res://data/techs/penetration.tres" id="11"]
-[ext_resource type="Resource" path="res://data/techs/volley.tres" id="12"]
-[ext_resource type="Resource" path="res://data/techs/plating.tres" id="13"]
-[ext_resource type="Resource" path="res://data/techs/field_repair.tres" id="14"]
-[ext_resource type="Resource" path="res://data/techs/logistics.tres" id="15"]
-[ext_resource type="Resource" path="res://data/techs/foundry.tres" id="16"]
-[ext_resource type="Script" path="res://src/core/faction/faction_unit_delta.gd" id="17"]
+[ext_resource type="Resource" path="res://data/structures/supply_depot.tres" id="6"]
+[ext_resource type="Resource" path="res://data/structures/research_lab.tres" id="7"]
+[ext_resource type="Resource" path="res://data/structures/defensive_structure.tres" id="8"]
+[ext_resource type="Resource" path="res://data/techs/attack_1.tres" id="9"]
+[ext_resource type="Resource" path="res://data/techs/defense_1.tres" id="10"]
+[ext_resource type="Resource" path="res://data/techs/economy_1.tres" id="11"]
+[ext_resource type="Resource" path="res://data/techs/penetration.tres" id="12"]
+[ext_resource type="Resource" path="res://data/techs/volley.tres" id="13"]
+[ext_resource type="Resource" path="res://data/techs/plating.tres" id="14"]
+[ext_resource type="Resource" path="res://data/techs/field_repair.tres" id="15"]
+[ext_resource type="Resource" path="res://data/techs/logistics.tres" id="16"]
+[ext_resource type="Resource" path="res://data/techs/foundry.tres" id="17"]
+[ext_resource type="Script" path="res://src/core/faction/faction_unit_delta.gd" id="18"]
 
 [resource]
 script = ExtResource("1")
@@ -26,8 +27,8 @@ display_name = "The Accord of Inner Systems"
 description = "The generalist: a serviceable answer to everything, the best answer to nothing. The balance baseline."
 playable = true
 hq = ExtResource("2")
-structures = [ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")]
-techs = [ExtResource("8"), ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16")]
+structures = [ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8")]
+techs = [ExtResource("9"), ExtResource("10"), ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16"), ExtResource("17")]
 infantry_cap_delta = 0
 base_income_delta = 0
 econ_tier_bonus_delta = 0

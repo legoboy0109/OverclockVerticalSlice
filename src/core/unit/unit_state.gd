@@ -45,6 +45,10 @@ extends EntityState
 ## (ADR-0008 step 2).
 @export var has_attacked: bool = false
 
+## ★ Ammo (2026-10-01): attacks spent since the last resupply. Stored as SPENT rather than
+## remaining so a fresh unit, and every save from before ammo existed, starts full at 0.
+@export var ammo_spent: int = 0
+
 ## Tiles moved so far this turn, toward the Movement epic's soft-cap penalty
 ## (forward-declared; the writer is out of scope here). Reset to [code]0[/code]
 ## at the start of the owning player's turn by [method Unit.reset_turn_flags]

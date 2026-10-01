@@ -7,6 +7,7 @@ structures:
 - '[[Order Barracks]]'
 - '[[Order Factory]]'
 - '[[Order Airfield]]'
+- '[[Supply Depot]]'
 - '[[Cathedral]]'
 - '[[Defensive Structure]]'
 techs:

@@ -23,6 +23,7 @@ attack_range = 2
 defense = 0
 can_counterattack = true
 can_research = false
+resupplies = false
 can_target = Array[int]([0, 1, 2])
 targeting_mode = 0
 min_range = 1

@@ -164,6 +164,7 @@ enum Reason {
 	NOTHING_TO_RUSH = 1048576,     ## Rush: not an own structure that is under construction or producing. STRUCTURAL — hidden.
 	NOT_RUSHABLE = 2097152,        ## Rush: producing infantry or a builder, which can't be rushed (user decision). SITUATIONAL — shown, so the rule is learned.
 	RUSH_AT_MINIMUM = 4194304,     ## Rush: already ready at the start of the next turn — the floor. SITUATIONAL.
+	OUT_OF_AMMO = 8388608,         ## Attack: a vehicle/aircraft with no ammo left ([method Ammo.is_empty]). SITUATIONAL — resupply beside an HQ, factory, airfield or Supply Depot.
 }
 
 
@@ -497,6 +498,9 @@ static func _attack_entry(state: GameState, entity: EntityState) -> VerbEntry:
 
 	if not can_still_attack:
 		return VerbEntry.new(Verb.ATTACK, false, Reason.ALREADY_ATTACKED)
+	# ★ Ammo (2026-10-01): named on its own — "no targets" would be a lie with enemies in range.
+	if Ammo.is_empty(entity):
+		return VerbEntry.new(Verb.ATTACK, false, Reason.OUT_OF_AMMO)
 
 	var has_targets: bool = not Combat.legal_targets(state, entity).is_empty()
 	var cost: int = Combat.attack_cost_for(entity)

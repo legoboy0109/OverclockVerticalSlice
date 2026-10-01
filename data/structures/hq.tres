@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=3 format=3]
 ; GENERATED from game-data/Structures/HQ.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 0fddc46f7c9ab822a98621c2a23e7bb909cf7ba3faa05dc3e74b2909cb7f3545
+; source-sha256: 799a6a1f9607dd37eef7296497c5588e75f5b13523b7beca0a40c33237969bfb
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/builder.tres" id="2"]
@@ -24,6 +24,7 @@ attack_range = 0
 defense = 2
 can_counterattack = false
 can_research = true
+resupplies = true
 can_target = Array[int]([0, 1])
 targeting_mode = 0
 min_range = 1

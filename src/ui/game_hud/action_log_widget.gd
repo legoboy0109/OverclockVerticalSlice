@@ -98,6 +98,7 @@ const ENTRY_LABELS: Dictionary = {
 	&"ProductionStartedEvent": "Production started",
 	&"ProductionCancelledEvent": "Production cancelled",
 	&"RushedEvent": "Rushed",
+	&"UnitResuppliedEvent": "Resupplied",
 	&"UnitMovedEvent": "Unit moved",
 	&"UnitDestroyedEvent": "Unit destroyed",
 	&"DamageEvent": "Damage dealt",

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="StructureTypeDef" load_steps=6 format=3]
 ; GENERATED from game-data/Structures/Mandate Factory.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: c96dd3d210c50e73ea0f587635adeb7198c65c3eb8b6250071dccc3f2d406982
+; source-sha256: 5910ce2fe26a2f401683ad66a9b97aafd1cb1b0a0bb4da8495dfbd833b2dfc2c
 
 [ext_resource type="Script" path="res://src/core/structure/structure_type_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/units/sentinel_mech.tres" id="2"]
@@ -27,6 +27,7 @@ attack_range = 0
 defense = 0
 can_counterattack = false
 can_research = false
+resupplies = true
 can_target = Array[int]([0, 1])
 targeting_mode = 0
 min_range = 1

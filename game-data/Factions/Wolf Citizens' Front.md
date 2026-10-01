@@ -7,6 +7,7 @@ structures:
 - '[[Front Barracks]]'
 - '[[Front Factory]]'
 - '[[Front Airfield]]'
+- '[[Supply Depot]]'
 - '[[Research Lab]]'
 - '[[Autonomous Defence Node]]'
 techs: []
