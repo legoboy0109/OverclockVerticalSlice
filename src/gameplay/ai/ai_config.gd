@@ -224,6 +224,17 @@ extends Resource
 ## tiles from its nearest supplier — a shorter trip is not worth risking the Builder.
 @export var depot_trip_trigger_tiles: int = 5
 
+## ★ Rush (2026-10-01). One turn sooner is worth this fraction of what is being made (its
+## Credit cost, in AP-equivalent). 0.07 × a 1400-Credit Tank ≈ 0.98 AP of value against a 4 AP
+## rush ⇒ score ≈ 0.245: worth it when nothing better is on offer, never ahead of a good attack.
+## (0.15 scored a Tank rush at 0.525, above most moves, so the AI rushed every Tank.)
+@export var rush_turn_value_fraction: float = 0.07
+
+## Multiplier on rush value when an enemy unit is within [member rush_threat_radius] tiles of the
+## structure — a defender or a finished building arriving a turn early matters most under attack.
+@export var rush_threat_multiplier: float = 2.0
+@export var rush_threat_radius: int = 6
+
 ## Tolerance below which two `action_score` values are treated as tied,
 ## triggering the deterministic tie-break (lowest `ap_cost`, then lowest
 ## entity ID) instead of a fragile raw-float `==`.

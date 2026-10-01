@@ -251,6 +251,7 @@ static func choose_action(state: GameState, economy_investments_committed: int, 
 		best = _score_build_and_economy_candidates(lookahead, entity, economy_investments_committed, best)
 		best = _score_research_candidates(lookahead, entity, economy_investments_committed, best)
 		best = _score_cancel_build_candidates(lookahead, entity, builds_committed_this_turn, best)
+		best = _score_rush_candidates(lookahead, entity, best)
 		best = _score_crewing_candidates(lookahead, entity, best)
 		best = _score_transport_candidates(lookahead, entity, best)
 		best = _score_ability_candidates(lookahead, entity, best)
@@ -656,6 +657,42 @@ static func _score_resupply_candidates(lookahead: GameState, unit: UnitState, be
 	if found and _is_better(score_best, cost_best, unit.entity_id, best.score, best.ap_cost, best.entity_id):
 		best = _Candidate.new(_make_move_action(unit, tile, tiles_moved_best), score_best, cost_best, unit.entity_id)
 	return best
+
+
+## ★ Rush (2026-10-01): one turn off [param entity]'s construction or vehicle production, when
+## legal ([method BaseProduction.validate_rush] — the rules' own answer, never re-derived).
+## Value = [member AIConfig.rush_turn_value_fraction] × the item's Credit cost in AP-equivalent,
+## × [member AIConfig.rush_threat_multiplier] with an enemy unit within
+## [member AIConfig.rush_threat_radius]; score = value / rush AP.
+static func _score_rush_candidates(lookahead: GameState, entity: EntityState, best: _Candidate) -> _Candidate:
+	if not (entity is StructureState) or entity.owner != lookahead.active_player:
+		return best
+	var structure: StructureState = entity
+	var action := RushAction.new()
+	action.player = entity.owner
+	action.structure_id = entity.entity_id
+	if BaseProduction.validate_rush(lookahead, action) != Action.Reason.OK:
+		return best
+	var credits: int
+	if structure.build_status == StructureState.BuildStatus.UNDER_CONSTRUCTION:
+		credits = BaseProduction.effective_build_cost(lookahead, structure.type, entity.owner)
+	else:
+		credits = Unit.effective_produce_cost(lookahead, structure.producing_type, entity.owner)
+	var value: float = credits_to_ap(float(credits)) * AIBalance.ai.rush_turn_value_fraction
+	if _enemy_unit_within(lookahead, structure.position, entity.owner, AIBalance.ai.rush_threat_radius):
+		value *= AIBalance.ai.rush_threat_multiplier
+	var cost: int = BaseProduction.rush_ap_cost()
+	var score: float = value / float(cost)
+	if _is_better(score, cost, entity.entity_id, best.score, best.ap_cost, best.entity_id):
+		best = _Candidate.new(action, score, cost, entity.entity_id)
+	return best
+
+
+static func _enemy_unit_within(state: GameState, tile: Vector2i, player: int, radius: int) -> bool:
+	for e: EntityState in state.entities():
+		if e is UnitState and e.owner != player and state.grid.manhattan_distance(e.position, tile) <= radius:
+			return true
+	return false
 
 
 ## A structure whose only job is resupply (the Supply Depot) — not a producer that also supplies.
