@@ -33,6 +33,11 @@ Manifest (JSON):
   smooth = median pre-filter size (default 7); lower (3) keeps thin frames, e.g. Sniper.
   accent_edges = rim width in cells (1-2): faction colour only on the rims of orange regions (over-orange art).
   keep_accent = cell share of accent (e.g. 0.25) that keeps thin neon trim in pixelize.
+  declutter = min accent shape size in art cells (e.g. 8): smaller specks become plating.
+  declutter_smooth = true to shave ragged accent fringes (opening) before declutter.
+  accent_cap = max accent coverage % kept, largest shapes first (structures: 15).
+          Structures shipped 23-43% freckled orange before this ("messy, too much player
+          colour", 2026-09-30); clean structures sit at 4-15%.
   lock  = false to skip palette_lock (art already on the house palette).
   touches = hand-placed pixel details on the finished sprite — see apply_touches().
   crop  = optional fraction trimmed off every edge of the raw before cutout (frames).
@@ -314,6 +319,70 @@ def accent_edges(px: Image.Image, structure: bool = False, width: int = 1,
     return Image.fromarray(g.repeat(FACTOR, 0).repeat(FACTOR, 1), "RGBA")
 
 
+def _accent_cells(g: np.ndarray) -> tuple[np.ndarray, tuple]:
+    """Accent mask on an art grid (same gate as accent_edges) plus the grid's HSV."""
+    rgb = g[..., :3].astype(np.float64) / 255.0
+    h, s, v = _hsv(rgb)
+    acc = (((h <= ACCENT_HUE_MAX) | (h >= ACCENT_HUE_WRAP_MIN)) & (s >= 0.45)
+           & (v >= ACCENT_VAL_MIN) & (g[..., 3] > 0))
+    return acc, (h, s, v)
+
+
+def declutter(px: Image.Image, min_cells: int, structure: bool = True,
+              smooth_edges: bool = False, cap: float = 0.0) -> Image.Image:
+    """Turn small isolated accent specks into plating; keep deliberate accent shapes.
+
+    Why: palette_lock promotes every warm render pixel (rust, brick, sodium-lamp glints)
+    to faction orange, so textured structures came out freckled with player colour —
+    "messy and too much player color" (playtest, 2026-09-30). Real trim is a connected
+    line or panel; a speck of 1-5 cells is texture. Components are 8-connected so a
+    diagonal neon line counts as one shape, not many specks.
+
+    smooth_edges: morphological opening first — shaves the ragged one-cell fringes and
+      bridges off blotches, so what survives reads as a panel or a line, not a stain.
+    cap: accent coverage % of the body to keep at most. Shapes are kept largest-first
+      until the cap is reached — the biggest shapes are the deliberate features (roof
+      panel, base rim, beacon); a field of mid-size blotches is texture. Measured on
+      the shipped roster: the clean Accord structures sit at 4-15%, the messy ones 23-43%.
+    """
+    from scipy import ndimage
+    a = np.asarray(px)
+    g = a[::FACTOR, ::FACTOR].copy()
+    acc, (h, s, v) = _accent_cells(g)
+    keep = acc
+    if smooth_edges:
+        keep = ndimage.binary_opening(acc, structure=ndimage.generate_binary_structure(2, 1))
+    lab, n = ndimage.label(keep, structure=np.ones((3, 3), bool))
+    sizes = ndimage.sum(keep, lab, index=np.arange(1, n + 1)) if n else np.zeros(0)
+    kept: list[int] = []
+    budget = cap / 100.0 * float((g[..., 3] > 0).sum()) if cap > 0 else float("inf")
+    used = 0.0
+    for i in np.argsort(-sizes):
+        if sizes[i] < min_cells or used + sizes[i] > budget and kept:
+            continue
+        kept.append(int(i) + 1)
+        used += sizes[i]
+    small = acc & ~np.isin(lab, kept)
+    v2 = (0.10 + 0.20 * v) if structure else (0.30 + 0.32 * v)
+    slate = _from_hsv(np.full_like(h, SLATE_HUE), np.full_like(s, SLATE_SAT), v2)
+    g[small, :3] = np.clip(slate[small] * 255 + 0.5, 0, 255).astype(np.uint8)
+    return Image.fromarray(g.repeat(FACTOR, 0).repeat(FACTOR, 1), "RGBA")
+
+
+def clip_glow(glow: Image.Image, sprite: Image.Image) -> Image.Image:
+    """Zero glow cells that are not on (or touching) accent in the finished sprite.
+
+    The glow mask is derived from the SMOOTH master, so accent removed after pixelize
+    (declutter, accent_edges) would otherwise still emit as ghost specks.
+    """
+    g = np.asarray(glow)[::FACTOR, ::FACTOR].copy()
+    acc, _ = _accent_cells(np.asarray(sprite)[::FACTOR, ::FACTOR])
+    p = np.pad(acc, 1)
+    near = acc | p[:-2, 1:-1] | p[2:, 1:-1] | p[1:-1, :-2] | p[1:-1, 2:]
+    g[~near] = 0
+    return Image.fromarray(g.repeat(FACTOR, 0).repeat(FACTOR, 1), glow.mode)
+
+
 def coverage(im: Image.Image) -> float:
     """Accent coverage %, exactly as tests/unit/art/accent_coverage_test.gd measures it."""
     a = np.asarray(im.convert("RGBA")).astype(np.float64)
@@ -425,6 +494,10 @@ def build(asset: dict, dry: bool, tmp: str) -> list[str]:
         locked = np.asarray(palette_lock(out, accent_sat=accent_sat)).copy()
         locked[ink] = (*OUTLINE_RGB, 255)
         out = Image.fromarray(locked, "RGBA")
+        if asset.get("declutter"):
+            out = declutter(out, int(asset["declutter"]), structure=kind == "struct",
+                            smooth_edges=bool(asset.get("declutter_smooth")),
+                            cap=float(asset.get("accent_cap", 0)))
         if asset.get("accent_edges"):
             out = accent_edges(out, structure=kind == "struct", width=int(asset["accent_edges"]),
                                diagonal=bool(asset.get("accent_edges_diagonal")))
@@ -476,6 +549,8 @@ def build(asset: dict, dry: bool, tmp: str) -> list[str]:
                 img.save(os.path.join(out_dir, name))
 
     glow = apply_touches(pixelize_mask(glow_mask(src)[0], FACTOR), touches, mask=True, ref=bare_px)
+    if asset.get("declutter") or asset.get("accent_edges"):
+        glow = clip_glow(glow, rush_px)
     if kind == "air":
         glow = _with_air_shadow(glow, mask=True)
     if is_struct:

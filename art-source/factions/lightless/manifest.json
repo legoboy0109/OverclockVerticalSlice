@@ -297,7 +297,10 @@
    "id": "independents_factory",
    "raw": "art-source/generated/lightless/independents_factory.png",
    "smooth": 9,
-   "cutter": "flood"
+   "cutter": "flood",
+   "declutter": 8,
+   "declutter_smooth": true,
+   "accent_cap": 15
   },
   {
    "kind": "struct",
@@ -308,7 +311,11 @@
    "keep_accent": 0.25,
    "id": "independents_airfield",
    "raw": "art-source/generated/lightless/independents_airfield_3.png",
-   "cutter": "flood"
+   "cutter": "flood",
+   "declutter": 8,
+   "declutter_smooth": true,
+   "accent_cap": 15,
+   "accent_sat": 0.5
   }
  ]
 }

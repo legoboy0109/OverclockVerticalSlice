@@ -172,7 +172,10 @@
    "raw": "art-source/generated/accord/airfield_4.png",
    "flatten": true,
    "keep_accent": 0.25,
-   "cutter": "flood"
+   "cutter": "flood",
+   "declutter": 8,
+   "declutter_smooth": true,
+   "accent_cap": 15
   },
   {
    "id": "artillery",
