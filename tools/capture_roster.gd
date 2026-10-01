@@ -8,7 +8,8 @@
 ##
 ## Usage: `./redot tools/CaptureRoster.tscn -- --units levy,knight --out order-infantry`
 ##        (needs a display; ids are vault note ids, i.e. the .tres basenames)
-## Structure ids (e.g. empire_factory) work too — they are placed completed.
+## Structure ids (e.g. empire_factory) work too — they are placed completed, or as construction
+## sites with `--site`.
 extends Node
 
 const OUT: String = "res://production/qa/evidence/roster"
@@ -83,7 +84,9 @@ func _run() -> void:
 				b.owner = row
 				b.type = stype
 				b.current_hp = stype.hp
-				b.build_status = StructureState.BuildStatus.COMPLETED
+				b.build_status = StructureState.BuildStatus.UNDER_CONSTRUCTION \
+					if OS.get_cmdline_user_args().has("--site") else StructureState.BuildStatus.COMPLETED
+				b.build_turns_remaining = 2
 				b.position = Vector2i(x, y)
 				st.entities_by_id[b.entity_id] = b
 				st.grid.place(b.entity_id, x, y)

@@ -1,7 +1,6 @@
 ---
 id: supply_depot
 buildable: true
-art_id: research_lab
 hp: 10
 build_cost: 500
 build_time: 2
@@ -32,4 +31,4 @@ resist_incendiary: 0
 Refills the ammo of every own vehicle and aircraft on a neighbouring tile at the start of its
 owner's turn (user decision 2026-10-01). HQ, factories and airfields do the same; the depot is
 how a player pushes a supply point forward. Values are starting guesses, untuned.
-art_id borrows the Research Lab until its own art is generated.
+

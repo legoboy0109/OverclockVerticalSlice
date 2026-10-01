@@ -100,6 +100,7 @@ func test_structure_mask_path_drops_the_faction_token() -> void:
 	hq.position = Vector2i.ZERO
 	hq.type = StructureTypes.HQ
 	hq.current_hp = 40
+	hq.build_status = StructureState.BuildStatus.COMPLETED   # a site uses the shared construction mask
 
 	# Act
 	var path := EntityGlow.mask_path(hq, "e")

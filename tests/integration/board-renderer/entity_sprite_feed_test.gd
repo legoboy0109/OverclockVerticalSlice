@@ -42,6 +42,8 @@ func _make_structure(id: int, owner: int, tile: Vector2i, type: StructureTypeDef
 	structure.position = tile
 	structure.type = type
 	structure.current_hp = hp
+	# ★ 2026-10-01: finished by default — a construction site draws the shared site sprite.
+	structure.build_status = StructureState.BuildStatus.COMPLETED
 	return structure
 
 
