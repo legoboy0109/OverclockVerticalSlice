@@ -23,6 +23,9 @@ const _NEIGHBOURS: Array[Vector2i] = [Vector2i(0, -1), Vector2i(1, 0), Vector2i(
 static func max_ammo(type: UnitTypeDef) -> int:
 	if type == null or type.max_ammo == 0:
 		return 0
+	# Unarmed (transports, lifters) never fire, so they carry no ammo to track.
+	if type.attack_range <= 0 or type.can_target.is_empty():
+		return 0
 	if type.max_ammo > 0:
 		return type.max_ammo
 	match type.unit_class:

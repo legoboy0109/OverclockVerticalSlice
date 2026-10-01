@@ -414,6 +414,9 @@ func _run_one_turn(state: GameState, game: int = 0, turn: int = 0, favoured: int
 		if result.ok and action is BuildAction:
 			var bkey: String = (action as BuildAction).structure_type.display_name
 			_built[bkey] = _built.get(bkey, 0) + 1
+		if result.ok and action is RushAction:
+			# Counted under SIM_BUILT so the existing summary prints it (2026-10-01).
+			_built["Rush"] = _built.get("Rush", 0) + 1
 		if not result.ok:
 			rejects += 1
 			if rejects >= 8:

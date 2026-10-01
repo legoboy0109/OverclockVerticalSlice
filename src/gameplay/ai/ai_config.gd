@@ -208,6 +208,33 @@ extends Resource
 ## being folded into the push, and above [member pass_threshold] so the move is committed.
 @export var resupply_value_per_tile_closed: float = 0.25
 
+## ★ Supply Depots (2026-10-01). A depot is valued by the resupply trip it saves: the sum, over
+## every own ammo-using unit, of how many tiles nearer its nearest supplier would be with the
+## depot on the candidate tile, times this rate (AP-equivalent per unit-tile). A depot at home
+## saves nothing — the HQ and factories already supply there — so it scores ~0 on its own.
+@export var depot_value_per_unit_tile: float = 0.15
+
+## A depot is only worth considering once this many own vehicles/aircraft exist.
+@export var depot_min_units: int = 2
+
+## The most Supply Depots (built + under construction) the AI keeps at once.
+@export var depot_max_owned: int = 2
+
+## A Builder only walks forward to raise a depot when some ammo-using unit is at least this many
+## tiles from its nearest supplier — a shorter trip is not worth risking the Builder.
+@export var depot_trip_trigger_tiles: int = 5
+
+## ★ Rush (2026-10-01). One turn sooner is worth this fraction of what is being made (its
+## Credit cost, in AP-equivalent). 0.07 × a 1400-Credit Tank ≈ 0.98 AP of value against a 4 AP
+## rush ⇒ score ≈ 0.245: worth it when nothing better is on offer, never ahead of a good attack.
+## (0.15 scored a Tank rush at 0.525, above most moves, so the AI rushed every Tank.)
+@export var rush_turn_value_fraction: float = 0.07
+
+## Multiplier on rush value when an enemy unit is within [member rush_threat_radius] tiles of the
+## structure — a defender or a finished building arriving a turn early matters most under attack.
+@export var rush_threat_multiplier: float = 2.0
+@export var rush_threat_radius: int = 6
+
 ## Tolerance below which two `action_score` values are treated as tied,
 ## triggering the deterministic tie-break (lowest `ap_cost`, then lowest
 ## entity ID) instead of a fragile raw-float `==`.

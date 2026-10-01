@@ -96,6 +96,9 @@ func test_ammo_class_defaults_vehicles_aircraft_and_unlimited_infantry() -> void
 	for t: UnitTypeDef in UnitTypes.ALL:
 		if t.max_ammo != -1:
 			continue
+		if t.attack_range <= 0 or t.can_target.is_empty():
+			assert_bool(Ammo.uses_ammo(t)).override_failure_message("unarmed %s" % t.display_name).is_false()
+			continue
 		match t.unit_class:
 			UnitTypeDef.UnitClass.GROUND_VEHICLE:
 				assert_int(Ammo.max_ammo(t)).is_equal(CombatBalance.combat.vehicle_ammo)
