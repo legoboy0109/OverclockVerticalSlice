@@ -188,20 +188,9 @@ func test_capacity_value_uses_the_cheapest_producible_unit() -> void:
 	assert_float(cheapest).is_equal_approx(float(UnitTypes.BUILDER.produce_cost), 0.0001)
 
 
-func test_a_factory_earns_its_vehicle_price_only_after_a_barracks_exists() -> void:
-	# 2026-10-01: Factories valued by their own vehicles, but not before the first infantry
-	# producer — measured, the AI otherwise opened Factory-first with no infantry at all.
+func test_producer_quality_stays_within_its_bounds() -> void:
+	# 2026-10-01: a vehicle producer is priced by its units' value next to the faction's infantry.
 	var state := _state()
 	_add_hq(state, 0, Vector2i(5, 5))
-	var before: float = AI._economy_value(state, 0, StructureTypes.FACTORY)
-	var b := StructureState.new()
-	b.entity_id = state.next_entity_id
-	b.owner = 0
-	b.position = Vector2i(2, 2)
-	b.type = StructureTypes.BARRACKS
-	b.current_hp = b.type.hp
-	b.build_status = StructureState.BuildStatus.UNDER_CONSTRUCTION
-	state.entities_by_id[b.entity_id] = b
-	state.grid.place(b.entity_id, 2, 2)
-	state.next_entity_id += 1
-	assert_float(AI._economy_value(state, 0, StructureTypes.FACTORY)).is_greater(before)
+	var q: float = AI._producer_quality(state, 0, StructureTypes.FACTORY)
+	assert_float(q).is_between(AIBalance.ai.producer_quality_min, 1.0)
