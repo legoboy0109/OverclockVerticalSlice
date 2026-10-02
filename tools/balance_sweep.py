@@ -7,6 +7,11 @@ parallel; raw stdout per job is kept in --out so a summary can be re-derived wit
 
   python3 tools/balance_sweep.py run --out <dir> [--maps vertical_slice,crossroads] [-j 12] [-- extra sim args]
   python3 tools/balance_sweep.py summarise <dir>
+  python3 tools/balance_sweep.py ab --out <dir> --pair "Heavy Ordnance/Rapid Deployment" [--prefix "X|"] [--faction democratic_alliance]
+  python3 tools/balance_sweep.py ab-summarise <dir>
+
+`ab` forces one seat down branch A and the other down branch B (free research, free Lab), then
+swaps seats, on each map — so it measures what a branch is WORTH, not what the AI likes.
 
 Why a durable script: the previous rotation runners lived in job-tmp and were lost each session.
 """
@@ -52,6 +57,56 @@ def run(args: argparse.Namespace) -> None:
         futs = [ex.submit(_run_job, out, a, b, m, args.extra) for a, b, m in jobs]
         for n, f in enumerate(cf.as_completed(futs), 1):
             print(f"[{n}/{len(jobs)}] {f.result()}", flush=True)
+
+
+def _run_ab_job(out: pathlib.Path, tag: str, plan0: str, plan1: str, fac: str, map_id: str, extra: list) -> str:
+    log = out / f"{tag}.log"
+    if log.exists() and "SIM_DONE" in log.read_text(errors="replace"):
+        return f"skip {log.name}"
+    cmd = [str(ROOT / "redot"), "--headless", "--path", str(ROOT), "tools/SimulateMatches.tscn", "--",
+           "--only-handicap=0", f"--factions={fac},{fac}", f"--map={map_id}", "--free-lab",
+           f"--plan0={plan0}", f"--plan1={plan1}", *extra]
+    t = time.time()
+    with open(log, "w") as fh:
+        subprocess.run(cmd, stdout=fh, stderr=subprocess.STDOUT, cwd=ROOT)
+    return f"done {log.name} in {time.time() - t:.0f}s"
+
+
+def ab(args: argparse.Namespace) -> None:
+    out = pathlib.Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    jobs = []
+    for spec in args.pair:
+        a, b = spec.split("/")
+        pa, pb = args.prefix + a, args.prefix + b
+        for m in args.maps.split(","):
+            slug = f"{a}__{b}__{m}".replace(" ", "_")
+            jobs.append((f"{slug}__AB", pa, pb, args.faction, m))
+            jobs.append((f"{slug}__BA", pb, pa, args.faction, m))
+    print(f"{len(jobs)} jobs -> {out}", flush=True)
+    with cf.ThreadPoolExecutor(args.j) as ex:
+        futs = [ex.submit(_run_ab_job, out, *j, args.extra) for j in jobs]
+        for n, f in enumerate(cf.as_completed(futs), 1):
+            print(f"[{n}/{len(jobs)}] {f.result()}", flush=True)
+
+
+def ab_summarise(args: argparse.Namespace) -> None:
+    res = collections.defaultdict(lambda: [0, 0, 0])  # (a,b) -> [a wins, b wins, games]
+    for log in sorted(pathlib.Path(args.dir).glob("*.log")):
+        a, b, m, order = log.stem.split("__")
+        seat_a = 0 if order == "AB" else 1
+        for line in log.read_text(errors="replace").splitlines():
+            p = line.split(",")
+            if p[0] == "SIM_END":
+                w = int(p[6])
+                r = res[(a, b)]
+                r[2] += 1
+                if w == seat_a:
+                    r[0] += 1
+                elif w in (0, 1):
+                    r[1] += 1
+    for (a, b), (aw, bw, g) in res.items():
+        print(f"  {a.replace('_', ' '):22s} {aw:3d}  v {bw:3d}  {b.replace('_', ' '):22s} (n={g}, A {100 * aw / g:.0f}%)")
 
 
 def summarise(args: argparse.Namespace) -> None:
@@ -133,8 +188,18 @@ def main() -> None:
     r.add_argument("extra", nargs="*", help="extra SimulateMatches args (after --)")
     s = sub.add_parser("summarise")
     s.add_argument("dir")
+    b = sub.add_parser("ab")
+    b.add_argument("--out", required=True)
+    b.add_argument("--pair", action="append", required=True, help='"Tech A/Tech B" (display names)')
+    b.add_argument("--prefix", default="", help='shared plan prefix, e.g. "Hardened Armor|"')
+    b.add_argument("--faction", default="democratic_alliance")
+    b.add_argument("--maps", default="vertical_slice,crossroads")
+    b.add_argument("-j", type=int, default=max(1, (os.cpu_count() or 2) - 2))
+    b.add_argument("extra", nargs="*", help="extra SimulateMatches args (after --)")
+    sb = sub.add_parser("ab-summarise")
+    sb.add_argument("dir")
     a = ap.parse_args()
-    run(a) if a.cmd == "run" else summarise(a)
+    {"run": run, "summarise": summarise, "ab": ab, "ab-summarise": ab_summarise}[a.cmd](a)
 
 
 if __name__ == "__main__":

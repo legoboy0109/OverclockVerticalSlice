@@ -157,6 +157,10 @@ var _dump_turn: int = -1
 ## Diagnostic (2026-09-28): --push-trace prints a SIM_PUSH row at the start of every turn — the
 ## active side's fighters, its largest group, units ready to push, and defenders at the enemy HQ.
 var _push_trace: bool = false
+## --research-trace: whenever the AI starts a tech, one SIM_RVAL row listing every tree-legal
+## target with the AI's value for it (before the per-match lean), so a lopsided pick rate can be
+## traced to the price that caused it (2026-10-02 balance pass).
+var _research_trace: bool = false
 ## With --push-trace: "attacker type>victim type" -> kills, printed as SIM_KILL rows.
 var _kills: Dictionary = {}
 ## With --ap-trace: AP spent per action category, summed over the batch (SIM_AP rows), plus one
@@ -279,6 +283,13 @@ func _parse_args() -> void:
 			print("SIM_AI_KNOB,%s,%s" % [kv[0], str(AIBalance.ai.get(kv[0]))])
 		elif arg == "--ap-trace":
 			_ap_trace = true
+		elif arg.begins_with("--econ-tiers="):
+			# e.g. --econ-tiers=250,400,600 — income steps per Economy tech (EconomyConfig.econ_tier_bonuses).
+			# ⚠ Mutates the shared config for the batch, like --econ=.
+			Balance.economy.econ_tier_bonuses = PackedInt32Array(Array(arg.split("=")[1].split(",")).map(func(x: String) -> int: return int(x)))
+			print("SIM_ECON_TIERS,%s" % str(Balance.economy.econ_tier_bonuses))
+		elif arg == "--research-trace":
+			_research_trace = true
 		elif arg == "--push-trace":
 			_push_trace = true
 		elif arg.begins_with("--dump-turn="):
@@ -414,7 +425,7 @@ func _play(game: int, favoured: int, handicap: int, variant: int) -> void:
 		for t: TechDef in state.per_player[p].completed_techs:
 			names.append(t.display_name)
 		print("SIM_RESEARCH,%d,%d,%d,%d,%s" % [game, p, state.win_reason,
-			BaseProduction.structure_count(state, p, StructureTypes.RESEARCH_LAB), "|".join(names)])
+			1 if Research._owns_completed(state, p, StructureTypes.RESEARCH_LAB) else 0, "|".join(names)])
 
 
 ## The shipped AI turn loop with the pacing timer removed — otherwise identical to
@@ -441,6 +452,12 @@ func _run_one_turn(state: GameState, game: int = 0, turn: int = 0, favoured: int
 			ended_by = "nothing_worth_it"
 			break
 		var ap_key: String = _ap_category(state, action) if _ap_trace else ""
+		if _research_trace and action is ResearchAction:
+			var parts := PackedStringArray()
+			for t: TechDef in Research.legal_research_targets(state, state.active_player):
+				parts.append("%s:%.3f" % [t.display_name, AI._tech_research_value(state, state.active_player, t)])
+			print("SIM_RVAL,%d,%d,%d,%s,%s" % [game, state.active_player, state.round_number,
+				(action as ResearchAction).tech.display_name, ";".join(parts)])
 		var ap_before: int = state.per_player[state.active_player].current_ap
 		var victim_key: String = ""
 		var victim_id: int = -1
