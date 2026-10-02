@@ -1,6 +1,6 @@
 ---
 id: slab_walls
-description: All structures get +2 defense.
+description: All structures get +3 defense.
 tree: defense
 tier: 2
 research_cost: 1200
@@ -14,7 +14,7 @@ exclusive_group: def_fo
 factions: []
 replaces:
 - '[[Reinforced Concrete]]'
-structure_defense_bonus: 2
+structure_defense_bonus: 3
 ---
 
 ## Notes

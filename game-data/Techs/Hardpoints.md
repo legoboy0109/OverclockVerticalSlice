@@ -1,6 +1,6 @@
 ---
 id: hardpoints
-description: Your HQ gets +20 HP and fires (attack 3, range 2).
+description: Your HQ gets +40 HP and fires (attack 6, range 2).
 tree: defense
 tier: 3
 research_cost: 1600
@@ -12,8 +12,8 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: def_rc
 factions: []
-hq_hp_bonus: 20
-hq_attack: 3
+hq_hp_bonus: 40
+hq_attack: 6
 hq_range: 2
 ---
 

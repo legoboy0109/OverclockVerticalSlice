@@ -1,13 +1,13 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=2 format=3]
 ; GENERATED from game-data/Techs/Hardened Armor.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: c40b4c56f0af6b85e6dec2d3d37c79622d2f13b602556a3773b09c05101bc163
+; source-sha256: 5ec7d19ad1368425d6c9e5e3a6469e8554594485b7fe9d907b462a4a24a8769a
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
 display_name = "Hardened Armor"
-description = "+1 defense for all units."
+description = "+2 defense for all units."
 tier = 1
 research_cost = 800
 research_time = 3
@@ -17,7 +17,7 @@ required_structures = []
 exclusive_group = &"def_t1"
 allowed_factions = []
 attack_bonus = 0
-defense_bonus = 1
+defense_bonus = 2
 attack_range_bonus = 0
 ignores_cover = false
 idle_heal = 0

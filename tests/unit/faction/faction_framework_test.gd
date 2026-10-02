@@ -330,8 +330,8 @@ func test_doctrine_strengthens_vehicles_only() -> void:
 	var w_atk: int = Unit.effective_attack(state, walker)
 	var l_atk: int = Unit.effective_attack(state, levy)
 	GameStateFactory.grant_tech(state, 0, Techs.DOCTRINE)   # ★ 2026-10-01: Doctrine I-III folded into one swap
-	assert_int(Unit.effective_attack(state, walker)).is_equal(w_atk + 1)
-	assert_int(Unit.effective_defense(state, walker)).is_equal(UnitTypes.AEGIS_WALKER.defense + 1)
+	assert_int(Unit.effective_attack(state, walker)).is_equal(w_atk + Techs.DOCTRINE.vehicle_attack_bonus)
+	assert_int(Unit.effective_defense(state, walker)).is_equal(UnitTypes.AEGIS_WALKER.defense + Techs.DOCTRINE.vehicle_defense_bonus)
 	assert_int(Unit.effective_attack(state, levy)).is_equal(l_atk)
 
 

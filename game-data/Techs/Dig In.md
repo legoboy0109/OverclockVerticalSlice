@@ -1,6 +1,6 @@
 ---
 id: dig_in
-description: Units standing in Cover heal 1 HP at the start of your turn.
+description: Units standing in Cover heal 2 HP at the start of your turn.
 tree: defense
 tier: 3
 research_cost: 1600
@@ -12,7 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: def_pl
 factions: []
-cover_heal: 1
+cover_heal: 2
 ---
 
 ## Notes

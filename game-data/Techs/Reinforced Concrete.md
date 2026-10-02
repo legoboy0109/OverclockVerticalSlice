@@ -1,6 +1,6 @@
 ---
 id: reinforced_concrete
-description: All structures get +1 defense.
+description: All structures get +2 defense.
 tree: defense
 tier: 2
 research_cost: 1200
@@ -12,7 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: def_fo
 factions: []
-structure_defense_bonus: 1
+structure_defense_bonus: 2
 ---
 
 ## Notes

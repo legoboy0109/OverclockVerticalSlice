@@ -1,6 +1,6 @@
 ---
 id: fortifications
-description: Structures get +25% HP; armed structures +1 attack.
+description: Structures get +50% HP; armed structures +2 attack.
 tree: defense
 tier: 1
 research_cost: 800
@@ -10,8 +10,8 @@ requires: []
 requires_structures: []
 exclusive_group: def_t1
 factions: []
-structure_hp_pct: 25
-defensive_attack_bonus: 1
+structure_hp_pct: 50
+defensive_attack_bonus: 2
 ---
 
 ## Notes

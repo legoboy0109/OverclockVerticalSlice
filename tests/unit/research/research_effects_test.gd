@@ -61,7 +61,7 @@ func test_attack_tech_adds_one_attack() -> void:
 	var unit := _unit(state, 0, UnitTypes.TROOPER, Vector2i(2, 2))
 	var before: int = Unit.effective_attack(state, unit)
 	GameStateFactory.grant_tech(state, 0, Techs.ATTACK_I)
-	assert_int(Unit.effective_attack(state, unit)).is_equal(before + 1)
+	assert_int(Unit.effective_attack(state, unit)).is_equal(before + Techs.ATTACK_I.infantry_attack_bonus)
 
 
 func test_defense_tech_adds_one_defense() -> void:
@@ -69,7 +69,7 @@ func test_defense_tech_adds_one_defense() -> void:
 	var unit := _unit(state, 0, UnitTypes.TROOPER, Vector2i(2, 2))
 	var before: int = Unit.effective_defense(state, unit)
 	GameStateFactory.grant_tech(state, 0, Techs.DEFENSE_I)
-	assert_int(Unit.effective_defense(state, unit)).is_equal(before + 1)
+	assert_int(Unit.effective_defense(state, unit)).is_equal(before + Techs.DEFENSE_I.defense_bonus)
 
 
 func test_economy_tech_raises_income_by_one_tier() -> void:
@@ -146,7 +146,8 @@ func test_plating_stacks_on_defense_tech() -> void:
 	var base: int = Unit.effective_defense(state, unit)
 	GameStateFactory.grant_tech(state, 0, Techs.DEFENSE_I)
 	GameStateFactory.grant_tech(state, 0, Techs.PLATING)
-	assert_int(Unit.effective_defense(state, unit)).is_equal(base + 2)
+	assert_int(Unit.effective_defense(state, unit)).is_equal(
+		base + Techs.DEFENSE_I.defense_bonus + Techs.PLATING.defense_bonus)
 
 
 func test_field_repair_heals_an_idle_damaged_unit() -> void:
@@ -157,7 +158,7 @@ func test_field_repair_heals_an_idle_damaged_unit() -> void:
 	assert_int(unit.current_hp).override_failure_message("Healed without Field Repair.").is_equal(2)
 	GameStateFactory.grant_tech(state, 0, Techs.FIELD_REPAIR)
 	var events: Array = state.start_turn(0)
-	assert_int(unit.current_hp).is_equal(3)
+	assert_int(unit.current_hp).is_equal(mini(2 + Techs.FIELD_REPAIR.idle_heal, UnitTypes.TROOPER.hp))
 	assert_bool(events.any(func(e: Variant) -> bool: return e is UnitHealedEvent)).is_true()
 
 

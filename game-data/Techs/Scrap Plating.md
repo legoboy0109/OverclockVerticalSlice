@@ -1,6 +1,6 @@
 ---
 id: scrap_plating
-description: +1 defense for all units; ground vehicles +2 max HP.
+description: +2 defense for all units; ground vehicles +4 max HP.
 tree: defense
 tier: 1
 research_cost: 800
@@ -12,8 +12,8 @@ exclusive_group: def_t1
 factions: []
 replaces:
 - '[[Hardened Armor]]'
-defense_bonus: 1
-vehicle_hp_bonus: 2
+defense_bonus: 2
+vehicle_hp_bonus: 4
 ---
 
 ## Notes

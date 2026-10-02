@@ -1,6 +1,6 @@
 ---
 id: doctrine
-description: Ground vehicles get +1 attack and +1 defense.
+description: Ground vehicles get +2 attack and +2 defense.
 tree: offense
 tier: 3
 research_cost: 1600
@@ -14,8 +14,8 @@ exclusive_group: off_blz
 factions: []
 replaces:
 - '[[Combined Arms]]'
-vehicle_attack_bonus: 1
-vehicle_defense_bonus: 1
+vehicle_attack_bonus: 2
+vehicle_defense_bonus: 2
 ---
 
 ## Notes

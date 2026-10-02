@@ -1,6 +1,6 @@
 ---
 id: technicals_doctrine
-description: Gun Trucks and Technicals get +1 attack and +1 move before the surcharge.
+description: Gun Trucks and Armoured Transports get +2 attack and +1 move before the surcharge.
 tree: offense
 tier: 3
 research_cost: 1600
@@ -14,11 +14,11 @@ exclusive_group: off_blz
 factions: []
 replaces:
 - '[[Combined Arms]]'
-bonus_unit_attack: 1
+bonus_unit_attack: 2
 bonus_unit_move_cap: 1
 bonus_unit_types:
 - '[[Gun Truck]]'
-- '[[Technical]]'
+- '[[Armoured Transport]]'
 ---
 
 ## Notes

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Sappers.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: fa222823e1bb628a00e5c7941d1167cc64e6d6f64b3f254f8d16cb90382d9d63
+; source-sha256: 29e5eb83fdef1e6d4c394f59a7b4a33bd1c1576a0cb4a01ff8f095398affa717
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/infiltrators.tres" id="2"]
@@ -9,7 +9,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Sappers"
-description = "Infantry get +1 attack against structures."
+description = "Infantry get +2 attack against structures."
 tier = 3
 research_cost = 1600
 research_time = 4
@@ -37,7 +37,7 @@ vehicle_move_cap_bonus = 0
 infantry_move_cost_discount = 0
 attack_vs_armor = 0
 attack_vs_infantry = 0
-infantry_attack_vs_structures = 1
+infantry_attack_vs_structures = 2
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0

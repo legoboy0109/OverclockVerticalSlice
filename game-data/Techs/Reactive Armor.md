@@ -1,6 +1,6 @@
 ---
 id: reactive_armor
-description: Ground vehicles get +2 defense.
+description: Ground vehicles get +4 defense.
 tree: defense
 tier: 3
 research_cost: 1600
@@ -12,7 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: def_pl
 factions: []
-vehicle_defense_bonus: 2
+vehicle_defense_bonus: 4
 ---
 
 ## Notes

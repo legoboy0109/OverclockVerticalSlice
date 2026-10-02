@@ -1,6 +1,6 @@
 ---
 id: combined_arms
-description: +1 attack for ground vehicles and aircraft.
+description: +2 attack for ground vehicles and aircraft.
 tree: offense
 tier: 3
 research_cost: 1600
@@ -12,8 +12,8 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: off_blz
 factions: []
-vehicle_attack_bonus: 1
-aircraft_attack_bonus: 1
+vehicle_attack_bonus: 2
+aircraft_attack_bonus: 2
 ---
 
 ## Notes

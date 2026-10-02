@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Rapid Repair.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 83d36fb967b0cd66da54a696f1878b03cb3f66c71f04cb72895b73f2147b8cdf
+; source-sha256: e64f42c974d022e0931e1141d1bb97ddaa255a82bcffc93cf1aeaf87b0fd4a86
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/field_repair.tres" id="2"]
@@ -9,7 +9,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Rapid Repair"
-description = "Field Repair heals 2 HP instead of 1."
+description = "Field Repair heals 4 HP instead of 2."
 tier = 3
 research_cost = 1600
 research_time = 4
@@ -22,7 +22,7 @@ attack_bonus = 0
 defense_bonus = 0
 attack_range_bonus = 0
 ignores_cover = false
-idle_heal = 1
+idle_heal = 2
 economy_tier_bonus = 0
 produce_ap_discount = 0
 build_ap_discount = 0

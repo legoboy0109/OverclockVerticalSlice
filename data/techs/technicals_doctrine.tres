@@ -1,18 +1,18 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=7 format=3]
-; GENERATED from game-data/Techs/Technicals Doctrine.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 025220e252ed4d406640fadb6ff56e39f1a17bf2248ebdb09e2d18a16525e49f
+; GENERATED from game-data/Techs/Motor Pool Doctrine.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 583fcfaaa11e28bf0d867eb29416281880e1c995859d09d849623ac20faa3a7b
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/blitz.tres" id="2"]
 [ext_resource type="Resource" path="res://data/structures/research_lab.tres" id="3"]
 [ext_resource type="Resource" path="res://data/techs/combined_arms.tres" id="4"]
 [ext_resource type="Resource" path="res://data/units/gun_truck.tres" id="5"]
-[ext_resource type="Resource" path="res://data/units/technical.tres" id="6"]
+[ext_resource type="Resource" path="res://data/units/armoured_transport.tres" id="6"]
 
 [resource]
 script = ExtResource("1")
-display_name = "Technicals Doctrine"
-description = "Gun Trucks and Technicals get +1 attack and +1 move before the surcharge."
+display_name = "Motor Pool Doctrine"
+description = "Gun Trucks and Armoured Transports get +2 attack and +1 move before the surcharge."
 tier = 3
 research_cost = 1600
 research_time = 4
@@ -74,7 +74,7 @@ infantry_cost_discount_pct = 0
 production_cap_bonus = 0
 factory_slot_bonus = 0
 aura_defense_bonus = 0
-bonus_unit_attack = 1
+bonus_unit_attack = 2
 aircraft_attack_bonus = 0
 replaces = [ExtResource("4")]
 bonus_unit_move_cap = 1

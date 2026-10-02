@@ -1,6 +1,6 @@
 ---
 id: consecration
-description: Structures beside a Cathedral get +2 defense.
+description: Structures beside a Cathedral get +4 defense.
 tree: defense
 tier: 3
 research_cost: 1600
@@ -14,7 +14,7 @@ exclusive_group: def_rc
 factions: []
 replaces:
 - '[[Rapid Construction]]'
-aura_defense_bonus: 2
+aura_defense_bonus: 4
 aura_structures:
 - '[[Cathedral]]'
 ---

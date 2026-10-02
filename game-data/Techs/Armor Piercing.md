@@ -1,6 +1,6 @@
 ---
 id: armor_piercing
-description: +2 attack against vehicles, aircraft and structures.
+description: +4 attack against vehicles, aircraft and structures.
 tree: offense
 tier: 3
 research_cost: 1600
@@ -12,7 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: off_pen
 factions: []
-attack_vs_armor: 2
+attack_vs_armor: 4
 ---
 
 ## Notes

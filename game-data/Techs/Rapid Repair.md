@@ -1,6 +1,6 @@
 ---
 id: rapid_repair
-description: Field Repair heals 2 HP instead of 1.
+description: Field Repair heals 4 HP instead of 2.
 tree: defense
 tier: 3
 research_cost: 1600
@@ -12,7 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: def_fr
 factions: []
-idle_heal: 1
+idle_heal: 2
 ---
 
 ## Notes

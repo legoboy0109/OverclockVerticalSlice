@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Dig In.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 3b67e0f4e495ed37c43dbb8f52dd87443e434a1718719a797eb1046e30825919
+; source-sha256: d060ea03035c668a5fb09c47a371625ae20ae8a923baf061c546942de8ca2e2a
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/plating.tres" id="2"]
@@ -9,7 +9,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Dig In"
-description = "Units standing in Cover heal 1 HP at the start of your turn."
+description = "Units standing in Cover heal 2 HP at the start of your turn."
 tier = 3
 research_cost = 1600
 research_time = 4
@@ -41,7 +41,7 @@ infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
-cover_heal = 1
+cover_heal = 2
 infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0

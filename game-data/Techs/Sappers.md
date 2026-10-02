@@ -1,6 +1,6 @@
 ---
 id: sappers
-description: Infantry get +1 attack against structures.
+description: Infantry get +2 attack against structures.
 tree: offense
 tier: 3
 research_cost: 1600
@@ -12,7 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: off_inf
 factions: []
-infantry_attack_vs_structures: 1
+infantry_attack_vs_structures: 2
 ---
 
 ## Notes

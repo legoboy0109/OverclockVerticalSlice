@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Triage.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 1d534847cbd431fabbd131bede5fc12e0ede764d468dbb2afb93a87d98a7cf6a
+; source-sha256: fcb4ab1e09da84f4ffc1b92cf73cb3db496e10513123f753da8214c51d8eb56d
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/field_repair.tres" id="2"]
@@ -9,7 +9,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Triage"
-description = "Infantry get +2 max HP."
+description = "Infantry get +4 max HP."
 tier = 3
 research_cost = 1600
 research_time = 4
@@ -42,7 +42,7 @@ vehicle_range_bonus = 0
 attack_ap_discount = 0
 infantry_cover_attack = 0
 cover_heal = 0
-infantry_hp_bonus = 2
+infantry_hp_bonus = 4
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0
 structure_hp_pct = 0

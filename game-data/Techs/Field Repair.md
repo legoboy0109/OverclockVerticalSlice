@@ -1,6 +1,6 @@
 ---
 id: field_repair
-description: Units that neither move nor attack heal 1 HP at the start of your turn.
+description: Units that neither move nor attack heal 2 HP at the start of your turn.
 tree: defense
 tier: 2
 research_cost: 1200
@@ -12,7 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: def_ha
 factions: []
-idle_heal: 1
+idle_heal: 2
 ---
 
 ## Notes

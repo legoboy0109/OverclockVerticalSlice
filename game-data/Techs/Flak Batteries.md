@@ -1,6 +1,6 @@
 ---
 id: flak_batteries
-description: Armed structures can hit aircraft, +2 attack against them.
+description: Armed structures can hit aircraft, +4 attack against them.
 tree: defense
 tier: 3
 research_cost: 1600
@@ -12,7 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: def_pd
 factions: []
-defensive_anti_air: 2
+defensive_anti_air: 4
 ---
 
 ## Notes

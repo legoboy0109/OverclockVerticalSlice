@@ -21,7 +21,7 @@ techs:
 - '[[Shredder Rounds]]'
 - '[[Long Guns]]'
 - '[[Fire Discipline]]'
-- '[[Technicals Doctrine]]'
+- '[[Motor Pool Doctrine]]'
 - '[[Overdrive]]'
 - '[[Ambush]]'
 - '[[Sappers]]'

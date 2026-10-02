@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=6 format=3]
 ; GENERATED from game-data/Techs/Consecration.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 36ee8d10cd83688ed4362149155b69c00dc8f5eb2759885c70f051446f04f264
+; source-sha256: a5d41bb7819bac08952e74b717e54b5c8bfdf7dc914aa1d253cba70785c443de
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/reinforced_concrete.tres" id="2"]
@@ -11,7 +11,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Consecration"
-description = "Structures beside a Cathedral get +2 defense."
+description = "Structures beside a Cathedral get +4 defense."
 tier = 3
 research_cost = 1600
 research_time = 4
@@ -72,7 +72,7 @@ pop_cap_bonus = 0
 infantry_cost_discount_pct = 0
 production_cap_bonus = 0
 factory_slot_bonus = 0
-aura_defense_bonus = 2
+aura_defense_bonus = 4
 bonus_unit_attack = 0
 aircraft_attack_bonus = 0
 replaces = [ExtResource("4")]

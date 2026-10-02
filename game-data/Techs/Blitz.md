@@ -1,6 +1,6 @@
 ---
 id: blitz
-description: Vehicles and aircraft move 2 more tiles before the surcharge.
+description: Vehicles and aircraft move 4 more tiles before the surcharge.
 tree: offense
 tier: 2
 research_cost: 1200
@@ -12,7 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: off_rd
 factions: []
-vehicle_move_cap_bonus: 2
+vehicle_move_cap_bonus: 4
 ---
 
 ## Notes

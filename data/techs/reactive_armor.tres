@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Reactive Armor.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: ff9449702403f3cb8904cf5d777c3ecad4cae6cbfc936b396dc22264ebbd6acc
+; source-sha256: 0bcb5570b3a87b561e03954dcbb5ff14b3a10c43a7615d0dcff9bc997d7806ce
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/plating.tres" id="2"]
@@ -9,7 +9,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Reactive Armor"
-description = "Ground vehicles get +2 defense."
+description = "Ground vehicles get +4 defense."
 tier = 3
 research_cost = 1600
 research_time = 4
@@ -30,7 +30,7 @@ produce_cost_discount_pct = 0
 frees_pilots = []
 vehicle_attack_bonus = 0
 infantry_attack_bonus = 0
-vehicle_defense_bonus = 2
+vehicle_defense_bonus = 4
 tree = "defense"
 move_cap_bonus = 0
 vehicle_move_cap_bonus = 0

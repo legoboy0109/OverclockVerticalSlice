@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Flak Batteries.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 85eea0e2fcc6b8b66f7b50690dd277ba7e477514051ad7087db7bbc922af3d44
+; source-sha256: 98922b8f689dad3a2e52fa221c300ab8d08deb84371720c0f4ff896c86980b78
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/point_defense.tres" id="2"]
@@ -9,7 +9,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Flak Batteries"
-description = "Armed structures can hit aircraft, +2 attack against them."
+description = "Armed structures can hit aircraft, +4 attack against them."
 tier = 3
 research_cost = 1600
 research_time = 4
@@ -50,7 +50,7 @@ structure_defense_bonus = 0
 defensive_attack_bonus = 0
 defensive_range_bonus = 0
 defensive_counterattack = false
-defensive_anti_air = 2
+defensive_anti_air = 4
 hq_hp_bonus = 0
 hq_attack = 0
 hq_range = 0

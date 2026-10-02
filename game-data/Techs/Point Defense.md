@@ -1,6 +1,6 @@
 ---
 id: point_defense
-description: Armed structures get +1 range; your HQ gets +30 HP.
+description: Armed structures get +1 range and +1 attack; your HQ gets +60 HP.
 tree: defense
 tier: 2
 research_cost: 1200
@@ -13,7 +13,8 @@ requires_structures:
 exclusive_group: def_fo
 factions: []
 defensive_range_bonus: 1
-hq_hp_bonus: 30
+hq_hp_bonus: 60
+defensive_attack_bonus: 1
 ---
 
 ## Notes

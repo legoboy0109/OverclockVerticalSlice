@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Armor Piercing.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: efaf9384e3936e16a7d484ddc04c781aaddac191b00b1bc18bb0b5b15df28e93
+; source-sha256: 374209c3c2d688f95ffe10a3070fccfaecffb5415a92a6de11c6cefe028f52d8
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/penetration.tres" id="2"]
@@ -9,7 +9,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Armor Piercing"
-description = "+2 attack against vehicles, aircraft and structures."
+description = "+4 attack against vehicles, aircraft and structures."
 tier = 3
 research_cost = 1600
 research_time = 4
@@ -35,7 +35,7 @@ tree = "offense"
 move_cap_bonus = 0
 vehicle_move_cap_bonus = 0
 infantry_move_cost_discount = 0
-attack_vs_armor = 2
+attack_vs_armor = 4
 attack_vs_infantry = 0
 infantry_attack_vs_structures = 0
 vehicle_range_bonus = 0

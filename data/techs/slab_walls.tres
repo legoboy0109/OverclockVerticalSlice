@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=5 format=3]
 ; GENERATED from game-data/Techs/Slab Walls.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 5b6d5faecabef568c5d64d23f909f1fe04e8c540025027376ab896a546e17b58
+; source-sha256: a252147621c6ce415c471c7b415c6b7d650ace2a12af099494b14ea8bcd3684a
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/fortifications.tres" id="2"]
@@ -10,7 +10,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Slab Walls"
-description = "All structures get +2 defense."
+description = "All structures get +3 defense."
 tier = 2
 research_cost = 1200
 research_time = 3
@@ -47,7 +47,7 @@ infantry_hp_bonus = 0
 vehicle_hp_bonus = 0
 vehicle_self_repair = 0
 structure_hp_pct = 0
-structure_defense_bonus = 2
+structure_defense_bonus = 3
 defensive_attack_bonus = 0
 defensive_range_bonus = 0
 defensive_counterattack = false

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="FactionDef" load_steps=51 format=3]
 ; GENERATED from game-data/Factions/Wolf Citizens' Front.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 58ab580cdce4192ccdbdd61d3db0b00b1740c28534471e76a5b043ce9a76f171
+; source-sha256: 0069d3ad0c42de0776b944c3354f5051c7c3dc1519f7164f3273115ecc5d4dd6
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/structures/solar_barracks.tres" id="2"]

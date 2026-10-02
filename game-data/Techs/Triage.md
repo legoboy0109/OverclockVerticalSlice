@@ -1,6 +1,6 @@
 ---
 id: triage
-description: Infantry get +2 max HP.
+description: Infantry get +4 max HP.
 tree: defense
 tier: 3
 research_cost: 1600
@@ -12,7 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: def_fr
 factions: []
-infantry_hp_bonus: 2
+infantry_hp_bonus: 4
 ---
 
 ## Notes

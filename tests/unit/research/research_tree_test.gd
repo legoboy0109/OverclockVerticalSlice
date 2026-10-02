@@ -489,3 +489,31 @@ func test_a_swap_unlocks_what_its_replaced_tech_would() -> void:
 	_lab(state)
 	GameStateFactory.grant_tech(state, 0, Techs.SCRAP_PLATING)
 	assert_int(Research.availability(state, 0, Techs.PLATING)).is_equal(Action.Reason.OK)
+
+
+# ★ 2026-10-02 balance pass: Technicals Doctrine (Wolf) shipped buffing the Technical, a unit only
+# the Lightless build — half the tech was dead and nothing noticed. Every unit or structure a tech
+# names must be fieldable by some faction that can research it, and no faction may hold a tech
+# whose named content it can field none of.
+func test_every_unit_or_structure_a_tech_names_is_fieldable_by_its_owners() -> void:
+	var owners: Dictionary = {}   # TechDef -> Array[FactionDef]
+	for f: FactionDef in Factions.playable():
+		for t: TechDef in (f.techs if not f.techs.is_empty() else Techs.ALL):
+			owners[t] = owners.get(t, []) + [f]
+	for t: TechDef in owners:
+		var named: Array = t.bonus_unit_types + t.frees_pilots + t.aura_structures
+		if named.is_empty():
+			continue
+		var fieldable_by: Dictionary = {}   # named type -> true once some owner can field it
+		for f: FactionDef in owners[t]:
+			var content: Array = Faction.units(f) + f.structures + [Faction.hq_type(f)]
+			var any_here := false
+			for n: Variant in named:
+				if n in content:
+					fieldable_by[n] = true
+					any_here = true
+			assert_bool(any_here).override_failure_message("%s holds %s but can field none of what it names" % [
+				f.display_name, t.display_name]).is_true()
+		for n: Variant in named:
+			assert_bool(fieldable_by.has(n)).override_failure_message("%s names %s, which none of its owners can field" % [
+				t.display_name, n.display_name]).is_true()

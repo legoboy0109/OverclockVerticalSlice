@@ -1,6 +1,6 @@
 ---
 id: shredder_rounds
-description: +2 attack against infantry.
+description: +4 attack against infantry.
 tree: offense
 tier: 3
 research_cost: 1600
@@ -12,7 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: off_pen
 factions: []
-attack_vs_infantry: 2
+attack_vs_infantry: 4
 ---
 
 ## Notes

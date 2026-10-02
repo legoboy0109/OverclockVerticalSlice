@@ -1,6 +1,6 @@
 ---
 id: plating
-description: +1 more defense for all units.
+description: +2 more defense for all units.
 tree: defense
 tier: 2
 research_cost: 1200
@@ -12,7 +12,7 @@ requires_structures:
 - '[[Research Lab]]'
 exclusive_group: def_ha
 factions: []
-defense_bonus: 1
+defense_bonus: 2
 ---
 
 ## Notes

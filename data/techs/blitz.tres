@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
 ; GENERATED from game-data/Techs/Blitz.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: fae25ebcf9e49527848a3bf89f1a50df42c0ac9e139ff82d6af82240581bdaa2
+; source-sha256: 36bb5efab6bc7fe1f80dab69a49a77dc6902824aaa55258856bc11871a75a68d
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/rapid_deployment.tres" id="2"]
@@ -9,7 +9,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Blitz"
-description = "Vehicles and aircraft move 2 more tiles before the surcharge."
+description = "Vehicles and aircraft move 4 more tiles before the surcharge."
 tier = 2
 research_cost = 1200
 research_time = 3
@@ -33,7 +33,7 @@ infantry_attack_bonus = 0
 vehicle_defense_bonus = 0
 tree = "offense"
 move_cap_bonus = 0
-vehicle_move_cap_bonus = 2
+vehicle_move_cap_bonus = 4
 infantry_move_cost_discount = 0
 attack_vs_armor = 0
 attack_vs_infantry = 0
