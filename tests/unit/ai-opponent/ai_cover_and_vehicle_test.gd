@@ -194,3 +194,28 @@ func test_a_pirate_is_worth_more_the_more_ground_vehicles_the_enemy_fields() -> 
 	_unit(state, 1, UnitTypes.TANK, Vector2i(12, 5))
 	_unit(state, 1, UnitTypes.TANK, Vector2i(12, 7))
 	assert_float(AI._ability_matchup_effect(state, 0, UnitTypes.PIRATE)).is_greater(infantry_only)
+
+
+# --- Defensive structures and research lookahead (2026-10-01) -----------------------------------
+
+func test_a_defence_is_worth_nothing_when_the_base_is_quiet_and_something_under_pressure() -> void:
+	var state := _state()   # HQ at (1, 8)
+	_unit(state, 1, UnitTypes.TROOPER, Vector2i(13, 2))   # far away
+	assert_float(AI._economy_value(state, 0, StructureTypes.DEFENSIVE_STRUCTURE)).is_equal(0.0)
+	_unit(state, 1, UnitTypes.TROOPER, Vector2i(4, 8))
+	_unit(state, 1, UnitTypes.TROOPER, Vector2i(4, 9))
+	assert_float(AI._economy_value(state, 0, StructureTypes.DEFENSIVE_STRUCTURE)).is_greater(0.0)
+
+
+func test_a_defence_goes_on_the_tile_nearest_the_hq() -> void:
+	var state := _state()   # HQ at (1, 8)
+	var tiles: Array[Vector2i] = [Vector2i(6, 8), Vector2i(2, 9), Vector2i(4, 4)]
+	assert_object(AI._defense_build_tile(state, 0, tiles)).is_equal(Vector2i(2, 9))
+
+
+func test_research_counts_what_a_tech_unlocks() -> void:
+	var state := _state()
+	state.per_player[0].faction = Factions.GALACTIC_PROTECTORATE
+	var alone: float = AI._tech_research_value(state, 0, Techs.FORWARD_DEPOTS, false)
+	var with_path: float = AI._tech_research_value(state, 0, Techs.FORWARD_DEPOTS)
+	assert_float(with_path).is_greater(alone)

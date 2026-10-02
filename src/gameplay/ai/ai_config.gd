@@ -234,6 +234,17 @@ extends Resource
 ## army that is half vehicles makes a Pirate as attractive as a one-shot killer.
 @export var capture_value_fraction: float = 0.5
 
+## ★ Defensive structures (AI._defense_value, 2026-10-01). Enemy fighters within
+## defense_threat_radius tiles of our HQ make a defence worth building; defense_threat_units of
+## them is full pressure; a defence is credited with defense_engaged_turns turns of its attack.
+@export var defense_threat_radius: int = 6
+@export var defense_threat_units: int = 2
+@export var defense_engaged_turns: int = 6
+
+## Share of the best follow-up tech's value a tech is credited with (AI._tech_research_value), so the
+## AI sees where a branch LEADS. 0 = judge every tech in isolation (the old behaviour).
+@export var research_path_lookahead: float = 0.5
+
 ## `ap_cost_opponent_paid_for` weight for the enemy HQ (which has no
 ## `build_cost`) — a siege-priority weight, not a sunk-cost figure.
 ## ★★ RAISED 12 -> 60 (S6-07c, user's lever: "make the objective outscore trading").

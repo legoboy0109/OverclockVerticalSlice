@@ -2133,7 +2133,9 @@ static func _score_build_and_economy_candidates(lookahead: GameState, _entity: E
 			action.player = player
 			action.structure_type = structure_type
 			action.builder_id = builder.entity_id
-			action.tile = _best_build_tile(lookahead, player, tiles)
+			action.tile = _defense_build_tile(lookahead, player, tiles) \
+				if structure_type.attack > 0 and structure_type.producible_types.is_empty() \
+				else _best_build_tile(lookahead, player, tiles)
 			best = _Candidate.new(action, score, cost, candidate_entity_id)
 
 	return best
@@ -2246,6 +2248,39 @@ static func _producer_quality(s: GameState, player: int, structure_type: Structu
 	return clampf(best_here / best_inf, AIBalance.ai.producer_quality_min, 1.0)
 
 
+## What an armed defensive structure is worth (2026-10-01): the damage it would deal over
+## [member AIConfig.defense_engaged_turns] turns, priced like any damage (÷ hp_per_ap), scaled
+## by how threatened the base is — enemy fighters within [member AIConfig.defense_threat_radius]
+## of [param player]'s HQ, saturating at [member AIConfig.defense_threat_units]. A quiet base is
+## worth nothing to fortify, so the AI raises defences in response to pressure, not by habit.
+static func _defense_value(s: GameState, player: int, structure_type: StructureTypeDef) -> float:
+	var cfg: AIConfig = AIBalance.ai
+	var hq: StructureState = _own_hq(s, player)
+	if hq == null:
+		return 0.0
+	var near: int = 0
+	for e: EntityState in s.entities():
+		if e is UnitState and e.owner != player and e.owner >= 0 and (e as UnitState).type.attack > 0 \
+				and s.grid.manhattan_distance(e.position, hq.position) <= cfg.defense_threat_radius:
+			near += 1
+	var threat: float = minf(1.0, float(near) / maxf(1.0, float(cfg.defense_threat_units)))
+	var attack: float = float(structure_type.attack + Research.sum(s, player, &"defensive_attack_bonus"))
+	return threat * attack * float(cfg.defense_engaged_turns) / cfg.hp_per_ap
+
+
+## Build tile for a defence: the legal one nearest [param player]'s HQ (losing the HQ loses the
+## game, so that is what a defence is for). Ties keep the first — the list is in stable order.
+static func _defense_build_tile(s: GameState, player: int, tiles: Array[Vector2i]) -> Vector2i:
+	var hq: StructureState = _own_hq(s, player)
+	if hq == null:
+		return tiles[0]
+	var best: Vector2i = tiles[0]
+	for t: Vector2i in tiles:
+		if s.grid.manhattan_distance(t, hq.position) < s.grid.manhattan_distance(best, hq.position):
+			best = t
+	return best
+
+
 ## Credit cost of the cheapest ARMED unit [param structure_type] produces for [param player]
 ## (0 if it produces none — e.g. the HQ, which makes only Builders).
 static func _cheapest_armed_cost_of(s: GameState, player: int, structure_type: StructureTypeDef) -> float:
@@ -2325,6 +2360,11 @@ static func _economy_value(lookahead: GameState, player: int, structure_type: St
 	var capacity: float = _capacity_value(lookahead, player, structure_type)
 	if capacity > 0.0:
 		return capacity
+	# ★ 2026-10-01 (user direction: "teach the AI to build defensive buildings"): an armed
+	# non-producer (Defensive Structure, Bulwark, Mandate Defence, Defence Node) was worth 0 here,
+	# so in every batch run no faction ever raised one. See _defense_value.
+	if structure_type.attack > 0 and structure_type.producible_types.is_empty():
+		return _defense_value(lookahead, player, structure_type)
 
 	# ★ S6-01 (2026-08-24): re-pointed off the deleted per-outpost income curve.
 	#
@@ -2441,7 +2481,7 @@ static func _score_research_candidates(lookahead: GameState, entity: EntityState
 ## the match (user direction: "value tech more since it will have a more universal impact
 ## throughout the game") — except Economy Tech's income, which stays on the short
 ## [member AIConfig.economy_horizon] like every other income projection (see that knob's note).
-static func _tech_research_value(lookahead: GameState, player: int, tech: TechDef) -> float:
+static func _tech_research_value(lookahead: GameState, player: int, tech: TechDef, followup: bool = true) -> float:
 	var horizon: int = _tech_horizon(lookahead)
 	var total: float = 0.0
 	if tech.attack_bonus != 0:
@@ -2468,6 +2508,15 @@ static func _tech_research_value(lookahead: GameState, player: int, tech: TechDe
 	var tree_value: float = _tree_effects_marginal_value(lookahead, player, tech)
 	if tree_value > 0.0:
 		total += _research_value(tech.research_time, horizon, tree_value)
+	# ★ 2026-10-01: a tech is also worth part of the best tech it UNLOCKS (one step, no
+	# recursion). Judged in isolation, the AI took Rapid Requisition over Forward Depots in
+	# Trappist games, never reaching Drone Maintenance behind it. AIConfig.research_path_lookahead.
+	if followup and AIBalance.ai.research_path_lookahead > 0.0:
+		var best_next: float = 0.0
+		for child: TechDef in Faction.techs(lookahead, player):
+			if tech in child.prerequisites:
+				best_next = maxf(best_next, _tech_research_value(lookahead, player, child, false))
+		total += AIBalance.ai.research_path_lookahead * best_next
 	return total
 
 
