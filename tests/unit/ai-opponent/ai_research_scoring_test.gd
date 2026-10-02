@@ -240,3 +240,30 @@ func test_different_matches_open_research_differently() -> void:
 	assert_int(first_picks.size()).override_failure_message(
 		"40 different match seeds all opened with the same tech: %s" % str(first_picks.keys())
 	).is_greater(1)
+
+
+# ★ 2026-10-02 balance pass: every TechDef effect field must carry a price ON ITS OWN. A whole-tech
+# check passes as long as one field is priced, which is how Hardpoints' hq_range went unpriced
+# beside its priced hq_hp_bonus/hq_attack. Walks the "Effects" export group so a field added later
+# fails here until the AI values it. Arrays are skipped: they qualify other fields (bonus_unit_types,
+# aura_structures) or are faction plumbing (replaces); frees_pilots is priced separately.
+func test_every_effect_field_is_priced_on_its_own() -> void:
+	var state := _state()
+	# Cost-discount fields are priced off the cheapest unit the player can produce, so give it a
+	# producer; without one they are legitimately worth 0.
+	_structure(state, 0, Vector2i(4, 4), StructureTypes.BARRACKS)
+	var in_effects := false
+	for prop: Dictionary in TechDef.new().get_property_list():
+		if prop.usage & PROPERTY_USAGE_GROUP:
+			in_effects = prop.name == "Effects"
+			continue
+		if not in_effects or not (prop.usage & PROPERTY_USAGE_EDITOR):
+			continue
+		if prop.type != TYPE_INT and prop.type != TYPE_BOOL:
+			continue
+		var t := TechDef.new()
+		t.display_name = "probe_%s" % prop.name
+		t.research_time = 3
+		t.set(prop.name, true if prop.type == TYPE_BOOL else 1)
+		assert_float(AI._tech_research_value(state, 0, t, false)).override_failure_message(
+			"AI gives TechDef.%s no value on its own" % prop.name).is_greater(0.0)

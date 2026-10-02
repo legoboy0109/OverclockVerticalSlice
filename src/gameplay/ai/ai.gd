@@ -2536,7 +2536,7 @@ static func _tree_effects_marginal_value(s: GameState, p: int, t: TechDef) -> fl
 	ae += 0.3 * (t.infantry_hp_bonus * inf + t.vehicle_hp_bonus * veh) + 0.8 * t.vehicle_self_repair * veh
 	ae += (t.vehicle_attack_bonus + t.vehicle_defense_bonus + t.aircraft_attack_bonus) * veh + t.infantry_attack_bonus * inf
 	ae += 0.3 * (t.structure_defense_bonus + t.defensive_attack_bonus + t.defensive_range_bonus + t.aura_defense_bonus)
-	ae += 0.01 * t.structure_hp_pct + 0.02 * t.hq_hp_bonus + 0.15 * t.hq_attack + (0.4 if t.defensive_counterattack else 0.0)
+	ae += 0.01 * t.structure_hp_pct + 0.02 * t.hq_hp_bonus + 0.15 * t.hq_attack + 0.1 * t.hq_range + (0.4 if t.defensive_counterattack else 0.0)
 	ae += 0.15 * t.defensive_anti_air + 0.4 * t.build_time_discount + 0.2 * t.ammo_bonus * veh
 	ae += 0.15 * t.resupply_range * veh + 0.3 * t.supply_heal + 0.6 * t.vehicle_production_turn_discount * veh
 	ae += 0.3 * t.pop_cap_bonus + 0.6 * (t.production_cap_bonus + t.factory_slot_bonus) + 0.5 * t.bonus_unit_attack + 0.3 * t.bonus_unit_move_cap + 0.3 * t.bonus_unit_self_repair
