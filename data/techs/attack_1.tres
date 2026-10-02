@@ -73,5 +73,6 @@ bonus_unit_attack = 0
 aircraft_attack_bonus = 0
 replaces = []
 bonus_unit_move_cap = 0
+bonus_unit_self_repair = 0
 bonus_unit_types = []
 aura_structures = []

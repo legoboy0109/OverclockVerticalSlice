@@ -1,22 +1,25 @@
-[gd_resource type="Resource" script_class="TechDef" load_steps=4 format=3]
-; GENERATED from game-data/Techs/Mass Production.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: 1708c79a19d1c59fa94ad53c4103a7224084e3d90d7ef7bbbf44de2becfaf1e9
+[gd_resource type="Resource" script_class="TechDef" load_steps=7 format=3]
+; GENERATED from game-data/Techs/Drone Maintenance.md — edit the note, then run: python3 tools/vault/build_data.py
+; source-sha256: 070613b07000b76f14d6d34e4756f3b2a50bf09fbcbb14ac15dd0df8a4695ec3
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
-[ext_resource type="Resource" path="res://data/techs/foundry.tres" id="2"]
+[ext_resource type="Resource" path="res://data/techs/forward_depots.tres" id="2"]
 [ext_resource type="Resource" path="res://data/structures/research_lab.tres" id="3"]
+[ext_resource type="Resource" path="res://data/units/sentinel_mech.tres" id="4"]
+[ext_resource type="Resource" path="res://data/units/breaker_mech.tres" id="5"]
+[ext_resource type="Resource" path="res://data/techs/field_workshops.tres" id="6"]
 
 [resource]
 script = ExtResource("1")
-display_name = "Mass Production"
-description = "Vehicles and aircraft take 1 fewer turn to produce (minimum 1). +1,200 Credits of income every turn."
+display_name = "Drone Maintenance"
+description = "Sentinel and Breaker mechs no longer need pilots, and repair 2 HP at the start of your turn. Crewed ones eject their pilot. +1,200 Credits of income every turn."
 tier = 3
 research_cost = 1600
 research_time = 4
 ap_surcharge = 8
 prerequisites = [ExtResource("2")]
 required_structures = [ExtResource("3")]
-exclusive_group = &"eco_fd"
+exclusive_group = &"eco_fwd"
 allowed_factions = []
 attack_bonus = 0
 defense_bonus = 0
@@ -27,7 +30,7 @@ economy_tier_bonus = 1
 produce_ap_discount = 0
 build_ap_discount = 0
 produce_cost_discount_pct = 0
-frees_pilots = []
+frees_pilots = [ExtResource("4"), ExtResource("5")]
 vehicle_attack_bonus = 0
 infantry_attack_bonus = 0
 vehicle_defense_bonus = 0
@@ -61,7 +64,7 @@ resupply_range = 0
 supply_heal = 0
 rush_ap_discount = 0
 vehicle_rush_half = false
-vehicle_production_turn_discount = 1
+vehicle_production_turn_discount = 0
 kill_refund_pct = 0
 ap_per_turn_bonus = 0
 upkeep_discount_pct = 0
@@ -73,8 +76,8 @@ factory_slot_bonus = 0
 aura_defense_bonus = 0
 bonus_unit_attack = 0
 aircraft_attack_bonus = 0
-replaces = []
+replaces = [ExtResource("6")]
 bonus_unit_move_cap = 0
-bonus_unit_self_repair = 0
-bonus_unit_types = []
+bonus_unit_self_repair = 2
+bonus_unit_types = [ExtResource("4"), ExtResource("5")]
 aura_structures = []

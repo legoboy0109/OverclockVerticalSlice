@@ -458,7 +458,7 @@ static func apply_idle_healing(state: GameState, player: int) -> Array:
 	# in Cover, which did nothing on its own path — Hardened Armor + Plating + Cover already floor
 	# infantry hits at min_damage.
 	var cover_heal: int = sum(state, player, &"cover_heal")
-	if amount <= 0 and self_repair <= 0 and cover_heal <= 0:
+	if amount <= 0 and self_repair <= 0 and cover_heal <= 0 and sum(state, player, &"bonus_unit_self_repair") <= 0:
 		return []
 	var events: Array = []
 	for e: EntityState in state.entities():
@@ -471,6 +471,7 @@ static func apply_idle_healing(state: GameState, player: int) -> Array:
 		var gain: int = (amount if idle else 0)
 		if unit.type.unit_class == UnitTypeDef.UnitClass.GROUND_VEHICLE:
 			gain += self_repair
+		gain += unit_type_bonus(state, player, unit.type, &"bonus_unit_self_repair")   # Drone Maintenance
 		if cover_heal > 0 and Unit.benefits_from_cover(unit) \
 				and state.grid.is_cover(unit.position.x, unit.position.y):
 			gain += cover_heal

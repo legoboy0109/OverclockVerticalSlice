@@ -49,7 +49,7 @@ techs:
 - '[[Salvage]]'
 - '[[Mech Autonomy]]'
 - '[[Quartermasters]]'
-- '[[Field Workshops]]'
+- '[[Drone Maintenance]]'
 - '[[Ammo Surplus]]'
 - '[[Bulk Contracts]]'
 - '[[Emergency Draft]]'

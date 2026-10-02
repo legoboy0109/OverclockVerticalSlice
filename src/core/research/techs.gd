@@ -65,6 +65,7 @@ const STRIP_THE_WRECKS: TechDef = preload("res://data/techs/strip_the_wrecks.tre
 const SCRAP_PLATING: TechDef = preload("res://data/techs/scrap_plating.tres")
 const SELF_REPAIR_PROTOCOLS: TechDef = preload("res://data/techs/self_repair_protocols.tres")
 const MECH_AUTONOMY: TechDef = preload("res://data/techs/mech_autonomy.tres")
+const DRONE_MAINTENANCE: TechDef = preload("res://data/techs/drone_maintenance.tres")
 const DOCTRINE: TechDef = preload("res://data/techs/doctrine.tres")
 const CONSECRATION: TechDef = preload("res://data/techs/consecration.tres")
 

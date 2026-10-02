@@ -220,7 +220,8 @@ KINDS: dict[str, Kind] = {
         Field("aircraft_attack_bonus", "int", 0, help="Attack for aircraft"),
         Field("replaces", "links", [], target="Techs", help="Faction swap: stands in for these shared techs"),
         Field("bonus_unit_move_cap", "int", 0, help="Tiles before the surcharge for bonus_unit_types"),
-        Field("bonus_unit_types", "links", [], target="Units", help="Unit types that get bonus_unit_attack / bonus_unit_move_cap"),
+        Field("bonus_unit_self_repair", "int", 0, help="HP bonus_unit_types heal at the start of their turn"),
+        Field("bonus_unit_types", "links", [], target="Units", help="Unit types that get bonus_unit_attack / bonus_unit_move_cap / bonus_unit_self_repair"),
         Field("aura_structures", "links", [], target="Structures", help="Structures that grant aura_defense_bonus to neighbours"),
     ]),
     "Factions": Kind("Factions", "factions", "res://src/core/faction/faction_def.gd", "FactionDef", [

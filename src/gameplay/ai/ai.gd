@@ -2490,7 +2490,7 @@ static func _tree_effects_marginal_value(s: GameState, p: int, t: TechDef) -> fl
 	ae += 0.01 * t.structure_hp_pct + 0.02 * t.hq_hp_bonus + 0.15 * t.hq_attack + (0.4 if t.defensive_counterattack else 0.0)
 	ae += 0.15 * t.defensive_anti_air + 0.4 * t.build_time_discount + 0.2 * t.ammo_bonus * veh
 	ae += 0.15 * t.resupply_range * veh + 0.3 * t.supply_heal + 0.6 * t.vehicle_production_turn_discount * veh
-	ae += 0.3 * t.pop_cap_bonus + 0.6 * (t.production_cap_bonus + t.factory_slot_bonus) + 0.5 * t.bonus_unit_attack + 0.3 * t.bonus_unit_move_cap
+	ae += 0.3 * t.pop_cap_bonus + 0.6 * (t.production_cap_bonus + t.factory_slot_bonus) + 0.5 * t.bonus_unit_attack + 0.3 * t.bonus_unit_move_cap + 0.3 * t.bonus_unit_self_repair
 	ae += 0.5 if not t.frees_pilots.is_empty() else 0.0
 	var ap: float = float(t.ap_per_turn_bonus) + 2.0 * t.attack_ap_discount + 0.5 * t.rush_ap_discount \
 		+ (1.0 if t.vehicle_rush_half else 0.0)
