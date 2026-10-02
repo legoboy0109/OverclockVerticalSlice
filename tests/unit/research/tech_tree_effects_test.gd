@@ -424,3 +424,43 @@ func test_effect_unit_type_bonuses() -> void:
 	assert_int(Unit.effective_attack(s, u)).is_equal(a0 + 1)
 	assert_int(Unit.soft_move_cap(u)).is_equal(m0 + 1)
 	assert_int(Unit.effective_attack(s, other)).is_equal(o0)
+
+
+# --- Autonomous mechs on both Economy branches (2026-10-01, user decision) ----------------------
+
+func test_mech_autonomy_frees_pilots_and_gives_mechs_a_move() -> void:
+	var t: TechDef = Techs.MECH_AUTONOMY
+	assert_bool(UnitTypes.SENTINEL_MECH in t.frees_pilots).is_true()
+	var s := _state()
+	var mech := _unit(s, 0, UnitTypes.SENTINEL_MECH, Vector2i(3, 3))
+	var tank := _unit(s, 0, UnitTypes.TANK, Vector2i(6, 6))
+	var m0: int = Unit.soft_move_cap(mech)
+	var t0: int = Unit.soft_move_cap(tank)
+	_grant(s, t)
+	assert_int(Unit.soft_move_cap(mech)).is_equal(m0 + 1)
+	assert_int(Unit.soft_move_cap(tank)).is_equal(t0)
+
+
+func test_drone_maintenance_frees_pilots_and_repairs_mechs_each_turn() -> void:
+	var t: TechDef = Techs.DRONE_MAINTENANCE
+	assert_bool(UnitTypes.SENTINEL_MECH in t.frees_pilots).is_true()
+	assert_bool(StructureTypes.RESEARCH_LAB in t.required_structures).is_true()
+	var s := _state()
+	var mech := _unit(s, 0, UnitTypes.SENTINEL_MECH, Vector2i(3, 3))
+	var tank := _unit(s, 0, UnitTypes.TANK, Vector2i(6, 6))
+	mech.current_hp = 5
+	tank.current_hp = 5
+	mech.tiles_moved_this_turn = 2   # it acted — the repair still applies
+	tank.tiles_moved_this_turn = 2
+	_grant(s, t)
+	Research.apply_idle_healing(s, 0)
+	assert_int(mech.current_hp).is_equal(7)
+	assert_int(tank.current_hp).is_equal(5)
+
+
+func test_trappist_can_reach_autonomy_on_either_branch() -> void:
+	var techs: Array = Factions.GALACTIC_PROTECTORATE.techs
+	assert_bool(Techs.MECH_AUTONOMY in techs).is_true()
+	assert_bool(Techs.DRONE_MAINTENANCE in techs).is_true()
+	assert_str(Techs.MECH_AUTONOMY.prerequisites[0].display_name).is_equal("Logistics")
+	assert_str(Techs.DRONE_MAINTENANCE.prerequisites[0].display_name).is_equal("Forward Depots")

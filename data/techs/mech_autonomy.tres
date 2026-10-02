@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="TechDef" load_steps=7 format=3]
 ; GENERATED from game-data/Techs/Mech Autonomy.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: d8b32c543734f3ab1b7a925fbb016e19fbef708ac597d67bc4d8fad36407d9a3
+; source-sha256: a20312a02f41a7a832fc97bc73ec9c66659670e667aa1c7db7c8265c21fd0887
 
 [ext_resource type="Script" path="res://src/core/research/tech_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/techs/logistics.tres" id="2"]
@@ -12,7 +12,7 @@
 [resource]
 script = ExtResource("1")
 display_name = "Mech Autonomy"
-description = "Sentinel and Breaker mechs no longer need pilots. Crewed ones eject their pilot. +1,200 Credits of income every turn."
+description = "Sentinel and Breaker mechs no longer need pilots, and move 1 more tile before the surcharge. Crewed ones eject their pilot. +1,200 Credits of income every turn."
 tier = 3
 research_cost = 1600
 research_time = 4
@@ -77,6 +77,7 @@ aura_defense_bonus = 0
 bonus_unit_attack = 0
 aircraft_attack_bonus = 0
 replaces = [ExtResource("6")]
-bonus_unit_move_cap = 0
-bonus_unit_types = []
+bonus_unit_move_cap = 1
+bonus_unit_self_repair = 0
+bonus_unit_types = [ExtResource("4"), ExtResource("5")]
 aura_structures = []

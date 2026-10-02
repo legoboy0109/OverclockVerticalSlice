@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="FactionDef" load_steps=51 format=3]
 ; GENERATED from game-data/Factions/Trappist Autonomous Mandate.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: e19eef805e6040034d77a11e68f830d0718bbdf8a5a98a8679b8b4b415e2d565
+; source-sha256: bd9960bffe9e24a4356425ce8181d3a6bbe2777cce92cbe32cdb6eb638c59632
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/structures/protectorate_barracks.tres" id="2"]
@@ -47,7 +47,7 @@
 [ext_resource type="Resource" path="res://data/techs/salvage.tres" id="43"]
 [ext_resource type="Resource" path="res://data/techs/mech_autonomy.tres" id="44"]
 [ext_resource type="Resource" path="res://data/techs/quartermasters.tres" id="45"]
-[ext_resource type="Resource" path="res://data/techs/field_workshops.tres" id="46"]
+[ext_resource type="Resource" path="res://data/techs/drone_maintenance.tres" id="46"]
 [ext_resource type="Resource" path="res://data/techs/ammo_surplus.tres" id="47"]
 [ext_resource type="Resource" path="res://data/techs/bulk_contracts.tres" id="48"]
 [ext_resource type="Resource" path="res://data/techs/emergency_draft.tres" id="49"]

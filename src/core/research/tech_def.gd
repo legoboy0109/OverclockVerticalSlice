@@ -175,6 +175,9 @@ extends Resource
 @export var bonus_unit_attack: int = 0
 ## Tiles before the surcharge for bonus_unit_types
 @export var bonus_unit_move_cap: int = 0
+## HP [member bonus_unit_types] heal at the start of their owner's turn, moved or not (Drone
+## Maintenance, 2026-10-01).
+@export var bonus_unit_self_repair: int = 0
 ## Unit types that get [member bonus_unit_attack] / [member bonus_unit_move_cap].
 ## ★ A faction swap: this tech stands in for the listed shared techs — it occupies their slot and
 ## satisfies any tech that requires them (Research.availability).
