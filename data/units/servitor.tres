@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="UnitTypeDef" load_steps=2 format=3]
 ; GENERATED from game-data/Units/Servitor.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: d3ab1c867fad6318f0793a52e35161cc97319caf3544b56f804722de90a1c178
+; source-sha256: 00ea95ba2d4f789307142a8829cf31bad498533f7b1aaff34101163f5fb93463
 
 [ext_resource type="Script" path="res://src/core/unit/unit_type_def.gd" id="1"]
 
@@ -38,7 +38,7 @@ transport_capacity = 0
 transport_accepts = Array[int]([])
 transport_size = 1
 targets_crew = false
-crew_bonus_attack = -1
+crew_bonus_attack = 0
 starting_merit = 0
 crew_bonus_move_cost = 0
 art_id = &""

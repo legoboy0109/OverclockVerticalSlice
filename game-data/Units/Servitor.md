@@ -31,7 +31,7 @@ transport_capacity: 0
 transport_accepts: []
 transport_size: 1
 targets_crew: false
-crew_bonus_attack: -1
+crew_bonus_attack: 0
 crew_bonus_move_cost: 0
 ---
 

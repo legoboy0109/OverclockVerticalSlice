@@ -260,9 +260,10 @@ func test_mech_autonomy_is_the_protectorates_alone() -> void:
 	assert_int(Research.availability(state, 1, Techs.MECH_AUTONOMY)).is_equal(Action.Reason.TECH_FACTION_RESTRICTED)
 
 
-func test_servitors_are_cap_exempt_and_poor_pilots() -> void:
+func test_servitors_are_cap_exempt_and_crew_mechs_at_no_penalty() -> void:
+	# ★ 2026-10-03 balance pass: the −1 crew attack penalty was removed (Trappist 42% -> 47%).
 	assert_bool(UnitTypes.SERVITOR.counts_toward_cap).is_false()
-	assert_int(UnitTypes.SERVITOR.crew_bonus_attack).is_equal(-1)
+	assert_int(UnitTypes.SERVITOR.crew_bonus_attack).is_equal(0)
 
 
 func _empire_state() -> GameState:

@@ -69,6 +69,10 @@ almost all the balancing work in this document.
 
 > ### ★★ The Servitor is where this entire faction is balanced
 >
+> ★ **2026-10-03 balance pass — Servitors are no longer poor pilots** (`crew_bonus: attack −1` → **0**).
+> The Protectorate was the weakest faction (42% across all matchups) and its mechs are mostly crewed
+> by Servitors; removing the penalty measured 47%. The cap-exemption trade below is unchanged.
+>
 > Read the two numbers together: **200 to buy, 300 a turn to keep.** It is the *cheapest* unit in
 > the game to acquire and, per point of combat value, by far the **most expensive to hold** — an
 > Alliance Heavy (attack 5, 10 hp) also costs 300 upkeep. That is the direction's *"less economical
