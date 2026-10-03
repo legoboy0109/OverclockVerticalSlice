@@ -153,6 +153,12 @@ hole is a different thing from a weakness.
 
 ### Structures and economy
 
+> ★ **Current values (2026-10-03 balance pass).** The table below predates the economy rework: base
+> income is now 1,500 (Alliance −100 since 2026-10-02) with research steps +500/+800/+1,200. The
+> Independents' intercept was **halved to −100** on 2026-10-03 (slope stays −100/step): at −200 they
+> won 44% across all matchups; −100 measured 49% (240 games, both seats, both maps). They now start
+> level with the Alliance and fall behind only as Economy research lands.
+
 | | Independents | Alliance | Δ |
 |---|---:|---:|---|
 | `BASE_INCOME` | **800** | 1,000 | ★ −200 (intercept) |
