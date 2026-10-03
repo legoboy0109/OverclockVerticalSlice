@@ -1676,6 +1676,8 @@ static func _matchup_multiplier(lookahead: GameState, owner: int, unit_type: Uni
 	probe.current_hp = unit_type.hp
 	var total: float = 0.0
 	var hit: float = 0.0
+	var unit_total: float = 0.0   # enemy UNITS only — the anti-air yardstick below
+	var air_hit: float = 0.0
 	for e: EntityState in lookahead.entities():
 		if e.owner == owner or e.owner < 0:
 			continue
@@ -1683,9 +1685,26 @@ static func _matchup_multiplier(lookahead: GameState, owner: int, unit_type: Uni
 		if worth <= 0.0:
 			continue
 		total += worth
+		if e is UnitState:
+			unit_total += worth
 		if Combat.can_target(probe, e):
-			hit += worth * minf(1.0, float(Combat.damage(lookahead, probe, e)) / float(maxi(1, _max_hp_of(e))))
+			var h: float = worth * minf(1.0, float(Combat.damage(lookahead, probe, e)) / float(maxi(1, _max_hp_of(e))))
+			hit += h
+			if e is UnitState and (e as UnitState).type.unit_class == UnitTypeDef.UnitClass.AIR:
+				air_hit += h
 	var effect: float = hit / total if total > 0.0 else 0.5
+	# ★ 2026-10-02 (never-built units): three things the damage share above cannot see.
+	# Range — a Cinder Tank (range 4, attack 9) scored strictly below a Lance Tank (range 3,
+	# attack 10) and a Breaker Mech (range 1) below a Sentinel (range 2), so neither was built.
+	effect *= 1.0 + AIBalance.ai.range_value_per_tile * maxf(0.0, float(unit_type.attack_range - 1))
+	# Splash — Breaker's burst and the Strafer's line hit more than the one target counted above.
+	if unit_type.area_shape != UnitTypeDef.AreaShape.SINGLE:
+		effect *= 1.0 + AIBalance.ai.splash_value_bonus
+	# Anti-air need — judged against the enemy's UNITS (not its HQ and buildings, which drowned
+	# it out) and scaled by how little of our own army can already hit aircraft. Measured: Order and
+	# Trappist built 0 Dominions/Talons facing 22 enemy aircraft in 12 games.
+	if air_hit > 0.0 and unit_total > 0.0:
+		effect = maxf(effect, air_hit / unit_total * (1.0 - _air_coverage(lookahead, owner)))
 	# ★ Durability (faction balance pass, 2026-09-29): the effect above measures only what the
 	# unit DOES to the enemy, never how long it lasts. A 3-hp unit and a 20-hp mech dealing the
 	# same damage scored the same, so every faction's AI spammed its glass cannons (Marksmen,
@@ -1703,6 +1722,18 @@ static func _matchup_multiplier(lookahead: GameState, owner: int, unit_type: Uni
 ## Army-mix multiplier for an ARMED vehicle/aircraft type: up to 1 + [member AIConfig.vehicle_mix_bonus]
 ## while vehicles are under [member AIConfig.vehicle_share_target] of [param owner]'s fighters,
 ## tapering linearly to 1.0 at the target. 1.0 for infantry and everything unarmed.
+## Share of [param owner]'s fighters that can target aircraft (0 when it has none).
+static func _air_coverage(s: GameState, owner: int) -> float:
+	var fighters: int = 0
+	var aa: int = 0
+	for e: EntityState in s.entities():
+		if e is UnitState and e.owner == owner and (e as UnitState).type.attack > 0:
+			fighters += 1
+			if UnitTypeDef.UnitClass.AIR in (e as UnitState).type.can_target:
+				aa += 1
+	return float(aa) / fighters if fighters > 0 else 0.0
+
+
 static func _vehicle_mix_factor(s: GameState, owner: int, unit_type: UnitTypeDef) -> float:
 	var cfg: AIConfig = AIBalance.ai
 	if unit_type.unit_class == UnitTypeDef.UnitClass.INFANTRY or cfg.vehicle_share_target <= 0.0:
@@ -2496,7 +2527,7 @@ static func _tech_research_value(lookahead: GameState, player: int, tech: TechDe
 	if tech.ignores_cover:
 		total += _research_value(tech.research_time, horizon, _penetration_tech_marginal_value())
 	if tech.idle_heal != 0:
-		total += _research_value(tech.research_time, horizon, _field_repair_tech_marginal_value(tech))
+		total += _research_value(tech.research_time, horizon, _field_repair_tech_marginal_value(lookahead, player, tech))
 	if tech.produce_ap_discount != 0 or tech.build_ap_discount != 0:
 		total += _research_value(tech.research_time, horizon, _logistics_tech_marginal_value(tech))
 	if tech.produce_cost_discount_pct != 0:
@@ -2525,24 +2556,30 @@ static func _tech_research_value(lookahead: GameState, player: int, tech: TechDe
 ## the share of the army they touch — and converted the way Attack Tech is; AP and Credit effects
 ## are converted directly. Deliberately coarse: its job is that every tech has a sensible,
 ## positive price so the AI walks all three trees, not that it plays the tree optimally.
+## ★ 2026-10-02: Infiltrators 0.5->1.6, build_time 0.4->1.2, attack AP
+## discount 2.0->1.0, vehicle_rush_half 1.0->3.0*veh, Ambush 0.4->0.15, Sappers 0.25->0.4, hp bonus
+## 0.3->0.6, cover_heal 0.3->2.0. Each pair (Blitz/Infiltrators, Dig In/
+## Reactive Armor, Hardpoints/Rapid Construction, Fire Discipline/Long Guns, Combined Arms/
+## Overdrive) tied or nearly tied in forced head-to-head sims (n=48) while priced 2.5-10x apart,
+## so the AI always took the same side. Targets: roughly equal prices in a typical mid-game army.
 static func _tree_effects_marginal_value(s: GameState, p: int, t: TechDef) -> float:
 	var inf: float = _class_share(s, p, UnitTypeDef.UnitClass.INFANTRY)
 	var veh: float = maxf(0.25, 1.0 - _class_share(s, p, UnitTypeDef.UnitClass.INFANTRY))
 	var ae: float = 0.0
-	ae += 0.4 * t.move_cap_bonus + 0.3 * t.vehicle_move_cap_bonus * veh + 0.5 * t.infantry_move_cost_discount * inf
-	ae += 0.6 * (t.attack_vs_armor + t.attack_vs_infantry) + 0.25 * t.infantry_attack_vs_structures * inf
+	ae += 0.4 * t.move_cap_bonus + 0.3 * t.vehicle_move_cap_bonus * veh + 1.6 * t.infantry_move_cost_discount * inf
+	ae += 0.6 * (t.attack_vs_armor + t.attack_vs_infantry) + 0.4 * t.infantry_attack_vs_structures * inf
 	ae += AIBalance.ai.range_bonus_attack_equivalent * t.vehicle_range_bonus * veh
-	ae += 0.4 * t.infantry_cover_attack * inf + 0.3 * t.cover_heal * inf
-	ae += 0.3 * (t.infantry_hp_bonus * inf + t.vehicle_hp_bonus * veh) + 0.8 * t.vehicle_self_repair * veh
+	ae += 0.15 * t.infantry_cover_attack * inf + 2.0 * t.cover_heal * inf
+	ae += 0.6 * (t.infantry_hp_bonus * inf + t.vehicle_hp_bonus * veh) + 0.8 * t.vehicle_self_repair * veh
 	ae += (t.vehicle_attack_bonus + t.vehicle_defense_bonus + t.aircraft_attack_bonus) * veh + t.infantry_attack_bonus * inf
 	ae += 0.3 * (t.structure_defense_bonus + t.defensive_attack_bonus + t.defensive_range_bonus + t.aura_defense_bonus)
 	ae += 0.01 * t.structure_hp_pct + 0.02 * t.hq_hp_bonus + 0.15 * t.hq_attack + 0.1 * t.hq_range + (0.4 if t.defensive_counterattack else 0.0)
-	ae += 0.15 * t.defensive_anti_air + 0.4 * t.build_time_discount + 0.2 * t.ammo_bonus * veh
+	ae += 0.15 * t.defensive_anti_air + 1.2 * t.build_time_discount + 0.2 * t.ammo_bonus * veh
 	ae += 0.15 * t.resupply_range * veh + 0.3 * t.supply_heal + 0.6 * t.vehicle_production_turn_discount * veh
 	ae += 0.3 * t.pop_cap_bonus + 0.6 * (t.production_cap_bonus + t.factory_slot_bonus) + 0.5 * t.bonus_unit_attack + 0.3 * t.bonus_unit_move_cap + 0.3 * t.bonus_unit_self_repair
 	ae += 0.5 if not t.frees_pilots.is_empty() else 0.0
-	var ap: float = float(t.ap_per_turn_bonus) + 2.0 * t.attack_ap_discount + 0.5 * t.rush_ap_discount \
-		+ (1.0 if t.vehicle_rush_half else 0.0)
+	var ap: float = float(t.ap_per_turn_bonus) + 1.0 * t.attack_ap_discount + 0.5 * t.rush_ap_discount \
+		+ (3.0 * veh if t.vehicle_rush_half else 0.0)
 	var credits: float = Upkeep.total_upkeep(s, p) * t.upkeep_discount_pct / 100.0 \
 		+ _cheapest_producible_cost(s, p) * 0.5 * (t.kill_refund_pct + t.infantry_cost_discount_pct * inf) / 100.0 \
 		+ 6.0 * t.structure_cost_discount_pct + 3.0 * t.depot_cost_discount_pct
@@ -2732,8 +2769,15 @@ static func _penetration_tech_marginal_value() -> float:
 ## retreat when it legally can ([member AIConfig.cover_tile_discount]'s doc: "this AI
 ## does not stay put"), so a unit sits idle only when it had no legal move at all. A low
 ## default keeps Field Repair from being valued as though the whole army held position.
-static func _field_repair_tech_marginal_value(tech: TechDef) -> float:
-	return float(tech.idle_heal) / AIBalance.ai.hp_per_ap * AIBalance.ai.field_repair_idle_uptime_estimate
+## ★ 2026-10-02: scaled by the fighter count — the heal lands on EVERY idle unit, and pricing it
+## as one unit made Field Repair 0.1x Plating although they tie head-to-head (24-24, n=48).
+## Capped at [constant _HEAL_FIGHTERS_CAP] fighters: healing is bounded by the damage actually
+## taken, which does not grow with army size — uncapped, Rapid Repair outpriced Triage 3.7x late.
+static func _field_repair_tech_marginal_value(s: GameState, p: int, tech: TechDef) -> float:
+	return float(tech.idle_heal) / AIBalance.ai.hp_per_ap * AIBalance.ai.field_repair_idle_uptime_estimate \
+		* clampi(_fighter_count(s, p), 1, _HEAL_FIGHTERS_CAP)
+
+const _HEAL_FIGHTERS_CAP: int = 4
 
 
 ## Logistics' marginal value (CR-14): AP is already the native scoring scale, so — unlike

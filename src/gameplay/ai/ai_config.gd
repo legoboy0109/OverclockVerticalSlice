@@ -344,7 +344,9 @@ extends Resource
 ## [method AI._attack_defense_tech_marginal_value]'s HP_PER_AP/ATTACKS_LANDED_PER_TURN_
 ## ESTIMATE conversion. A range point trades reach for damage, not damage for damage, so
 ## it is valued as a FRACTION of one flat attack point, never the full point.
-@export var range_bonus_attack_equivalent: float = 0.5
+## ★ 2026-10-02: 0.5 -> 1.0 — at 0.5 (with Fire Discipline repriced) Volley went 77 -> 0 picks per
+## 720 games though it ties Penetration head-to-head (21-27, n=48).
+@export var range_bonus_attack_equivalent: float = 1.0
 
 ## Assumed fraction of the AI's landed attacks that would otherwise have been reduced by
 ## [member CombatConfig.cover_dr] — what Penetration's Cover-ignore is worth per attack,
@@ -358,8 +360,10 @@ extends Resource
 ## advance, attack or retreat when it legally can ([member cover_tile_discount]'s doc —
 ## "this AI does not stay put"), so a unit is idle only when it had no legal move at
 ## all. A low default keeps Field Repair from being valued as though the whole army
-## held position.
-@export var field_repair_idle_uptime_estimate: float = 0.15
+## held position. ★ 2026-10-02: 0.15 -> 0.5 and now multiplied by the fighter count (capped at 4) (it was
+## priced as if only one unit could heal) — calibrated so Field Repair ~ Plating, which tie
+## head-to-head.
+@export var field_repair_idle_uptime_estimate: float = 0.5
 
 ## Assumed Produce commits per turn once a producer is available — converts Logistics'
 ## `produce_ap_discount` (already AP-native, no `credit_to_ap_rate`) and Foundry's
@@ -405,6 +409,13 @@ extends Resource
 ## hit worth 1.5×. A typical mid-roster infantry lands near 0.9 — close to the old flat value.
 @export var matchup_floor: float = 0.25
 @export var matchup_scale: float = 1.25
+
+## ★ 2026-10-02: production value per tile of attack range beyond 1 (AI._matchup_multiplier).
+## Range was invisible to production scoring, so longer-ranged but slightly weaker units (Cinder
+## Tank vs Lance Tank, Sentinel vs Breaker) were never chosen on their merits. 0 = old behaviour.
+@export var range_value_per_tile: float = 0.15
+## ★ 2026-10-02: production value bonus for an area attack (burst / line). 0 = old behaviour.
+@export var splash_value_bonus: float = 0.2
 
 ## Added to a pilot-capable unit's matchup multiplier while the AI owns a vehicle nobody is
 ## crewing — a pilot is then worth the whole vehicle it unlocks, not its own weak gun.

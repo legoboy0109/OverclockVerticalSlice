@@ -455,7 +455,8 @@ func _run_one_turn(state: GameState, game: int = 0, turn: int = 0, favoured: int
 		if _research_trace and action is ResearchAction:
 			var parts := PackedStringArray()
 			for t: TechDef in Research.legal_research_targets(state, state.active_player):
-				parts.append("%s:%.3f" % [t.display_name, AI._tech_research_value(state, state.active_player, t)])
+				parts.append("%s:%.3f:%.3f" % [t.display_name, AI._tech_research_value(state, state.active_player, t),
+					AI._tech_research_value(state, state.active_player, t, false)])
 			print("SIM_RVAL,%d,%d,%d,%s,%s" % [game, state.active_player, state.round_number,
 				(action as ResearchAction).tech.display_name, ";".join(parts)])
 		var ap_before: int = state.per_player[state.active_player].current_ap
