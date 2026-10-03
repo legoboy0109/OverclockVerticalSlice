@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="FactionDef" load_steps=10 format=3]
 ; GENERATED from game-data/Factions/The Accord of Inner Systems.md — edit the note, then run: python3 tools/vault/build_data.py
-; source-sha256: d703ef1c352101f542d4ca35e47e4fda1e54fd167d8ade53619ffde00a407ded
+; source-sha256: 464e218defaf2f0133180bd744bac5b52c0af722e3152727385a4da912af5e9f
 
 [ext_resource type="Script" path="res://src/core/faction/faction_def.gd" id="1"]
 [ext_resource type="Resource" path="res://data/structures/hq.tres" id="2"]
@@ -21,7 +21,7 @@ hq = ExtResource("2")
 structures = [ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8")]
 techs = []
 infantry_cap_delta = 0
-base_income_delta = 0
+base_income_delta = -100
 econ_tier_bonus_delta = 0
 upkeep_pct_delta = 0
 vehicle_upkeep_pct_delta = 0

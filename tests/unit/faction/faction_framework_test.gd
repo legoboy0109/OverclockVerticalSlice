@@ -21,11 +21,13 @@ func test_seat_palettes_are_not_playable_factions() -> void:
 		assert_bool(Factions.playable().has(f)).is_false()
 
 
-func test_the_baseline_modifies_nothing() -> void:
-	# faction-democratic-alliance AC-1: the regression anchor — every MOD delta is 0.
+func test_the_baseline_modifies_nothing_but_base_income() -> void:
+	# faction-democratic-alliance AC-1: the regression anchor — every MOD delta is 0 except base income
+	# (−100 since the 2026-10-02 balance pass: penalty-free, it won 74% on Crossroads).
 	var a: FactionDef = Factions.DEMOCRATIC_ALLIANCE
 	assert_int(a.infantry_cap_delta).is_equal(0)
-	assert_int(a.base_income_delta).is_equal(0)
+	assert_int(a.base_income_delta).is_equal(-100)
+	assert_int(a.econ_tier_bonus_delta).is_equal(0)
 	assert_int(a.upkeep_pct_delta).is_equal(0)
 	assert_array(a.unit_deltas).is_empty()
 
@@ -77,7 +79,8 @@ func test_mod_domains_fold_into_their_owning_systems() -> void:
 	f.base_income_delta = 300
 	state.per_player[0].faction = f
 	assert_int(Population.effective_cap(state, 0)).is_equal(cap + 2)
-	assert_int(Credits.credit_income(state, 0)).is_equal(income + 300)
+	# The fixture's Alliance carries its own base-income delta (−100 since 2026-10-02); the new faction replaces it.
+	assert_int(Credits.credit_income(state, 0)).is_equal(income + 300 - Factions.DEMOCRATIC_ALLIANCE.base_income_delta)
 
 
 func test_an_upkeep_delta_scales_upkeep() -> void:
@@ -165,14 +168,18 @@ func test_solar_is_poorer_with_a_shallower_economy_slope() -> void:
 		[Factions.SOLAR_FEDERATION, Factions.DEMOCRATIC_ALLIANCE] as Array[FactionDef], 0, 80)
 	# Read from the faction (its penalty was halved on 2026-09-29) — the point is the SHAPE:
 	# poorer from turn 1, and the gap widens with each economy tier.
+	# ★ 2026-10-02: the Alliance now has −100 base too, so measure against ITS deltas, not zero —
+	# Solar is no poorer at the start than the Alliance, only on the slope.
 	var f: FactionDef = Factions.SOLAR_FEDERATION
-	assert_int(f.base_income_delta).is_less(0)
-	assert_int(Credits.credit_income(state, 1) - Credits.credit_income(state, 0)).is_equal(-f.base_income_delta)
+	var a: FactionDef = Factions.DEMOCRATIC_ALLIANCE
+	assert_int(f.base_income_delta).is_less_equal(a.base_income_delta)
+	assert_int(Credits.credit_income(state, 1) - Credits.credit_income(state, 0)) \
+		.is_equal(a.base_income_delta - f.base_income_delta)
 	state.per_player[0].economy_tier = 1
 	state.per_player[1].economy_tier = 1
 	assert_int(Credits.credit_income(state, 1) - Credits.credit_income(state, 0)) \
-		.is_equal(-f.base_income_delta - f.econ_tier_bonus_delta)
-	assert_int(-f.econ_tier_bonus_delta).is_greater(0)
+		.is_equal(a.base_income_delta - f.base_income_delta + a.econ_tier_bonus_delta - f.econ_tier_bonus_delta)
+	assert_int(a.econ_tier_bonus_delta - f.econ_tier_bonus_delta).is_greater(0)
 
 
 func test_a_machinist_crew_drives_the_siege_mech_faster() -> void:

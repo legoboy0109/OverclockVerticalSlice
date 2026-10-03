@@ -145,4 +145,4 @@ func test_ross_full_economy_overtakes_the_baseline() -> void:
 	state.per_player[0].economy_tier = 3
 	state.per_player[1].economy_tier = 3
 	assert_int(Credits.credit_income(state, 0)).is_equal(5200)
-	assert_int(Credits.credit_income(state, 1)).is_equal(4000)
+	assert_int(Credits.credit_income(state, 1)).is_equal(3900)   # Accord: base 1,500 − 100 + 2,500

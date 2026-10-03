@@ -148,10 +148,10 @@ simply the tech tree.
 ## Formulas
 
 The Alliance introduces **no new formulas**. Every value above feeds the existing shared formulas
-unchanged, and its `FactionDef` is identity across every MOD domain:
+unchanged, and its `FactionDef` is identity across every MOD domain **except base income**:
 
 ```
-Δ_base_income = 0 · Δ_econ_tier_bonus = 0 · Δ_econ_tier_cost = 0
+Δ_base_income = −100 · Δ_econ_tier_bonus = 0 · Δ_econ_tier_cost = 0
 Δ_upkeep_rate = 0 · Δ_build_cost = 0 · Δ_build_time = 0 · Δ_production_cap = 0
 ```
 
@@ -159,6 +159,12 @@ unchanged, and its `FactionDef` is identity across every MOD domain:
 `effective_X(entity, alliance_player) == base_X(entity)` for every domain — which makes the Alliance
 the regression anchor v1's AC-4a was built around, and lets any drift in the modifier-resolution
 path be caught by a test that needs no faction-specific fixture.
+
+> ★ **2026-10-02 balance pass — base income −100.** Every other faction pays some economic price for
+> its strengths; the Alliance paid none, and on the larger Crossroads map that alone was a 74% win
+> rate (Vertical Slice 50%). −100 base income measured 56% / 48% (≈52% overall, 720-game sweep). It
+> keeps full Economy-tech income, so it remains the plain, strong-economy generalist. The identity
+> property above now holds for every domain but base income; AC-1 is amended to match.
 
 **Sustainability check** (the CR-10 comparison sheet's anchor row):
 
@@ -233,7 +239,7 @@ in Credits, once in bodies.**
 
 | # | Criterion | Type |
 |---|---|---|
-| AC-1 | GIVEN the Alliance `FactionDef`, THEN every MOD-domain delta is 0 and `effective_X(e, alliance) == base_X(e)` for every domain (the regression anchor) | Logic |
+| AC-1 | GIVEN the Alliance `FactionDef`, THEN every MOD-domain delta is 0 except `base_income_delta` (−100, 2026-10-02) and `effective_X(e, alliance) == base_X(e)` for every other domain (the regression anchor) | Logic |
 | AC-2 | GIVEN the Alliance roster, THEN its four infantry match `data/units/{scout,trooper,heavy,sniper}.tres` exactly | Config-Data |
 | AC-3 | GIVEN a full Alliance build-out, THEN `effective_cap` is exactly 10 | Logic |
 | AC-4 | GIVEN all three economy tiers researched, THEN `credit_income` is exactly **2,500** | Logic |
