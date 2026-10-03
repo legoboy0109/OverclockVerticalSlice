@@ -55,7 +55,7 @@ techs:
 - '[[Emergency Draft]]'
 infantry_cap_delta: 0
 base_income_delta: -300
-econ_tier_bonus_delta: 500
+econ_tier_bonus_delta: 300
 upkeep_pct_delta: 0
 vehicle_upkeep_pct_delta: 0
 unit_changes: []

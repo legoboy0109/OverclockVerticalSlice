@@ -147,15 +147,19 @@ the *opposite* pole from Solar's Autonomous Defence Node on the same axis:
 
 ### ★★ Economy — the compounding arc
 
+> ★ **Current values (2026-10-02 balance pass).** The table below was rewritten from the original
+> 700/+200 numbers: base income is now 1,500 with research steps +500/+800/+1,200; the Union's slope
+> was raised to +500 (2026-10-01) and cut to **+300** (2026-10-02 — at +500 it won 61% overall and
+> 69% against Trappist; +300 measured 53% / 58%). The Alliance carries −100 base since 2026-10-02.
+
 | | Union | Alliance | Δ |
 |---|---:|---:|---|
-| `BASE_INCOME` | ★ **700** | 1,000 | ★ **−300** (intercept) |
-| Economy tier bonus | ★ **+700** | +500 | ★ **+200** (slope) |
-| Tier costs | 1,000 / 2,000 / 3,500 | same | — |
-| Income at turn 1 | ★ **700** | 1,000 | **−30%** |
-| After Tier I | 1,400 | 1,500 | −7% |
-| After Tier II | 2,100 | 2,000 | **+5%** |
-| **After Tier III** | ★ **2,800** | 2,500 | ★ **+12%, the highest in the game** |
+| Base income | ★ **1,200** | 1,400 | ★ **−300** vs the shared 1,500 (intercept) |
+| Economy step bonus | ★ **+300 on every step** | +500 / +800 / +1,200 | ★ **+300** (slope) |
+| Income at turn 1 | ★ **1,200** | 1,400 | **−14%** |
+| After step I | 2,000 | 1,900 | +5% |
+| After step II | 3,100 | 2,700 | **+15%** |
+| **After step III** | ★ **4,600** | 3,900 | ★ **+18%, the highest in the game** |
 
 > ★ **This is the intercept/slope distinction from `faction-identity.md` D4 doing exactly the job it
 > was named for.** A low **intercept** makes the Union poor from turn 1; a high **slope** makes each
@@ -251,7 +255,7 @@ everything, late it is ahead on machines but still fields the fewest bodies.
 - **Guard cannot pilot:** deliberate. Building Guards trades future vehicle capacity for present survival — the faction's core early decision.
 - **Bulwark against an early rush:** crewless, so it costs no cap at exactly the moment the Union has no bodies to spare. ★ This is the design intent, not an accident.
 - **Union that never reaches Tier II:** strictly worse than the baseline in every respect. Its whole design is a bet on time.
-- **Research Lab destroyed pre-Tier-III:** ★ costs the Union more than any other faction — its slope means each tier is worth 700 rather than 500. The best single attack available against them.
+- **Research Lab destroyed pre-Tier-III:** ★ costs the Union more than any other faction — its slope means each step is worth 300 more than anyone else's. The best single attack available against them.
 - **Hauler carrying 4 Machinists, destroyed:** four crew die at once (TP-4), potentially stranding every vehicle on the board. ★ The most punishing transport loss in the corpus.
 - **Foreman repairing a Siege Mech:** 4 hp of a 28 hp body — proportionally weak. ★ `REPAIR_AMOUNT` was tuned against infantry; against the Union's machines it may be nearly pointless (MUOQ-4).
 - **Union mirror:** two slow economies and two sets of Bulwarks. ★ Likely the slowest matchup in the game and a real risk of hitting the round cap — worth measuring against the PIVOT's terminating-condition problem specifically.
