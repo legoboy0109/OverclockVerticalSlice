@@ -1704,7 +1704,11 @@ static func _matchup_multiplier(lookahead: GameState, owner: int, unit_type: Uni
 	# it out) and scaled by how little of our own army can already hit aircraft. Measured: Order and
 	# Trappist built 0 Dominions/Talons facing 22 enemy aircraft in 12 games.
 	if air_hit > 0.0 and unit_total > 0.0:
-		effect = maxf(effect, air_hit / unit_total * (1.0 - _air_coverage(lookahead, owner)))
+		# ×anti_air_need_multiplier: nothing else in the army can touch an aircraft, so a share of
+		# the enemy that is airborne is worth more than the same share on the ground. Without it an
+		# owned Airfield sat idle — Order produced 0 Dominions facing 23 enemy gunships (12 games).
+		effect = maxf(effect, minf(1.0, air_hit / unit_total * AIBalance.ai.anti_air_need_multiplier \
+			* (1.0 - _air_coverage(lookahead, owner))))
 	# ★ Durability (faction balance pass, 2026-09-29): the effect above measures only what the
 	# unit DOES to the enemy, never how long it lasts. A 3-hp unit and a 20-hp mech dealing the
 	# same damage scored the same, so every faction's AI spammed its glass cannons (Marksmen,
@@ -2253,6 +2257,36 @@ static func _capacity_value(lookahead: GameState, player: int, structure_type: S
 
 
 ## True when [param structure_type] produces an armed infantry type (a Barracks).
+## ★ 2026-10-02: what a producer of anti-air units is worth while the enemy flies and we cannot
+## answer it — the damage the enemy's aircraft would deal over [member AIConfig.anti_air_engaged_turns]
+## turns, scaled by how little of our army can already hit air. Zero once we own (or are raising)
+## any anti-air producer. Without it, Order and Trappist — whose only anti-air units come from
+## their Airfield — never built one: 0 Talons/Dominions facing 22 enemy aircraft in 12 games, because
+## [method _capacity_value] prices an Airfield by unit cost alone, never by what only it can make.
+static func _anti_air_need_value(s: GameState, player: int, structure_type: StructureTypeDef) -> float:
+	if not _makes_anti_air(structure_type):
+		return 0.0
+	for e: EntityState in s.entities():
+		if e is StructureState and e.owner == player and _makes_anti_air((e as StructureState).type):
+			return 0.0
+	var air_attack: float = 0.0
+	for e: EntityState in s.entities():
+		if e is UnitState and e.owner != player and e.owner >= 0 \
+				and (e as UnitState).type.unit_class == UnitTypeDef.UnitClass.AIR:
+			air_attack += float(Unit.effective_attack(s, e))
+	if air_attack <= 0.0:
+		return 0.0
+	return air_attack * (1.0 - _air_coverage(s, player)) * float(AIBalance.ai.anti_air_engaged_turns) \
+		/ AIBalance.ai.hp_per_ap
+
+
+static func _makes_anti_air(structure_type: StructureTypeDef) -> bool:
+	for t: UnitTypeDef in structure_type.producible_types:
+		if t.attack > 0 and UnitTypeDef.UnitClass.AIR in t.can_target:
+			return true
+	return false
+
+
 static func _makes_armed_infantry(structure_type: StructureTypeDef) -> bool:
 	for t: UnitTypeDef in structure_type.producible_types:
 		if t.unit_class == UnitTypeDef.UnitClass.INFANTRY and t.attack > 0 and not t.can_build:
@@ -2388,7 +2422,8 @@ static func _economy_value(lookahead: GameState, player: int, structure_type: St
 	# 4, its army never grew, both sides ground mid-map with three units each, and 0/21 games
 	# resolved with zero HQ damage. Diagnosed with tools/DiagnoseAI.tscn: `best_build` was
 	# 0.000 in every single traced turn.
-	var capacity: float = _capacity_value(lookahead, player, structure_type)
+	var capacity: float = _capacity_value(lookahead, player, structure_type) \
+		+ _anti_air_need_value(lookahead, player, structure_type)
 	if capacity > 0.0:
 		return capacity
 	# ★ 2026-10-01 (user direction: "teach the AI to build defensive buildings"): an armed
@@ -2637,6 +2672,7 @@ static func _vehicle_savings_reserve(s: GameState, owner: int) -> int:
 	if net <= 0 or vehicle_cost - credits > net * cfg.vehicle_save_turns:
 		return 0
 	return vehicle_cost
+
 
 
 ## Upkeep [param owner] should keep free for a vehicle/aircraft this turn (0 = none). See

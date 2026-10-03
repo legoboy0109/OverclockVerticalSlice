@@ -240,6 +240,12 @@ extends Resource
 @export var defense_threat_radius: int = 6
 @export var defense_threat_units: int = 2
 @export var defense_engaged_turns: int = 6
+## ★ 2026-10-02: turns of enemy air attack an anti-air producer is credited with stopping, while the
+## enemy flies and we cannot answer it (AI._anti_air_need_value). 0 = old behaviour.
+@export var anti_air_engaged_turns: int = 6
+## ★ 2026-10-02: production weight on the airborne share of the enemy for an anti-air unit
+## (AI._matchup_multiplier) — aircraft are unanswerable without anti-air. 1 = plain damage share.
+@export var anti_air_need_multiplier: float = 3.0
 
 ## Share of the best follow-up tech's value a tech is credited with (AI._tech_research_value), so the
 ## AI sees where a branch LEADS. 0 = judge every tech in isolation (the old behaviour).
