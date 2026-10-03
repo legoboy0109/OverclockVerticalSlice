@@ -256,6 +256,14 @@ func _parse_args() -> void:
 			var fd: FactionDef = load("res://data/factions/%s.tres" % fparts[0])
 			fd.set(fparts[1], int(fspec[1]))
 			print("SIM_FACTION_STAT,%s,%s,%d" % [fparts[0], fparts[1], int(fd.get(fparts[1]))])
+		elif arg.begins_with("--structure-stat="):
+			# Structure experiment for this run only: --structure-stat=union_barracks.production_slots=1
+			# (repeatable). Mutates the loaded StructureTypeDef, which every reference shares.
+			var sspec: PackedStringArray = arg.trim_prefix("--structure-stat=").split("=")
+			var sparts: PackedStringArray = sspec[0].split(".")
+			var sd: StructureTypeDef = load("res://data/structures/%s.tres" % sparts[0])
+			sd.set(sparts[1], int(sspec[1]))
+			print("SIM_STRUCTURE_STAT,%s,%s,%d" % [sparts[0], sparts[1], int(sd.get(sparts[1]))])
 		elif arg.begins_with("--combat="):
 			# Combat-config experiment for this run only: --combat=rank_hp=0,1,3,5 (int lists) or
 			# --combat=merit_per_kill=4. Sets the loaded CombatConfig every system reads.
