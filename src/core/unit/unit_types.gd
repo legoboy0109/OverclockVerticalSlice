@@ -71,6 +71,7 @@ const TALON: UnitTypeDef = preload("res://data/units/talon.tres")
 const LEVY: UnitTypeDef = preload("res://data/units/levy.tres")
 const KNIGHT: UnitTypeDef = preload("res://data/units/knight.tres")
 const CONFESSOR: UnitTypeDef = preload("res://data/units/confessor.tres")
+const VIGIL: UnitTypeDef = preload("res://data/units/vigil.tres")   # 2026-10-02: Order anti-air infantry
 const INQUISITOR: UnitTypeDef = preload("res://data/units/inquisitor.tres")
 const AEGIS_WALKER: UnitTypeDef = preload("res://data/units/aegis_walker.tres")
 const CATHEDRAL_TANK: UnitTypeDef = preload("res://data/units/cathedral_tank.tres")
@@ -91,4 +92,4 @@ const ALL: Array[UnitTypeDef] = [BUILDER, SCOUT, TROOPER, HEAVY, SNIPER, TANK, A
 	PARTISAN, PIRATE, SABOTEUR, MARKSMAN, MISSILE_TEAM, TECHNICAL, SCRAP_TANK, BUZZARD,
 	MACHINIST, FOREMAN, GUARD, WALKER, SIEGE_MECH, HAULER, LANCER, BATTERY, SKYWORKS_GUNSHIP, SKYWORKS_INTERCEPTOR,
 	SERVITOR, DEMOLITIONS_SPECIALIST, LANCE_SPECIALIST, SUPPORT_SPECIALIST, SENTINEL_MECH, BREAKER_MECH, LANCE_TANK, CINDER_TANK, STRAFER, AUTONOMOUS_LIFTER, TALON,
-	LEVY, KNIGHT, CONFESSOR, INQUISITOR, AEGIS_WALKER, CATHEDRAL_TANK, RELIQUARY, SERAPH, DOMINION]
+	LEVY, KNIGHT, CONFESSOR, INQUISITOR, AEGIS_WALKER, CATHEDRAL_TANK, RELIQUARY, SERAPH, DOMINION, VIGIL]

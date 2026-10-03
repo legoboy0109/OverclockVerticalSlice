@@ -14,6 +14,7 @@ produces:
 - '[[Knight]]'
 - '[[Confessor]]'
 - '[[Inquisitor]]'
+- '[[Vigil]]'
 attack: 0
 attack_range: 0
 defense: 0
