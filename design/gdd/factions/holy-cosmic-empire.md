@@ -64,7 +64,7 @@ using the existing merit machinery rather than any new rule.
 | **Levy** | The bottom of the ladder | **300** | 5 | **2** | 2 | 2 | **200** | 0 *(rank 0)* | ★ Below baseline at rank 0 · `can_pilot` ✔ |
 | **Knight** | Enters already promoted | **700** | 7 | 4 | 2 | 2 | **250** | ★ **6** *(rank 1)* | `can_pilot` ✔ |
 | **Confessor** | Sustain and enable | **600** | 4 | 2 | 1 | 2 | **250** | 0 | `REPAIR`, `SPOT` |
-| **Inquisitor** | Reach | **700** | 4 | 6 | 3 | 2 | **250** | 0 | `DEMOLISH` |
+| **Inquisitor** | Reach | **700** | 4 | ★ **5** | 3 | 2 | **250** | 0 | `DEMOLISH` · ★ attack 6 → 5 (2026-10-04): Order won 56%, 67% vs Lightless; at 5 it measured 46% / 54% |
 
 > ### ★★ The Levy is the faction in one unit
 >

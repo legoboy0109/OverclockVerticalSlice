@@ -5,7 +5,7 @@ can_target:
 - infantry
 - ground_vehicle
 hp: 4
-attack: 6
+attack: 5
 attack_range: 3
 defense: 0
 move_cost: 2
